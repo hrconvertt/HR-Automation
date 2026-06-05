@@ -1,0 +1,494 @@
+import { cookies } from 'next/headers'
+import { prisma } from '@/lib/prisma'
+import { verifyToken } from '@/lib/auth'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Card } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from '@/components/ui/table'
+import { formatDate, formatCurrency } from '@/lib/utils'
+import { Briefcase, Users, Calendar, FileText, ClipboardList } from 'lucide-react'
+import { RequestToHireButton } from '@/components/recruiting/request-to-hire-button'
+import { DecideRequestButtons } from '@/components/recruiting/decide-request-buttons'
+import { AddCandidateButton } from '@/components/recruiting/add-candidate-button'
+import { CandidateCard } from '@/components/recruiting/candidate-card'
+import { RequisitionStatusMenu } from '@/components/recruiting/requisition-status-menu'
+import { JdReviewButton } from '@/components/recruiting/jd-review-button'
+import { InterviewFeedbackButton } from '@/components/recruiting/interview-feedback-button'
+import { TalentPoolView } from '@/components/recruiting/talent-pool-view'
+
+const AVATAR_PALETTE = [
+  'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700',
+  'bg-purple-100 text-purple-700', 'bg-amber-100 text-amber-700',
+  'bg-rose-100 text-rose-700', 'bg-sky-100 text-sky-700',
+  'bg-indigo-100 text-indigo-700', 'bg-teal-100 text-teal-700',
+]
+function avatarTone(name: string): string {
+  let h = 0
+  for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0
+  return AVATAR_PALETTE[h % AVATAR_PALETTE.length]
+}
+
+const PIPELINE_STAGES = [
+  { key: 'APPLIED',    label: 'Applied',    tone: 'bg-slate-50  border-slate-200' },
+  { key: 'SCREENING',  label: 'Screening',  tone: 'bg-blue-50/40 border-blue-200' },
+  { key: 'INTERVIEW',  label: 'Interview',  tone: 'bg-purple-50/40 border-purple-200' },
+  { key: 'OFFER',      label: 'Offer',      tone: 'bg-amber-50/40 border-amber-200' },
+  { key: 'HIRED',      label: 'Hired',      tone: 'bg-emerald-50/40 border-emerald-200' },
+  { key: 'REJECTED',   label: 'Rejected',   tone: 'bg-rose-50/40 border-rose-200' },
+]
+
+async function getData() {
+  const [requisitions, candidates, interviews, offers, poolCandidates] = await Promise.all([
+    prisma.jobRequisition.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+      include: { requestedBy: { select: { fullName: true } } },
+    }),
+    prisma.candidate.findMany({
+      // Strong matches surface first per column. Within the same score,
+      // fall back to recency.
+      orderBy: [{ matchScore: 'desc' }, { createdAt: 'desc' }],
+      take: 100,
+      include: { requisition: { select: { title: true } } },
+    }),
+    prisma.interview.findMany({
+      orderBy: { scheduledAt: 'desc' },
+      take: 30,
+      include: { candidate: { select: { fullName: true } } },
+    }),
+    prisma.jobOffer.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 30,
+      include: { candidate: { select: { fullName: true } } },
+    }),
+    prisma.candidate.findMany({
+      where: { inTalentPool: true },
+      orderBy: [{ matchScore: 'desc' }, { poolAddedAt: 'desc' }],
+      include: { requisition: { select: { title: true } } },
+    }),
+  ])
+  return { requisitions, candidates, interviews, offers, poolCandidates }
+}
+
+async function resolveContext(): Promise<{
+  role: 'HR_ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'EXECUTIVE'
+  myEmployeeId: string | null
+}> {
+  const c = await cookies()
+  const tok = c.get('hr_token')?.value
+  const payload = tok ? verifyToken(tok) : null
+  if (!payload) return { role: 'EMPLOYEE', myEmployeeId: null }
+  const u = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { role: true, employee: { select: { id: true } } },
+  })
+  if (!u) return { role: 'EMPLOYEE', myEmployeeId: null }
+  const preview = u.role === 'HR_ADMIN' ? c.get('hr_preview_role')?.value : undefined
+  const role = (preview ?? u.role) as 'HR_ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'EXECUTIVE'
+  return { role, myEmployeeId: u.employee?.id ?? null }
+}
+
+const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'warning' | 'default'> = {
+  OPEN: 'success',
+  FILLED: 'default',
+  CLOSED: 'secondary',
+  CANCELLED: 'destructive',
+  ACCEPTED: 'success',
+  REJECTED: 'destructive',
+  EXPIRED: 'secondary',
+  PENDING: 'warning',
+  PASS: 'success',
+  FAIL: 'destructive',
+}
+
+export default async function RecruitingPage() {
+  const { role, myEmployeeId } = await resolveContext()
+  const { requisitions, candidates, interviews, offers, poolCandidates } = await getData()
+
+  const isHR      = role === 'HR_ADMIN'
+  const isManager = role === 'MANAGER'
+
+  // Requests tab scoping:
+  //   HR_ADMIN → sees all PENDING/REJECTED requests (decision queue)
+  //   MANAGER  → sees only their own (privacy + clutter)
+  //   Others   → see nothing here (the tab is hidden anyway)
+  const requestsVisible = isHR
+    ? requisitions
+    : isManager && myEmployeeId
+      ? requisitions.filter((r) => r.requestedById === myEmployeeId)
+      : []
+
+  const openCount      = requisitions.filter((r) => r.status === 'OPEN').length
+  const pendingRequests = requestsVisible.filter((r) => r.status === 'PENDING')
+  const activePipeline = candidates.filter((c) => !['HIRED', 'REJECTED'].includes(c.stage)).length
+  const upcoming       = interviews.filter((i) => !i.result).length
+  const pendingOffers  = offers.filter((o) => o.status === 'PENDING').length
+
+  return (
+    <div className="space-y-5">
+      {/* Toolbar — KPIs on left, primary action on right */}
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-1 min-w-0">
+          <Kpi label="Open Roles"      value={openCount}            Icon={Briefcase}    tone="bg-blue-50 text-blue-600" />
+          <Kpi label="Pending Requests" value={pendingRequests.length} Icon={ClipboardList} tone="bg-amber-50 text-amber-600" />
+          <Kpi label="In Pipeline"     value={activePipeline}       Icon={Users}        tone="bg-purple-50 text-purple-600" />
+          <Kpi label="Pending Offers"  value={pendingOffers}        Icon={FileText}     tone="bg-emerald-50 text-emerald-600" />
+        </div>
+        {(isHR || isManager) && (
+          <div className="flex-shrink-0">
+            <RequestToHireButton role={isHR ? 'HR_ADMIN' : 'MANAGER'} />
+          </div>
+        )}
+      </div>
+
+      {/* Tabs ordered left-to-right by lifecycle:
+            Requests (manager → HR) → Requisitions (the live hiring board)
+            → Pipeline (candidates flowing through stages) → Interviews → Offers.
+          Default tab is the earliest place that needs attention: Requests
+          if HR has pending ones, otherwise Pipeline. */}
+      <Tabs defaultValue={isHR && pendingRequests.length > 0 ? 'requests' : 'pipeline'}>
+        <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex">
+          <TabsTrigger value="requests">
+            Requests
+            {pendingRequests.length > 0 && (
+              <span className="ml-1.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-full px-1.5 py-0.5 tabular-nums">{pendingRequests.length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="requisitions">Job Requisitions</TabsTrigger>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="pool">
+            Talent Pool
+            {poolCandidates.length > 0 && (
+              <span className="ml-1.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded-full px-1.5 py-0.5 tabular-nums">{poolCandidates.length}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="interviews">Interviews</TabsTrigger>
+          <TabsTrigger value="offers">Offers</TabsTrigger>
+        </TabsList>
+
+        {/* Pipeline (kanban) */}
+        <TabsContent value="pipeline" className="mt-4">
+          <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-xs text-slate-500">
+                <span className="font-semibold text-slate-900">{candidates.length}</span> candidates across {requisitions.filter((r) => r.status === 'OPEN').length} open {requisitions.filter((r) => r.status === 'OPEN').length === 1 ? 'role' : 'roles'}
+              </p>
+              {(isHR || isManager) && (
+                <AddCandidateButton
+                  openRequisitions={requisitions
+                    .filter((r) => r.status === 'OPEN')
+                    .map((r) => ({ id: r.id, title: r.title }))}
+                />
+              )}
+            </div>
+            <div className="p-4 bg-slate-50/60 overflow-x-auto">
+              <div className="grid gap-3 min-w-[1100px]" style={{ gridTemplateColumns: `repeat(${PIPELINE_STAGES.length}, 1fr)` }}>
+                {PIPELINE_STAGES.map((stage) => {
+                  const stageCandidates = candidates.filter((c) => c.stage === stage.key)
+                  return (
+                    <div key={stage.key} className={`rounded-lg border ${stage.tone}`}>
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200/50">
+                        <p className="text-xs font-semibold text-slate-700 uppercase tracking-wider">{stage.label}</p>
+                        <span className="text-[10px] font-bold text-slate-600 bg-white border border-slate-200 rounded-full px-1.5 py-0.5 tabular-nums">{stageCandidates.length}</span>
+                      </div>
+                      <div className="p-2 space-y-2 min-h-[120px]">
+                        {stageCandidates.length === 0 ? (
+                          <p className="text-[11px] text-slate-400 text-center py-6">No candidates</p>
+                        ) : (
+                          stageCandidates.map((c) => (
+                            <CandidateCard
+                              key={c.id}
+                              candidate={{
+                                id: c.id, fullName: c.fullName, stage: c.stage,
+                                matchScore: c.matchScore, scoreReason: c.scoreReason,
+                                inTalentPool: c.inTalentPool,
+                                requisition: c.requisition,
+                              }}
+                              canMove={isHR || isManager}
+                            />
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </Card>
+        </TabsContent>
+
+        {/* Requisitions — the active hiring board.
+            Excludes PENDING + REJECTED (those live in the Requests tab).
+            Result: each row appears in exactly one tab, no double-counting. */}
+        <TabsContent value="requisitions" className="mt-4">
+          {(() => {
+            const liveReqs = requisitions.filter((r) => r.status !== 'PENDING' && r.status !== 'REJECTED')
+            return (
+              <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
+                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                  <p className="text-xs text-slate-500">
+                    <span className="font-semibold text-slate-900">{liveReqs.length}</span> {liveReqs.length === 1 ? 'requisition' : 'requisitions'} on the hiring board
+                  </p>
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Vacancies</TableHead>
+                      <TableHead>Status</TableHead>
+                      {isHR && <TableHead>JD</TableHead>}
+                      <TableHead>Closes</TableHead>
+                      {isHR && <TableHead></TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {liveReqs.length === 0 ? (
+                      <TableRow><TableCell colSpan={isHR ? 7 : 5} className="text-center py-10 text-slate-400 text-sm">
+                        No open requisitions yet. {isHR && 'Click "New Requisition" to add one, or approve a pending request.'}
+                      </TableCell></TableRow>
+                    ) : (
+                      liveReqs.map((r) => (
+                        <TableRow key={r.id}>
+                          <TableCell className="font-medium text-slate-900">{r.title}</TableCell>
+                          <TableCell><Badge variant="secondary">{r.type}</Badge></TableCell>
+                          <TableCell className="tabular-nums">{r.vacancies}</TableCell>
+                          <TableCell><Badge variant={STATUS_TONE[r.status] ?? 'secondary'}>{r.status}</Badge></TableCell>
+                          {isHR && (
+                            <TableCell>
+                              <JdReviewButton requisitionId={r.id} title={r.title} jdStatus={r.jdStatus} />
+                            </TableCell>
+                          )}
+                          <TableCell className="text-slate-500">{r.closingDate ? formatDate(r.closingDate) : '—'}</TableCell>
+                          {isHR && (
+                            <TableCell>
+                              <RequisitionStatusMenu requisitionId={r.id} status={r.status} title={r.title} />
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            )
+          })()}
+        </TabsContent>
+
+        {/* Requests — manager-raised, awaiting HR decision */}
+        <TabsContent value="requests" className="mt-4">
+          <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-slate-100">
+              <p className="text-xs text-slate-500">
+                {isManager && <span className="text-slate-400">Your requests · </span>}
+                <span className="font-semibold text-slate-900">{pendingRequests.length}</span> pending {pendingRequests.length === 1 ? 'request' : 'requests'}
+                {' · '}{requestsVisible.filter((r) => r.status === 'REJECTED').length} rejected (history)
+              </p>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Role</TableHead>
+                  {!isManager && <TableHead>Requested By</TableHead>}
+                  <TableHead>Reason</TableHead>
+                  <TableHead>Vacancies</TableHead>
+                  <TableHead>Submitted</TableHead>
+                  <TableHead>Status</TableHead>
+                  {isHR && <TableHead></TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {requestsVisible.filter((r) => r.status === 'PENDING' || r.status === 'REJECTED').length === 0 ? (
+                  <TableRow><TableCell colSpan={isHR ? 7 : isManager ? 5 : 6} className="text-center py-10 text-slate-400 text-sm">
+                    {isManager ? 'No hiring requests yet. Click "Request to Hire" to submit one.' : 'No hiring requests yet.'}
+                  </TableCell></TableRow>
+                ) : (
+                  requestsVisible
+                    .filter((r) => r.status === 'PENDING' || r.status === 'REJECTED')
+                    .map((r) => (
+                      <TableRow key={r.id}>
+                        <TableCell className="font-medium text-slate-900">
+                          {r.title}
+                          {r.requestNote && (
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">“{r.requestNote}”</p>
+                          )}
+                        </TableCell>
+                        {!isManager && (
+                          <TableCell className="text-slate-600 text-sm">{r.requestedBy?.fullName ?? '—'}</TableCell>
+                        )}
+                        <TableCell>
+                          <Badge variant="secondary" className="text-[10px]">{(r.requestReason ?? 'OTHER').toString().replace('_', ' ')}</Badge>
+                        </TableCell>
+                        <TableCell className="tabular-nums">{r.vacancies}</TableCell>
+                        <TableCell className="text-slate-500 text-sm">{formatDate(r.createdAt)}</TableCell>
+                        <TableCell>
+                          {r.status === 'PENDING' ? (
+                            <Badge variant="warning">Pending</Badge>
+                          ) : (
+                            <Badge variant="destructive">Rejected</Badge>
+                          )}
+                          {r.status === 'REJECTED' && r.decisionNote && (
+                            <p className="text-[11px] text-rose-700 mt-0.5 line-clamp-2">“{r.decisionNote}”</p>
+                          )}
+                        </TableCell>
+                        {isHR && (
+                          <TableCell>
+                            {r.status === 'PENDING' && (
+                              <DecideRequestButtons requisitionId={r.id} title={r.title} />
+                            )}
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* Talent Pool — pre-vetted candidates for urgent hires */}
+        <TabsContent value="pool" className="mt-4">
+          <TalentPoolView
+            candidates={poolCandidates.map((c) => ({
+              id: c.id,
+              fullName: c.fullName,
+              email: c.email,
+              matchScore: c.matchScore,
+              experience: c.experience,
+              currentCompany: c.currentCompany,
+              currentRole: c.currentRole,
+              source: c.source,
+              poolTags: c.poolTags,
+              poolReason: c.poolReason,
+              poolAddedAt: c.poolAddedAt?.toISOString() ?? null,
+              updatedAt: c.updatedAt.toISOString(),
+              requisition: c.requisition,
+            }))}
+            openRequisitions={requisitions
+              .filter((r) => r.status === 'OPEN')
+              .map((r) => ({ id: r.id, title: r.title }))}
+          />
+        </TabsContent>
+
+        {/* Interviews */}
+        <TabsContent value="interviews" className="mt-4">
+          <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-xs text-slate-500">
+                <span className="font-semibold text-slate-900">{interviews.length}</span> recent interviews
+              </p>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Candidate</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Round</TableHead>
+                  <TableHead>Scheduled</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Result</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {interviews.length === 0 ? (
+                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-slate-400 text-sm">
+                    No interviews scheduled yet.
+                  </TableCell></TableRow>
+                ) : (
+                  interviews.map((i) => (
+                    <TableRow key={i.id}>
+                      <TableCell className="font-medium text-slate-900">{i.candidate.fullName}</TableCell>
+                      <TableCell><Badge variant="secondary">{i.type}</Badge></TableCell>
+                      <TableCell className="text-slate-500">{i.round}</TableCell>
+                      <TableCell className="text-slate-500">{formatDate(i.scheduledAt)}</TableCell>
+                      <TableCell className="tabular-nums">{i.rating ? `${i.rating}/5` : '—'}</TableCell>
+                      <TableCell>
+                        {(isHR || isManager) ? (
+                          <InterviewFeedbackButton
+                            interviewId={i.id}
+                            candidateName={i.candidate.fullName}
+                            round={i.round}
+                            type={i.type}
+                            initialFeedback={i.feedback}
+                            initialRating={i.rating}
+                            initialResult={i.result}
+                          />
+                        ) : (
+                          i.result
+                            ? <Badge variant={STATUS_TONE[i.result] ?? 'warning'}>{i.result}</Badge>
+                            : <span className="text-slate-400 text-xs">Pending</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+
+        {/* Offers */}
+        <TabsContent value="offers" className="mt-4">
+          <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+              <p className="text-xs text-slate-500">
+                <span className="font-semibold text-slate-900">{offers.length}</span> offers
+              </p>
+            </div>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Candidate</TableHead>
+                  <TableHead>Offered Salary</TableHead>
+                  <TableHead>Joining Date</TableHead>
+                  <TableHead>Expiry</TableHead>
+                  <TableHead>Status</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {offers.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="text-center py-10 text-slate-400 text-sm">
+                    No offers extended yet.
+                  </TableCell></TableRow>
+                ) : (
+                  offers.map((o) => (
+                    <TableRow key={o.id}>
+                      <TableCell className="font-medium text-slate-900">{o.candidate.fullName}</TableCell>
+                      <TableCell className="tabular-nums">{formatCurrency(o.salary)}</TableCell>
+                      <TableCell className="text-slate-500">{o.joiningDate ? formatDate(o.joiningDate) : '—'}</TableCell>
+                      <TableCell className="text-slate-500">{o.expiryDate ? formatDate(o.expiryDate) : '—'}</TableCell>
+                      <TableCell><Badge variant={STATUS_TONE[o.status] ?? 'warning'}>{o.status}</Badge></TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+
+function Kpi({ label, value, Icon, tone }: {
+  label: string
+  value: number
+  Icon: React.ComponentType<{ className?: string }>
+  tone: string
+}) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">{label}</p>
+          <p className="text-lg font-bold text-slate-900 mt-1.5 tabular-nums">{value}</p>
+        </div>
+        <div className={`p-2 rounded-lg ${tone}`}>
+          <Icon className="w-4 h-4" />
+        </div>
+      </div>
+    </div>
+  )
+}

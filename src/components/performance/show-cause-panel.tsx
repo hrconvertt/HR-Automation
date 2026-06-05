@@ -1,0 +1,659 @@
+'use client'
+
+/**
+ * Performance Concerns — manager-initiated workflow that can escalate to a
+ * formal HR Show Cause.
+ *
+ *   1. Manager flags concern → requests 1:1 meeting        (MEETING_REQUESTED)
+ *   2. Meeting outcome logged                              (MEETING_HELD)
+ *   3. Pattern persists → manager escalates to HR          (SHOW_CAUSE_REQUESTED)
+ *   4. HR issues formal Show Cause                         (ISSUED)
+ *   5. Employee responds                                   (RESPONDED)
+ *   6. Resolved or escalated to PIP                        (RESOLVED | ESCALATED_TO_PIP)
+ */
+
+import { useState, useEffect, useCallback } from 'react'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog'
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
+import {
+  Plus, AlertTriangle, ArrowUpCircle, CheckCircle2, MessageSquare,
+  Calendar, FileWarning, ChevronRight, Clock,
+} from 'lucide-react'
+import { formatDate } from '@/lib/utils'
+
+interface Notice {
+  id: string
+  issueType: string
+  status: string
+  occurrenceNo: number
+  // Meeting stage
+  requestedByName: string | null
+  meetingRequestedAt: string | null
+  meetingScheduledFor: string | null
+  meetingConcerns: string | null
+  meetingHeldAt: string | null
+  meetingNotes: string | null
+  // Escalation
+  escalationRequestedAt: string | null
+  escalationReason: string | null
+  // Formal notice
+  issueDate: string | null
+  description: string | null
+  deadline: string | null
+  issuedBy: string | null
+  // Response
+  employeeResponse: string | null
+  responseAt: string | null
+  // Outcome
+  actionPlan: string | null
+  outcome: string | null
+  followUpDate: string | null
+  createdAt: string
+  employee: {
+    id: string
+    employeeCode: string
+    fullName: string
+    department: { name: string } | null
+  }
+}
+
+interface Props {
+  role: 'HR_ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'EXECUTIVE'
+  employeeId: string | null
+  isPreviewMode?: boolean
+}
+
+const ISSUE_TYPES = ['ATTENDANCE', 'MISCONDUCT', 'PERFORMANCE', 'POLICY_VIOLATION', 'OTHER']
+
+const STATUS_META: Record<string, { label: string; tone: 'success' | 'warning' | 'destructive' | 'secondary' | 'default'; icon?: React.ComponentType<{ className?: string }> }> = {
+  MEETING_REQUESTED:     { label: 'Meeting Requested',     tone: 'default',     icon: MessageSquare },
+  MEETING_HELD:          { label: 'Meeting Held',           tone: 'default',     icon: CheckCircle2 },
+  SHOW_CAUSE_REQUESTED:  { label: 'Awaiting HR Review',     tone: 'warning',     icon: ArrowUpCircle },
+  ISSUED:                { label: 'Show Cause Issued',      tone: 'warning',     icon: FileWarning },
+  RESPONDED:             { label: 'Response Received',      tone: 'default',     icon: MessageSquare },
+  RESOLVED:              { label: 'Resolved',                tone: 'success',     icon: CheckCircle2 },
+  ESCALATED_TO_PIP:      { label: 'Escalated to PIP',        tone: 'destructive', icon: AlertTriangle },
+}
+
+const STAGES = [
+  'MEETING_REQUESTED',
+  'MEETING_HELD',
+  'SHOW_CAUSE_REQUESTED',
+  'ISSUED',
+  'RESPONDED',
+  'RESOLVED',
+] as const
+
+export function ShowCausePanel({ role, employeeId, isPreviewMode = false }: Props) {
+  const [notices, setNotices] = useState<Notice[]>([])
+  const [loading, setLoading] = useState(true)
+  const [flagOpen, setFlagOpen] = useState(false)
+  const [selected, setSelected] = useState<Notice | null>(null)
+
+  const isHR = role === 'HR_ADMIN' && !isPreviewMode
+  const isManager = role === 'MANAGER' && !isPreviewMode
+
+  const fetchNotices = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch('/api/performance/show-cause')
+    const data = await res.json()
+    setNotices(data.notices ?? [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { fetchNotices() }, [fetchNotices])
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h2 className="text-lg font-bold text-slate-900">Show Cause</h2>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {isManager
+              ? 'Flag a concern with a direct report → log the meeting outcome → escalate to HR for a formal Show Cause if the pattern persists.'
+              : isHR
+                ? 'Review manager-flagged concerns and issue formal Show Cause Notices.'
+                : 'View any Show Cause matters raised about you and submit your response.'}
+          </p>
+        </div>
+        {(isHR || isManager) && (
+          <Button onClick={() => setFlagOpen(true)}>
+            <Plus className="w-4 h-4 mr-1" /> Flag Concern
+          </Button>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="text-center text-slate-400 py-8 text-sm">Loading…</p>
+      ) : notices.length === 0 ? (
+        <Card>
+          <CardContent className="p-8 text-center text-slate-400">
+            <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-40" />
+            No active Show Cause matters. {isManager && 'Click the button to flag one.'}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-2">
+          {notices.map((n) => (
+            <NoticeCard
+              key={n.id}
+              notice={n}
+              isHR={isHR}
+              isManager={isManager}
+              isOwn={n.employee.id === employeeId}
+              onClick={() => setSelected(n)}
+            />
+          ))}
+        </div>
+      )}
+
+      {flagOpen && (
+        <FlagConcernDialog
+          isHR={isHR}
+          onClose={() => setFlagOpen(false)}
+          onCreated={() => { fetchNotices(); setFlagOpen(false) }}
+        />
+      )}
+
+      {selected && (
+        <NoticeDetailDialog
+          notice={selected}
+          isHR={isHR}
+          isManager={isManager}
+          isOwn={selected.employee.id === employeeId}
+          onClose={() => setSelected(null)}
+          onUpdated={() => { fetchNotices(); setSelected(null) }}
+        />
+      )}
+    </div>
+  )
+}
+
+// ─── Notice card ─────────────────────────────────────────────────────────────
+
+function NoticeCard({ notice, onClick }: {
+  notice: Notice; isHR: boolean; isManager: boolean; isOwn: boolean; onClick: () => void;
+}) {
+  const meta = STATUS_META[notice.status] ?? STATUS_META.MEETING_REQUESTED
+  const Icon = meta.icon ?? MessageSquare
+  const stageIdx = STAGES.indexOf(notice.status as typeof STAGES[number])
+  const totalStages = STAGES.length
+
+  return (
+    <Card>
+      <button onClick={onClick} className="w-full p-4 text-left hover:bg-slate-50/60">
+        <div className="flex items-start justify-between gap-4 mb-2">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className="font-semibold text-slate-900">{notice.employee.fullName}</p>
+              <Badge variant="secondary">{notice.issueType.replace('_', ' ')}</Badge>
+              <Badge variant={meta.tone}><Icon className="w-3 h-3 mr-1 inline" />{meta.label}</Badge>
+              {notice.occurrenceNo > 1 && <span className="text-[10px] text-amber-700 font-semibold">Occurrence #{notice.occurrenceNo}</span>}
+            </div>
+            <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+              {notice.meetingConcerns || notice.description || notice.escalationReason || 'No description'}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-1">
+              {notice.requestedByName && <>Flagged by <strong>{notice.requestedByName}</strong> · </>}
+              {new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </p>
+          </div>
+        </div>
+        {/* Progress dots */}
+        {notice.status !== 'ESCALATED_TO_PIP' && (
+          <div className="flex items-center gap-1 mt-2">
+            {STAGES.map((s, i) => (
+              <div
+                key={s}
+                className={`h-1 flex-1 rounded-full ${
+                  i < stageIdx ? 'bg-emerald-400' : i === stageIdx ? 'bg-blue-500' : 'bg-slate-200'
+                }`}
+                title={STATUS_META[s]?.label ?? s}
+              />
+            ))}
+          </div>
+        )}
+      </button>
+    </Card>
+  )
+}
+
+// ─── Flag dialog ─────────────────────────────────────────────────────────────
+
+function FlagConcernDialog({ isHR, onClose, onCreated }: {
+  isHR: boolean; onClose: () => void; onCreated: () => void;
+}) {
+  const [employees, setEmployees] = useState<{ id: string; fullName: string; employeeCode: string }[]>([])
+  const [employeeId, setEmployeeId] = useState('')
+  const [issueType, setIssueType] = useState('PERFORMANCE')
+  const [meetingConcerns, setMeetingConcerns] = useState('')
+  const [meetingScheduledFor, setMeetingScheduledFor] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/employees?limit=200&status=ACTIVE')
+      .then(r => r.json())
+      .then(d => setEmployees(d.employees ?? d.items ?? []))
+  }, [])
+
+  async function handleFlag() {
+    setError('')
+    if (!employeeId || !meetingConcerns.trim()) {
+      setError('Pick an employee and describe the concerns.')
+      return
+    }
+    setSaving(true)
+    const res = await fetch('/api/performance/show-cause', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employeeId, issueType, meetingConcerns,
+        meetingScheduledFor: meetingScheduledFor || undefined,
+      }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (!res.ok) { setError(data.error ?? 'Failed'); return }
+    onCreated()
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Flag a Show Cause Concern</DialogTitle>
+          <p className="text-xs text-slate-500 mt-1">
+            Records the pattern + schedules a 1:1 meeting. The employee + HR are notified.
+            If the pattern persists after the meeting, you can escalate to a formal Show Cause Notice.
+          </p>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Employee</label>
+            <Select value={employeeId} onValueChange={setEmployeeId}>
+              <SelectTrigger><SelectValue placeholder={isHR ? 'Pick any employee' : 'Pick a direct report'} /></SelectTrigger>
+              <SelectContent>
+                {employees.map(e => (
+                  <SelectItem key={e.id} value={e.id}>{e.fullName} ({e.employeeCode})</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Type</label>
+            <Select value={issueType} onValueChange={setIssueType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {ISSUE_TYPES.map(t => <SelectItem key={t} value={t}>{t.replace('_', ' ')}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">
+              Pattern / concerns observed
+            </label>
+            <textarea
+              value={meetingConcerns}
+              onChange={(e) => setMeetingConcerns(e.target.value)}
+              rows={4}
+              className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+              placeholder="e.g. Missed 3 deadlines in the last 2 weeks (12 May, 14 May, 17 May). Quality of design output has dropped — 2 client revisions on each delivery. Verbal feedback given on 10 May but no improvement."
+            />
+            <p className="text-[11px] text-slate-500 mt-1">Be specific, factual, and dated. This is what you'll discuss in the meeting.</p>
+          </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">
+              Meeting scheduled for (optional)
+            </label>
+            <Input
+              type="datetime-local"
+              value={meetingScheduledFor}
+              onChange={(e) => setMeetingScheduledFor(e.target.value)}
+            />
+            <p className="text-[11px] text-slate-500 mt-1">Workday convention: hold the meeting within a few days.</p>
+          </div>
+
+          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleFlag} disabled={saving}>
+            {saving ? 'Saving…' : 'Flag & Request Meeting'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+// ─── Detail / action dialog ──────────────────────────────────────────────────
+
+function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated }: {
+  notice: Notice; isHR: boolean; isManager: boolean; isOwn: boolean; onClose: () => void; onUpdated: () => void;
+}) {
+  const [activeAction, setActiveAction] = useState<string | null>(null)
+  const [form, setForm] = useState({
+    meetingNotes: notice.meetingNotes ?? '',
+    escalationReason: notice.escalationReason ?? '',
+    description: notice.description ?? '',
+    deadline: notice.deadline?.split('T')[0] ?? '',
+    employeeResponse: notice.employeeResponse ?? '',
+    actionPlan: notice.actionPlan ?? '',
+    outcome: notice.outcome ?? '',
+    followUpDate: '',
+  })
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  async function performAction(action: string, payload: Record<string, unknown>) {
+    setBusy(true); setError('')
+    const res = await fetch(`/api/performance/show-cause/${notice.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, ...payload }),
+    })
+    const data = await res.json()
+    setBusy(false)
+    if (!res.ok) { setError(data.error ?? 'Failed'); return }
+    onUpdated()
+  }
+
+  // Available actions based on current stage + viewer role
+  const actions: { id: string; label: string; tone?: 'primary' | 'success' | 'destructive' }[] = []
+  if (notice.status === 'MEETING_REQUESTED' && (isHR || isManager)) {
+    actions.push({ id: 'LOG_MEETING_OUTCOME', label: '📝 Log meeting outcome', tone: 'primary' })
+  }
+  if (notice.status === 'MEETING_HELD' && (isHR || isManager)) {
+    actions.push({ id: 'RESOLVE', label: '✓ Resolve (improved)', tone: 'success' })
+    actions.push({ id: 'ESCALATE_TO_HR', label: '🚩 Escalate to HR (pattern persists)', tone: 'destructive' })
+  }
+  if (notice.status === 'SHOW_CAUSE_REQUESTED' && isHR) {
+    actions.push({ id: 'ISSUE_FORMAL_NOTICE', label: '⚠️ Issue formal Show Cause', tone: 'destructive' })
+    actions.push({ id: 'RESOLVE', label: '✓ Resolve without formal notice', tone: 'success' })
+  }
+  if (notice.status === 'ISSUED' && isOwn) {
+    actions.push({ id: 'RESPOND', label: '✍️ Submit my response', tone: 'primary' })
+  }
+  if (notice.status === 'RESPONDED' && isHR) {
+    actions.push({ id: 'RESOLVE', label: '✓ Accept response & resolve', tone: 'success' })
+    actions.push({ id: 'ESCALATE_TO_PIP', label: '🚨 Escalate to PIP', tone: 'destructive' })
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <FileWarning className="w-4 h-4 text-amber-600" />
+            Show Cause — {notice.employee.fullName}
+          </DialogTitle>
+          <p className="text-xs text-slate-500 mt-1">
+            {notice.issueType.replace('_', ' ')} · Occurrence #{notice.occurrenceNo} · {STATUS_META[notice.status]?.label ?? notice.status}
+          </p>
+        </DialogHeader>
+
+        {/* Timeline */}
+        <div className="space-y-3 text-sm">
+          {notice.meetingRequestedAt && (
+            <TimelineEntry
+              icon={MessageSquare}
+              tone="blue"
+              title="Concern flagged · meeting requested"
+              by={notice.requestedByName ?? 'Manager'}
+              at={notice.meetingRequestedAt}
+              body={notice.meetingConcerns}
+              extra={notice.meetingScheduledFor && <>Meeting scheduled for <Calendar className="w-3 h-3 inline" /> {new Date(notice.meetingScheduledFor).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</>}
+            />
+          )}
+          {notice.meetingHeldAt && (
+            <TimelineEntry
+              icon={CheckCircle2}
+              tone="emerald"
+              title="Meeting held"
+              by="Manager"
+              at={notice.meetingHeldAt}
+              body={notice.meetingNotes}
+            />
+          )}
+          {notice.escalationRequestedAt && (
+            <TimelineEntry
+              icon={ArrowUpCircle}
+              tone="amber"
+              title="Escalated to HR"
+              by={notice.requestedByName ?? 'Manager'}
+              at={notice.escalationRequestedAt}
+              body={notice.escalationReason}
+            />
+          )}
+          {notice.issueDate && (
+            <TimelineEntry
+              icon={FileWarning}
+              tone="amber"
+              title="Formal Show Cause Notice issued"
+              by={notice.issuedBy ?? 'HR'}
+              at={notice.issueDate}
+              body={notice.description}
+              extra={notice.deadline && <>Response due by <strong>{new Date(notice.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</strong></>}
+            />
+          )}
+          {notice.responseAt && (
+            <TimelineEntry
+              icon={MessageSquare}
+              tone="blue"
+              title="Employee response"
+              by={notice.employee.fullName}
+              at={notice.responseAt}
+              body={notice.employeeResponse}
+            />
+          )}
+          {(notice.outcome || notice.actionPlan) && notice.status === 'RESOLVED' && (
+            <TimelineEntry
+              icon={CheckCircle2}
+              tone="emerald"
+              title="Resolved"
+              by="HR"
+              at={null}
+              body={notice.outcome ?? notice.actionPlan}
+            />
+          )}
+        </div>
+
+        {/* Active action form */}
+        {activeAction && (
+          <div className="border-t border-slate-200 pt-4 mt-4 space-y-3">
+            {activeAction === 'LOG_MEETING_OUTCOME' && (
+              <>
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600">
+                  What was discussed in the meeting?
+                </label>
+                <textarea
+                  value={form.meetingNotes}
+                  onChange={(e) => setForm({ ...form, meetingNotes: e.target.value })}
+                  rows={4}
+                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+                  placeholder="e.g. Discussed specific deadlines missed. Employee acknowledged. Agreed on weekly check-ins for the next month. Will revisit in 2 weeks."
+                />
+                <div className="flex gap-2">
+                  <Button onClick={() => performAction('LOG_MEETING_OUTCOME', { meetingNotes: form.meetingNotes })} disabled={busy}>
+                    {busy ? 'Saving…' : 'Save Meeting Notes'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
+                </div>
+              </>
+            )}
+            {activeAction === 'ESCALATE_TO_HR' && (
+              <>
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600">
+                  Why is the pattern still persisting?
+                </label>
+                <textarea
+                  value={form.escalationReason}
+                  onChange={(e) => setForm({ ...form, escalationReason: e.target.value })}
+                  rows={4}
+                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+                  placeholder="e.g. Despite weekly check-ins agreed on 12 May, missed 2 more deadlines on 19 May and 22 May. No improvement in quality. Requesting formal Show Cause."
+                />
+                <div className="flex gap-2">
+                  <Button onClick={() => performAction('ESCALATE_TO_HR', { escalationReason: form.escalationReason })} disabled={busy} className="bg-amber-600 hover:bg-amber-700 text-white">
+                    {busy ? 'Escalating…' : 'Send to HR for Show Cause'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
+                </div>
+              </>
+            )}
+            {activeAction === 'ISSUE_FORMAL_NOTICE' && (
+              <>
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600">Formal notice text</label>
+                <textarea
+                  value={form.description || `${notice.meetingConcerns ?? ''}\n\n${notice.escalationReason ?? ''}`.trim()}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={5}
+                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+                />
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600">Response deadline</label>
+                <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
+                <div className="flex gap-2">
+                  <Button
+                    onClick={() => performAction('ISSUE_FORMAL_NOTICE', {
+                      description: form.description || `${notice.meetingConcerns ?? ''}\n\n${notice.escalationReason ?? ''}`.trim(),
+                      deadline: form.deadline,
+                    })}
+                    disabled={busy}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    {busy ? 'Issuing…' : 'Issue Show Cause Notice'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
+                </div>
+              </>
+            )}
+            {activeAction === 'RESPOND' && (
+              <>
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600">Your response</label>
+                <textarea
+                  value={form.employeeResponse}
+                  onChange={(e) => setForm({ ...form, employeeResponse: e.target.value })}
+                  rows={6}
+                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+                  placeholder="Explain your side, any mitigating circumstances, and your plan to address the concerns."
+                />
+                <div className="flex gap-2">
+                  <Button onClick={() => performAction('RESPOND', { employeeResponse: form.employeeResponse })} disabled={busy}>
+                    {busy ? 'Submitting…' : 'Submit Response'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
+                </div>
+              </>
+            )}
+            {activeAction === 'RESOLVE' && (
+              <>
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600">Outcome / resolution</label>
+                <textarea
+                  value={form.outcome}
+                  onChange={(e) => setForm({ ...form, outcome: e.target.value })}
+                  rows={3}
+                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+                  placeholder="e.g. Employee has shown clear improvement in the last 4 weeks. Closing the matter."
+                />
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600">Action plan (optional)</label>
+                <textarea
+                  value={form.actionPlan}
+                  onChange={(e) => setForm({ ...form, actionPlan: e.target.value })}
+                  rows={2}
+                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+                  placeholder="Any ongoing support / coaching to continue."
+                />
+                <div className="flex gap-2">
+                  <Button onClick={() => performAction('RESOLVE', { outcome: form.outcome, actionPlan: form.actionPlan })} disabled={busy} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                    {busy ? 'Resolving…' : 'Resolve'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
+                </div>
+              </>
+            )}
+            {activeAction === 'ESCALATE_TO_PIP' && (
+              <>
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600">Action plan</label>
+                <textarea
+                  value={form.actionPlan}
+                  onChange={(e) => setForm({ ...form, actionPlan: e.target.value })}
+                  rows={3}
+                  className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+                  placeholder="Outline the PIP scope — measurable goals, timeline, support, consequences."
+                />
+                <div className="flex gap-2">
+                  <Button onClick={() => performAction('ESCALATE_TO_PIP', { actionPlan: form.actionPlan })} disabled={busy} className="bg-red-600 hover:bg-red-700 text-white">
+                    {busy ? 'Escalating…' : 'Escalate to PIP'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
+                </div>
+              </>
+            )}
+            {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+          </div>
+        )}
+
+        {/* Action buttons */}
+        {!activeAction && actions.length > 0 && (
+          <div className="border-t border-slate-200 pt-4 mt-4 flex flex-wrap gap-2">
+            {actions.map(a => (
+              <Button
+                key={a.id}
+                onClick={() => setActiveAction(a.id)}
+                variant={a.tone === 'primary' ? 'default' : 'outline'}
+                className={
+                  a.tone === 'success'    ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' :
+                  a.tone === 'destructive'? 'border-red-200 text-red-700 hover:bg-red-50' :
+                  ''
+                }
+              >
+                {a.label}
+              </Button>
+            ))}
+          </div>
+        )}
+
+        <DialogFooter className="border-t border-slate-200 pt-3 mt-4">
+          <Button variant="outline" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function TimelineEntry({ icon: Icon, tone, title, by, at, body, extra }: {
+  icon: React.ComponentType<{ className?: string }>; tone: 'blue' | 'emerald' | 'amber';
+  title: string; by: string; at: string | null;
+  body: string | null; extra?: React.ReactNode;
+}) {
+  const tones = {
+    blue:    'bg-blue-50 border-blue-200 text-blue-900',
+    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+    amber:   'bg-amber-50 border-amber-200 text-amber-900',
+  }
+  return (
+    <div className={`border-l-4 rounded-r-md p-3 ${tones[tone]}`}>
+      <div className="flex items-center gap-2 mb-1">
+        <Icon className="w-3.5 h-3.5" />
+        <p className="text-sm font-semibold">{title}</p>
+        <span className="text-[11px] opacity-70 ml-auto">
+          {by}{at && ` · ${new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+        </span>
+      </div>
+      {body && <p className="text-sm whitespace-pre-line opacity-90">{body}</p>}
+      {extra && <p className="text-xs mt-1 opacity-80">{extra}</p>}
+    </div>
+  )
+}
