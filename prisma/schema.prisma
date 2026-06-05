@@ -2,8 +2,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// Production: Postgres (Vercel Postgres / Neon / Supabase / self-hosted).
+// Local dev: also Postgres — see scripts/setup-local-postgres.md, or run a
+// Postgres container with `docker run -p 5432:5432 ...`. SQLite was used
+// during early development but Vercel's serverless functions have an
+// ephemeral filesystem, so we moved off it.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
