@@ -174,11 +174,40 @@ model Employee {
   trustedDevices      TrustedDevice[]
   journeys            EmployeeJourney[]
   emailDrafts         EmailDraft[]
+  letterRequests      LetterRequest[]
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   @@map("employees")
+}
+
+// ─── DOCUMENTS & LETTERS ──────────────────────────────────────────────────────
+// Self-serve formal letter issuance: employees request, HR reviews & generates.
+
+model LetterRequest {
+  id                 String    @id @default(cuid())
+  letterNumber       String?   @unique           // CON-LTR-YYYY-NNN, assigned on approval
+  employeeId         String
+  employee           Employee  @relation(fields: [employeeId], references: [id])
+  letterType         String    // EXPERIENCE | SALARY_CERTIFICATE | NOC_VISA | BONAFIDE | RELIEVING
+  purpose            String?   // free text: "for HBL home loan application"
+  destinationCountry String?   // for NOC_VISA
+  bankName           String?   // for SALARY_CERTIFICATE
+  travelFrom         DateTime? // for NOC_VISA
+  travelTo           DateTime? // for NOC_VISA
+  status             String    @default("PENDING") // PENDING | APPROVED | REJECTED | GENERATED
+  rejectionReason    String?
+  requestedAt        DateTime  @default(now())
+  reviewedAt         DateTime?
+  reviewedById       String?   // userId of HR admin
+  signedByName       String?   // who signs on company side
+  signedByTitle      String?
+  letterBody         String?   // generated text snapshot
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("letter_requests")
 }
 
 // ─── ATTENDANCE ───────────────────────────────────────────────────────────────

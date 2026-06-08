@@ -1,0 +1,194 @@
+// Letter template generator for formal HR letters.
+// Pure functions only — no Prisma, no I/O. The route fetches data + calls here
+// to produce the snapshot stored on LetterRequest.letterBody.
+
+export const LETTER_TYPES = [
+  'EXPERIENCE',
+  'SALARY_CERTIFICATE',
+  'NOC_VISA',
+  'BONAFIDE',
+  'RELIEVING',
+] as const
+export type LetterType = (typeof LETTER_TYPES)[number]
+
+export const LETTER_TYPE_LABEL: Record<LetterType, string> = {
+  EXPERIENCE: 'Experience Letter',
+  SALARY_CERTIFICATE: 'Salary Certificate',
+  NOC_VISA: 'NOC for Visa',
+  BONAFIDE: 'Bonafide / Employment Verification',
+  RELIEVING: 'Relieving Letter',
+}
+
+export const COMPANY = {
+  name: 'Convertt',
+  address: 'Mega Tower, Gulberg III, Lahore',
+  website: 'convertt.co',
+}
+
+export interface LetterEmployeeInput {
+  fullName: string
+  employeeCode: string
+  designation: string
+  joiningDate: Date
+  exitDate?: Date | null
+  cnic?: string | null
+  department?: string | null
+  basicSalary?: number | null   // monthly basic — fallback
+  grossSalary?: number | null   // from latest payslip — preferred for salary certs
+  bankName?: string | null
+  bankAccount?: string | null
+}
+
+export interface LetterRequestInput {
+  letterNumber?: string | null
+  letterType: LetterType | string
+  purpose?: string | null
+  destinationCountry?: string | null
+  bankName?: string | null
+  travelFrom?: Date | null
+  travelTo?: Date | null
+}
+
+export interface SignedBy {
+  name: string
+  title: string
+}
+
+export interface GeneratedLetter {
+  subject: string
+  body: string
+}
+
+function fmtDate(d: Date | string | null | undefined): string {
+  if (!d) return '—'
+  const date = typeof d === 'string' ? new Date(d) : d
+  return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+}
+
+function fmtPkr(n: number | null | undefined): string {
+  if (n == null) return '—'
+  return `PKR ${Math.round(n).toLocaleString('en-PK')}/-`
+}
+
+export function generateLetter(
+  type: LetterType | string,
+  employee: LetterEmployeeInput,
+  request: LetterRequestInput,
+  signedBy: SignedBy,
+): GeneratedLetter {
+  const today = fmtDate(new Date())
+  const joining = fmtDate(employee.joiningDate)
+  const sign = `For ${COMPANY.name},\n\n${signedBy.name}\n${signedBy.title}\nDate: ${today}`
+
+  switch (type) {
+    case 'EXPERIENCE': {
+      const exit = employee.exitDate ? fmtDate(employee.exitDate) : 'present'
+      return {
+        subject: 'Experience Letter',
+        body: [
+          `TO WHOM IT MAY CONCERN`,
+          ``,
+          `This is to certify that Mr./Ms. ${employee.fullName} (Employee Code: ${employee.employeeCode}${employee.cnic ? `, CNIC: ${employee.cnic}` : ''}) was associated with ${COMPANY.name} as ${employee.designation}${employee.department ? ` in the ${employee.department} department` : ''} from ${joining} to ${exit}.`,
+          ``,
+          `During their tenure with us, ${employee.fullName.split(' ')[0]} demonstrated professionalism, commitment, and a strong work ethic. Their contribution to the team and the organisation has been valuable.`,
+          ``,
+          `We wish them every success in their future endeavours.`,
+          ``,
+          `This letter is issued on the employee's request${request.purpose ? ` ${request.purpose}` : ''}.`,
+          ``,
+          sign,
+        ].join('\n'),
+      }
+    }
+
+    case 'SALARY_CERTIFICATE': {
+      const monthly = employee.grossSalary ?? employee.basicSalary ?? null
+      const bank = request.bankName ?? employee.bankName ?? null
+      return {
+        subject: 'Salary Certificate',
+        body: [
+          `TO WHOM IT MAY CONCERN${bank ? ` (${bank})` : ''}`,
+          ``,
+          `This is to certify that Mr./Ms. ${employee.fullName} (Employee Code: ${employee.employeeCode}${employee.cnic ? `, CNIC: ${employee.cnic}` : ''}) is a permanent/active employee of ${COMPANY.name}, working as ${employee.designation}${employee.department ? ` in the ${employee.department} department` : ''} since ${joining}.`,
+          ``,
+          `Their current monthly gross salary is ${fmtPkr(monthly)} (Pak Rupees ${monthly != null ? Math.round(monthly).toLocaleString('en-PK') : '—'} only).`,
+          ``,
+          `This certificate has been issued on the employee's request${request.purpose ? ` ${request.purpose}` : ''} and is valid for thirty (30) days from the date of issuance.`,
+          ``,
+          `${COMPANY.name} bears no financial liability against the use of this certificate.`,
+          ``,
+          sign,
+        ].join('\n'),
+      }
+    }
+
+    case 'NOC_VISA': {
+      const country = request.destinationCountry ?? '—'
+      const from = fmtDate(request.travelFrom)
+      const to = fmtDate(request.travelTo)
+      return {
+        subject: `No Objection Certificate — Visa (${country})`,
+        body: [
+          `TO THE CONSULATE / EMBASSY OF ${country.toUpperCase()}`,
+          ``,
+          `Subject: No Objection Certificate for Visa`,
+          ``,
+          `Dear Sir/Madam,`,
+          ``,
+          `This letter is to confirm that Mr./Ms. ${employee.fullName} (Employee Code: ${employee.employeeCode}${employee.cnic ? `, CNIC: ${employee.cnic}` : ''}) is a full-time employee of ${COMPANY.name}, working as ${employee.designation}${employee.department ? ` in the ${employee.department} department` : ''} since ${joining}.`,
+          ``,
+          `${COMPANY.name} has no objection to ${employee.fullName.split(' ')[0]} travelling to ${country} from ${from} to ${to}${request.purpose ? ` ${request.purpose}` : ''}.`,
+          ``,
+          `Their employment with ${COMPANY.name} is intact and they will resume their duties on return. All travel-related expenses are borne by the employee.`,
+          ``,
+          `Should you require any further information, please feel free to contact us at ${COMPANY.website}.`,
+          ``,
+          sign,
+        ].join('\n'),
+      }
+    }
+
+    case 'BONAFIDE': {
+      return {
+        subject: 'Employment Verification Letter',
+        body: [
+          `TO WHOM IT MAY CONCERN`,
+          ``,
+          `This letter is to confirm that Mr./Ms. ${employee.fullName} (Employee Code: ${employee.employeeCode}${employee.cnic ? `, CNIC: ${employee.cnic}` : ''}) is a bonafide employee of ${COMPANY.name}, working as ${employee.designation}${employee.department ? ` in the ${employee.department} department` : ''} since ${joining}.`,
+          ``,
+          `This letter has been issued on the employee's request${request.purpose ? ` ${request.purpose}` : ''}.`,
+          ``,
+          `For any verification, please contact us at ${COMPANY.website}.`,
+          ``,
+          sign,
+        ].join('\n'),
+      }
+    }
+
+    case 'RELIEVING': {
+      const last = employee.exitDate ? fmtDate(employee.exitDate) : fmtDate(new Date())
+      return {
+        subject: 'Relieving Letter',
+        body: [
+          `TO WHOM IT MAY CONCERN`,
+          ``,
+          `This is to certify that Mr./Ms. ${employee.fullName} (Employee Code: ${employee.employeeCode}${employee.cnic ? `, CNIC: ${employee.cnic}` : ''}) was employed with ${COMPANY.name} as ${employee.designation}${employee.department ? ` in the ${employee.department} department` : ''} from ${joining} until ${last}.`,
+          ``,
+          `${employee.fullName.split(' ')[0]} has duly completed all exit formalities and there are no dues or outstanding obligations pending against them at the time of leaving the organisation.`,
+          ``,
+          `We hereby relieve them of all duties and responsibilities effective ${last}.`,
+          ``,
+          `We thank ${employee.fullName.split(' ')[0]} for their service and wish them success in their future endeavours.`,
+          ``,
+          sign,
+        ].join('\n'),
+      }
+    }
+
+    default:
+      return {
+        subject: 'Letter',
+        body: `Unknown letter type: ${type}`,
+      }
+  }
+}

@@ -34,6 +34,7 @@ import {
   ShieldCheck,
   Sprout,
   Heart,
+  FileText,
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import AIChatbot from '@/components/ai-chatbot'
@@ -61,6 +62,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/attendance',   // legacy redirect — keep allowed so old bookmarks resolve
   '/dashboard/leave',        // legacy redirect — keep allowed so old bookmarks resolve
   '/dashboard/policies',
+  '/dashboard/letters',      // Documents & Letters
   '/dashboard/employees',    // People
   '/dashboard/payroll',      // Payroll
   '/dashboard/recruiting',   // Hiring / Recruiting — now in active polishing
@@ -94,6 +96,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'Talent',
       items: [
         { href: '/dashboard/performance', label: 'Performance', icon: TrendingUp },
+        { href: '/dashboard/letters', label: 'Letters', icon: FileText },
         { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
         { href: '/dashboard/learning', label: 'Learning & Dev', icon: GraduationCap },
@@ -131,6 +134,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/employees', label: 'Team Members', icon: Users },
         { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
+        { href: '/dashboard/letters', label: 'Letters', icon: FileText },
       ],
     },
     {
@@ -164,6 +168,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'My Growth',
       items: [
         { href: '/dashboard/performance', label: 'My Reviews', icon: TrendingUp },
+        { href: '/dashboard/letters', label: 'Letters', icon: FileText },
         { href: '/dashboard/learning', label: 'My Learning', icon: GraduationCap },
       ],
     },

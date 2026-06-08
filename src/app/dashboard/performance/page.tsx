@@ -14,7 +14,7 @@ import { OpenCycleButton } from '@/components/performance/open-cycle-button'
 import { ShowCausePanel } from '@/components/performance/show-cause-panel'
 import { PipPanel } from '@/components/performance/pip-panel'
 import { PerformanceAnalytics } from '@/components/performance/analytics-panel'
-import { TrendingUp, ExternalLink } from 'lucide-react'
+import { TrendingUp, ExternalLink, ClipboardCheck, ArrowRight } from 'lucide-react'
 
 export default async function PerformancePage() {
   const cookieStore = await cookies()
@@ -105,6 +105,38 @@ export default async function PerformancePage() {
         {/* REVIEWS TAB — Step 2 */}
         <TabsContent value="reviews">
           <div className="space-y-4">
+            {/* Self-review CTA — surfaces the most-recent pending self-appraisal */}
+            {role === 'EMPLOYEE' && employeeId && (() => {
+              const myPending = reviews.find(
+                (r) => r.employeeId === employeeId && r.status === 'PENDING',
+              )
+              if (!myPending) return null
+              return (
+                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 p-5">
+                  <div className="flex items-start justify-between gap-4 flex-wrap">
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-full bg-blue-600/10 p-2.5">
+                        <ClipboardCheck className="w-5 h-5 text-blue-700" />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-semibold text-gray-900">Complete Your Self-Review</h3>
+                        <p className="text-sm text-gray-600 mt-1">
+                          Your <strong>{myPending.reviewType.replace('_', ' ')}</strong> review for{' '}
+                          <strong>{myPending.reviewPeriod}</strong> is open. Rate your performance and share your achievements so your manager can review.
+                        </p>
+                      </div>
+                    </div>
+                    <Link href={`/dashboard/performance/${myPending.id}`}>
+                      <Button>
+                        Start Self-Review
+                        <ArrowRight className="w-4 h-4" />
+                      </Button>
+                    </Link>
+                  </div>
+                </Card>
+              )
+            })()}
+
             <div className="flex items-center justify-between flex-wrap gap-2">
               <div>
                 <h2 className="text-lg font-semibold text-gray-900">Performance Reviews</h2>
