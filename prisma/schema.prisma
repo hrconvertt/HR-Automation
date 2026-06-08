@@ -584,6 +584,8 @@ model PerformanceReview {
   ownershipScore    Float?
   communicationScore Float?
   reliabilityScore  Float?
+  initiativeScore   Float?
+  adaptabilityScore Float?
   behavioralAvg     Float?
   individualScore   Float?
   teamScore         Float?
@@ -900,6 +902,10 @@ model JobRequisition {
   jdApprovedAt   DateTime?
   jdApprovedById String?
 
+  // Per-role score threshold (0-100). Candidates scoring at/above
+  // this number qualify for auto talent-pool inclusion. Default 60.
+  scoreThreshold Int        @default(60)
+
   candidates     Candidate[]
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
@@ -950,6 +956,7 @@ model Interview {
   scheduledAt   DateTime
   duration      Int       // minutes
   interviewerIds String?  // JSON array of employee IDs
+  meetingLink   String?   // Optional Google Meet / Zoom URL — HR pastes manually
   feedback      String?
   rating        Float?
   result        String?   // PASS | FAIL | HOLD

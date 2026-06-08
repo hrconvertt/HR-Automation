@@ -30,6 +30,8 @@ interface Review {
   ownershipScore: number | null
   communicationScore: number | null
   reliabilityScore: number | null
+  initiativeScore: number | null
+  adaptabilityScore: number | null
   behavioralAvg: number | null
   individualScore: number | null
   teamScore: number | null
@@ -104,6 +106,8 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
     ownershipScore: review.ownershipScore?.toString() ?? '',
     communicationScore: review.communicationScore?.toString() ?? '',
     reliabilityScore: review.reliabilityScore?.toString() ?? '',
+    initiativeScore: review.initiativeScore?.toString() ?? '',
+    adaptabilityScore: review.adaptabilityScore?.toString() ?? '',
     teamScore: review.teamScore?.toString() ?? '',
     managerFeedback: review.managerFeedback ?? '',
 
@@ -190,6 +194,8 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
       if (form.ownershipScore)     body.ownershipScore     = Number(form.ownershipScore)
       if (form.communicationScore) body.communicationScore = Number(form.communicationScore)
       if (form.reliabilityScore)   body.reliabilityScore   = Number(form.reliabilityScore)
+      if (form.initiativeScore)    body.initiativeScore    = Number(form.initiativeScore)
+      if (form.adaptabilityScore)  body.adaptabilityScore  = Number(form.adaptabilityScore)
       if (form.teamScore)          body.teamScore          = Number(form.teamScore)
       body.managerFeedback = form.managerFeedback
       // Manager's goal assessments — overrides employee's self-rating if provided
@@ -370,6 +376,8 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
                     <FormSelect label="Ownership"     value={form.ownershipScore}     onChange={(v) => setForm({ ...form, ownershipScore: v })}     options={RATING_OPTIONS} compact />
                     <FormSelect label="Communication" value={form.communicationScore} onChange={(v) => setForm({ ...form, communicationScore: v })} options={RATING_OPTIONS} compact />
                     <FormSelect label="Reliability"   value={form.reliabilityScore}   onChange={(v) => setForm({ ...form, reliabilityScore: v })}   options={RATING_OPTIONS} compact />
+                    <FormSelect label="Initiative"    value={form.initiativeScore}    onChange={(v) => setForm({ ...form, initiativeScore: v })}    options={RATING_OPTIONS} compact />
+                    <FormSelect label="Adaptability"  value={form.adaptabilityScore}  onChange={(v) => setForm({ ...form, adaptabilityScore: v })}  options={RATING_OPTIONS} compact />
                   </div>
                 </div>
 
@@ -409,6 +417,8 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
                   ['Ownership', review.ownershipScore != null ? `${review.ownershipScore}/5` : '—'],
                   ['Communication', review.communicationScore != null ? `${review.communicationScore}/5` : '—'],
                   ['Reliability', review.reliabilityScore != null ? `${review.reliabilityScore}/5` : '—'],
+                  ['Initiative', review.initiativeScore != null ? `${review.initiativeScore}/5` : '—'],
+                  ['Adaptability', review.adaptabilityScore != null ? `${review.adaptabilityScore}/5` : '—'],
                   ['Behavioral Avg', review.behavioralAvg != null ? `${review.behavioralAvg}/5` : '—'],
                   ['Individual Score', review.individualScore != null ? `${review.individualScore}/5` : '—'],
                   ['Team Score', review.teamScore != null ? `${review.teamScore}/5` : '—'],

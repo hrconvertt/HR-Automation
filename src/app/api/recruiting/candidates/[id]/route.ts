@@ -35,7 +35,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const c = await prisma.candidate.findUnique({
     where: { id },
-    include: { requisition: { select: { title: true, type: true } } },
+    include: { requisition: { select: { title: true, type: true, scoreThreshold: true } } },
   })
   if (!c) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
 
@@ -43,7 +43,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   // Auto-pool on rejection if score is strong enough — keeps the
   // candidate around for future requisitions instead of disappearing.
-  if (stage === 'REJECTED' && !c.inTalentPool && shouldAutoPool(c)) {
+  if (stage === 'REJECTED' && !c.inTalentPool && shouldAutoPool(c, c.requisition.scoreThreshold ?? 60)) {
     const tags = autoTags(c, c.requisition)
     await prisma.candidate.update({
       where: { id },

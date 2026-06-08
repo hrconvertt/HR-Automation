@@ -73,7 +73,8 @@ export function freshnessTag(updatedAt: Date): 'Hot' | 'Warm' | 'Cold' {
   return 'Cold'
 }
 
-/** Decide whether to auto-add a candidate to the pool on rejection. */
-export function shouldAutoPool(c: CandidateLike): boolean {
-  return (c.matchScore ?? 0) >= 60
+/** Decide whether to auto-add a candidate to the pool on rejection.
+ *  Threshold is per-role (JobRequisition.scoreThreshold, default 60). */
+export function shouldAutoPool(c: CandidateLike, threshold = 60): boolean {
+  return (c.matchScore ?? 0) >= threshold
 }

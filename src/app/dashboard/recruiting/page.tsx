@@ -103,7 +103,8 @@ const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'war
   FAIL: 'destructive',
 }
 
-export default async function RecruitingPage() {
+export default async function RecruitingPage({ searchParams }: { searchParams?: Promise<{ tab?: string; stage?: string }> }) {
+  const sp = (await searchParams) ?? {}
   const { role, myEmployeeId } = await resolveContext()
   const { requisitions, candidates, interviews, offers, poolCandidates } = await getData()
 
@@ -148,7 +149,13 @@ export default async function RecruitingPage() {
             → Pipeline (candidates flowing through stages) → Interviews → Offers.
           Default tab is the earliest place that needs attention: Requests
           if HR has pending ones, otherwise Pipeline. */}
-      <Tabs defaultValue={isHR && pendingRequests.length > 0 ? 'requests' : 'pipeline'}>
+      <Tabs defaultValue={
+        sp.tab && ['requests','requisitions','pipeline','pool','interviews','offers'].includes(sp.tab)
+          ? sp.tab
+          : sp.stage
+            ? 'pipeline'
+            : (isHR && pendingRequests.length > 0 ? 'requests' : 'pipeline')
+      }>
         <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex">
           <TabsTrigger value="requests">
             Requests

@@ -87,6 +87,20 @@ async function getManagerData(managerEmployeeId: string) {
     }),
   ])
 
+  // Probation decisions needed: settling check-ins due + UNDER_REVIEW awaiting manager
+  const day30 = new Date(today); day30.setDate(day30.getDate() - 30)
+  const probationItems = await prisma.probationRecord.findMany({
+    where: {
+      employeeId: { in: teamIds },
+      OR: [
+        { settlingCheckInAt: null, startDate: { lte: day30 } },
+        { status: 'UNDER_REVIEW', managerSubmittedAt: null },
+      ],
+    },
+    include: { employee: { select: { id: true, fullName: true } } },
+    take: 10,
+  })
+
   const totalOT = teamOTLogs.reduce((s, l) => s + (l.overtimeHours ?? 0), 0)
   const attendanceMap = new Map<string, (typeof todayAttendance)[number]>()
   for (const a of todayAttendance) attendanceMap.set(a.employeeId, a)
@@ -114,6 +128,7 @@ async function getManagerData(managerEmployeeId: string) {
     onLeaveSet,
     upcomingReviews,
     birthdays,
+    probationItems,
   }
 }
 
@@ -281,6 +296,37 @@ export async function ManagerDashboard({
           </Card>
         </div>
       </div>
+
+      {/* Probation Decisions Needed */}
+      {data.probationItems.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Probation Decisions Needed</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              {data.probationItems.map((p) => {
+                const needsCheckIn = p.settlingCheckInAt == null
+                const needsDecision = p.status === 'UNDER_REVIEW' && p.managerSubmittedAt == null
+                const label = needsCheckIn ? 'Settling check-in due' : needsDecision ? 'Decision needed' : 'Review'
+                return (
+                  <Link
+                    key={p.id}
+                    href={`/dashboard/probation/${p.id}`}
+                    className="flex items-center justify-between gap-3 py-2 px-3 -mx-2 rounded-lg hover:bg-amber-50 transition border border-amber-100 bg-amber-50/40"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{p.employee.fullName}</p>
+                      <p className="text-xs text-amber-700">{label}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-amber-700 flex-shrink-0">Submit →</span>
+                  </Link>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Upcoming Team Reviews */}

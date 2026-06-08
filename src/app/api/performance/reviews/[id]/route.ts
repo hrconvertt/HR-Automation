@@ -68,6 +68,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     scrubbed.ownershipScore = null
     scrubbed.communicationScore = null
     scrubbed.reliabilityScore = null
+    scrubbed.initiativeScore = null
+    scrubbed.adaptabilityScore = null
     scrubbed.behavioralAvg = null
     scrubbed.individualScore = null
     scrubbed.teamScore = null
@@ -85,6 +87,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     scrubbed.ownershipScore = null
     scrubbed.communicationScore = null
     scrubbed.reliabilityScore = null
+    scrubbed.initiativeScore = null
+    scrubbed.adaptabilityScore = null
     scrubbed.behavioralAvg = null
     scrubbed.individualScore = null
     scrubbed.teamScore = null
@@ -177,17 +181,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body.ownershipScore !== undefined) data.ownershipScore = Number(body.ownershipScore)
     if (body.communicationScore !== undefined) data.communicationScore = Number(body.communicationScore)
     if (body.reliabilityScore !== undefined) data.reliabilityScore = Number(body.reliabilityScore)
+    if (body.initiativeScore !== undefined) data.initiativeScore = Number(body.initiativeScore)
+    if (body.adaptabilityScore !== undefined) data.adaptabilityScore = Number(body.adaptabilityScore)
     if (body.individualScore !== undefined) data.individualScore = Number(body.individualScore)
     if (body.teamScore !== undefined) data.teamScore = Number(body.teamScore)
     if (body.managerFeedback !== undefined) data.managerFeedback = body.managerFeedback
 
-    // Auto-compute behavioralAvg
-    const t = body.teamworkScore ?? review.teamworkScore
-    const o = body.ownershipScore ?? review.ownershipScore
-    const c = body.communicationScore ?? review.communicationScore
-    const r = body.reliabilityScore ?? review.reliabilityScore
-    if (t != null && o != null && c != null && r != null) {
-      data.behavioralAvg = Math.round(((Number(t)+Number(o)+Number(c)+Number(r))/4) * 100) / 100
+    // Auto-compute behavioralAvg across all 6 dimensions when any are present
+    const dims = [
+      body.teamworkScore ?? review.teamworkScore,
+      body.ownershipScore ?? review.ownershipScore,
+      body.communicationScore ?? review.communicationScore,
+      body.reliabilityScore ?? review.reliabilityScore,
+      body.initiativeScore ?? review.initiativeScore,
+      body.adaptabilityScore ?? review.adaptabilityScore,
+    ].filter((x) => x != null).map(Number)
+    if (dims.length > 0) {
+      data.behavioralAvg = Math.round((dims.reduce((a, b) => a + b, 0) / dims.length) * 100) / 100
     }
 
     // Update goals with manager comments + auto-compute individual score

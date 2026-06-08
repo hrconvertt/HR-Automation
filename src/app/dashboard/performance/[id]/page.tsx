@@ -139,6 +139,8 @@ export default async function ReviewDetailPage({ params }: PageProps) {
           ownershipScore: review.ownershipScore,
           communicationScore: review.communicationScore,
           reliabilityScore: review.reliabilityScore,
+          initiativeScore: review.initiativeScore,
+          adaptabilityScore: review.adaptabilityScore,
           behavioralAvg: review.behavioralAvg,
           individualScore: review.individualScore,
           teamScore: review.teamScore,

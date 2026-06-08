@@ -70,6 +70,17 @@ async function getEmployeeData(employeeId: string) {
     }),
   ])
 
+  // My probation — show only while still in-progress
+  const myProbation = await prisma.probationRecord.findFirst({
+    where: { employeeId, status: { in: ['ACTIVE', 'UNDER_REVIEW'] } },
+    orderBy: { startDate: 'desc' },
+    select: {
+      id: true, startDate: true, endDate: true, status: true,
+      settlingCheckInAt: true, settlingFlag: true,
+      managerSubmittedAt: true, hrDecidedAt: true, outcomeEnactedAt: true,
+    },
+  })
+
   return {
     employee,
     todayAttendance,
@@ -78,6 +89,7 @@ async function getEmployeeData(employeeId: string) {
     pendingPolicies,
     pendingLeaves,
     announcements,
+    myProbation,
   }
 }
 
@@ -136,6 +148,59 @@ export async function EmployeeDashboard({
           {emp?.department?.name ? ` · ${emp.department.name}` : ''}
         </p>
       </div>
+
+      {/* My Probation — only while in-progress */}
+      {data.myProbation && (() => {
+        const p = data.myProbation
+        const total = Math.max(1, Math.ceil((p.endDate.getTime() - p.startDate.getTime()) / 86400_000))
+        const remaining = Math.ceil((p.endDate.getTime() - Date.now()) / 86400_000)
+        const elapsed = total - remaining
+        const pct = Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)))
+        const toneText = remaining < 0 ? 'text-rose-700' : remaining <= 14 ? 'text-amber-700' : 'text-emerald-700'
+        const toneBg   = remaining < 0 ? 'bg-rose-500'  : remaining <= 14 ? 'bg-amber-500'  : 'bg-emerald-500'
+        const stepDone = (cond: unknown) => cond ? 'text-emerald-600' : 'text-gray-300'
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>My Probation</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-baseline justify-between mb-2">
+                <p className={`text-3xl font-bold ${toneText} tabular-nums`}>
+                  {remaining < 0 ? `${Math.abs(remaining)}d overdue` : `${remaining}d remaining`}
+                </p>
+                <p className="text-xs text-gray-500">
+                  {formatDate(p.startDate)} → {formatDate(p.endDate)}
+                </p>
+              </div>
+              <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                <div className={`h-full ${toneBg}`} style={{ width: `${pct}%` }} />
+              </div>
+              <div className="mt-4 grid grid-cols-4 gap-2 text-[11px]">
+                <div className="text-center">
+                  <CheckCircle2 className={`w-4 h-4 mx-auto ${stepDone(true)}`} />
+                  <p className="mt-1 text-gray-600">Hired</p>
+                </div>
+                <div className="text-center">
+                  <CheckCircle2 className={`w-4 h-4 mx-auto ${stepDone(p.settlingCheckInAt)}`} />
+                  <p className="mt-1 text-gray-600">Settling check-in</p>
+                </div>
+                <div className="text-center">
+                  <CheckCircle2 className={`w-4 h-4 mx-auto ${stepDone(p.status === 'UNDER_REVIEW' || p.outcomeEnactedAt)}`} />
+                  <p className="mt-1 text-gray-600">Decision</p>
+                </div>
+                <div className="text-center">
+                  <CheckCircle2 className={`w-4 h-4 mx-auto ${stepDone(p.outcomeEnactedAt)}`} />
+                  <p className="mt-1 text-gray-600">Outcome</p>
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-500 mt-4">
+                Your manager and HR will share the outcome with you once finalized.
+              </p>
+            </CardContent>
+          </Card>
+        )
+      })()}
 
       {/* Today's Status */}
       <Card>

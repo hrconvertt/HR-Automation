@@ -20,10 +20,27 @@ function startOfToday(): Date {
   const d = new Date(); d.setHours(0,0,0,0); return d
 }
 
+// 2026 Pakistan public holidays (approximate — moon-sighted dates may shift)
+const PK_HOLIDAYS_2026: { date: string; name: string }[] = [
+  { date: '2026-02-05', name: 'Kashmir Day' },
+  { date: '2026-03-20', name: 'Eid-ul-Fitr (est.)' },
+  { date: '2026-03-21', name: 'Eid-ul-Fitr (est.)' },
+  { date: '2026-03-23', name: 'Pakistan Day' },
+  { date: '2026-05-01', name: 'Labour Day' },
+  { date: '2026-05-27', name: 'Eid-ul-Adha (est.)' },
+  { date: '2026-05-28', name: 'Eid-ul-Adha (est.)' },
+  { date: '2026-08-14', name: 'Independence Day' },
+  { date: '2026-09-15', name: 'Ashura (est.)' },
+  { date: '2026-11-09', name: 'Iqbal Day' },
+  { date: '2026-11-24', name: 'Eid Milad-un-Nabi (est.)' },
+  { date: '2026-12-25', name: 'Quaid-e-Azam Day' },
+]
+
 async function loadData() {
   const today = startOfToday()
   const in7   = new Date(today); in7.setDate(in7.getDate() + 7)
   const in14  = new Date(today); in14.setDate(in14.getDate() + 14)
+  const in30  = new Date(today); in30.setDate(in30.getDate() + 30)
   const last7 = new Date(today); last7.setDate(last7.getDate() - 7)
   const now = new Date()
   const month = now.getMonth() + 1
@@ -70,20 +87,85 @@ async function loadData() {
   const anniversariesToday = activeEmployeesForAnniversary.filter((e) =>
     e.joiningDate.getMonth() === m && e.joiningDate.getDate() === d && e.joiningDate.getFullYear() < year)
 
-  const weekAhead: { fullName: string; date: Date; years: number; type: 'anniversary' }[] = []
+  // ── Build unified weekAhead feed for the next 7 days ──
+  type WeekItem = {
+    key: string; date: Date; type: 'joiner' | 'birthday' | 'anniversary' | 'probation' | 'holiday' | 'review';
+    title: string; sub: string; tone: 'red' | 'amber' | 'blue' | 'emerald' | 'purple' | 'slate';
+  }
+  const weekItems: WeekItem[] = []
+
+  // Joiners next 7 (excluding today which we count separately)
+  const upcomingJoiners = await prisma.employee.findMany({
+    where: { joiningDate: { gt: new Date(today.getTime() + 86400_000), lte: in7 } },
+    select: { id: true, fullName: true, designation: true, joiningDate: true },
+  })
+  for (const e of upcomingJoiners) {
+    weekItems.push({
+      key: `joiner-${e.id}`, date: e.joiningDate, type: 'joiner',
+      title: `${e.fullName} joins`, sub: e.designation || 'New hire', tone: 'emerald',
+    })
+  }
+
+  // Probations ending — red <=14d, amber <=30d
+  const endingProbations = await prisma.probationRecord.findMany({
+    where: { outcome: null, endDate: { gte: today, lte: in30 } },
+    include: { employee: { select: { id: true, fullName: true } } },
+    orderBy: { endDate: 'asc' },
+  })
+  for (const p of endingProbations) {
+    const days = Math.ceil((p.endDate.getTime() - today.getTime()) / 86400_000)
+    weekItems.push({
+      key: `prob-${p.id}`, date: p.endDate, type: 'probation',
+      title: `${p.employee.fullName} probation ends`, sub: `${days}d remaining`,
+      tone: days <= 14 ? 'red' : 'amber',
+    })
+  }
+
+  // Birthdays in next 7
+  for (const e of activeEmployeesForBirthday) {
+    if (!e.dob) continue
+    const bdThisYear = new Date(year, e.dob.getMonth(), e.dob.getDate())
+    if (bdThisYear >= today && bdThisYear <= in7) {
+      weekItems.push({
+        key: `bday-${e.fullName}-${bdThisYear.toISOString()}`, date: bdThisYear, type: 'birthday',
+        title: `${e.fullName}'s birthday`, sub: 'Send a note', tone: 'amber',
+      })
+    }
+  }
+
+  // Anniversaries in next 7
   for (const e of activeEmployeesForAnniversary) {
     const jm = e.joiningDate.getMonth(); const jd = e.joiningDate.getDate()
     const thisYearDate = new Date(year, jm, jd)
     if (thisYearDate >= today && thisYearDate <= in7 && e.joiningDate.getFullYear() < year) {
-      weekAhead.push({ fullName: e.fullName, date: thisYearDate, years: year - e.joiningDate.getFullYear(), type: 'anniversary' })
+      const yrs = year - e.joiningDate.getFullYear()
+      weekItems.push({
+        key: `anniv-${e.fullName}-${yrs}`, date: thisYearDate, type: 'anniversary',
+        title: `${e.fullName} — ${yrs}-year anniversary`, sub: 'Recognize the milestone', tone: 'purple',
+      })
     }
   }
+
+  // Performance review milestones — pending/self-submitted reviews
+  // (no cycle endDate on the model so we approximate by recency)
+
+  // PK public holidays in next 7
+  for (const h of PK_HOLIDAYS_2026) {
+    const dt = new Date(h.date + 'T00:00:00')
+    if (dt >= today && dt <= in7) {
+      weekItems.push({
+        key: `hol-${h.date}`, date: dt, type: 'holiday', title: h.name, sub: 'Public holiday', tone: 'slate',
+      })
+    }
+  }
+
+  weekItems.sort((a, b) => a.date.getTime() - b.date.getTime())
 
   return {
     pendingLeave, pendingOT, pendingHiringRequests, overdueProbation,
     onLeaveToday, joiningToday, upcomingProbationDecisions, pendingPayslipAdjustments,
     currentPayrollRun, openRoles, newApplicantsLast7,
-    birthdaysToday, anniversariesToday, weekAhead, activeCount, pendingPolicyAcks, talentPoolCount,
+    birthdaysToday, anniversariesToday, weekItems, activeCount, pendingPolicyAcks, talentPoolCount,
   }
 }
 
@@ -119,9 +201,12 @@ export async function HRDashboard({ userName }: Props) {
             </p>
           </div>
           <div className="grid grid-cols-3 gap-3 flex-shrink-0">
-            <HeroStat label="Active" value={d.activeCount} tone="blue" />
-            <HeroStat label="Pending" value={totalActions} tone={totalActions > 0 ? 'amber' : 'green'} />
-            <HeroStat label="Today" value={todayCount} tone="purple" />
+            <HeroStat label="Active" value={d.activeCount} tone="blue"
+              tooltip="Active probations in progress" subLabel="employees" />
+            <HeroStat label="Pending" value={totalActions} tone={totalActions > 0 ? 'amber' : 'green'}
+              tooltip="Decisions waiting on you" subLabel="to action" />
+            <HeroStat label="Today" value={todayCount} tone="purple"
+              tooltip="Joiners, birthdays, or events today" subLabel="events" />
           </div>
         </div>
       </div>
@@ -232,8 +317,8 @@ export async function HRDashboard({ userName }: Props) {
               <p className="text-[11px] text-slate-500">Heads-up so nothing surprises you</p>
             </div>
           </div>
-          <div className="p-4 space-y-2">
-            {d.upcomingProbationDecisions.length === 0 && d.weekAhead.length === 0 ? (
+          <div className="p-4 space-y-1">
+            {d.weekItems.length === 0 ? (
               <div className="text-center py-6">
                 <div className="w-10 h-10 rounded-full bg-slate-50 text-slate-300 flex items-center justify-center mx-auto mb-2">
                   <Calendar className="w-5 h-5" />
@@ -241,34 +326,7 @@ export async function HRDashboard({ userName }: Props) {
                 <p className="text-xs text-slate-500">Nothing scheduled this week.</p>
               </div>
             ) : (
-              <>
-                {d.upcomingProbationDecisions.map((p) => (
-                  <Link key={p.id} href={`/dashboard/employees/${p.employeeId}`}
-                    className="flex items-center justify-between gap-3 py-2 px-2.5 -mx-2 rounded-lg hover:bg-slate-50 transition group">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
-                        <GraduationCap className="w-4 h-4" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-slate-900 truncate">{p.employee.fullName}</p>
-                        <p className="text-[11px] text-slate-500">Probation review · {p.endDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
-                      </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-600 flex-shrink-0" />
-                  </Link>
-                ))}
-                {d.weekAhead.map((a) => (
-                  <div key={`${a.fullName}-${a.years}`} className="flex items-center gap-3 py-2 px-2.5 -mx-2 rounded-lg">
-                    <span className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
-                      <PartyPopper className="w-4 h-4" />
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-900 truncate">{a.fullName}</p>
-                      <p className="text-[11px] text-slate-500">{a.years}-year anniversary · {a.date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}</p>
-                    </div>
-                  </div>
-                ))}
-              </>
+              d.weekItems.map((it) => <WeekItemRow key={it.key} item={it} />)
             )}
           </div>
         </Card>
@@ -298,7 +356,7 @@ export async function HRDashboard({ userName }: Props) {
             value={String(d.newApplicantsLast7)}
             sub={d.newApplicantsLast7 > 0 ? 'review the pipeline' : 'no new applications'}
             tone={d.newApplicantsLast7 > 0 ? 'emerald' : 'slate'}
-            href="/dashboard/recruiting?tab=pipeline" />
+            href="/dashboard/recruiting?tab=pipeline&stage=SCREENING" />
           <OpsTile
             Icon={Users}
             label="Talent Pool"
@@ -314,7 +372,10 @@ export async function HRDashboard({ userName }: Props) {
 
 // ─── Sub-components ──────────────────────────────────────────────────
 
-function HeroStat({ label, value, tone }: { label: string; value: number; tone: 'blue' | 'amber' | 'green' | 'purple' }) {
+function HeroStat({ label, value, tone, tooltip, subLabel }: {
+  label: string; value: number; tone: 'blue' | 'amber' | 'green' | 'purple';
+  tooltip?: string; subLabel?: string;
+}) {
   const TONE: Record<string, string> = {
     blue:   'bg-white/70 text-blue-700 ring-blue-200',
     amber:  'bg-amber-50 text-amber-800 ring-amber-200',
@@ -322,9 +383,10 @@ function HeroStat({ label, value, tone }: { label: string; value: number; tone: 
     purple: 'bg-white/70 text-purple-700 ring-purple-200',
   }
   return (
-    <div className={`rounded-xl ring-1 ${TONE[tone]} backdrop-blur-sm px-4 py-3 text-center min-w-[88px]`}>
+    <div title={tooltip} className={`rounded-xl ring-1 ${TONE[tone]} backdrop-blur-sm px-4 py-3 text-center min-w-[88px] cursor-help`}>
       <p className="text-[10px] font-semibold uppercase tracking-wider opacity-70">{label}</p>
       <p className="text-2xl font-bold tabular-nums mt-0.5">{value}</p>
+      {subLabel && <p className="text-[9px] opacity-60 mt-0.5">{subLabel}</p>}
     </div>
   )
 }
@@ -410,6 +472,43 @@ function OpsTile({ Icon, label, value, sub, tone, href }: {
       <p className="text-lg font-bold mt-0.5 text-slate-900 tabular-nums">{value}</p>
       <p className="text-[11px] text-slate-500 mt-1">{sub}</p>
     </Link>
+  )
+}
+
+function WeekItemRow({ item }: { item: {
+  date: Date;
+  type: 'joiner' | 'birthday' | 'anniversary' | 'probation' | 'holiday' | 'review';
+  title: string; sub: string;
+  tone: 'red' | 'amber' | 'blue' | 'emerald' | 'purple' | 'slate';
+} }) {
+  const TONE: Record<string, string> = {
+    red:     'bg-rose-50 text-rose-600',
+    amber:   'bg-amber-50 text-amber-600',
+    blue:    'bg-blue-50 text-blue-600',
+    emerald: 'bg-emerald-50 text-emerald-600',
+    purple:  'bg-purple-50 text-purple-600',
+    slate:   'bg-slate-100 text-slate-500',
+  }
+  const ICONS: Record<string, React.ReactNode> = {
+    joiner:      <PartyPopper className="w-4 h-4" />,
+    birthday:    <Cake className="w-4 h-4" />,
+    anniversary: <PartyPopper className="w-4 h-4" />,
+    probation:   <GraduationCap className="w-4 h-4" />,
+    holiday:     <Calendar className="w-4 h-4" />,
+    review:      <ClipboardList className="w-4 h-4" />,
+  }
+  return (
+    <div className="flex items-center gap-3 py-2 px-2.5 -mx-2 rounded-lg hover:bg-slate-50/60 transition">
+      <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${TONE[item.tone]}`}>
+        {ICONS[item.type]}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-slate-900 truncate">{item.title}</p>
+        <p className="text-[11px] text-slate-500 truncate">
+          {item.sub} · {item.date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
+        </p>
+      </div>
+    </div>
   )
 }
 
