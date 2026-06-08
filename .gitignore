@@ -50,3 +50,6 @@ prisma/*.db-wal
 
 # Claude session state
 .claude/
+
+.vercel
+.env*

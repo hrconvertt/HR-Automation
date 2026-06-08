@@ -62,6 +62,16 @@ function deptCode(raw) {
 
 async function main() {
   const prisma = new PrismaClient()
+  // Neon free tier suspends after ~5 min of inactivity. Retry SELECT 1
+  // up to 10 times with 4-second backoff to wake it before doing real work.
+  for (let i = 1; i <= 10; i++) {
+    try { await prisma.$queryRaw`SELECT 1`; break }
+    catch (e) {
+      if (i === 10) throw e
+      console.log(`Waking Neon… attempt ${i}/10`)
+      await new Promise((r) => setTimeout(r, 4000))
+    }
+  }
   const wb = XLSX.readFile(SHEET_PATH)
   const rows = XLSX.utils.sheet_to_json(wb.Sheets['Employee_Master'], { defval: null })
 
@@ -144,6 +154,7 @@ async function main() {
 
       const managerId = resolveManager(r['Reporting Manager'])
 
+      // 30s timeout — Neon transcontinental round-trips can exceed Prisma's 5s default.
       await prisma.$transaction(async (tx) => {
         const existingUser = await tx.user.findUnique({ where: { email } })
         const emp = await tx.employee.create({
@@ -168,7 +179,7 @@ async function main() {
           await tx.probationRecord.create({ data: { employeeId: emp.id, startDate: probationStart, endDate: probationEnd } })
         }
         await tx.onboardingChecklist.upsert({ where: { employeeId: emp.id }, update: {}, create: { employeeId: emp.id } })
-      })
+      }, { timeout: 30000 })
       created++
     }
   }
@@ -181,7 +192,7 @@ async function main() {
         // hard-delete is fine for test data — no payroll history
         if (t.user) await tx.user.delete({ where: { id: t.user.id } }).catch(()=>{})
         await tx.employee.delete({ where: { id: t.id } }).catch(()=>{})
-      })
+      }, { timeout: 30000 })
       deletedTest++
     }
   }
