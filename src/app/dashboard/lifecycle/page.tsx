@@ -16,10 +16,16 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Sprout, Users, DoorOpen, Plus, X, ChevronRight } from 'lucide-react'
+import { Sprout, Users, DoorOpen, Plus, X, ShieldCheck } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { ProbationTrackerTabs, type ProbationListItem } from '@/components/probation/tracker-tabs'
 
 interface Employee { id: string; fullName: string; employeeCode: string; status: string; designation: string }
+interface OnboardingItem {
+  id: string
+  progress: number
+  employee: { id: string; fullName: string; employeeCode: string; designation: string; joiningDate: string }
+}
 interface Clearance {
   id: string
   status: string
@@ -53,67 +59,176 @@ export default function LifecyclePage() {
       </div>
 
       <Tabs defaultValue="onboarding">
-        <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex">
+        <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex flex-wrap">
           <TabsTrigger value="onboarding"><Sprout className="w-3.5 h-3.5 mr-1.5" /> Onboarding</TabsTrigger>
+          <TabsTrigger value="probation"><ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Probation</TabsTrigger>
           <TabsTrigger value="active"><Users className="w-3.5 h-3.5 mr-1.5" /> Active</TabsTrigger>
           <TabsTrigger value="exit"><DoorOpen className="w-3.5 h-3.5 mr-1.5" /> Exit Clearance</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="onboarding" className="mt-4">
-          <Card>
-            <CardHeader className="border-b border-slate-100"><CardTitle>Onboarding & Probation</CardTitle></CardHeader>
-            <CardContent className="p-6">
-              <p className="text-sm text-slate-600 mb-4">
-                Onboarding checklists and probation reviews live in dedicated modules.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Link href="/dashboard/onboarding"
-                  className="rounded-xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-md transition-all group">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Onboarding Checklists</p>
-                      <p className="text-xs text-slate-500 mt-1">Track new-hire setup tasks</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600" />
-                  </div>
-                </Link>
-                <Link href="/dashboard/probation"
-                  className="rounded-xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-md transition-all group">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-semibold text-slate-900">Probation Tracker</p>
-                      <p className="text-xs text-slate-500 mt-1">Settling check-ins, decisions, confirmations</p>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600" />
-                  </div>
-                </Link>
-              </div>
-            </CardContent>
-          </Card>
+        <TabsContent value="onboarding" className="mt-4 transition-opacity duration-150">
+          <OnboardingTab />
         </TabsContent>
 
-        <TabsContent value="active" className="mt-4">
-          <Card>
-            <CardHeader className="border-b border-slate-100"><CardTitle>Active Employees</CardTitle></CardHeader>
-            <CardContent className="p-6">
-              <p className="text-sm text-slate-600 mb-4">Active employees are managed in the People module.</p>
-              <Link href="/dashboard/employees"
-                className="rounded-xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-md transition-all group flex items-center justify-between max-w-md">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">Open People Directory</p>
-                  <p className="text-xs text-slate-500 mt-1">Search, filter, edit employee records</p>
-                </div>
-                <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600" />
-              </Link>
-            </CardContent>
-          </Card>
+        <TabsContent value="probation" className="mt-4 transition-opacity duration-150">
+          <ProbationTab />
         </TabsContent>
 
-        <TabsContent value="exit" className="mt-4">
+        <TabsContent value="active" className="mt-4 transition-opacity duration-150">
+          <ActiveEmployeesTab />
+        </TabsContent>
+
+        <TabsContent value="exit" className="mt-4 transition-opacity duration-150">
           <ExitClearanceTab />
         </TabsContent>
       </Tabs>
     </div>
+  )
+}
+
+function OnboardingTab() {
+  const [items, setItems] = useState<OnboardingItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/onboarding').then((r) => r.json()).then((d) => {
+      setItems(d.checklists ?? d.items ?? [])
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  const inProgress = items.filter((i) => i.progress < 100)
+  const complete = items.filter((i) => i.progress >= 100)
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-slate-100 flex items-center justify-between flex-row">
+        <CardTitle>Onboarding Checklists</CardTitle>
+        <Link href="/dashboard/onboarding" className="text-xs text-blue-600 hover:underline">Full view →</Link>
+      </CardHeader>
+      {loading ? (
+        <CardContent className="py-10 text-center text-slate-400">Loading…</CardContent>
+      ) : items.length === 0 ? (
+        <CardContent className="py-10 text-center text-slate-400">
+          <Sprout className="w-8 h-8 mx-auto mb-2 opacity-30" />
+          No new hires in onboarding.
+        </CardContent>
+      ) : (
+        <CardContent className="p-4 space-y-3">
+          <div className="text-xs text-slate-500">
+            {inProgress.length} in progress · {complete.length} complete
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {inProgress.slice(0, 8).map((i) => (
+              <Link
+                key={i.id}
+                href={`/dashboard/employees/${i.employee.id}`}
+                prefetch
+                className="rounded-xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-sm transition-all"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-slate-900 truncate">{i.employee.fullName}</p>
+                    <p className="text-xs text-slate-500 truncate">{i.employee.designation}</p>
+                  </div>
+                  <Badge variant="secondary">{i.progress}%</Badge>
+                </div>
+                <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
+                  <div className="h-full bg-blue-500 transition-all" style={{ width: `${i.progress}%` }} />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </CardContent>
+      )}
+    </Card>
+  )
+}
+
+function ProbationTab() {
+  const [records, setRecords] = useState<ProbationListItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/probation').then((r) => r.json()).then((d) => {
+      setRecords(d.records ?? [])
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="py-10 text-center text-slate-400">Loading probation records…</CardContent>
+      </Card>
+    )
+  }
+  return <ProbationTrackerTabs records={records} />
+}
+
+function ActiveEmployeesTab() {
+  const [employees, setEmployees] = useState<Employee[]>([])
+  const [loading, setLoading] = useState(true)
+  const [query, setQuery] = useState('')
+
+  useEffect(() => {
+    fetch('/api/employees?status=ACTIVE&limit=200').then((r) => r.json()).then((d) => {
+      setEmployees(d.employees ?? [])
+      setLoading(false)
+    }).catch(() => setLoading(false))
+  }, [])
+
+  const filtered = employees.filter((e) =>
+    !query.trim() ||
+    e.fullName.toLowerCase().includes(query.toLowerCase()) ||
+    e.employeeCode.toLowerCase().includes(query.toLowerCase()) ||
+    e.designation.toLowerCase().includes(query.toLowerCase())
+  )
+
+  const permanent = employees.filter((e) => (e as Employee & { employeeType?: string }).employeeType === 'PERMANENT').length
+  const probation = employees.filter((e) => (e as Employee & { employeeType?: string }).employeeType === 'PROBATION').length
+
+  return (
+    <Card>
+      <CardHeader className="border-b border-slate-100">
+        <div className="flex items-center justify-between flex-wrap gap-3">
+          <CardTitle>Active Employees</CardTitle>
+          <div className="flex items-center gap-3">
+            <span className="text-xs text-slate-500">
+              <strong className="text-slate-900">{employees.length}</strong> total · {permanent} permanent · {probation} probation
+            </span>
+            <Link href="/dashboard/employees" className="text-xs text-blue-600 hover:underline">Full directory →</Link>
+          </div>
+        </div>
+      </CardHeader>
+      {loading ? (
+        <CardContent className="py-10 text-center text-slate-400">Loading…</CardContent>
+      ) : (
+        <CardContent className="p-4 space-y-3">
+          <Input placeholder="Search by name, code, or designation…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          {filtered.length === 0 ? (
+            <p className="py-6 text-center text-sm text-slate-400">No matches.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto pr-1">
+              {filtered.slice(0, 60).map((e) => (
+                <Link
+                  key={e.id}
+                  href={`/dashboard/employees/${e.id}`}
+                  prefetch
+                  className="rounded-lg border border-slate-200 px-3 py-2 hover:border-blue-300 hover:bg-slate-50 transition-all"
+                >
+                  <p className="text-sm font-medium text-slate-900 truncate">{e.fullName}</p>
+                  <p className="text-xs text-slate-500 truncate">{e.employeeCode} · {e.designation}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+          {filtered.length > 60 && (
+            <p className="text-xs text-slate-400 text-center">Showing first 60 of {filtered.length}. Use the full directory for more.</p>
+          )}
+        </CardContent>
+      )}
+    </Card>
   )
 }
 
