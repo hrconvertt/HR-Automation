@@ -101,7 +101,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'Talent',
       items: [
         { href: '/dashboard/performance', label: 'Performance', icon: TrendingUp },
-        { href: '/dashboard/letters', label: 'Letters', icon: FileText },
         { href: '/dashboard/lifecycle', label: 'Employee Lifecycle', icon: UserPlus },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
@@ -119,10 +118,9 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
     {
       label: 'Support & Admin',
       items: [
-        { href: '/dashboard/policies', label: 'Policies', icon: ShieldCheck },
+        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/email-queue', label: 'Email Queue', icon: Mail },
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
-        { href: '/dashboard/documents', label: 'Documents', icon: FolderOpen },
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
         { href: '/dashboard/help', label: 'Help Center', icon: HelpCircle },
@@ -145,7 +143,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/employees', label: 'Team Members', icon: Users },
         { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
-        { href: '/dashboard/letters', label: 'Letters', icon: FileText },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
       ],
     },
@@ -154,13 +151,12 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
         { href: '/dashboard/learning', label: 'Learning', icon: GraduationCap },
-        { href: '/dashboard/documents', label: 'Documents', icon: FolderOpen },
+        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
       ],
     },
     {
       label: 'Support',
       items: [
-        { href: '/dashboard/policies', label: 'Policies', icon: ShieldCheck },
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
       ],
     },
@@ -180,15 +176,13 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'My Growth',
       items: [
         { href: '/dashboard/performance', label: 'My Reviews', icon: TrendingUp },
-        { href: '/dashboard/letters', label: 'Letters', icon: FileText },
         { href: '/dashboard/learning', label: 'My Learning', icon: GraduationCap },
       ],
     },
     {
       label: 'Support',
       items: [
-        { href: '/dashboard/policies', label: 'Policies', icon: ShieldCheck },
-        { href: '/dashboard/documents', label: 'Documents', icon: FolderOpen },
+        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
       ],
     },
@@ -214,7 +208,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
     {
       label: 'Support',
       items: [
-        { href: '/dashboard/policies', label: 'Policies', icon: ShieldCheck },
+        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
       ],
     },
