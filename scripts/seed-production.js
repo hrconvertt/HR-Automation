@@ -22,7 +22,7 @@ const bcrypt = require('bcryptjs')
 const p = new PrismaClient()
 
 const HR_ADMIN_EMAIL    = process.env.HR_ADMIN_EMAIL    || 'hr@convertt.co'
-const HR_ADMIN_NAME     = process.env.HR_ADMIN_NAME     || 'HR Admin'
+const HR_ADMIN_NAME     = process.env.HR_ADMIN_NAME     || 'Head of People & Culture'
 const HR_ADMIN_PASSWORD = process.env.HR_ADMIN_PASSWORD || 'ChangeMe123!'
 
 const DEPARTMENTS = [
@@ -39,16 +39,21 @@ const DEPARTMENTS = [
   { code: 'PCD',  name: 'Project Coordinator' },
 ]
 
+// Pakistani standard:
+//   PERMANENT  — full annual allocation up-front (24 annual / 10 sick / 12 casual).
+//   PROBATION  — 1 casual + 1 sick per month worked, NO annual leave.
+//   INTERNSHIP — 1 casual per month worked, no annual.
+//   TRAINING   — 1 casual per month worked, no annual.
+// accrualPerMonth drives per-month allocation; daysPerYear is the cap.
 const LEAVE_POLICIES = [
   { employeeType: 'PERMANENT',  leaveType: 'CASUAL', daysPerYear: 12, carryForward: false, maxCarryDays: 0 },
   { employeeType: 'PERMANENT',  leaveType: 'SICK',   daysPerYear: 10, carryForward: false, maxCarryDays: 0 },
   { employeeType: 'PERMANENT',  leaveType: 'ANNUAL', daysPerYear: 24, carryForward: true,  maxCarryDays: 5 },
-  { employeeType: 'PROBATION',  leaveType: 'CASUAL', daysPerYear: 6,  carryForward: false, maxCarryDays: 0 },
-  { employeeType: 'PROBATION',  leaveType: 'SICK',   daysPerYear: 6,  carryForward: false, maxCarryDays: 0 },
-  { employeeType: 'PROBATION',  leaveType: 'ANNUAL', daysPerYear: 6,  carryForward: false, maxCarryDays: 0 },
-  { employeeType: 'INTERNSHIP', leaveType: 'CASUAL', daysPerYear: 1,  carryForward: false, maxCarryDays: 0 },
-  { employeeType: 'INTERNSHIP', leaveType: 'ANNUAL', daysPerYear: 1,  carryForward: false, maxCarryDays: 0 },
-  { employeeType: 'TRAINING',   leaveType: 'CASUAL', daysPerYear: 2,  carryForward: false, maxCarryDays: 0 },
+  { employeeType: 'PROBATION',  leaveType: 'CASUAL', daysPerYear: 12, accrualPerMonth: 1, carryForward: false, maxCarryDays: 0 },
+  { employeeType: 'PROBATION',  leaveType: 'SICK',   daysPerYear: 12, accrualPerMonth: 1, carryForward: false, maxCarryDays: 0 },
+  // No PROBATION ANNUAL row — probationers do not accrue annual leave.
+  { employeeType: 'INTERNSHIP', leaveType: 'CASUAL', daysPerYear: 12, accrualPerMonth: 1, carryForward: false, maxCarryDays: 0 },
+  { employeeType: 'TRAINING',   leaveType: 'CASUAL', daysPerYear: 12, accrualPerMonth: 1, carryForward: false, maxCarryDays: 0 },
 ]
 
 const PAYROLL_CONFIG = [
@@ -76,10 +81,27 @@ async function main() {
   console.log(`  ✓ ${DEPARTMENTS.length} departments`)
 
   // ─── 2. Leave policies ───────────────────────────────────────────
+  // Clear stale PROBATION/INTERNSHIP/TRAINING rows that no longer match
+  // the new Pakistani policy (e.g. PROBATION ANNUAL = 6 days/year).
+  await p.leavePolicy.deleteMany({
+    where: {
+      OR: [
+        { employeeType: 'PROBATION', leaveType: 'ANNUAL' },
+        { employeeType: 'INTERNSHIP', leaveType: 'ANNUAL' },
+        { employeeType: 'TRAINING', leaveType: 'ANNUAL' },
+      ],
+    },
+  }).catch(() => {})
+
   for (const lp of LEAVE_POLICIES) {
     await p.leavePolicy.upsert({
       where: { employeeType_leaveType: { employeeType: lp.employeeType, leaveType: lp.leaveType } },
-      update: { daysPerYear: lp.daysPerYear, carryForward: lp.carryForward, maxCarryDays: lp.maxCarryDays },
+      update: {
+        daysPerYear: lp.daysPerYear,
+        accrualPerMonth: lp.accrualPerMonth ?? null,
+        carryForward: lp.carryForward,
+        maxCarryDays: lp.maxCarryDays,
+      },
       create: lp,
     })
   }
@@ -120,7 +142,7 @@ async function main() {
         employeeCode: 'CON-HR-001',
         fullName: HR_ADMIN_NAME,
         email: HR_ADMIN_EMAIL,
-        designation: 'HR Administrator',
+        designation: 'Head of People & Culture',
         employeeType: 'PERMANENT',
         status: 'ACTIVE',
         joiningDate: new Date(),
@@ -128,6 +150,15 @@ async function main() {
         ...(hrDept ? { departmentId: hrDept.id } : {}),
       },
     })
+  } else {
+    // One-time migration: bring the existing hr@convertt.co employee up
+    // to the new "Head of People & Culture" title. Safe to re-run.
+    if (existingEmp.designation === 'HR Administrator') {
+      await p.employee.update({
+        where: { id: existingEmp.id },
+        data: { designation: 'Head of People & Culture' },
+      })
+    }
   }
   console.log(`  ✓ HR admin: ${HR_ADMIN_EMAIL}`)
   console.log(`     password: ${HR_ADMIN_PASSWORD}  (you'll be forced to change on first login)`)

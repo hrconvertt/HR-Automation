@@ -14,9 +14,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
-} from '@/components/ui/table'
-import {
   Wallet, TrendingUp, Calendar, Lock,
   Download, Pencil, Eye, ShieldCheck,
 } from 'lucide-react'
@@ -87,19 +84,10 @@ export default function CompensationPanel({
     new Date(h.effectiveDate).getFullYear() === new Date().getFullYear(),
   ).length
 
-  async function handleDownload() {
-    const res = await fetch(`/api/employees/${employeeId}/total-rewards`)
-    if (!res.ok) {
-      alert('Could not generate Total Rewards statement.')
-      return
-    }
-    const blob = await res.blob()
-    const url = window.URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `total-rewards-${employeeName.replace(/\s+/g, '-')}.html`
-    a.click()
-    window.URL.revokeObjectURL(url)
+  function handleDownload() {
+    // Opens the printable A4 Total Rewards page in a new tab; that page
+    // auto-fires window.print() so HR/employee can save it as PDF.
+    window.open(`/dashboard/employees/${employeeId}/total-rewards`, '_blank', 'noopener')
   }
 
   return (
@@ -125,10 +113,16 @@ export default function CompensationPanel({
               Total Rewards
             </Button>
           )}
-          {access.canEdit && (
+          {access.canEdit && !currentSalary && (
             <Button size="sm" onClick={() => setEditOpen(true)}>
               <Pencil className="w-3.5 h-3.5 mr-1.5" />
-              {currentSalary ? 'Request Compensation Change' : 'Set Initial Salary'}
+              Set Initial Salary
+            </Button>
+          )}
+          {access.canEdit && currentSalary && (
+            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+              <Pencil className="w-3.5 h-3.5 mr-1.5" />
+              Add History Entry
             </Button>
           )}
         </div>
@@ -208,64 +202,112 @@ export default function CompensationPanel({
         </CardContent>
       </Card>
 
-      {/* ─── History timeline ─────────────────────────────────────── */}
+      {/* ─── History timeline ─────────────────────────────────────────
+          Vertical timeline (dots + connecting line) listing every
+          CompensationHistory row. Pakistani culture: salary changes
+          flow through review cycles, not self-serve — so this is a
+          read-only chronicle, not an action surface. */}
       <Card>
         <CardHeader className="border-b border-slate-100">
           <CardTitle className="flex items-center gap-2 text-base">
             <TrendingUp className="w-4 h-4 text-slate-500" /> Compensation History
           </CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="p-6">
           {history.length === 0 ? (
-            <p className="text-sm text-slate-400 italic py-8 text-center">
-              No compensation changes recorded.
+            <p className="text-sm text-slate-400 italic py-6 text-center">
+              No compensation changes recorded yet.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[140px]">Effective</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead className="text-right">Previous</TableHead>
-                  <TableHead className="text-right">New</TableHead>
-                  <TableHead className="text-right">Change</TableHead>
-                  <TableHead>Reason</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {history.map((c) => {
-                  const meta = TYPE_LABELS[c.type] ?? { label: c.type, tone: 'bg-slate-100 text-slate-700' }
-                  const diff = c.newSalary - c.oldSalary
-                  return (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium tabular-nums">{fmtDate(c.effectiveDate)}</TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${meta.tone}`}>
-                          {meta.label}
-                        </span>
-                      </TableCell>
-                      <TableCell className="text-right text-slate-600 tabular-nums">
-                        {c.oldSalary > 0 ? formatCurrency(c.oldSalary) : '—'}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold text-slate-900 tabular-nums">
-                        {formatCurrency(c.newSalary)}
-                      </TableCell>
-                      <TableCell className={`text-right tabular-nums font-medium ${diff >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
-                        {diff > 0 ? '+' : ''}{formatCurrency(diff)}
-                        {c.incrementPct != null && (
-                          <span className="block text-[10px] font-normal text-slate-500">
-                            {c.incrementPct > 0 ? '+' : ''}{c.incrementPct.toFixed(1)}%
-                          </span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-slate-600 text-sm max-w-[220px]">
-                        {c.reason ?? <span className="text-slate-300 italic">—</span>}
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+            <>
+              {/* Sorted oldest → newest for chronological reading;
+                  history prop arrives newest-first. */}
+              {(() => {
+                const sorted = [...history].sort(
+                  (a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime(),
+                )
+                return (
+                  <ol className="relative border-l-2 border-slate-200 ml-3 space-y-6">
+                    {sorted.map((c) => {
+                      const meta = TYPE_LABELS[c.type] ?? { label: c.type, tone: 'bg-slate-100 text-slate-700' }
+                      const diff = c.newSalary - c.oldSalary
+                      const pct =
+                        c.incrementPct != null
+                          ? c.incrementPct
+                          : c.oldSalary > 0
+                          ? ((c.newSalary - c.oldSalary) / c.oldSalary) * 100
+                          : null
+                      const positive = diff >= 0
+                      return (
+                        <li key={c.id} className="pl-6 relative">
+                          <span
+                            className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full ring-4 ring-white ${
+                              positive ? 'bg-emerald-500' : 'bg-rose-500'
+                            }`}
+                          />
+                          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                            <span className="text-xs font-semibold text-slate-700 tabular-nums">
+                              {fmtDate(c.effectiveDate)}
+                            </span>
+                            <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${meta.tone}`}>
+                              {meta.label}
+                            </span>
+                          </div>
+                          <p className="mt-1.5 text-sm text-slate-900">
+                            {c.oldSalary > 0 ? (
+                              <>
+                                <span className="text-slate-500 tabular-nums">{formatCurrency(c.oldSalary)}</span>
+                                <span className="mx-2 text-slate-400">→</span>
+                                <span className="font-semibold tabular-nums">{formatCurrency(c.newSalary)}</span>
+                              </>
+                            ) : (
+                              <span className="font-semibold tabular-nums">{formatCurrency(c.newSalary)}</span>
+                            )}
+                            {pct != null && c.oldSalary > 0 && (
+                              <span className={`ml-2 text-xs font-medium ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>
+                                ({pct > 0 ? '+' : ''}{pct.toFixed(1)}%)
+                              </span>
+                            )}
+                          </p>
+                          {c.reason && (
+                            <p className="mt-0.5 text-xs text-slate-600">{c.reason}</p>
+                          )}
+                        </li>
+                      )
+                    })}
+                  </ol>
+                )
+              })()}
+
+              {/* Total growth since joining — first → latest */}
+              {(() => {
+                const sorted = [...history].sort(
+                  (a, b) => new Date(a.effectiveDate).getTime() - new Date(b.effectiveDate).getTime(),
+                )
+                const first = sorted[0]
+                const last = sorted[sorted.length - 1]
+                if (!first || !last || first.id === last.id) return null
+                const start = first.newSalary || first.oldSalary
+                if (!start) return null
+                const growth = ((last.newSalary - start) / start) * 100
+                const startDate = new Date(first.effectiveDate)
+                const endDate = new Date(last.effectiveDate)
+                const months = Math.max(
+                  1,
+                  Math.round(
+                    (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 30.4),
+                  ),
+                )
+                return (
+                  <div className="mt-6 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 flex items-center justify-between">
+                    <span className="text-xs text-slate-600">Total growth since joining</span>
+                    <span className={`text-sm font-semibold ${growth >= 0 ? 'text-emerald-700' : 'text-rose-700'} tabular-nums`}>
+                      {growth >= 0 ? '+' : ''}{growth.toFixed(1)}% in {months} {months === 1 ? 'month' : 'months'}
+                    </span>
+                  </div>
+                )
+              })()}
+            </>
           )}
         </CardContent>
       </Card>

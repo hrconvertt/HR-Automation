@@ -51,14 +51,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Access check
+  // Access check — salary confidentiality: HR + the employee themselves only.
   const isHR = effectiveRole === 'HR_ADMIN'
-  const isExec = effectiveRole === 'EXECUTIVE'
-  const isFinance = effectiveRole === 'FINANCE'
-  const isManager = effectiveRole === 'MANAGER'
   const isOwn = target.id === myEmpId
-  const isTeamMember = target.reportingManagerId === myEmpId
-  const allowed = isHR || isExec || isFinance || isOwn || (isManager && isTeamMember)
+  const allowed = isHR || isOwn
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   // YTD totals

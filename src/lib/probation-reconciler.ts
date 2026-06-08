@@ -303,6 +303,57 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
       data: { employeeType: 'PERMANENT', confirmationDate: now },
     })
 
+    // ── 3b. Top up leave balances to PERMANENT quotas, pro-rated to
+    //        the remaining months of the current calendar year. The
+    //        accrualPerMonth-driven probation balances stay (they may
+    //        already have been used); we just bump the allocated/
+    //        remaining up to the permanent pro-rata level.
+    try {
+      const permPolicies = await prisma.leavePolicy.findMany({
+        where: { employeeType: 'PERMANENT' },
+      })
+      const year = now.getFullYear()
+      const monthsRemaining = Math.max(1, 12 - now.getMonth())
+      for (const policy of permPolicies) {
+        const target = Math.round((policy.daysPerYear * monthsRemaining) / 12)
+        const existing = await prisma.leaveBalance.findUnique({
+          where: {
+            employeeId_year_leaveType: {
+              employeeId: rec.employee.id,
+              year,
+              leaveType: policy.leaveType,
+            },
+          },
+        })
+        if (existing) {
+          if (target > existing.allocated) {
+            const bump = target - existing.allocated
+            await prisma.leaveBalance.update({
+              where: { id: existing.id },
+              data: {
+                allocated: target,
+                remaining: existing.remaining + bump,
+              },
+            })
+          }
+        } else {
+          await prisma.leaveBalance.create({
+            data: {
+              employeeId: rec.employee.id,
+              year,
+              leaveType: policy.leaveType,
+              allocated: target,
+              used: 0,
+              pending: 0,
+              remaining: target,
+            },
+          })
+        }
+      }
+    } catch (e) {
+      console.error('[probation confirm] leave top-up failed', e)
+    }
+
     // ── 4. Mark record CONFIRMED ──
     await prisma.probationRecord.update({
       where: { id: rec.id },

@@ -63,11 +63,12 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
     fetch('/api/employees/departments')
       .then((r) => r.json())
       .then((d) => setDepartments(d.departments ?? []))
-    fetch('/api/employees?limit=200&status=ACTIVE')
+    // Leadership-only manager pool — designation contains lead/head/manager
+    // /director/chief/CXO/VP/president/partner OR the user has HR_ADMIN role.
+    fetch('/api/employees?limit=200&status=ACTIVE&managersOnly=1')
       .then((r) => r.json())
       .then((d) => {
         const all = (d.employees ?? d.items ?? []) as ManagerOption[]
-        // Anyone except this employee themselves can be picked as their manager
         setManagers(all.filter((e) => e.id !== employeeId))
       })
   }, [employeeId])

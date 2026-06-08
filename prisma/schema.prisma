@@ -175,6 +175,7 @@ model Employee {
   journeys            EmployeeJourney[]
   emailDrafts         EmailDraft[]
   letterRequests      LetterRequest[]
+  exitClearances      ExitClearance[]
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -334,6 +335,11 @@ model LeavePolicy {
   employeeType String   // PERMANENT | PROBATION | INTERNSHIP | TRAINING
   leaveType    String   // CASUAL | SICK | EARNED | ANNUAL | MATERNITY | PATERNITY | UNPAID
   daysPerYear  Int
+  // For PROBATION/INTERNSHIP/TRAINING types we accrue per month worked
+  // rather than handing out the full quota up-front. 1.0 = one day per
+  // month. Null means "use daysPerYear as a one-shot allocation"
+  // (PERMANENT default behaviour).
+  accrualPerMonth Float?
   carryForward Boolean  @default(false)
   maxCarryDays Int      @default(0)
   createdAt    DateTime @default(now())
@@ -1045,6 +1051,22 @@ model AssetAssignment {
   notes        String?
   createdAt    DateTime  @default(now())
 
+  // ─── Typed asset details (Workday-style asset register) ───
+  assetCode        String?   @unique   // CON-AST-NNN, auto-generated on add
+  assetType        String?             // LAPTOP_DESKTOP | MOBILE_PHONE | SIM_CARD | ACCESS_CARD | OFFICE_KEYS | ID_CARD | SOFTWARE_LICENSE | EMAIL_ACCOUNT | MONITOR | HEADPHONES | KEYBOARD_MOUSE | LAPTOP_BAG | FURNITURE_CHAIR | VEHICLE | DOCUMENTS_CONTRACTS | OTHER
+  brand            String?
+  model            String?
+  serialNumber     String?
+  conditionAtIssue String?             // NEW | GOOD | USED | DAMAGED
+  costPkr          Float?
+  purchaseDate     DateTime?
+  custodianDept    String?             // IT | Admin | HR
+  photoBlob        Bytes?
+  photoMimeType    String?
+  returnCondition  String?
+  returnPhotoBlob  Bytes?
+  returnPhotoMime  String?
+
   @@map("asset_assignments")
 }
 
@@ -1054,14 +1076,19 @@ model EmployeeDocument {
   id           String   @id @default(cuid())
   employeeId   String
   employee     Employee @relation(fields: [employeeId], references: [id])
-  type         String   // OFFER_LETTER | CNIC | BANK_DETAILS | EDUCATION | EXPERIENCE | NDA | PHOTO | SALARY_SLIP | OTHER
+  type         String   // OFFER_LETTER | CNIC | RESUME | EDUCATIONAL_CERTIFICATE | EXPERIENCE | NDA | PHOTO | SALARY_SLIP | OTHER
   name         String
-  url          String
+  url          String   @default("")
   size         Int?
   mimeType     String?
   uploadedById String?
   signedAt     DateTime?
   expiryDate   DateTime?
+  // Postgres BYTEA storage — file bytes stored directly so we don't depend
+  // on external blob storage during early deployments.
+  fileBlob     Bytes?
+  fileMimeType String?
+  fileSize     Int?
   createdAt    DateTime @default(now())
 
   @@map("employee_documents")
@@ -1203,6 +1230,50 @@ model AuditLog {
   createdAt   DateTime @default(now())
 
   @@map("audit_logs")
+}
+
+// ─── EXIT CLEARANCE ───────────────────────────────────────────────────────────
+// Unified offboarding workflow matching the Annexure E PDF.
+// Five sections, each tracked with timestamp + signatory + cleared flag.
+model ExitClearance {
+  id                  String   @id @default(cuid())
+  employeeId          String
+  employee            Employee @relation(fields: [employeeId], references: [id])
+  initiatedAt         DateTime @default(now())
+  initiatedById       String?
+  lastWorkingDay      DateTime?
+  // Section 2 — departmental clearance
+  itCleared           Boolean  @default(false)
+  itClearedAt         DateTime?
+  itClearedBy         String?
+  financeCleared      Boolean  @default(false)
+  financeClearedAt    DateTime?
+  financeClearedBy    String?
+  adminCleared        Boolean  @default(false)
+  adminClearedAt      DateTime?
+  adminClearedBy      String?
+  hrCleared           Boolean  @default(false)
+  hrClearedAt         DateTime?
+  hrClearedBy         String?
+  // Section 3 — settlement
+  finalSettlementAmount Float?
+  duesCleared           Boolean @default(false)
+  settlementNotes       String?
+  // Section 4 — employee declaration
+  employeeAcknowledged Boolean @default(false)
+  employeeSignedAt     DateTime?
+  // Section 5 — HR certification
+  hrCertifiedAt        DateTime?
+  hrCertifiedById      String?
+  // Final outputs
+  clearanceFormLetterId String?
+  relievingLetterId     String?
+  status               String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
+  completedAt          DateTime?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("exit_clearances")
 }
 
 // ─── SETTINGS / CONFIG ────────────────────────────────────────────────────────

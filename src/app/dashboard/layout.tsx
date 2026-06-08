@@ -67,7 +67,11 @@ const FOCUS_PATHS = new Set([
   '/dashboard/payroll',      // Payroll
   '/dashboard/recruiting',   // Hiring / Recruiting — now in active polishing
   '/dashboard/onboarding',   // Onboarding & Probation — now in active polishing
+  '/dashboard/lifecycle',    // Unified Employee Lifecycle (onboarding + active + exit)
   '/dashboard/probation',    // Probation Tracker (Devsinc-style lifecycle)
+  '/dashboard/assets',       // Assets module — typed inventory
+  '/dashboard/documents',    // Documents — BYTEA upload + download
+  '/dashboard/settings',     // Settings — Stripe/Linear-style redesign
   '/dashboard/help',
   '/dashboard/admin/seed',
   '/dashboard/admin/health',
@@ -98,7 +102,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/performance', label: 'Performance', icon: TrendingUp },
         { href: '/dashboard/letters', label: 'Letters', icon: FileText },
-        { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
+        { href: '/dashboard/lifecycle', label: 'Employee Lifecycle', icon: UserPlus },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
         { href: '/dashboard/learning', label: 'Learning & Dev', icon: GraduationCap },
@@ -121,9 +125,14 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/documents', label: 'Documents', icon: FolderOpen },
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+        { href: '/dashboard/help', label: 'Help Center', icon: HelpCircle },
+      ],
+    },
+    {
+      label: 'Developer',
+      items: [
         { href: '/dashboard/admin/seed', label: 'Demo Data', icon: Sprout },
         { href: '/dashboard/admin/health', label: 'System Health', icon: Heart },
-        { href: '/dashboard/help', label: 'Help Center', icon: HelpCircle },
       ],
     },
   ],
@@ -293,11 +302,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const navGroups = applyFocus(NAV_GROUPS_BY_ROLE[effectiveRole] ?? NAV_GROUPS_BY_ROLE.EMPLOYEE)
 
-  const displayRole =
-    effectiveRole === 'HR_ADMIN'  ? 'HR'                 :
-    effectiveRole === 'MANAGER'   ? 'Manager'           :
-    effectiveRole === 'EXECUTIVE' ? 'Executive'         :
-    user?.employee?.designation ?? 'Employee'
+  // For HR_ADMIN we prefer the actual designation ("Head of People & Culture")
+  // joined with the department, so the sidebar/header doesn't say a generic "HR".
+  const displayRole = (() => {
+    if (effectiveRole === 'HR_ADMIN') {
+      const desig = user?.employee?.designation ?? 'Head of People & Culture'
+      const dept = user?.employee?.department?.name
+      return dept ? `${desig} · ${dept}` : desig
+    }
+    if (effectiveRole === 'MANAGER')   return 'Manager'
+    if (effectiveRole === 'EXECUTIVE') return 'Executive'
+    return user?.employee?.designation ?? 'Employee'
+  })()
 
   const inboxCount = 0
 

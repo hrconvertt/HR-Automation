@@ -11,6 +11,7 @@ import { verifyToken } from '@/lib/auth'
 import EditEmployeeButton from '@/components/edit-employee-button'
 import CompensationPanel from '@/components/compensation-panel'
 import { SystemRolesPanel } from '@/components/system-roles-panel'
+import { BackButton } from '@/components/ui/back-button'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -122,9 +123,9 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
   //  │ MANAGER      │ team │      │     ✓      │  (own + direct reports)
   //  │ EMPLOYEE     │ own  │      │   own      │
   //  └──────────────┴──────┴──────┴────────────┘
-  const isFinance = effectiveRole === 'FINANCE'
-  const canViewCompensation =
-    isHR || isExec || isFinance || isViewingOwn || (isManager && isMyTeamMember)
+  // Salary is HR + employee only (Pakistani culture / explicit spec):
+  // managers and executives do NOT see compensation, even for their reports.
+  const canViewCompensation = isHR || isViewingOwn
   const canEditCompensation = isHR && !isPreviewMode
   const canDownloadTotalRewards = canViewCompensation
 
@@ -138,8 +139,40 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
 
   const currentSalary = employee.salary
 
+  // Seed a synthetic "Hire — Joining offer" row from the current Salary when
+  // there's no CompensationHistory yet. Read-only — we don't persist it,
+  // because the joining-offer row is implicit from joiningDate + Salary.
+  let displayHistory = employee.compensationHistory
+  if (displayHistory.length === 0 && currentSalary) {
+    const gross =
+      currentSalary.basic +
+      currentSalary.houseRent +
+      currentSalary.utilities +
+      currentSalary.food +
+      currentSalary.fuel +
+      currentSalary.medicalAllowance +
+      currentSalary.otherAllowance
+    if (gross > 0) {
+      displayHistory = [
+        {
+          id: 'seed-hire',
+          employeeId: employee.id,
+          type: 'INITIAL',
+          oldSalary: 0,
+          newSalary: gross,
+          incrementPct: null,
+          reason: 'Hire — Joining offer',
+          effectiveDate: employee.joiningDate,
+          approvedById: null,
+          createdAt: employee.joiningDate,
+        },
+      ]
+    }
+  }
+
   return (
     <div className="space-y-6">
+      <BackButton fallback="/dashboard/employees" />
       {/* Header */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <div className="flex items-start gap-5">
@@ -296,7 +329,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
             employeeId={employee.id}
             employeeName={employee.fullName}
             currentSalary={currentSalary}
-            history={employee.compensationHistory.map((c) => ({
+            history={displayHistory.map((c) => ({
               id: c.id,
               effectiveDate: c.effectiveDate.toISOString(),
               type: c.type,

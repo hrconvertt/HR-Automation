@@ -94,6 +94,12 @@ export function HRPeopleView() {
     cnic: '',
     probationMonths: 3,
   })
+  // Auto-suggested employee code — refreshed when department changes.
+  // HR can flip the override toggle to type a custom code, in which case
+  // the server validates uniqueness.
+  const [employeeCode, setEmployeeCode] = useState('')
+  const [overrideCode, setOverrideCode] = useState(false)
+  const [codeLoading, setCodeLoading] = useState(false)
   // Initial Compensation captured at hire-time (optional). If totalGross > 0,
   // the API splits it into Basic + Allowances per the Convertt standard split
   // (60% Basic / 25% HRA / 15% Allowances) and creates the Salary row.
@@ -136,6 +142,21 @@ export function HRPeopleView() {
       .then((d) => setDepartments(d.departments ?? []))
   }, [])
 
+  // Refresh the auto-suggested employee code whenever the department
+  // changes (or the dialog opens). HR can still flip the override toggle.
+  useEffect(() => {
+    if (!addOpen || overrideCode) return
+    setCodeLoading(true)
+    const url = form.departmentId
+      ? `/api/employees/next-code?dept=${encodeURIComponent(form.departmentId)}`
+      : `/api/employees/next-code?code=GEN`
+    fetch(url)
+      .then((r) => r.json())
+      .then((d) => { if (d?.next) setEmployeeCode(d.next) })
+      .catch(() => {})
+      .finally(() => setCodeLoading(false))
+  }, [form.departmentId, addOpen, overrideCode])
+
   useEffect(() => {
     const t = setTimeout(fetchEmployees, 300)
     return () => clearTimeout(t)
@@ -151,6 +172,10 @@ export function HRPeopleView() {
     // Only send probationMonths for non-permanent hires
     if (form.employeeType === 'PERMANENT') {
       delete (payload as Record<string, unknown>).probationMonths
+    }
+    // Include code override only when HR explicitly chose to type one.
+    if (overrideCode && employeeCode.trim()) {
+      payload.employeeCodeOverride = employeeCode.trim().toUpperCase()
     }
     if (salary.enabled && Number.isFinite(grossNum) && grossNum > 0) {
       const sum = salary.basicPct + salary.housePct + salary.otherPct
@@ -179,6 +204,8 @@ export function HRPeopleView() {
     }
     setAddOpen(false)
     setSalary({ enabled: false, totalGross: '', basicPct: 60, housePct: 25, otherPct: 15 })
+    setEmployeeCode('')
+    setOverrideCode(false)
     setForm({
       fullName: '',
       email: '',
@@ -403,6 +430,34 @@ export function HRPeopleView() {
                     <SelectItem value="TRAINING">Training</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="col-span-2">
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Employee Code
+                </label>
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={employeeCode}
+                    readOnly={!overrideCode}
+                    onChange={(e) => setEmployeeCode(e.target.value.toUpperCase())}
+                    placeholder={codeLoading ? 'Generating…' : 'CON-DEPT-NNN'}
+                    className={overrideCode ? '' : 'bg-slate-50 text-slate-700 font-mono'}
+                  />
+                  <label className="flex items-center gap-1.5 text-xs text-slate-600 whitespace-nowrap cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={overrideCode}
+                      onChange={(e) => setOverrideCode(e.target.checked)}
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+                    />
+                    Override
+                  </label>
+                </div>
+                <p className="mt-1 text-[11px] text-slate-500">
+                  {overrideCode
+                    ? 'Custom code — must be unique across all employees.'
+                    : 'Auto-generated from the selected department. Changes when you pick a different one.'}
+                </p>
               </div>
               <div className="col-span-2">
                 <label className="block text-sm font-medium text-slate-700 mb-1">

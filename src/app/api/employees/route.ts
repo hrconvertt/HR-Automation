@@ -2,8 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole, hashPassword } from '@/lib/auth'
 
-function generateEmployeeCode(deptCode: string, count: number): string {
-  return `CON-${deptCode}-${String(count + 1).padStart(3, '0')}`
+// Returns the next available CON-{DEPT}-NNN code by scanning existing
+// codes for the prefix and picking max + 1. Avoids gaps becoming
+// duplicates when employees are deleted/restored.
+async function nextEmployeeCode(deptCode: string): Promise<string> {
+  const prefix = `CON-${deptCode}-`
+  const rows = await prisma.employee.findMany({
+    where: { employeeCode: { startsWith: prefix } },
+    select: { employeeCode: true },
+  })
+  let maxN = 0
+  for (const r of rows) {
+    const n = parseInt(r.employeeCode.slice(prefix.length), 10)
+    if (Number.isFinite(n) && n > maxN) maxN = n
+  }
+  return `${prefix}${String(maxN + 1).padStart(3, '0')}`
 }
 
 export async function GET(request: NextRequest) {
@@ -31,6 +44,10 @@ export async function GET(request: NextRequest) {
   const status = searchParams.get('status') ?? ''
   const employeeType = searchParams.get('employeeType') ?? ''
   const limit = parseInt(searchParams.get('limit') ?? '100')
+  // When set, return only employees who could plausibly be a reporting
+  // manager: designation contains a leadership keyword, or the user has
+  // the HR_ADMIN role.
+  const managersOnly = searchParams.get('managersOnly') === '1'
 
   // Role-based filters layered onto user filters
   let roleFilter: object = {}
@@ -75,6 +92,23 @@ export async function GET(request: NextRequest) {
     take: limit,
   })
 
+  if (managersOnly) {
+    const KEYWORDS = ['lead', 'head', 'manager', 'director', 'chief', 'cto', 'ceo', 'coo', 'cfo', 'vp', 'president', 'partner']
+    // Also include anyone with the HR_ADMIN role membership.
+    const hrAdmins = await prisma.userRole.findMany({
+      where: { role: 'HR_ADMIN' },
+      select: { user: { select: { employee: { select: { id: true } } } } },
+    })
+    const hrAdminEmpIds = new Set(
+      hrAdmins.map((r) => r.user?.employee?.id).filter((id): id is string => !!id),
+    )
+    const filtered = employees.filter((e) => {
+      const d = (e.designation ?? '').toLowerCase()
+      return hrAdminEmpIds.has(e.id) || KEYWORDS.some((k) => d.includes(k))
+    })
+    return NextResponse.json({ employees: filtered })
+  }
+
   return NextResponse.json({ employees })
 }
 
@@ -100,6 +134,9 @@ export async function POST(request: NextRequest) {
       // Optional: probation duration in months (1-12). Only honored when
       // employeeType != PERMANENT. Defaults to 3 when omitted.
       probationMonths,
+      // Optional override for the auto-generated employee code. When set,
+      // we validate uniqueness server-side and use it verbatim.
+      employeeCodeOverride,
       // Initial Compensation (optional). If `salary` is provided, a Salary
       // record + CompensationHistory row are created in the same transaction
       // so AutoPilot can pick the new hire up immediately.
@@ -123,8 +160,20 @@ export async function POST(request: NextRequest) {
       if (dept) deptCode = dept.code
     }
 
-    const count = await prisma.employee.count({ where: departmentId ? { departmentId } : {} })
-    const employeeCode = generateEmployeeCode(deptCode, count)
+    let employeeCode: string
+    if (typeof employeeCodeOverride === 'string' && employeeCodeOverride.trim()) {
+      employeeCode = employeeCodeOverride.trim().toUpperCase()
+      // Uniqueness check (DB has @unique too, but fail fast with a clear message)
+      const dup = await prisma.employee.findUnique({ where: { employeeCode } })
+      if (dup) {
+        return NextResponse.json(
+          { error: `Employee code ${employeeCode} is already in use.` },
+          { status: 409 },
+        )
+      }
+    } else {
+      employeeCode = await nextEmployeeCode(deptCode)
+    }
     const empType = employeeType ?? 'PROBATION'
 
     // ─── Auto-provision login (Step 3a) ─────────────────────────────────────
@@ -268,12 +317,36 @@ export async function POST(request: NextRequest) {
       data: { employeeId: employee.id },
     })
 
-    // Initialize leave balances
+    // Initialize leave balances.
+    //   PERMANENT  → full daysPerYear allocation up-front.
+    //   PROBATION / INTERNSHIP / TRAINING → accrualPerMonth × probation
+    //   months (default 3). No ANNUAL row is created — probationers do
+    //   not accrue annual leave in the Pakistani standard.
     const policies = await prisma.leavePolicy.findMany({
       where: { employeeType: empType },
     })
+    const probMonths =
+      empType !== 'PERMANENT'
+        ? (() => {
+            const m = Number(probationMonths)
+            return Number.isFinite(m) && m >= 1 && m <= 12 ? Math.floor(m) : 3
+          })()
+        : 0
 
     for (const policy of policies) {
+      // Probation policies without an accrualPerMonth get skipped — they
+      // are stale rows from the old "6 days/year" model.
+      const isProbationary = empType !== 'PERMANENT'
+      if (isProbationary && policy.leaveType === 'ANNUAL') continue
+
+      let allocated = policy.daysPerYear
+      if (isProbationary) {
+        if (policy.accrualPerMonth == null) continue
+        allocated = Math.min(
+          policy.accrualPerMonth * probMonths,
+          policy.daysPerYear,
+        )
+      }
       await prisma.leaveBalance.upsert({
         where: {
           employeeId_year_leaveType: {
@@ -287,10 +360,10 @@ export async function POST(request: NextRequest) {
           employeeId: employee.id,
           year: new Date().getFullYear(),
           leaveType: policy.leaveType,
-          allocated: policy.daysPerYear,
+          allocated,
           used: 0,
           pending: 0,
-          remaining: policy.daysPerYear,
+          remaining: allocated,
         },
       })
     }

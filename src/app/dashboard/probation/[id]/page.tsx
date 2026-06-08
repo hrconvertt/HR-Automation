@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { ShieldCheck, Zap, AlertTriangle, CheckCircle, Clock, FileText } from 'lucide-react'
+import { BackButton } from '@/components/ui/back-button'
 
 interface ProbationRec {
   id: string
@@ -114,6 +115,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
 
   return (
     <div className="space-y-6">
+      <BackButton fallback="/dashboard/probation" />
       {/* Header */}
       <div className="rounded-2xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-600 p-6 text-white shadow-md">
         <div className="flex items-start gap-4">
