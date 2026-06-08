@@ -1,29 +1,10 @@
-'use client'
-
-import { useEffect, useState } from 'react'
-import Link from 'next/link'
-import { Card } from '@/components/ui/card'
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { verifyToken } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
 import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { ShieldCheck, AlertTriangle } from 'lucide-react'
-
-interface ProbationListItem {
-  id: string
-  status: string
-  startDate: string
-  endDate: string
-  durationMonths: number
-  warningCount: number
-  employee: {
-    id: string
-    fullName: string
-    employeeCode: string
-    designation: string
-    department: { name: string } | null
-    reportingManager: { id: string; fullName: string } | null
-  }
-}
+import { ShieldCheck } from 'lucide-react'
+import { ProbationTrackerTabs, type ProbationListItem } from '@/components/probation/tracker-tabs'
 
 const STATUSES = ['ACTIVE', 'UNDER_REVIEW', 'CONFIRMED', 'EXTENDED', 'WARNED', 'TERMINATED'] as const
 
@@ -36,25 +17,69 @@ const STATUS_TONE: { [key: string]: string } = {
   TERMINATED: 'bg-rose-50 text-rose-700 border-rose-200',
 }
 
-function daysLeft(endIso: string): number {
-  return Math.floor((new Date(endIso).getTime() - Date.now()) / 86_400_000)
-}
+export default async function ProbationListPage() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('hr_token')?.value
+  if (!token) redirect('/login')
+  const payload = verifyToken(token)
+  if (!payload) redirect('/login')
 
-export default function ProbationListPage() {
-  const [records, setRecords] = useState<ProbationListItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<string>('ACTIVE')
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { role: true, employee: { select: { id: true } } },
+  })
+  if (!user) redirect('/login')
 
-  useEffect(() => {
-    fetch('/api/probation')
-      .then((r) => r.json())
-      .then((d) => { setRecords(d.records ?? []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [])
+  const previewRole =
+    user.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined
+  const effectiveRole = previewRole ?? user.role
+  const meId = user.employee?.id ?? null
 
-  const counts: { [key: string]: number } = {}
-  for (const s of STATUSES) counts[s] = records.filter((r) => r.status === s).length
-  const filtered = records.filter((r) => r.status === tab)
+  let where: object = {}
+  if (effectiveRole === 'MANAGER' && meId) {
+    where = { employee: { reportingManagerId: meId } }
+  } else if (effectiveRole === 'EMPLOYEE') {
+    if (!meId) {
+      // No employee link → no records visible
+      where = { id: '__none__' }
+    } else {
+      where = { employeeId: meId }
+    }
+  } else if (effectiveRole !== 'HR_ADMIN') {
+    where = { id: '__none__' }
+  }
+
+  const recordsRaw = await prisma.probationRecord.findMany({
+    where,
+    orderBy: { endDate: 'asc' },
+    include: {
+      employee: {
+        select: {
+          id: true, fullName: true, employeeCode: true, designation: true,
+          department: { select: { name: true } },
+          reportingManager: { select: { id: true, fullName: true } },
+        },
+      },
+    },
+  })
+
+  // Serialize Date fields to ISO strings for the client component prop
+  const records: ProbationListItem[] = recordsRaw.map((r) => ({
+    id: r.id,
+    status: r.status,
+    startDate: r.startDate.toISOString(),
+    endDate: r.endDate.toISOString(),
+    durationMonths: r.durationMonths,
+    warningCount: r.warningCount,
+    employee: {
+      id: r.employee.id,
+      fullName: r.employee.fullName,
+      employeeCode: r.employee.employeeCode,
+      designation: r.employee.designation,
+      department: r.employee.department,
+      reportingManager: r.employee.reportingManager,
+    },
+  }))
 
   return (
     <div className="space-y-6">
@@ -73,71 +98,8 @@ export default function ProbationListPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={tab} onValueChange={setTab}>
-        <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex flex-wrap">
-          {STATUSES.map((s) => (
-            <TabsTrigger key={s} value={s}>
-              {s.replace('_', ' ').toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase())}
-              <span className="ml-2 text-xs text-slate-500">{counts[s]}</span>
-            </TabsTrigger>
-          ))}
-        </TabsList>
-
-        {STATUSES.map((s) => (
-          <TabsContent key={s} value={s} className="mt-4">
-            <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
-              {loading ? (
-                <div className="p-8 text-center text-slate-500">Loading…</div>
-              ) : filtered.length === 0 ? (
-                <div className="p-8 text-center text-slate-500">No records.</div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Manager</TableHead>
-                      <TableHead>Started</TableHead>
-                      <TableHead>Ends</TableHead>
-                      <TableHead>Days Left</TableHead>
-                      <TableHead>Warnings</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((r) => {
-                      const dl = daysLeft(r.endDate)
-                      const tone = dl < 14 ? 'text-rose-700 font-semibold' : dl < 30 ? 'text-amber-700 font-semibold' : 'text-slate-700'
-                      return (
-                        <TableRow key={r.id}>
-                          <TableCell>
-                            <div className="font-medium text-slate-900">{r.employee.fullName}</div>
-                            <div className="text-xs text-slate-500">{r.employee.employeeCode} · {r.employee.designation}</div>
-                          </TableCell>
-                          <TableCell className="text-sm text-slate-700">{r.employee.reportingManager?.fullName ?? '—'}</TableCell>
-                          <TableCell className="text-sm text-slate-700">{new Date(r.startDate).toLocaleDateString('en-GB')}</TableCell>
-                          <TableCell className="text-sm text-slate-700">{new Date(r.endDate).toLocaleDateString('en-GB')}</TableCell>
-                          <TableCell className={`text-sm ${tone}`}>{dl} days</TableCell>
-                          <TableCell>
-                            {r.warningCount > 0 ? (
-                              <span className="inline-flex items-center gap-1 text-orange-700 text-xs font-semibold">
-                                <AlertTriangle className="w-3 h-3" />{r.warningCount}
-                              </span>
-                            ) : <span className="text-slate-400 text-xs">—</span>}
-                          </TableCell>
-                          <TableCell>
-                            <Link href={`/dashboard/probation/${r.id}`} className="text-blue-600 hover:underline text-sm font-medium">View →</Link>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </Card>
-          </TabsContent>
-        ))}
-      </Tabs>
+      {/* Tabs (client) */}
+      <ProbationTrackerTabs records={records} />
 
       <p className="text-xs text-slate-400">
         Status badges:{' '}
