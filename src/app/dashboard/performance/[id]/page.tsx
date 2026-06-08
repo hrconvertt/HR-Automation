@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, User, Calendar, ClipboardCheck } from 'lucide-react'
 import { ReviewForm } from '@/components/performance/review-form'
+import { suggestedOverallRating } from '@/lib/performance-metrics'
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -120,6 +121,15 @@ export default async function ReviewDetailPage({ params }: PageProps) {
 
       {/* Form / Read-only views */}
       <ReviewForm
+        suggestedOverall={
+          isHR
+            ? suggestedOverallRating({
+                individualScore: review.individualScore,
+                timeScore: review.timeScore,
+                behavioralAvg: review.behavioralAvg,
+              })
+            : null
+        }
         review={{
           id: review.id,
           status: review.status,
@@ -138,6 +148,17 @@ export default async function ReviewDetailPage({ params }: PageProps) {
           learnings: review.learnings,
           teamContribution: review.teamContribution,
           managerFeedback: review.managerFeedback,
+          // Time & Work auto-metrics
+          cycleStartDate: review.cycleStartDate?.toISOString() ?? null,
+          cycleEndDate: review.cycleEndDate?.toISOString() ?? null,
+          daysWorked: review.daysWorked,
+          daysAbsent: review.daysAbsent,
+          daysOnLeave: review.daysOnLeave,
+          lateArrivalCount: review.lateArrivalCount,
+          avgHoursPerDay: review.avgHoursPerDay,
+          goalsOnTime: review.goalsOnTime,
+          goalsLate: review.goalsLate,
+          timeScore: review.timeScore,
           goals: review.goals.map((g) => ({
             id: g.id,
             goalId: g.goalId,

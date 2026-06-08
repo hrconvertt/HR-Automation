@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
-import { Save, Send, CheckCircle2 } from 'lucide-react'
+import { Save, Send, CheckCircle2, Clock, Sparkles } from 'lucide-react'
 
 interface ReviewGoal {
   id: string
@@ -39,6 +39,17 @@ interface Review {
   learnings: string | null
   teamContribution: string | null
   managerFeedback: string | null
+  // Time & Work auto-metrics (null on legacy reviews / failed compute)
+  cycleStartDate?: string | null
+  cycleEndDate?: string | null
+  daysWorked?: number | null
+  daysAbsent?: number | null
+  daysOnLeave?: number | null
+  lateArrivalCount?: number | null
+  avgHoursPerDay?: number | null
+  goalsOnTime?: number | null
+  goalsLate?: number | null
+  timeScore?: number | null
   goals?: ReviewGoal[]
 }
 
@@ -50,6 +61,8 @@ interface Props {
     isHR: boolean
     isExec?: boolean
   }
+  // Blended suggestion: 60% work + 20% time + 20% behavioral (HR-only)
+  suggestedOverall?: number | null
 }
 
 const RATING_OPTIONS = [
@@ -67,7 +80,7 @@ const CATEGORY_OPTIONS = [
   { value: 'UNSATISFACTORY', label: 'Unsatisfactory',       variant: 'destructive' as const },
 ]
 
-export function ReviewForm({ review, permissions }: Props) {
+export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState('')
@@ -304,6 +317,13 @@ export function ReviewForm({ review, permissions }: Props) {
         </Card>
       )}
 
+      {/* ─── TIME & WORK SECTION ─── Auto-computed from attendance + goals. */}
+      {/* Visibility mirrors the manager section: manager + HR always; employee/exec after HR_FINALIZED. */}
+      {(permissions.isMyTeamMember || permissions.isHR ||
+        ((permissions.isOwn || !!permissions.isExec) && isFinalized)) && (
+        <TimeWorkCard review={review} />
+      )}
+
       {/* ─── MANAGER REVIEW SECTION ─── Confidential to employee until HR_FINALIZED */}
       {canSeeManager && (
         <Card>
@@ -418,6 +438,27 @@ export function ReviewForm({ review, permissions }: Props) {
           <CardContent className="space-y-4">
             {showHRForm ? (
               <>
+                {suggestedOverall != null && (
+                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 flex items-start gap-3">
+                    <Sparkles className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm text-emerald-900">
+                        Suggested Overall (based on 60% work + 20% time + 20% behavioral):{' '}
+                        <strong>{suggestedOverall.toFixed(1)}/5</strong>
+                      </p>
+                      <p className="text-xs text-emerald-700 mt-0.5">
+                        HR can override — this is a starting point computed from the data above.
+                      </p>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setForm({ ...form, overallRating: String(Math.round(suggestedOverall)) })}
+                    >
+                      Use Suggestion
+                    </Button>
+                  </div>
+                )}
                 <FormSelect
                   label="Overall Rating"
                   value={form.overallRating}
@@ -597,6 +638,173 @@ function GoalEditor({
           )}
         </>
       )}
+    </div>
+  )
+}
+
+// ─── Time & Work auto-metrics card ─────────────────────────────────────────
+// Pulls work + time numbers computed server-side from Attendance + Goals.
+// Shows a skeleton if all metrics are null (legacy review with no window).
+function TimeWorkCard({ review }: { review: Review }) {
+  const noMetrics =
+    review.daysWorked == null &&
+    review.daysAbsent == null &&
+    review.lateArrivalCount == null &&
+    review.timeScore == null
+
+  // Goal achievement % — average across linked goals
+  const goalAchPct =
+    review.goals && review.goals.length > 0
+      ? Math.round(
+          review.goals.reduce((sum, g) => sum + (g.achievement ?? 0), 0) /
+            review.goals.length,
+        )
+      : null
+
+  const ts = review.timeScore
+  const scoreColor: 'secondary' | 'success' | 'default' | 'warning' =
+    ts == null
+      ? 'secondary'
+      : ts >= 4
+        ? 'success'
+        : ts >= 3
+          ? 'default'
+          : 'warning'
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Clock className="w-4 h-4 text-amber-600" />
+          Time &amp; Work
+          {ts != null && (
+            <Badge variant={scoreColor}>Score: {ts.toFixed(1)}/5</Badge>
+          )}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {noMetrics ? (
+          <div className="rounded-lg border border-dashed border-gray-200 bg-gray-50 p-4 text-sm text-gray-500">
+            Computing… (metrics unavailable for this review cycle)
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Work delivered */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                  Work delivered
+                </p>
+                <div className="space-y-2">
+                  <StatTile
+                    label="Goals Achieved (weighted)"
+                    value={
+                      review.individualScore != null
+                        ? `${review.individualScore.toFixed(1)} / 5`
+                        : '—'
+                    }
+                  />
+                  <StatTile
+                    label="Goals On-Time"
+                    value={
+                      review.goalsOnTime != null && review.goalsLate != null
+                        ? `${review.goalsOnTime} of ${review.goalsOnTime + review.goalsLate}`
+                        : '—'
+                    }
+                  />
+                  <StatTile
+                    label="Goal Achievement %"
+                    value={goalAchPct != null ? `${goalAchPct}%` : '—'}
+                  />
+                </div>
+              </div>
+
+              {/* Time investment */}
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
+                  Time investment
+                </p>
+                <div className="space-y-2">
+                  <StatTile label="Days Worked" value={review.daysWorked ?? '—'} />
+                  <StatTile
+                    label="Absent"
+                    value={review.daysAbsent ?? '—'}
+                    tone={
+                      review.daysAbsent != null && review.daysAbsent > 5
+                        ? 'red'
+                        : undefined
+                    }
+                  />
+                  <StatTile label="On Leave" value={review.daysOnLeave ?? '—'} />
+                  <StatTile
+                    label="Late Arrivals"
+                    value={review.lateArrivalCount ?? '—'}
+                    tone={
+                      review.lateArrivalCount != null && review.lateArrivalCount > 3
+                        ? 'amber'
+                        : undefined
+                    }
+                  />
+                  <StatTile
+                    label="Avg Hours/Day"
+                    value={
+                      review.avgHoursPerDay != null
+                        ? review.avgHoursPerDay.toFixed(1)
+                        : '—'
+                    }
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Big score footer */}
+            {ts != null && (
+              <div className="mt-5 pt-4 border-t border-gray-100 flex items-center justify-between">
+                <div>
+                  <p className="text-xs text-gray-500">Time &amp; Work Score</p>
+                  <p className="text-xs text-gray-400 mt-0.5">
+                    Attendance · Punctuality · On-time delivery
+                  </p>
+                </div>
+                <div
+                  className={`px-4 py-2 rounded-lg text-lg font-bold ${
+                    ts >= 4
+                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      : ts >= 3
+                        ? 'bg-gray-50 text-gray-800 border border-gray-200'
+                        : 'bg-amber-50 text-amber-800 border border-amber-200'
+                  }`}
+                >
+                  {ts.toFixed(1)} / 5
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function StatTile({
+  label,
+  value,
+  tone,
+}: {
+  label: string
+  value: string | number
+  tone?: 'red' | 'amber'
+}) {
+  const valueColor =
+    tone === 'red'
+      ? 'text-red-700'
+      : tone === 'amber'
+        ? 'text-amber-700'
+        : 'text-gray-900'
+  return (
+    <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2">
+      <span className="text-sm text-gray-600">{label}</span>
+      <span className={`text-sm font-semibold ${valueColor}`}>{value}</span>
     </div>
   )
 }

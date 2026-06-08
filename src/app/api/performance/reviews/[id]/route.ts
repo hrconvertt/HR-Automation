@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
+import { cycleWindow, computeTimeMetrics, suggestedOverallRating } from '@/lib/performance-metrics'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -92,9 +93,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     scrubbed.finalCategory = null
   }
 
+  // Suggested overall — only meaningful for HR (gates on un-scrubbed values).
+  const suggestedOverall = isHR
+    ? suggestedOverallRating({
+        individualScore: review.individualScore,
+        timeScore: review.timeScore,
+        behavioralAvg: review.behavioralAvg,
+      })
+    : null
+
   return NextResponse.json({
     review: scrubbed,
     viewer: { isOwn, isMyTeamMember, isHR, isExec },
+    suggestedOverall,
   })
 }
 
@@ -214,7 +225,33 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    if (action === 'SUBMIT_MANAGER') data.status = 'MANAGER_REVIEWED'
+    // ─── Re-compute Time & Work metrics fresh on manager submit ───
+    // Attendance / leave / goals may have shifted since the cycle was opened,
+    // so we always pull current numbers when the manager submits.
+    if (action === 'SUBMIT_MANAGER') {
+      const window =
+        review.cycleStartDate && review.cycleEndDate
+          ? { start: review.cycleStartDate, end: review.cycleEndDate }
+          : cycleWindow(review.reviewType, review.reviewPeriod)
+      if (window) {
+        try {
+          const m = await computeTimeMetrics(review.employeeId, window.start, window.end)
+          data.cycleStartDate = window.start
+          data.cycleEndDate = window.end
+          data.daysWorked = m.daysWorked
+          data.daysAbsent = m.daysAbsent
+          data.daysOnLeave = m.daysOnLeave
+          data.lateArrivalCount = m.lateArrivalCount
+          data.avgHoursPerDay = m.avgHoursPerDay
+          data.goalsOnTime = m.goalsOnTime
+          data.goalsLate = m.goalsLate
+          data.timeScore = m.timeScore
+        } catch {
+          // non-fatal — leave existing metrics in place
+        }
+      }
+      data.status = 'MANAGER_REVIEWED'
+    }
   }
   else if (action === 'FINALIZE') {
     if (!isHR) return NextResponse.json({ error: 'Only HR can finalize' }, { status: 403 })
@@ -282,5 +319,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     })
   }
 
-  return NextResponse.json({ review: updated })
+  // Compute suggested overall (blend of work + time + behavioral) for HR UI
+  const suggestedOverall = suggestedOverallRating({
+    individualScore: updated.individualScore,
+    timeScore: updated.timeScore,
+    behavioralAvg: updated.behavioralAvg,
+  })
+
+  return NextResponse.json({ review: updated, suggestedOverall })
 }

@@ -588,6 +588,19 @@ model PerformanceReview {
   teamContribution  String?
   managerFeedback   String?
   status            String   @default("PENDING") // PENDING | SELF_SUBMITTED | MANAGER_REVIEWED | HR_FINALIZED
+
+  // ─── Time & Work auto-metrics (computed from Attendance + Goals over cycle window) ───
+  cycleStartDate    DateTime?
+  cycleEndDate      DateTime?
+  daysWorked        Int?
+  daysAbsent        Int?
+  daysOnLeave       Int?
+  lateArrivalCount  Int?
+  avgHoursPerDay    Float?
+  goalsOnTime       Int?
+  goalsLate         Int?
+  timeScore         Float?
+
   goals             Goal[]
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notifyMany } from '@/lib/notifications'
+import { cycleWindow, computeTimeMetrics } from '@/lib/performance-metrics'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -156,10 +157,25 @@ export async function POST(request: NextRequest) {
     select: { id: true, reportingManagerId: true },
   })
 
+  // ─── Compute cycle window for Time & Work metrics ───
+  // Returns null for legacy types (MONTHLY_11, QUARTERLY) — metrics stay null.
+  const window = cycleWindow(reviewType, reviewPeriod)
+
   // Create draft reviews for each + link their open goals
   let created = 0
   let goalsLinked = 0
   for (const emp of activeEmployees) {
+    // Time & Work metrics — only when we have a valid window
+    let metrics: Awaited<ReturnType<typeof computeTimeMetrics>> | null = null
+    if (window) {
+      try {
+        metrics = await computeTimeMetrics(emp.id, window.start, window.end)
+      } catch {
+        // Don't block cycle open if a single employee's metrics fail
+        metrics = null
+      }
+    }
+
     const review = await prisma.performanceReview.create({
       data: {
         employeeId: emp.id,
@@ -167,6 +183,16 @@ export async function POST(request: NextRequest) {
         reviewPeriod,
         reviewType,
         status: 'PENDING',
+        cycleStartDate: window?.start ?? null,
+        cycleEndDate: window?.end ?? null,
+        daysWorked: metrics?.daysWorked ?? null,
+        daysAbsent: metrics?.daysAbsent ?? null,
+        daysOnLeave: metrics?.daysOnLeave ?? null,
+        lateArrivalCount: metrics?.lateArrivalCount ?? null,
+        avgHoursPerDay: metrics?.avgHoursPerDay ?? null,
+        goalsOnTime: metrics?.goalsOnTime ?? null,
+        goalsLate: metrics?.goalsLate ?? null,
+        timeScore: metrics?.timeScore ?? null,
       },
     })
 
