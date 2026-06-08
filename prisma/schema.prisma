@@ -571,7 +571,7 @@ model PerformanceReview {
   employee          Employee @relation(fields: [employeeId], references: [id])
   reviewerId        String?
   reviewPeriod      String
-  reviewType        String   // MONTHLY_11 | QUARTERLY | ANNUAL | PROBATION
+  reviewType        String   // BIANNUAL | ANNUAL | PROBATION  (legacy values: MONTHLY_11, QUARTERLY)
   selfRating        Float?
   managerRating     Float?
   teamworkScore     Float?

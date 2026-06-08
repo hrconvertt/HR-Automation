@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
 
 // POST /api/performance/reviews
 // HR opens a review cycle — auto-creates a PerformanceReview row for every active employee
-// body: { reviewPeriod: "Q2-2026", reviewType: "QUARTERLY" }
+// body: { reviewPeriod: "H1-2026", reviewType: "BIANNUAL" }
 export async function POST(request: NextRequest) {
   const access = await resolveAccess(request)
   if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -135,7 +135,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'reviewPeriod and reviewType required' }, { status: 400 })
   }
 
-  const validTypes = ['MONTHLY_11', 'QUARTERLY', 'ANNUAL', 'PROBATION']
+  // Convertt only runs Biannual + Annual (Probation is a separate flow for new joiners).
+  // MONTHLY_11 / QUARTERLY kept in the valid list so historical rows still pass guards if any exist.
+  const validTypes = ['BIANNUAL', 'ANNUAL', 'PROBATION', 'MONTHLY_11', 'QUARTERLY']
   if (!validTypes.includes(reviewType)) {
     return NextResponse.json({ error: 'Invalid reviewType' }, { status: 400 })
   }

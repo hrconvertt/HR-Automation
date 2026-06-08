@@ -10,19 +10,17 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { Badge } from '@/components/ui/badge'
 import { CalendarPlus, AlertCircle } from 'lucide-react'
 
+// Convertt runs only Biannual (every 6 months) and Annual reviews.
+// PROBATION is a separate workflow for new joiners — kept available.
 const REVIEW_TYPES = [
-  { value: 'MONTHLY_11', label: 'Monthly 1:1', uses: 'month' },
-  { value: 'QUARTERLY',  label: 'Quarterly Review', uses: 'quarter' },
-  { value: 'ANNUAL',     label: 'Annual Review', uses: 'year' },
-  { value: 'PROBATION',  label: 'Probation Review', uses: 'year' },
+  { value: 'BIANNUAL',  label: 'Biannual Review (6-Month)', uses: 'half' },
+  { value: 'ANNUAL',    label: 'Annual Review',             uses: 'year' },
+  { value: 'PROBATION', label: 'Probation Review',          uses: 'year' },
 ] as const
 
-const QUARTERS = ['Q1', 'Q2', 'Q3', 'Q4']
-const MONTHS = [
-  { value: 'Jan', label: 'January' }, { value: 'Feb', label: 'February' }, { value: 'Mar', label: 'March' },
-  { value: 'Apr', label: 'April' }, { value: 'May', label: 'May' }, { value: 'Jun', label: 'June' },
-  { value: 'Jul', label: 'July' }, { value: 'Aug', label: 'August' }, { value: 'Sep', label: 'September' },
-  { value: 'Oct', label: 'October' }, { value: 'Nov', label: 'November' }, { value: 'Dec', label: 'December' },
+const HALVES = [
+  { value: 'H1', label: 'H1 (Jan–Jun)' },
+  { value: 'H2', label: 'H2 (Jul–Dec)' },
 ]
 
 const STATUS_VARIANT: Record<string, 'default' | 'success' | 'warning' | 'secondary'> = {
@@ -44,14 +42,12 @@ export function OpenCycleButton() {
   const [existing, setExisting] = useState<CycleSummary[]>([])
 
   const now = new Date()
-  const currentQuarter = `Q${Math.ceil((now.getMonth() + 1) / 3)}`
+  const currentHalf = now.getMonth() < 6 ? 'H1' : 'H2'
   const currentYear = String(now.getFullYear())
-  const currentMonth = MONTHS[now.getMonth()].value
 
   const [form, setForm] = useState({
-    reviewType: 'QUARTERLY',
-    quarter: currentQuarter,
-    month: currentMonth,
+    reviewType: 'BIANNUAL',
+    half: currentHalf,
     year: currentYear,
   })
 
@@ -64,8 +60,7 @@ export function OpenCycleButton() {
   // Compute the period string from the dropdown values + type
   const computedPeriod = useMemo(() => {
     const t = REVIEW_TYPES.find((r) => r.value === form.reviewType)
-    if (t?.uses === 'quarter') return `${form.quarter}-${form.year}`
-    if (t?.uses === 'month') return `${form.month}-${form.year}`
+    if (t?.uses === 'half') return `${form.half}-${form.year}`
     return `${form.year}` // year-only (Annual / Probation)
   }, [form])
 
@@ -147,22 +142,12 @@ export function OpenCycleButton() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Period</label>
               <div className="grid grid-cols-2 gap-3">
-                {typeMeta?.uses === 'quarter' && (
-                  <Select value={form.quarter} onValueChange={(v) => setForm({ ...form, quarter: v })}>
-                    <SelectTrigger><SelectValue placeholder="Quarter" /></SelectTrigger>
+                {typeMeta?.uses === 'half' && (
+                  <Select value={form.half} onValueChange={(v) => setForm({ ...form, half: v })}>
+                    <SelectTrigger><SelectValue placeholder="Half" /></SelectTrigger>
                     <SelectContent>
-                      {QUARTERS.map((q) => (
-                        <SelectItem key={q} value={q}>{q}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                )}
-                {typeMeta?.uses === 'month' && (
-                  <Select value={form.month} onValueChange={(v) => setForm({ ...form, month: v })}>
-                    <SelectTrigger><SelectValue placeholder="Month" /></SelectTrigger>
-                    <SelectContent>
-                      {MONTHS.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>
+                      {HALVES.map((h) => (
+                        <SelectItem key={h.value} value={h.value}>{h.label}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
