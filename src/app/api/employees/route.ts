@@ -97,6 +97,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       fullName, email, designation, departmentId, employeeType, joiningDate, phone, cnic,
+      // Optional: probation duration in months (1-12). Only honored when
+      // employeeType != PERMANENT. Defaults to 3 when omitted.
+      probationMonths,
       // Initial Compensation (optional). If `salary` is provided, a Salary
       // record + CompensationHistory row are created in the same transaction
       // so AutoPilot can pick the new hire up immediately.
@@ -241,15 +244,21 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Create probation record
-    if (empType === 'PROBATION') {
+    // Create probation record (skip for PERMANENT hires)
+    if (empType !== 'PERMANENT') {
+      const monthsRaw = Number(probationMonths)
+      const months = Number.isFinite(monthsRaw) && monthsRaw >= 1 && monthsRaw <= 12
+        ? Math.floor(monthsRaw)
+        : 3
       const probEndDate = new Date(joiningDate)
-      probEndDate.setMonth(probEndDate.getMonth() + 3)
+      probEndDate.setMonth(probEndDate.getMonth() + months)
       await prisma.probationRecord.create({
         data: {
           employeeId: employee.id,
           startDate: new Date(joiningDate),
           endDate: probEndDate,
+          durationMonths: months,
+          status: 'ACTIVE',
         },
       })
     }

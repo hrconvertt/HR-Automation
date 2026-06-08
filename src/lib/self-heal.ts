@@ -241,6 +241,46 @@ async function checkMissingOnboarding(): Promise<HealthCheck> {
   }
 }
 
+/** Probation lifecycle — auto-prompt settling check-ins, generate decision packets, enact on meeting day. */
+async function checkProbationLifecycle(): Promise<HealthCheck> {
+  // Drift = records in ACTIVE/UNDER_REVIEW where a lifecycle stage is overdue
+  // (settling check-in due, packet not generated, or enactment pending).
+  const today = new Date()
+  const records = await prisma.probationRecord.findMany({
+    where: { status: { in: ['ACTIVE', 'UNDER_REVIEW'] } },
+    include: { employee: { select: { fullName: true, employeeCode: true } } },
+  })
+  const drifted: { fullName: string; employeeCode: string }[] = []
+  for (const r of records) {
+    const elapsed = Math.floor((today.getTime() - r.startDate.getTime()) / 86_400_000)
+    const remaining = Math.floor((r.endDate.getTime() - today.getTime()) / 86_400_000)
+    if (elapsed >= 30 && r.durationMonths >= 2 && r.settlingCheckInAt == null && r.status === 'ACTIVE') {
+      drifted.push(r.employee); continue
+    }
+    if (remaining <= 30 && r.packetGeneratedAt == null && r.status === 'ACTIVE') {
+      drifted.push(r.employee); continue
+    }
+    if (r.hrDecision != null && r.outcomeEnactedAt == null && r.meetingScheduledFor && today >= r.meetingScheduledFor) {
+      drifted.push(r.employee); continue
+    }
+  }
+  return {
+    id: 'probation_lifecycle',
+    label: 'Probation lifecycle stages pending action',
+    severity: drifted.length > 0 ? 'warn' : 'info',
+    found: drifted.length,
+    sample: drifted.slice(0, 5).map((e) => `${e.fullName} (${e.employeeCode})`),
+    autoFixable: true,
+    description: 'Auto-fix runs the probation reconciler: prompts settling check-ins, generates decision packets, and enacts outcomes on meeting day.',
+  }
+}
+
+async function fixProbationLifecycle(): Promise<number> {
+  const { runProbationReconciler } = await import('./probation-reconciler')
+  const r = await runProbationReconciler()
+  return r.settlingPrompted + r.packetsGenerated + r.overdueNotified + r.enacted
+}
+
 async function fixMissingOnboarding(): Promise<number> {
   const ids = (await prisma.employee.findMany({ where: { onboarding: null }, select: { id: true } })).map((e) => e.id)
   let fixed = 0
@@ -261,6 +301,7 @@ const CHECKS = [
   checkOldNotifications,
   checkLeaveBalanceDrift,
   checkMissingOnboarding,
+  checkProbationLifecycle,
 ] as const
 
 const FIXERS: Record<string, () => Promise<number>> = {
@@ -269,6 +310,7 @@ const FIXERS: Record<string, () => Promise<number>> = {
   old_notifications: fixOldNotifications,
   leave_balance_drift: fixLeaveBalanceDrift,
   missing_onboarding: fixMissingOnboarding,
+  probation_lifecycle: fixProbationLifecycle,
 }
 
 export async function runHealthScan(): Promise<HealthReport> {

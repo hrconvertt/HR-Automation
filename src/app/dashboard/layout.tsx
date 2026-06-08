@@ -67,6 +67,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/payroll',      // Payroll
   '/dashboard/recruiting',   // Hiring / Recruiting — now in active polishing
   '/dashboard/onboarding',   // Onboarding & Probation — now in active polishing
+  '/dashboard/probation',    // Probation Tracker (Devsinc-style lifecycle)
   '/dashboard/help',
   '/dashboard/admin/seed',
   '/dashboard/admin/health',
@@ -98,6 +99,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/performance', label: 'Performance', icon: TrendingUp },
         { href: '/dashboard/letters', label: 'Letters', icon: FileText },
         { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
+        { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
         { href: '/dashboard/learning', label: 'Learning & Dev', icon: GraduationCap },
       ],
@@ -135,6 +137,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
         { href: '/dashboard/letters', label: 'Letters', icon: FileText },
+        { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
       ],
     },
     {

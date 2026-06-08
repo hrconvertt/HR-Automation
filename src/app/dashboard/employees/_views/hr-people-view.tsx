@@ -92,6 +92,7 @@ export function HRPeopleView() {
     joiningDate: '',
     phone: '',
     cnic: '',
+    probationMonths: 3,
   })
   // Initial Compensation captured at hire-time (optional). If totalGross > 0,
   // the API splits it into Basic + Allowances per the Convertt standard split
@@ -147,6 +148,10 @@ export function HRPeopleView() {
     // provided a numeric Total Gross.
     const grossNum = Number(salary.totalGross)
     const payload: Record<string, unknown> = { ...form }
+    // Only send probationMonths for non-permanent hires
+    if (form.employeeType === 'PERMANENT') {
+      delete (payload as Record<string, unknown>).probationMonths
+    }
     if (salary.enabled && Number.isFinite(grossNum) && grossNum > 0) {
       const sum = salary.basicPct + salary.housePct + salary.otherPct
       if (sum !== 100) { setFormError('Salary split must total 100%'); return }
@@ -183,6 +188,7 @@ export function HRPeopleView() {
       joiningDate: '',
       phone: '',
       cnic: '',
+      probationMonths: 3,
     })
     // Surface auto-provisioned login credentials (Step 3a).
     if (data?.login) {
@@ -408,6 +414,32 @@ export function HRPeopleView() {
                   onChange={(e) => setForm({ ...form, joiningDate: e.target.value })}
                 />
               </div>
+              {form.employeeType !== 'PERMANENT' && (
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Probation Duration (months)
+                  </label>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={12}
+                    value={form.probationMonths}
+                    onChange={(e) => setForm({ ...form, probationMonths: Math.max(1, Math.min(12, Number(e.target.value) || 3)) })}
+                  />
+                  {form.joiningDate && (
+                    <p className="mt-1 text-xs text-slate-500">
+                      Probation ends:{' '}
+                      <span className="font-semibold text-slate-700">
+                        {(() => {
+                          const d = new Date(form.joiningDate)
+                          d.setMonth(d.getMonth() + (form.probationMonths || 3))
+                          return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
+                        })()}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Initial Compensation — optional. If set, the API creates the

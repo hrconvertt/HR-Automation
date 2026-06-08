@@ -8,6 +8,7 @@ export const LETTER_TYPES = [
   'NOC_VISA',
   'BONAFIDE',
   'RELIEVING',
+  'CONFIRMATION',
 ] as const
 export type LetterType = (typeof LETTER_TYPES)[number]
 
@@ -17,6 +18,7 @@ export const LETTER_TYPE_LABEL: Record<LetterType, string> = {
   NOC_VISA: 'NOC for Visa',
   BONAFIDE: 'Bonafide / Employment Verification',
   RELIEVING: 'Relieving Letter',
+  CONFIRMATION: 'Employment Confirmation Letter',
 }
 
 export const COMPANY = {

@@ -808,9 +808,52 @@ model ProbationRecord {
   durationMonths  Int       @default(3)
   performanceRating Float?
   managerNotes    String?
-  outcome         String?   // CONFIRMED | EXTENDED | TERMINATED
+  outcome         String?   // legacy: CONFIRMED | EXTENDED | TERMINATED (still set on enact for back-compat)
   outcomeDate     DateTime?
   hrAlertSent     Boolean   @default(false)
+
+  // ─── Devsinc-style lifecycle (full workflow) ───
+  status                String   @default("ACTIVE") // ACTIVE | UNDER_REVIEW | CONFIRMED | EXTENDED | WARNED | TERMINATED
+  // Day-30 settling check-in
+  settlingCheckInAt     DateTime?
+  settlingNotes         String?
+  settlingFlag          String?  // GREEN | AMBER | RED
+  // Decision packet (auto-generated at Day-(end-30))
+  packetGeneratedAt     DateTime?
+  packetDaysWorked      Int?
+  packetDaysAbsent      Int?
+  packetLateCount       Int?
+  packetAvgHours        Float?
+  packetGoalScore       Float?
+  packetTimeScore       Float?
+  packetSuggestedRec    String?  // CONFIRM | EXTEND | TERMINATE
+  // Manager review
+  managerRecommendation String?  // CONFIRM | EXTEND | TERMINATE
+  managerReviewNotes    String?
+  managerSubmittedAt    DateTime?
+  // HR decision
+  hrDecision            String?  // CONFIRM | EXTEND | WARNING | TERMINATE
+  hrNotes               String?
+  hrDecidedAt           DateTime?
+  hrDecidedById         String?
+  extensionMonths       Int?
+  overrodeManager       Boolean  @default(false)
+  // Decision meeting
+  meetingScheduledFor   DateTime?
+  meetingAgenda         String?
+  // Outcome
+  outcomeEnactedAt      DateTime?
+  confirmationLetterId  String?
+  isEarlyDecision       Boolean  @default(false)
+  earlyDecisionReason   String?
+  // Warning
+  warningIssuedAt       DateTime?
+  warningNotes          String?
+  warningCount          Int      @default(0)
+  // Optional salary bump on confirm
+  salaryBumpAmount      Float?
+  salaryBumpEffective   DateTime?
+
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
