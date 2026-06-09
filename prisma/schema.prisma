@@ -157,6 +157,7 @@ model Employee {
   // celebration cron. HR is the only role that can still query these.
   hideBirthday        Boolean   @default(false)
   hideAnniversary     Boolean   @default(false)
+  isDemo              Boolean   @default(false)
 
   // Relations
   attendanceLogs      AttendanceLog[]
@@ -672,6 +673,7 @@ model ShowCause {
   // Stage machine
   status        String   @default("MEETING_REQUESTED") // MEETING_REQUESTED | MEETING_HELD | SHOW_CAUSE_REQUESTED | ISSUED | RESPONDED | RESOLVED | ESCALATED_TO_PIP
 
+  isDemo        Boolean  @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -690,6 +692,7 @@ model PIP {
   outcome      String?  // PASSED | FAILED | IN_PROGRESS
   managerId    String?
   hrId         String?
+  isDemo       Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -918,6 +921,7 @@ model JobRequisition {
   scoreThreshold Int        @default(60)
 
   candidates     Candidate[]
+  isDemo         Boolean    @default(false)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
@@ -953,6 +957,7 @@ model Candidate {
   lastStallNotifiedAt DateTime?
   interviews      Interview[]
   offer           JobOffer?
+  isDemo          Boolean        @default(false)
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
@@ -1044,6 +1049,9 @@ model Certification {
 
 model Asset {
   id           String            @id @default(cuid())
+  // Legacy display name + type (preserved for back-compat with the
+  // existing AssetAssignment-driven UI; new imports populate `category`
+  // / `subCategory` / `name` instead).
   name         String
   type         String            // LAPTOP | PHONE | MONITOR | CHAIR | OTHER
   brand        String?
@@ -1054,6 +1062,27 @@ model Asset {
   status       String            @default("AVAILABLE") // AVAILABLE | ASSIGNED | MAINTENANCE | DISPOSED
   assignments  AssetAssignment[]
   createdAt    DateTime          @default(now())
+
+  // ─── Workday-style asset register fields (added for the 996+
+  //     spreadsheet import). All optional so existing rows continue
+  //     to deserialize cleanly. ───────────────────────────────
+  assetCode          String?   @unique   // user-supplied: STU-001 / FUR-002 / ELE-003 / WAT-001 …
+  category           String?              // Electronic | Furniture | Equipments | Studio | Other
+  subCategory        String?              // Laptop | AC | Bar Lights | etc.
+  quantity           Int       @default(1)
+  modelSerialNumber  String?
+  motherboardNumber  String?
+  estimatedLifeYears Float?
+  purchasePricePkr   Float?
+  currentMarketValue Float?
+  residualValue      Float?
+  photoUrl           String?              // Google Drive link
+  photoBlob          Bytes?
+  custodyType        String    @default("INDIVIDUAL") // INDIVIDUAL | SHARED | POOL
+  locationLabel      String?              // "Kitchen" | "CEO Office" | "Studio" | …
+  notes              String?
+  isDemo             Boolean   @default(false)
+  updatedAt          DateTime? @updatedAt
 
   @@map("assets")
 }
@@ -1085,6 +1114,7 @@ model AssetAssignment {
   returnCondition  String?
   returnPhotoBlob  Bytes?
   returnPhotoMime  String?
+  isDemo           Boolean   @default(false)
 
   @@map("asset_assignments")
 }
