@@ -123,10 +123,65 @@ export async function GET(request: NextRequest) {
     }
   }
 
+  // ─── Day 30 onboarding feedback prompt ─────────────────────────────
+  // For anyone whose joiningDate was 30 days ago, create a notification
+  // (and a feedback row stub) if they haven't already submitted.
+  const day30Start = new Date(today); day30Start.setDate(day30Start.getDate() - 30); day30Start.setHours(0, 0, 0, 0)
+  const day30End = new Date(day30Start); day30End.setDate(day30End.getDate() + 1)
+  const day30Hires = await prisma.employee.findMany({
+    where: { joiningDate: { gte: day30Start, lt: day30End }, status: 'ACTIVE' },
+    select: { id: true, fullName: true, onboardingFeedback: { select: { id: true, submittedAt: true } } },
+  })
+  let feedbackPrompted = 0
+  for (const h of day30Hires) {
+    if (h.onboardingFeedback?.submittedAt) continue
+    await notify({
+      employeeId: h.id,
+      type: 'GENERAL',
+      title: 'Tell us about your onboarding experience',
+      message: 'Quick 5-minute survey — your feedback helps us improve onboarding for everyone.',
+      link: '/dashboard/onboarding/feedback',
+    })
+    feedbackPrompted++
+  }
+
+  // ─── Milestone Culture posts (T14) ─────────────────────────────────
+  // For each milestone anniversary, create a CompanyEvent + notify manager.
+  let cultureEvents = 0
+  for (const a of anniversaries) {
+    if (!a.milestone) continue
+    try {
+      await prisma.companyEvent.create({
+        data: {
+          title: `${a.name}'s ${a.years}-Year Anniversary`,
+          description: `Congratulations to ${a.name} on ${a.years} years at Convertt!`,
+          eventDate: today,
+          category: 'ANNIVERSARY',
+        },
+      })
+      cultureEvents++
+    } catch (e) {
+      console.warn('[cron/celebrations] culture event skip:', (e as Error).message)
+    }
+    // Notify manager
+    const emp = await prisma.employee.findUnique({ where: { id: a.id }, select: { reportingManagerId: true } })
+    if (emp?.reportingManagerId) {
+      await notify({
+        employeeId: emp.reportingManagerId,
+        type: 'GENERAL',
+        title: `${a.years}-year milestone today`,
+        message: `It's ${a.name}'s ${a.years}-year anniversary today. Consider a promotion/increment discussion.`,
+        link: `/dashboard/employees/${a.id}`,
+      })
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     birthdays: birthdays.length,
     anniversaries: anniversaries.length,
     serviceCertsCreated: certsCreated,
+    feedbackPrompted,
+    cultureEvents,
   })
 }

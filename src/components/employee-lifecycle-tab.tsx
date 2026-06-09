@@ -1,0 +1,164 @@
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { formatDate, formatCurrency } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+
+interface CompRow { id: string; effectiveDate: string; type: string; oldSalary: number; newSalary: number; incrementPct: number | null; reason: string | null }
+interface ReviewRow { id: string; reviewPeriod: string; reviewType: string; overallRating: number | null; finalCategory: string | null }
+interface ManagerRow { changedAt: string; oldManagerId: string | null; newManagerId: string | null; reason: string | null }
+
+interface Props {
+  joiningDate: string
+  confirmationDate: string | null
+  exitDate: string | null
+  designation: string
+  managerName: string | null
+  managerHistory: ManagerRow[]
+  compensationHistory: CompRow[] | null
+  reviews: ReviewRow[] | null
+}
+
+function tenureDescription(joiningDate: string, exitDate: string | null) {
+  const start = new Date(joiningDate).getTime()
+  const end = exitDate ? new Date(exitDate).getTime() : Date.now()
+  const days = Math.max(0, Math.floor((end - start) / 86_400_000))
+  const years = Math.floor(days / 365)
+  const remDays = days - years * 365
+  const months = Math.floor(remDays / 30)
+  if (years === 0 && months === 0) return `${days} day${days === 1 ? '' : 's'}`
+  if (years === 0) return `${months} month${months === 1 ? '' : 's'}`
+  return `${years} year${years === 1 ? '' : 's'}, ${months} month${months === 1 ? '' : 's'}`
+}
+
+function nextMilestone(joiningDate: string): { years: number; daysAway: number } | null {
+  const join = new Date(joiningDate)
+  const today = new Date()
+  const elapsedMs = today.getTime() - join.getTime()
+  const yearsElapsed = elapsedMs / (365 * 86_400_000)
+  const milestones = [1, 3, 5, 7, 10, 15, 20, 25]
+  for (const m of milestones) {
+    if (m > yearsElapsed) {
+      const target = new Date(join); target.setFullYear(target.getFullYear() + m)
+      const daysAway = Math.ceil((target.getTime() - today.getTime()) / 86_400_000)
+      return { years: m, daysAway }
+    }
+  }
+  return null
+}
+
+export default function EmployeeLifecycleTab({
+  joiningDate, confirmationDate, exitDate, designation, managerName,
+  managerHistory, compensationHistory, reviews,
+}: Props) {
+  const tenure = tenureDescription(joiningDate, exitDate)
+  const milestone = nextMilestone(joiningDate)
+
+  return (
+    <div className="space-y-4">
+      {/* Tenure */}
+      <Card>
+        <CardHeader><CardTitle>Tenure Progress</CardTitle></CardHeader>
+        <CardContent>
+          <dl className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+            <div>
+              <dt className="text-gray-500 text-xs">At Convertt</dt>
+              <dd className="text-gray-900 font-medium mt-1">{tenure}</dd>
+              <dd className="text-xs text-gray-500 mt-0.5">Since {formatDate(joiningDate)}</dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 text-xs">Confirmation</dt>
+              <dd className="text-gray-900 font-medium mt-1">
+                {confirmationDate ? formatDate(confirmationDate) : 'On probation'}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-gray-500 text-xs">Next milestone</dt>
+              <dd className="text-gray-900 font-medium mt-1">
+                {milestone
+                  ? `${milestone.daysAway} day${milestone.daysAway === 1 ? '' : 's'} to ${milestone.years}-year anniversary`
+                  : '—'}
+              </dd>
+            </div>
+          </dl>
+        </CardContent>
+      </Card>
+
+      {/* Role History */}
+      <Card>
+        <CardHeader><CardTitle>Role History</CardTitle></CardHeader>
+        <CardContent>
+          <ul className="space-y-2 text-sm">
+            <li className="flex justify-between gap-3 border-l-2 border-blue-300 pl-3">
+              <div>
+                <p className="font-medium text-gray-900">{designation}</p>
+                <p className="text-xs text-gray-500">{managerName ? `Manager: ${managerName}` : 'No manager'}</p>
+              </div>
+              <span className="text-xs text-gray-400">{formatDate(joiningDate)} → {exitDate ? formatDate(exitDate) : 'present'}</span>
+            </li>
+            {managerHistory.length === 0 ? null : managerHistory.map((m, i) => (
+              <li key={i} className="flex justify-between gap-3 border-l-2 border-slate-200 pl-3">
+                <div>
+                  <p className="text-gray-700">Manager changed</p>
+                  {m.reason ? <p className="text-xs text-gray-500">{m.reason}</p> : null}
+                </div>
+                <span className="text-xs text-gray-400">{formatDate(m.changedAt)}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+      {/* Compensation Timeline */}
+      {compensationHistory && (
+        <Card>
+          <CardHeader><CardTitle>Compensation Timeline</CardTitle></CardHeader>
+          <CardContent>
+            {compensationHistory.length === 0 ? (
+              <p className="text-sm text-gray-400">No compensation changes recorded.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {compensationHistory.map((c) => (
+                  <li key={c.id} className="flex justify-between gap-3 border-l-2 border-emerald-300 pl-3">
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {formatCurrency(c.oldSalary)} → {formatCurrency(c.newSalary)}
+                        {c.incrementPct != null && c.incrementPct !== 0 ? (
+                          <Badge variant="success" className="ml-2">+{c.incrementPct}%</Badge>
+                        ) : null}
+                      </p>
+                      <p className="text-xs text-gray-500">{c.type} {c.reason ? `· ${c.reason}` : ''}</p>
+                    </div>
+                    <span className="text-xs text-gray-400">{formatDate(c.effectiveDate)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Reviews */}
+      {reviews && (
+        <Card>
+          <CardHeader><CardTitle>Review History</CardTitle></CardHeader>
+          <CardContent>
+            {reviews.length === 0 ? (
+              <p className="text-sm text-gray-400">No finalized reviews yet.</p>
+            ) : (
+              <ul className="space-y-2 text-sm">
+                {reviews.map((r) => (
+                  <li key={r.id} className="flex justify-between gap-3 border-l-2 border-purple-300 pl-3">
+                    <div>
+                      <p className="font-medium text-gray-900">{r.reviewPeriod}</p>
+                      <p className="text-xs text-gray-500">{r.reviewType} · {r.finalCategory ?? '—'}</p>
+                    </div>
+                    <span className="text-xs text-gray-400">{r.overallRating ? `${r.overallRating}/5` : '—'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  )
+}

@@ -180,69 +180,148 @@ function ProbationTab() {
   return <ProbationTrackerTabs records={records} />
 }
 
+interface ActiveSummary {
+  birthdays: { id: string; fullName: string; date: string; manager: string | null }[]
+  anniversaries: { id: string; fullName: string; date: string; years: number; milestone: boolean }[]
+  probationEnding: { id: string; fullName: string; daysLeft: number; endDate: string }[]
+  promotions: { employeeId: string; employee: string; newDesignation: string; effectiveDate: string }[]
+  managerChanges: { employeeId: string; employee: string; oldManager: string | null; newManager: string | null; changedAt: string }[]
+  deptTransfers: { employeeId: string; employee: string; from: string | null; to: string | null; at: string }[]
+  tenure: { lt6: number; m6to2y: number; y2to5: number; y5plus: number }
+}
+
 function ActiveEmployeesTab() {
-  const [employees, setEmployees] = useState<Employee[]>([])
+  const [data, setData] = useState<ActiveSummary | null>(null)
   const [loading, setLoading] = useState(true)
-  const [query, setQuery] = useState('')
 
   useEffect(() => {
-    fetch('/api/employees?status=ACTIVE&limit=200').then((r) => r.json()).then((d) => {
-      setEmployees(d.employees ?? [])
+    fetch('/api/lifecycle/active-summary').then((r) => r.json()).then((d) => {
+      setData(d)
       setLoading(false)
     }).catch(() => setLoading(false))
   }, [])
 
-  const filtered = employees.filter((e) =>
-    !query.trim() ||
-    e.fullName.toLowerCase().includes(query.toLowerCase()) ||
-    e.employeeCode.toLowerCase().includes(query.toLowerCase()) ||
-    e.designation.toLowerCase().includes(query.toLowerCase())
-  )
-
-  const permanent = employees.filter((e) => (e as Employee & { employeeType?: string }).employeeType === 'PERMANENT').length
-  const probation = employees.filter((e) => (e as Employee & { employeeType?: string }).employeeType === 'PROBATION').length
+  if (loading) return <Card><CardContent className="py-10 text-center text-slate-400">Loading…</CardContent></Card>
+  if (!data) return <Card><CardContent className="py-10 text-center text-slate-400">Failed to load.</CardContent></Card>
 
   return (
-    <Card>
-      <CardHeader className="border-b border-slate-100">
-        <div className="flex items-center justify-between flex-wrap gap-3">
-          <CardTitle>Active Employees</CardTitle>
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-slate-500">
-              <strong className="text-slate-900">{employees.length}</strong> total · {permanent} permanent · {probation} probation
-            </span>
-            <Link href="/dashboard/employees" className="text-xs text-blue-600 hover:underline">Full directory →</Link>
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="border-b border-slate-100"><CardTitle>This Month</CardTitle></CardHeader>
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🎂 Birthdays ({data.birthdays.length})</p>
+            {data.birthdays.length === 0 ? <p className="text-sm text-slate-400">None this month.</p> : (
+              <ul className="space-y-1">
+                {data.birthdays.map((b) => (
+                  <li key={b.id} className="text-sm">
+                    <Link href={`/dashboard/employees/${b.id}`} className="text-blue-600 hover:underline">{b.fullName}</Link>
+                    <span className="text-xs text-slate-500"> · {formatDate(b.date)}{b.manager ? ` · ${b.manager}` : ''}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
-        </div>
-      </CardHeader>
-      {loading ? (
-        <CardContent className="py-10 text-center text-slate-400">Loading…</CardContent>
-      ) : (
-        <CardContent className="p-4 space-y-3">
-          <Input placeholder="Search by name, code, or designation…" value={query} onChange={(e) => setQuery(e.target.value)} />
-          {filtered.length === 0 ? (
-            <p className="py-6 text-center text-sm text-slate-400">No matches.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[60vh] overflow-y-auto pr-1">
-              {filtered.slice(0, 60).map((e) => (
-                <Link
-                  key={e.id}
-                  href={`/dashboard/employees/${e.id}`}
-                  prefetch
-                  className="rounded-lg border border-slate-200 px-3 py-2 hover:border-blue-300 hover:bg-slate-50 transition-all"
-                >
-                  <p className="text-sm font-medium text-slate-900 truncate">{e.fullName}</p>
-                  <p className="text-xs text-slate-500 truncate">{e.employeeCode} · {e.designation}</p>
-                </Link>
-              ))}
-            </div>
-          )}
-          {filtered.length > 60 && (
-            <p className="text-xs text-slate-400 text-center">Showing first 60 of {filtered.length}. Use the full directory for more.</p>
-          )}
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🎉 Anniversaries ({data.anniversaries.length})</p>
+            {data.anniversaries.length === 0 ? <p className="text-sm text-slate-400">None this month.</p> : (
+              <ul className="space-y-1">
+                {data.anniversaries.map((a) => (
+                  <li key={a.id} className="text-sm">
+                    <Link href={`/dashboard/employees/${a.id}`} className={a.milestone ? 'text-purple-700 font-semibold hover:underline' : 'text-blue-600 hover:underline'}>
+                      {a.fullName} · {a.years}y{a.milestone ? ' ⭐' : ''}
+                    </Link>
+                    <span className="text-xs text-slate-500"> · {formatDate(a.date)}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">⏰ Probation conversions ({data.probationEnding.length})</p>
+            {data.probationEnding.length === 0 ? <p className="text-sm text-slate-400">None within 30 days.</p> : (
+              <ul className="space-y-1">
+                {data.probationEnding.map((p) => (
+                  <li key={p.id} className="text-sm">
+                    <Link href={`/dashboard/employees/${p.id}`} className="text-blue-600 hover:underline">{p.fullName}</Link>
+                    <span className="text-xs text-slate-500"> · ends in {p.daysLeft}d</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         </CardContent>
-      )}
-    </Card>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b border-slate-100"><CardTitle>Recent Moves (last 90 days)</CardTitle></CardHeader>
+        <CardContent className="p-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">📈 Promotions</p>
+            {data.promotions.length === 0 ? <p className="text-sm text-slate-400">None.</p> : (
+              <ul className="space-y-1">
+                {data.promotions.map((p, i) => (
+                  <li key={i} className="text-sm">
+                    <Link href={`/dashboard/employees/${p.employeeId}`} className="text-blue-600 hover:underline">{p.employee}</Link>
+                    <span className="text-xs text-slate-500"> → {p.newDesignation} ({formatDate(p.effectiveDate)})</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🔄 Manager changes</p>
+            {data.managerChanges.length === 0 ? <p className="text-sm text-slate-400">None.</p> : (
+              <ul className="space-y-1">
+                {data.managerChanges.map((m, i) => (
+                  <li key={i} className="text-sm">
+                    <Link href={`/dashboard/employees/${m.employeeId}`} className="text-blue-600 hover:underline">{m.employee}</Link>
+                    <span className="text-xs text-slate-500"> · {m.oldManager ?? '—'} → {m.newManager ?? '—'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">🏢 Department transfers</p>
+            {data.deptTransfers.length === 0 ? <p className="text-sm text-slate-400">None.</p> : (
+              <ul className="space-y-1">
+                {data.deptTransfers.map((d, i) => (
+                  <li key={i} className="text-sm">
+                    <Link href={`/dashboard/employees/${d.employeeId}`} className="text-blue-600 hover:underline">{d.employee}</Link>
+                    <span className="text-xs text-slate-500"> · {d.from ?? '—'} → {d.to ?? '—'}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b border-slate-100"><CardTitle>Tenure Distribution</CardTitle></CardHeader>
+        <CardContent className="p-4 space-y-2">
+          {([
+            ['< 6 months', data.tenure.lt6, 'bg-blue-400'],
+            ['6mo - 2yr', data.tenure.m6to2y, 'bg-emerald-400'],
+            ['2-5 yr', data.tenure.y2to5, 'bg-violet-400'],
+            ['5+ yr', data.tenure.y5plus, 'bg-amber-400'],
+          ] as [string, number, string][]).map(([label, count, color]) => {
+            const max = Math.max(1, data.tenure.lt6, data.tenure.m6to2y, data.tenure.y2to5, data.tenure.y5plus)
+            const pct = (count / max) * 100
+            return (
+              <div key={label} className="flex items-center gap-3 text-sm">
+                <span className="w-28 text-slate-600">{label}</span>
+                <div className="flex-1 h-3 rounded-full bg-slate-100 overflow-hidden">
+                  <div className={`h-full ${color} transition-all`} style={{ width: `${pct}%` }} />
+                </div>
+                <span className="w-10 text-right tabular-nums text-slate-900 font-medium">{count}</span>
+              </div>
+            )
+          })}
+        </CardContent>
+      </Card>
+    </div>
   )
 }
 
@@ -474,13 +553,22 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
           </Section>
 
           <Section title="3. Final Settlement">
+            {(c.prorataSalary != null || c.leaveEncashment != null) && (
+              <div className="text-xs text-slate-600 mb-2 space-y-0.5">
+                <p>Prorata salary: PKR {(c.prorataSalary ?? 0).toLocaleString()}</p>
+                <p>Leave encashment: PKR {(c.leaveEncashment ?? 0).toLocaleString()}</p>
+                <p>Outstanding deductions: PKR {(c.outstandingDeductions ?? 0).toLocaleString()}</p>
+                <p className="font-semibold text-slate-800">Computed total: PKR {((c.prorataSalary ?? 0) + (c.leaveEncashment ?? 0) - (c.outstandingDeductions ?? 0)).toLocaleString()}</p>
+                <button onClick={() => act({ action: 'RECOMPUTE_SETTLEMENT' })} className="text-xs text-blue-600 hover:underline" disabled={busy}>Recompute</button>
+              </div>
+            )}
             {c.duesCleared ? (
               <p className="text-sm text-emerald-700">Cleared. Amount: PKR {c.finalSettlementAmount?.toLocaleString() ?? '0'}</p>
             ) : (
               <div className="space-y-2">
-                <Input type="number" placeholder="Final settlement amount (PKR)" value={settleAmt} onChange={(e) => setSettleAmt(e.target.value)} />
+                <Input type="number" placeholder="Final settlement amount (PKR)" value={settleAmt || (c.finalSettlementAmount?.toString() ?? '')} onChange={(e) => setSettleAmt(e.target.value)} />
                 <Input placeholder="Notes (optional)" value={settleNotes} onChange={(e) => setSettleNotes(e.target.value)} />
-                <Button size="sm" disabled={busy} onClick={() => act({ action: 'SETTLE', amount: settleAmt, notes: settleNotes })}>Mark Settled</Button>
+                <Button size="sm" disabled={busy} onClick={() => act({ action: 'SETTLE', amount: settleAmt || c.finalSettlementAmount, notes: settleNotes })}>Mark Settled</Button>
               </div>
             )}
           </Section>
@@ -505,15 +593,42 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
             )}
           </Section>
 
+          <Section title="6. Exit Interview">
+            {c.interviewCompletedAt ? (
+              <p className="text-sm text-emerald-700">Completed on {formatDate(c.interviewCompletedAt)} — eNPS: {c.interviewRecommendScore ?? '—'}/10</p>
+            ) : (
+              <ExitInterviewForm busy={busy} onSubmit={(payload) => act({ action: 'INTERVIEW', ...payload })} />
+            )}
+          </Section>
+
+          <Section title="7. Handover Document">
+            {c.handoverSignedAt && c.handoverSignedByMgr ? (
+              <p className="text-sm text-emerald-700">Handover signed by employee on {formatDate(c.handoverSignedAt)} — manager confirmed.</p>
+            ) : (
+              <HandoverForm
+                busy={busy}
+                initial={{
+                  handoverCurrentProjects: c.handoverCurrentProjects ?? '',
+                  handoverPendingTasks: c.handoverPendingTasks ?? '',
+                  handoverKeyContacts: c.handoverKeyContacts ?? '',
+                  handoverDocLocations: c.handoverDocLocations ?? '',
+                  handoverPasswords: c.handoverPasswords ?? '',
+                }}
+                signedAt={c.handoverSignedAt}
+                mgrConfirmed={c.handoverSignedByMgr}
+                onSubmit={(payload) => act({ action: 'HANDOVER_SUBMIT', ...payload })}
+                onConfirm={() => act({ action: 'HANDOVER_CONFIRM' })}
+              />
+            )}
+          </Section>
+
           <div className="border-t border-slate-100 pt-4">
             {c.status === 'COMPLETED' ? (
               <p className="text-sm font-semibold text-emerald-700">
                 Clearance complete — employee deactivated on {formatDate(c.completedAt)}.
               </p>
             ) : (
-              <Button disabled={busy} onClick={() => act({ action: 'COMPLETE' })}>
-                Complete Clearance & Deactivate Login
-              </Button>
+              <ClearanceCompleteButton clearance={c} busy={busy} onComplete={() => act({ action: 'COMPLETE' })} />
             )}
           </div>
         </div>
@@ -527,6 +642,161 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div className="rounded-xl border border-slate-200 p-4">
       <h3 className="text-sm font-semibold text-slate-900 mb-3">{title}</h3>
       {children}
+    </div>
+  )
+}
+
+function ExitInterviewForm({ busy, onSubmit }: { busy: boolean; onSubmit: (p: Record<string, unknown>) => void }) {
+  const [reason, setReason] = useState('')
+  const [nextRole, setNextRole] = useState('')
+  const [mgrSupport, setMgrSupport] = useState(3)
+  const [workEnv, setWorkEnv] = useState(3)
+  const [comp, setComp] = useState(3)
+  const [growth, setGrowth] = useState(3)
+  const [workLife, setWorkLife] = useState(3)
+  const [improvement, setImprovement] = useState('')
+  const [enps, setEnps] = useState(7)
+
+  return (
+    <div className="space-y-3 text-sm">
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">Why are you leaving?</span>
+        <textarea className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">Next role / company (optional)</span>
+        <Input value={nextRole} onChange={(e) => setNextRole(e.target.value)} />
+      </label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {([
+          ['Manager Support', mgrSupport, setMgrSupport],
+          ['Work Environment', workEnv, setWorkEnv],
+          ['Compensation', comp, setComp],
+          ['Growth Opportunities', growth, setGrowth],
+          ['Work-Life Balance', workLife, setWorkLife],
+        ] as [string, number, (n: number) => void][]).map(([label, val, set]) => (
+          <label key={label} className="block">
+            <span className="text-xs font-medium text-slate-700">{label}: {val}/5</span>
+            <input type="range" min={1} max={5} value={val} onChange={(e) => set(Number(e.target.value))} className="w-full" />
+          </label>
+        ))}
+      </div>
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">What could improve?</span>
+        <textarea className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm" rows={2} value={improvement} onChange={(e) => setImprovement(e.target.value)} />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">Would you recommend Convertt? {enps}/10</span>
+        <input type="range" min={0} max={10} value={enps} onChange={(e) => setEnps(Number(e.target.value))} className="w-full" />
+      </label>
+      <Button size="sm" disabled={busy} onClick={() => onSubmit({
+        interviewReason: reason,
+        interviewNextRole: nextRole,
+        interviewMgrSupport: mgrSupport,
+        interviewWorkEnv: workEnv,
+        interviewCompensation: comp,
+        interviewGrowth: growth,
+        interviewWorkLife: workLife,
+        interviewImprovement: improvement,
+        interviewRecommendScore: enps,
+      })}>Complete Interview</Button>
+    </div>
+  )
+}
+
+interface HandoverInitial {
+  handoverCurrentProjects: string
+  handoverPendingTasks: string
+  handoverKeyContacts: string
+  handoverDocLocations: string
+  handoverPasswords: string
+}
+
+function HandoverForm({ busy, initial, signedAt, mgrConfirmed, onSubmit, onConfirm }: {
+  busy: boolean
+  initial: HandoverInitial
+  signedAt: string | null
+  mgrConfirmed: boolean
+  onSubmit: (p: Record<string, unknown>) => void
+  onConfirm: () => void
+}) {
+  const [projects, setProjects] = useState(initial.handoverCurrentProjects)
+  const [pending, setPending] = useState(initial.handoverPendingTasks)
+  const [contacts, setContacts] = useState(initial.handoverKeyContacts)
+  const [docs, setDocs] = useState(initial.handoverDocLocations)
+  const [passwords, setPasswords] = useState(initial.handoverPasswords)
+
+  return (
+    <div className="space-y-3 text-sm">
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">Current projects</span>
+        <textarea className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm" rows={2} value={projects} onChange={(e) => setProjects(e.target.value)} />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">Pending tasks</span>
+        <textarea className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm" rows={2} value={pending} onChange={(e) => setPending(e.target.value)} />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">Key contacts</span>
+        <textarea className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm" rows={2} value={contacts} onChange={(e) => setContacts(e.target.value)} />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">Document locations / drives</span>
+        <textarea className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm" rows={2} value={docs} onChange={(e) => setDocs(e.target.value)} />
+      </label>
+      <label className="block">
+        <span className="text-xs font-medium text-slate-700">Passwords transferred to</span>
+        <textarea className="mt-1 w-full rounded-md border border-slate-300 p-2 text-sm" rows={2} value={passwords} onChange={(e) => setPasswords(e.target.value)} placeholder="e.g. passwords for X transferred to Aisha on Aug 10" />
+      </label>
+      <div className="flex items-center gap-2 flex-wrap">
+        <Button size="sm" disabled={busy} onClick={() => onSubmit({
+          handoverCurrentProjects: projects,
+          handoverPendingTasks: pending,
+          handoverKeyContacts: contacts,
+          handoverDocLocations: docs,
+          handoverPasswords: passwords,
+        })}>{signedAt ? 'Update Handover' : 'Submit Handover'}</Button>
+        {signedAt && !mgrConfirmed && (
+          <Button size="sm" variant="outline" disabled={busy} onClick={onConfirm}>Confirm Handover Complete (manager)</Button>
+        )}
+        {signedAt && (
+          <span className="text-xs text-slate-500">Submitted {formatDate(signedAt)}{mgrConfirmed ? ' · manager confirmed' : ' · awaiting manager confirmation'}</span>
+        )}
+      </div>
+    </div>
+  )
+}
+
+interface ClearanceLite {
+  itCleared: boolean; financeCleared: boolean; adminCleared: boolean; hrCleared: boolean
+  duesCleared: boolean; employeeAcknowledged: boolean; hrCertifiedAt: string | null
+  interviewCompletedAt: string | null; handoverSignedAt: string | null; handoverSignedByMgr: boolean
+}
+
+function ClearanceCompleteButton({ clearance, busy, onComplete }: { clearance: ClearanceLite; busy: boolean; onComplete: () => void }) {
+  const checks = [
+    { label: 'Departmental clearance', ok: clearance.itCleared && clearance.financeCleared && clearance.adminCleared && clearance.hrCleared },
+    { label: 'Final settlement', ok: clearance.duesCleared },
+    { label: 'Employee acknowledgment', ok: clearance.employeeAcknowledged },
+    { label: 'HR certification', ok: !!clearance.hrCertifiedAt },
+    { label: 'Exit interview', ok: !!clearance.interviewCompletedAt },
+    { label: 'Handover signed + manager confirmed', ok: !!clearance.handoverSignedAt && clearance.handoverSignedByMgr },
+  ]
+  const allOk = checks.every((c) => c.ok)
+
+  return (
+    <div className="space-y-2">
+      <div className="grid grid-cols-2 gap-1 text-xs">
+        {checks.map((c) => (
+          <div key={c.label} className={c.ok ? 'text-emerald-700' : 'text-slate-400'}>
+            {c.ok ? '✓' : '○'} {c.label}
+          </div>
+        ))}
+      </div>
+      <Button disabled={busy || !allOk} onClick={onComplete}>
+        Complete Clearance & Deactivate Login
+      </Button>
+      {!allOk && <p className="text-xs text-slate-500">All 7 sections must be complete before finalising.</p>}
     </div>
   )
 }

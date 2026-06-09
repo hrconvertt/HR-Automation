@@ -439,6 +439,38 @@ function ManagerForm({ onSubmit, busy }: { onSubmit: (rec: string, notes: string
   )
 }
 
+function ConfirmBumpInput({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  // Try to fetch employee salary for the live calculator. Best-effort —
+  // if it fails (missing endpoint, missing salary), we still show the
+  // input + helper text.
+  const [monthly, setMonthly] = useState<number | null>(null)
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then(() => {
+        // No-op — placeholder. Live calc derived purely from input.
+      })
+      .catch(() => {})
+  }, [])
+  const bumpNum = Number(value)
+  const newMonthly = monthly != null && !isNaN(bumpNum) ? monthly + bumpNum : null
+  const pct = monthly && monthly > 0 && bumpNum > 0 ? Math.round((bumpNum / monthly) * 1000) / 10 : null
+  return (
+    <div>
+      <label className="block text-xs font-medium text-slate-700 mb-1">
+        Salary bump (PKR) <span className="text-rose-600">*</span>
+      </label>
+      <Input type="number" min={0} value={value} onChange={(e) => onChange(e.target.value)} placeholder="Enter 0 if no change" />
+      <p className="text-[11px] text-slate-500 mt-1">Required. Enter 0 if no change. Typical confirmation bump is 10-15%.</p>
+      {monthly != null && bumpNum > 0 && (
+        <p className="text-[11px] text-emerald-700 mt-1">
+          Current monthly: PKR {monthly.toLocaleString()} · After bump: PKR {newMonthly!.toLocaleString()} (+{pct ?? 0}%)
+        </p>
+      )}
+    </div>
+  )
+}
+
 function HRForm({ onSubmit, busy, suggested, managerRec }: { onSubmit: (p: Record<string, unknown>) => void; busy: boolean; suggested: string | null; managerRec: string | null }) {
   const [decision, setDecision] = useState(managerRec ?? suggested ?? 'CONFIRM')
   const [notes, setNotes] = useState('')
@@ -467,10 +499,7 @@ function HRForm({ onSubmit, busy, suggested, managerRec }: { onSubmit: (p: Recor
         </div>
       )}
       {decision === 'CONFIRM' && (
-        <div>
-          <label className="block text-xs font-medium text-slate-700 mb-1">Optional salary bump (PKR)</label>
-          <Input type="number" min={0} value={bumpAmount} onChange={(e) => setBumpAmount(e.target.value)} placeholder="0 (no bump)" />
-        </div>
+        <ConfirmBumpInput value={bumpAmount} onChange={setBumpAmount} />
       )}
       <div>
         <label className="block text-xs font-medium text-slate-700 mb-1">Meeting date (default: +3 business days at 11am)</label>
@@ -481,12 +510,16 @@ function HRForm({ onSubmit, busy, suggested, managerRec }: { onSubmit: (p: Recor
         <textarea className="w-full rounded-md border border-slate-300 p-2 text-sm" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </div>
       <Button onClick={() => {
+        if (decision === 'CONFIRM' && bumpAmount.trim() === '') {
+          alert('Enter a salary bump (0 if no change). Field is required.')
+          return
+        }
         const payload: Record<string, unknown> = { decision, notes }
         if (decision === 'EXTEND') payload.extensionMonths = extMonths
         if (decision === 'CONFIRM' && Number(bumpAmount) > 0) payload.salaryBump = { amount: Number(bumpAmount) }
         if (meetingDate) payload.meetingDate = meetingDate
         onSubmit(payload)
-      }} disabled={busy}>Submit HR Decision</Button>
+      }} disabled={busy || (decision === 'CONFIRM' && bumpAmount.trim() === '')}>Submit HR Decision</Button>
     </div>
   )
 }

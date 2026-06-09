@@ -161,13 +161,78 @@ async function loadData() {
 
   weekItems.sort((a, b) => a.date.getTime() - b.date.getTime())
 
+  // ─── Lifecycle funnel + attrition (T6) ───
+  const oneYearAgo = new Date(today); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
+  const [onboardingActive, probationActive, exitInFlight, completedOnboard, hires12mo, exits12mo] = await Promise.all([
+    prisma.onboardingChecklist.count({ where: { status: { not: 'COMPLETED' } } }),
+    prisma.probationRecord.count({ where: { status: 'ACTIVE' } }),
+    prisma.exitClearance.count({ where: { status: 'IN_PROGRESS' } }),
+    prisma.onboardingChecklist.findMany({
+      where: { status: 'COMPLETED', completedAt: { gte: oneYearAgo, not: null } },
+      include: { employee: { select: { joiningDate: true } } },
+    }),
+    prisma.employee.count({ where: { joiningDate: { gte: oneYearAgo } } }),
+    prisma.employee.count({ where: { exitDate: { gte: oneYearAgo, not: null } } }),
+  ])
+  let avgDaysToOnboarded = 0
+  if (completedOnboard.length > 0) {
+    const total = completedOnboard.reduce((acc, c) => {
+      const start = new Date(c.employee.joiningDate).getTime()
+      const end = c.completedAt ? new Date(c.completedAt).getTime() : Date.now()
+      return acc + (end - start) / 86400000
+    }, 0)
+    avgDaysToOnboarded = Math.round(total / completedOnboard.length)
+  }
+  const overallAttritionPct = activeCount > 0 ? Math.round((exits12mo / activeCount) * 100) : 0
+  void hires12mo
+  const lifecycleFunnel = {
+    onboarding: onboardingActive,
+    probation: probationActive,
+    active: Math.max(0, activeCount - onboardingActive - probationActive),
+    exit: exitInFlight,
+    avgDaysToOnboarded,
+    overallAttritionPct,
+  }
+
+  // ─── Possible Absconding (T10) — active employees with no attendance log
+  //     in the past 9 days and no approved leave overlapping. ───
+  const sevenDaysAgo = new Date(today); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 9)
+  const activeEmps = await prisma.employee.findMany({
+    where: { status: 'ACTIVE' },
+    select: {
+      id: true, fullName: true, employeeCode: true,
+      reportingManager: { select: { fullName: true } },
+    },
+  })
+  const absconding: { id: string; name: string; code: string; manager: string | null; daysSince: number }[] = []
+  for (const emp of activeEmps) {
+    const latest = await prisma.attendanceLog.findFirst({
+      where: { employeeId: emp.id, status: { notIn: ['WEEKEND', 'HOLIDAY', 'ABSENT'] } },
+      orderBy: { date: 'desc' }, select: { date: true },
+    })
+    const lastDate = latest?.date ?? null
+    if (lastDate && lastDate >= sevenDaysAgo) continue
+    const leaves = await prisma.leaveRequest.count({
+      where: { employeeId: emp.id, status: 'APPROVED', fromDate: { lte: today }, toDate: { gte: sevenDaysAgo } },
+    })
+    if (leaves >= 1) continue
+    // Skip employees with no attendance ever (probably never onboarded into time tracking)
+    if (!lastDate) continue
+    const daysSince = Math.floor((today.getTime() - lastDate.getTime()) / 86400000)
+    if (daysSince >= 9) {
+      absconding.push({ id: emp.id, name: emp.fullName, code: emp.employeeCode, manager: emp.reportingManager?.fullName ?? null, daysSince })
+    }
+  }
+
   return {
     pendingLeave, pendingOT, pendingHiringRequests, overdueProbation,
     onLeaveToday, joiningToday, upcomingProbationDecisions, pendingPayslipAdjustments,
     currentPayrollRun, openRoles, newApplicantsLast7,
     birthdaysToday, anniversariesToday, weekItems, activeCount, pendingPolicyAcks, talentPoolCount,
+    lifecycleFunnel, absconding,
   }
 }
+
 
 interface Props { userName: string }
 
@@ -331,6 +396,65 @@ export async function HRDashboard({ userName }: Props) {
           </div>
         </Card>
       </div>
+
+      {/* ─── LIFECYCLE FUNNEL ───────────────────────────────────── */}
+      <Card className="rounded-2xl border-slate-200 overflow-hidden shadow-sm">
+        <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-slate-900">Lifecycle Funnel</p>
+              <p className="text-[11px] text-slate-500">Where everyone is in their journey</p>
+            </div>
+          </div>
+          <Link href="/dashboard/lifecycle" className="text-xs text-blue-600 hover:underline">Open lifecycle →</Link>
+        </div>
+        <div className="p-4 grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
+          <FunnelTile label="Onboarding" value={d.lifecycleFunnel.onboarding} tone="blue" />
+          <FunnelTile label="Probation" value={d.lifecycleFunnel.probation} tone="amber" />
+          <FunnelTile label="Active" value={d.lifecycleFunnel.active} tone="emerald" />
+          <FunnelTile label="Exit" value={d.lifecycleFunnel.exit} tone="rose" />
+          <FunnelTile label="Avg days to onboarded" value={d.lifecycleFunnel.avgDaysToOnboarded} tone="slate" />
+          <FunnelTile label="Attrition (12mo)" value={`${d.lifecycleFunnel.overallAttritionPct}%`} tone="slate" />
+        </div>
+      </Card>
+
+      {/* ─── ABSCONDING ──────────────────────────────────────────── */}
+      {d.absconding.length > 0 && (
+        <Card className="rounded-2xl border-rose-200 bg-rose-50/40 overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+                <AlertTriangle className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-rose-900">Possible Absconding</p>
+                <p className="text-[11px] text-rose-700">No attendance in 9+ days, no covering leave</p>
+              </div>
+            </div>
+            <span className="text-xs font-semibold bg-white text-rose-700 border border-rose-200 rounded-full px-2.5 py-1">
+              {d.absconding.length}
+            </span>
+          </div>
+          <ul className="divide-y divide-rose-100">
+            {d.absconding.map((a) => (
+              <li key={a.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div className="min-w-0">
+                  <Link href={`/dashboard/employees/${a.id}`} className="text-sm font-medium text-slate-900 hover:underline">{a.name}</Link>
+                  <p className="text-[11px] text-slate-500">{a.code} · {a.daysSince}d since last log{a.manager ? ` · Manager: ${a.manager}` : ''}</p>
+                </div>
+                <form action={`/api/employees/${a.id}/mark-absconded`} method="post">
+                  <button className="text-xs font-medium text-rose-700 border border-rose-300 rounded-full bg-white px-3 py-1 hover:bg-rose-100">
+                    Mark as ABSCONDED
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* ─── OPERATIONAL ─────────────────────────────────────────── */}
       <div>
@@ -508,6 +632,22 @@ function WeekItemRow({ item }: { item: {
           {item.sub} · {item.date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
         </p>
       </div>
+    </div>
+  )
+}
+
+function FunnelTile({ label, value, tone }: { label: string; value: number | string; tone: 'blue' | 'amber' | 'emerald' | 'rose' | 'slate' }) {
+  const TONE: Record<string, string> = {
+    blue: 'bg-blue-50 text-blue-700 border-blue-200',
+    amber: 'bg-amber-50 text-amber-800 border-amber-200',
+    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+    rose: 'bg-rose-50 text-rose-700 border-rose-200',
+    slate: 'bg-slate-50 text-slate-700 border-slate-200',
+  }
+  return (
+    <div className={`rounded-xl border ${TONE[tone]} px-3 py-3`}>
+      <p className="text-xl font-bold tabular-nums">{value}</p>
+      <p className="text-[10px] uppercase tracking-wide opacity-70 mt-0.5">{label}</p>
     </div>
   )
 }

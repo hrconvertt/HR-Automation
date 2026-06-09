@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
+import { computeFinalSettlement } from '@/lib/final-settlement'
 
 // Manager acknowledges resignation -> auto-creates ExitClearance.
 export async function POST(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
@@ -28,11 +29,16 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ id: st
 
   const body = await request.json().catch(() => ({}))
 
+  const settlement = await computeFinalSettlement(resignation.employeeId, resignation.intendedLastDay).catch(() => null)
   const clearance = await prisma.exitClearance.create({
     data: {
       employeeId: resignation.employeeId,
       initiatedById: payload.userId,
       lastWorkingDay: resignation.intendedLastDay,
+      prorataSalary: settlement?.prorataSalary ?? null,
+      leaveEncashment: settlement?.leaveEncashment ?? null,
+      outstandingDeductions: settlement?.outstandingDeductions ?? null,
+      finalSettlementAmount: settlement?.finalSettlementAmount ?? null,
     },
   })
 

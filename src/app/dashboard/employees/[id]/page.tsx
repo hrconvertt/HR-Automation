@@ -15,6 +15,9 @@ import { ExternalLink } from 'lucide-react'
 import CompensationPanel from '@/components/compensation-panel'
 import { SystemRolesPanel } from '@/components/system-roles-panel'
 import { BackButton } from '@/components/ui/back-button'
+import { ResignationButton } from '@/components/resignation-button'
+import EmployeeLifecycleTab from '@/components/employee-lifecycle-tab'
+import { ResignationBanner } from '@/components/resignation-banner'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -26,6 +29,22 @@ interface PageProps {
  * Keeps display copy consistent so the profile doesn't mix all-caps DB
  * values with sentence-case ones.
  */
+function sectionsComplete(c: {
+  itCleared: boolean; financeCleared: boolean; adminCleared: boolean; hrCleared: boolean
+  duesCleared: boolean; employeeAcknowledged: boolean; hrCertifiedAt: Date | null
+  interviewCompletedAt: Date | null; handoverSignedAt: Date | null
+}): { done: number; total: number } {
+  // Section 1 (assets) implicit, count 2-7
+  let done = 0
+  if (c.itCleared && c.financeCleared && c.adminCleared && c.hrCleared) done++ // §2
+  if (c.duesCleared) done++ // §3
+  if (c.employeeAcknowledged) done++ // §4
+  if (c.hrCertifiedAt) done++ // §5
+  if (c.interviewCompletedAt) done++ // §6
+  if (c.handoverSignedAt) done++ // §7
+  return { done, total: 6 }
+}
+
 function humanize(v: string | null | undefined): string | null {
   if (!v) return null
   // Special-case acronyms that should stay uppercase.
@@ -56,6 +75,9 @@ async function getEmployee(id: string) {
         where: { returnedDate: null },
         include: { asset: true },
       },
+      resignation: true,
+      managerHistory: { orderBy: { changedAt: 'desc' }, take: 20 },
+      onboardingFeedback: true,
     },
   })
 }
@@ -173,9 +195,31 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
     }
   }
 
+  // For resignation banner: latest exit clearance if any
+  const latestClearance = employee.resignation
+    ? await prisma.exitClearance.findFirst({
+        where: { employeeId: employee.id },
+        orderBy: { createdAt: 'desc' },
+      })
+    : null
+
+  // Lifecycle tab visibility per role (see brief T5)
+  const showLifecycleTab = isHR || isExec || isViewingOwn || (isManager && isMyTeamMember)
+  const lifecycleShowsComp = isHR || isViewingOwn
+  const lifecycleShowsReviews = isHR || isViewingOwn || (isManager && isMyTeamMember)
+
   return (
     <div className="space-y-6">
       <BackButton fallback="/dashboard/employees" />
+      {employee.resignation && (
+        <ResignationBanner
+          submittedAt={employee.resignation.submittedAt.toISOString()}
+          intendedLastDay={employee.resignation.intendedLastDay.toISOString()}
+          managerAckedAt={employee.resignation.managerAckedAt?.toISOString() ?? null}
+          status={employee.resignation.status}
+          clearanceSections={latestClearance ? sectionsComplete(latestClearance) : null}
+        />
+      )}
       {/* Header */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <div className="flex items-start gap-5">
@@ -194,6 +238,9 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                 <Badge variant={employee.employeeType === 'PERMANENT' ? 'default' : 'warning'}>
                   {employee.employeeType}
                 </Badge>
+                {isViewingOwn && employee.status === 'ACTIVE' && !employee.resignation && (
+                  <ResignationButton employeeType={employee.employeeType} />
+                )}
                 {canEdit && (
                   <EditEmployeeButton
                     employeeId={employee.id}
@@ -257,6 +304,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
+          {showLifecycleTab     && <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>}
           {showCompensation     && <TabsTrigger value="compensation">Compensation</TabsTrigger>}
           {showLeave            && <TabsTrigger value="leave">Leave</TabsTrigger>}
           {showDocuments        && <TabsTrigger value="documents">Documents</TabsTrigger>}
@@ -325,6 +373,49 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
             </div>
           )}
         </TabsContent>
+
+        {/* Lifecycle */}
+        {showLifecycleTab && <TabsContent value="lifecycle">
+          <EmployeeLifecycleTab
+            joiningDate={employee.joiningDate.toISOString()}
+            confirmationDate={employee.confirmationDate?.toISOString() ?? null}
+            exitDate={employee.exitDate?.toISOString() ?? null}
+            designation={employee.designation}
+            managerName={employee.reportingManager?.fullName ?? null}
+            managerHistory={employee.managerHistory.map((h) => ({
+              changedAt: h.changedAt.toISOString(),
+              oldManagerId: h.oldManagerId,
+              newManagerId: h.newManagerId,
+              reason: h.reason,
+            }))}
+            compensationHistory={
+              lifecycleShowsComp
+                ? displayHistory.map((c) => ({
+                    id: c.id,
+                    effectiveDate: c.effectiveDate.toISOString(),
+                    type: c.type,
+                    oldSalary: c.oldSalary,
+                    newSalary: c.newSalary,
+                    incrementPct: c.incrementPct,
+                    reason: c.reason,
+                  }))
+                : null
+            }
+            reviews={
+              lifecycleShowsReviews
+                ? employee.performanceReviews
+                    .filter((r) => r.status === 'HR_FINALIZED')
+                    .map((r) => ({
+                      id: r.id,
+                      reviewPeriod: r.reviewPeriod,
+                      reviewType: r.reviewType,
+                      overallRating: r.overallRating,
+                      finalCategory: r.finalCategory,
+                    }))
+                : null
+            }
+          />
+        </TabsContent>}
 
         {/* ─── Compensation ─────────────────────────────────────────── */}
         {showCompensation && <TabsContent value="compensation">

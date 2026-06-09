@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
+import { computeFinalSettlement } from '@/lib/final-settlement'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -46,11 +47,16 @@ export async function POST(request: NextRequest) {
   if (!employeeId) return NextResponse.json({ error: 'employeeId required' }, { status: 400 })
   const lastWorkingDay = body.lastWorkingDay ? new Date(String(body.lastWorkingDay)) : null
 
+  const settlement = await computeFinalSettlement(employeeId, lastWorkingDay).catch(() => null)
   const clearance = await prisma.exitClearance.create({
     data: {
       employeeId,
       initiatedById: payload.userId,
       lastWorkingDay,
+      prorataSalary: settlement?.prorataSalary ?? null,
+      leaveEncashment: settlement?.leaveEncashment ?? null,
+      outstandingDeductions: settlement?.outstandingDeductions ?? null,
+      finalSettlementAmount: settlement?.finalSettlementAmount ?? null,
     },
   })
   return NextResponse.json({ clearance })
