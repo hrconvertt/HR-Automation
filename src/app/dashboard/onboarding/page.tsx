@@ -106,7 +106,7 @@ export default async function OnboardingPage() {
                     return (
                       <Link
                         key={c.id}
-                        href={`/dashboard/employees/${c.employee.id}`}
+                        href={`/dashboard/onboarding/${c.employee.id}`}
                         className="group bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all"
                       >
                         <div className="flex items-start gap-3">

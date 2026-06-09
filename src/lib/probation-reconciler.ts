@@ -115,6 +115,34 @@ export async function runProbationReconciler(): Promise<{
       }
     }
 
+    // ── Day -45 (heads-up: decision needed soon) ──
+    if (remaining <= 45 && remaining > 30 && rec.heads45NotifiedAt == null && rec.status === 'ACTIVE') {
+      const recipients: string[] = []
+      if (rec.employee.reportingManagerId) recipients.push(rec.employee.reportingManagerId)
+      const hrUsers = await prisma.user.findMany({ where: { role: 'HR_ADMIN' }, select: { employee: { select: { id: true } } } })
+      for (const u of hrUsers) if (u.employee?.id) recipients.push(u.employee.id)
+      await notifyMany(recipients, {
+        type: 'PROBATION_ALERT',
+        title: 'Probation decision in ~45 days',
+        message: `${rec.employee.fullName}'s probation period ends in ${remaining} days. Start considering the outcome.`,
+        link: `/dashboard/probation/${rec.id}`,
+      })
+      await prisma.probationRecord.update({ where: { id: rec.id }, data: { heads45NotifiedAt: todayMid } })
+    }
+
+    // ── Day -14 urgent reminder (decision still missing) ──
+    if (remaining <= 14 && remaining > 0 && rec.hrDecision == null && rec.urgent14NotifiedAt == null) {
+      const hrUsers = await prisma.user.findMany({ where: { role: 'HR_ADMIN' }, select: { employee: { select: { id: true } } } })
+      const ids = hrUsers.map((u) => u.employee?.id).filter(Boolean) as string[]
+      await notifyMany(ids, {
+        type: 'PROBATION_ALERT',
+        title: 'URGENT — probation decision needed',
+        message: `${rec.employee.fullName}'s probation ends in ${remaining} days and no HR decision is recorded.`,
+        link: `/dashboard/probation/${rec.id}`,
+      })
+      await prisma.probationRecord.update({ where: { id: rec.id }, data: { urgent14NotifiedAt: todayMid } })
+    }
+
     // ── Day-(end-30) decision packet ──
     if (remaining <= 30 && rec.packetGeneratedAt == null && rec.status === 'ACTIVE') {
       const metrics = await computeTimeMetrics(rec.employeeId, rec.startDate, todayMid)
@@ -387,6 +415,10 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
   }
 
   if (decision === 'EXTEND') {
+    // Extension cap — max 2 extensions per probation record.
+    if ((rec.extensionCount ?? 0) >= 2) {
+      throw new Error('Cannot extend further — already extended 2 times. Must confirm or terminate.')
+    }
     const months = rec.extensionMonths && rec.extensionMonths >= 1 ? rec.extensionMonths : 1
     const newEnd = new Date(rec.endDate)
     newEnd.setMonth(newEnd.getMonth() + months)
@@ -396,6 +428,7 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
         status: 'ACTIVE',
         endDate: newEnd,
         durationMonths: rec.durationMonths + months,
+        extensionCount: (rec.extensionCount ?? 0) + 1,
         outcome: 'EXTENDED',
         outcomeDate: now,
         outcomeEnactedAt: now,

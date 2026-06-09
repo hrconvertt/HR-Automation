@@ -145,6 +145,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       hideFromDirectory,
     } = body
 
+    // Capture old manager for ManagerHistory audit trail
+    const prior = await prisma.employee.findUnique({
+      where: { id },
+      select: { reportingManagerId: true, fullName: true },
+    })
+
     const employee = await prisma.employee.update({
       where: { id },
       data: {
@@ -179,6 +185,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(typeof hideFromDirectory === 'boolean' ? { hideFromDirectory } : {}),
       },
     })
+
+    // Log manager change (ManagerHistory) + notify affected parties.
+    if (prior && reportingManagerId !== undefined && (prior.reportingManagerId ?? null) !== (reportingManagerId === '' ? null : reportingManagerId)) {
+      const newMgrId = reportingManagerId === '' ? null : reportingManagerId
+      await prisma.managerHistory.create({
+        data: {
+          employeeId: id,
+          oldManagerId: prior.reportingManagerId ?? null,
+          newManagerId: newMgrId,
+          changedById: payload.userId,
+        },
+      })
+      const { notify } = await import('@/lib/notifications')
+      // Notify employee + old + new manager
+      await notify({ employeeId: id, type: 'GENERAL', title: 'Manager change', message: 'Your reporting manager has been updated.' })
+      if (prior.reportingManagerId) await notify({ employeeId: prior.reportingManagerId, type: 'GENERAL', title: 'Team member moved out', message: `${prior.fullName} is no longer in your team.` })
+      if (newMgrId) await notify({ employeeId: newMgrId, type: 'GENERAL', title: 'New team member', message: `${prior.fullName} now reports to you.` })
+    }
 
     return NextResponse.json({ employee })
   } catch (error) {

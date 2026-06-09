@@ -189,6 +189,13 @@ model Employee {
   kudosGiven          Kudos[]           @relation("KudosFrom")
   kudosReceived       Kudos[]           @relation("KudosTo")
   tasks               TaskAssignment[]
+  resignation         Resignation?
+  managerHistory      ManagerHistory[]
+  promotionRequests   PromotionRequest[]
+  onboardingFeedback  OnboardingFeedback?
+
+  // Rehire / boomerang
+  rehireDate          DateTime?
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -768,10 +775,39 @@ model OnboardingChecklist {
   status                String    @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | COMPLETED
   completedAt           DateTime?
   notes                 String?
+  // Day 1 schedule template, free-form (markdown / plain text / JSON)
+  day1ScheduleJson      String?
+  // Welcome email auto-send scheduling
+  welcomeEmailScheduledFor DateTime?
+  welcomeEmailSentAt    DateTime?
+  // Custom tasks per-hire (preferred over fixed booleans for new flows)
+  tasks                 OnboardingTask[]
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
   @@map("onboarding_checklists")
+}
+
+// Per-hire custom onboarding task — replaces the fixed boolean list.
+// One OnboardingChecklist has many tasks across categories.
+model OnboardingTask {
+  id            String   @id @default(cuid())
+  checklistId   String
+  checklist     OnboardingChecklist @relation(fields: [checklistId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  owner         String   // HR | MANAGER | EMPLOYEE | IT
+  category      String   // DAY_1 | WEEK_1_PAPERWORK | WEEK_1_IT | PRE_ARRIVAL | OTHER
+  orderIndex    Int      @default(0)
+  isComplete    Boolean  @default(false)
+  completedAt   DateTime?
+  completedById String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([checklistId, category, orderIndex])
+  @@map("onboarding_tasks")
 }
 
 // ─── EMPLOYEE JOURNEYS (Onboarding / Offboarding) ─────────────────────────────
@@ -919,6 +955,10 @@ model ProbationRecord {
   warningIssuedAt       DateTime?
   warningNotes          String?
   warningCount          Int      @default(0)
+  // Extension cap (max 2) + new reminder cadence touch-points
+  extensionCount        Int      @default(0)
+  heads45NotifiedAt     DateTime?
+  urgent14NotifiedAt    DateTime?
   // Optional salary bump on confirm
   salaryBumpAmount      Float?
   salaryBumpEffective   DateTime?
@@ -1364,12 +1404,113 @@ model ExitClearance {
   // Final outputs
   clearanceFormLetterId String?
   relievingLetterId     String?
+  experienceLetterId    String?
+  // Auto-computed settlement components
+  prorataSalary         Float?
+  leaveEncashment       Float?
+  outstandingDeductions Float?
+  // Section 6 — Exit Interview
+  interviewReason         String?
+  interviewNextRole       String?
+  interviewMgrSupport     Int?
+  interviewWorkEnv        Int?
+  interviewCompensation   Int?
+  interviewGrowth         Int?
+  interviewWorkLife       Int?
+  interviewImprovement    String?
+  interviewRecommendScore Int?
+  interviewCompletedAt    DateTime?
+  // Section 7 — Handover Document
+  handoverCurrentProjects String?
+  handoverPendingTasks    String?
+  handoverKeyContacts     String?
+  handoverDocLocations    String?
+  handoverPasswords       String?
+  handoverSignedAt        DateTime?
+  handoverSignedByMgr     Boolean  @default(false)
   status               String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
   completedAt          DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   @@map("exit_clearances")
+}
+
+// ─── RESIGNATION ──────────────────────────────────────────────────────────────
+// Self-serve resignation submission. Manager must acknowledge before
+// HR opens an ExitClearance. Notice period is tracked, not enforced.
+model Resignation {
+  id              String   @id @default(cuid())
+  employeeId      String   @unique
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  submittedAt     DateTime @default(now())
+  intendedLastDay DateTime
+  reason          String?
+  managerAckedAt  DateTime?
+  managerAckedById String?
+  managerNotes    String?
+  exitClearanceId String?
+  status          String   @default("PENDING_MANAGER_ACK") // PENDING_MANAGER_ACK | ACKNOWLEDGED | RETRACTED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("resignations")
+}
+
+// ─── MANAGER CHANGE AUDIT ─────────────────────────────────────────────────────
+model ManagerHistory {
+  id              String   @id @default(cuid())
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  oldManagerId    String?
+  newManagerId    String?
+  changedAt       DateTime @default(now())
+  changedById     String
+  reason          String?
+
+  @@index([employeeId, changedAt])
+  @@map("manager_history")
+}
+
+// ─── PROMOTION WORKFLOW ───────────────────────────────────────────────────────
+// 3-step: Manager initiates -> HR approves -> CEO approves -> applied.
+model PromotionRequest {
+  id                   String   @id @default(cuid())
+  employeeId           String
+  employee             Employee @relation(fields: [employeeId], references: [id])
+  initiatedById        String
+  newDesignation       String
+  newDepartmentId      String?
+  newSalaryAmount      Float?
+  effectiveDate        DateTime
+  reason               String
+  status               String   @default("PENDING_HR") // PENDING_HR | PENDING_CEO | APPROVED | REJECTED
+  hrApprovedAt         DateTime?
+  hrApprovedById       String?
+  hrNotes              String?
+  ceoApprovedAt        DateTime?
+  ceoApprovedById      String?
+  ceoNotes             String?
+  letterId             String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("promotion_requests")
+}
+
+// ─── ONBOARDING FEEDBACK (Day 30 survey) ──────────────────────────────────────
+model OnboardingFeedback {
+  id             String   @id @default(cuid())
+  employeeId     String   @unique
+  employee       Employee @relation(fields: [employeeId], references: [id])
+  managerRating  Int?
+  clarityRating  Int?
+  missingItems   String?
+  recommendScore Int?
+  submittedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  @@map("onboarding_feedback")
 }
 
 // ─── SETTINGS / CONFIG ────────────────────────────────────────────────────────

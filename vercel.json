@@ -1,6 +1,10 @@
 {
   "crons": [
     { "path": "/api/cron/probation", "schedule": "0 0 * * *" },
-    { "path": "/api/cron/celebrations", "schedule": "0 4 * * *" }
+    { "path": "/api/cron/celebrations", "schedule": "0 4 * * *" },
+    { "path": "/api/cron/onboarding-welcome", "schedule": "0 3 * * *" },
+    { "path": "/api/cron/exit-finalize", "schedule": "0 13 * * *" },
+    { "path": "/api/cron/document-expiry", "schedule": "0 5 * * *" },
+    { "path": "/api/cron/absconding-check", "schedule": "0 6 * * *" }
   ]
 }

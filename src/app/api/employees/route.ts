@@ -152,7 +152,34 @@ export async function POST(request: NextRequest) {
     }
 
     const existing = await prisma.employee.findUnique({ where: { email } })
-    if (existing) return NextResponse.json({ error: 'Email already in use' }, { status: 409 })
+    if (existing) {
+      // Boomerang: offer reactivation when existing record is terminated/resigned.
+      if (['TERMINATED', 'RESIGNED', 'ABSCONDED'].includes(existing.status) && body.reactivate === true) {
+        const reactivated = await prisma.employee.update({
+          where: { id: existing.id },
+          data: {
+            status: 'ACTIVE',
+            rehireDate: new Date(),
+            exitDate: null,
+            terminationType: null,
+            ...(designation ? { designation } : {}),
+            ...(departmentId ? { departmentId } : {}),
+            employeeType: employeeType ?? existing.employeeType,
+          },
+        })
+        return NextResponse.json({ employee: reactivated, reactivated: true }, { status: 200 })
+      }
+      if (['TERMINATED', 'RESIGNED', 'ABSCONDED'].includes(existing.status)) {
+        return NextResponse.json(
+          {
+            error: 'Email matches a former employee',
+            boomerang: { employeeId: existing.id, fullName: existing.fullName, originalJoiningDate: existing.joiningDate, status: existing.status },
+          },
+          { status: 409 },
+        )
+      }
+      return NextResponse.json({ error: 'Email already in use' }, { status: 409 })
+    }
 
     let deptCode = 'GEN'
     if (departmentId) {
@@ -293,12 +320,18 @@ export async function POST(request: NextRequest) {
       }
     })
 
-    // Create probation record (skip for PERMANENT hires)
+    // Create probation record (skip for PERMANENT hires).
+    // Defaults per type when probationMonths not specified:
+    //   PROBATION = 3, INTERNSHIP = 1, TRAINING = 2, PERMANENT = 0 (skipped).
     if (empType !== 'PERMANENT') {
       const monthsRaw = Number(probationMonths)
+      const typeDefault =
+        empType === 'INTERNSHIP' ? 1 :
+        empType === 'TRAINING'   ? 2 :
+        3
       const months = Number.isFinite(monthsRaw) && monthsRaw >= 1 && monthsRaw <= 12
         ? Math.floor(monthsRaw)
-        : 3
+        : typeDefault
       const probEndDate = new Date(joiningDate)
       probEndDate.setMonth(probEndDate.getMonth() + months)
       await prisma.probationRecord.create({
@@ -312,9 +345,50 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // Create onboarding checklist
-    await prisma.onboardingChecklist.create({
-      data: { employeeId: employee.id },
+    // Schedule welcome email for 8am on joining date (or null if past).
+    const join = new Date(joiningDate)
+    const welcomeDay = new Date(join.getFullYear(), join.getMonth(), join.getDate(), 8, 0, 0)
+    const scheduleWelcome = welcomeDay.getTime() >= Date.now() ? welcomeDay : null
+
+    // Create onboarding checklist + default custom tasks (per-hire seed).
+    const checklist = await prisma.onboardingChecklist.create({
+      data: {
+        employeeId: employee.id,
+        welcomeEmailScheduledFor: scheduleWelcome,
+      },
+    })
+
+    const defaultTasks: { title: string; owner: string; category: string; orderIndex: number; description?: string }[] = [
+      // Pre-arrival
+      { title: 'Confirm seat / desk', owner: 'IT', category: 'PRE_ARRIVAL', orderIndex: 1 },
+      { title: 'Send welcome email', owner: 'HR', category: 'PRE_ARRIVAL', orderIndex: 2 },
+      // Day 1
+      { title: 'Welcome & office tour', owner: 'HR', category: 'DAY_1', orderIndex: 1 },
+      { title: 'First-day orientation', owner: 'HR', category: 'DAY_1', orderIndex: 2 },
+      { title: 'Photo for ID card', owner: 'HR', category: 'DAY_1', orderIndex: 3 },
+      { title: 'Introduce to team', owner: 'MANAGER', category: 'DAY_1', orderIndex: 4 },
+      // Week 1 — Paperwork (HR-issued + Employee-submitted docs)
+      { title: 'Offer letter issued', owner: 'HR', category: 'WEEK_1_PAPERWORK', orderIndex: 1 },
+      { title: 'Employment agreement signed', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 2 },
+      { title: 'NDA signed', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 3 },
+      { title: 'CNIC copy submitted', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 4 },
+      { title: 'Bank details collected', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 5 },
+      { title: 'Educational certificates submitted', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 6 },
+      { title: 'Experience / relieving letters submitted', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 7 },
+      // Week 1 — IT & Access
+      { title: 'Laptop / equipment issued', owner: 'IT', category: 'WEEK_1_IT', orderIndex: 1 },
+      { title: 'System access granted', owner: 'IT', category: 'WEEK_1_IT', orderIndex: 2 },
+      { title: 'Email account created', owner: 'IT', category: 'WEEK_1_IT', orderIndex: 3 },
+    ]
+    await prisma.onboardingTask.createMany({
+      data: defaultTasks.map((t) => ({
+        checklistId: checklist.id,
+        title: t.title,
+        owner: t.owner,
+        category: t.category,
+        orderIndex: t.orderIndex,
+        description: t.description ?? null,
+      })),
     })
 
     // Initialize leave balances.

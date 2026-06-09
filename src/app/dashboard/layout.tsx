@@ -40,7 +40,6 @@ import {
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import AIChatbot from '@/components/ai-chatbot'
-import { RoleSwitcher } from '@/components/role-switcher'
 import NotificationsBell from '@/components/notifications-bell'
 
 interface NavItem {
@@ -232,12 +231,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
   ],
 }
 
-// Read the preview role cookie set by the RoleSwitcher
-function getPreviewRole(): string | null {
-  if (typeof document === 'undefined') return null
-  const match = document.cookie.match(/(?:^|;\s*)hr_preview_role=([^;]+)/)
-  return match ? decodeURIComponent(match[1]) : null
-}
+// View switcher removed — each user logs in as themselves with strict role.
 
 interface CurrentUser {
   id: string
@@ -260,15 +254,17 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // Desktop collapse — persisted in localStorage so it survives reload
   const [sidebarHidden, setSidebarHidden] = useState(false)
   const [user, setUser] = useState<CurrentUser | null>(null)
-  const [previewRole, setPreviewRole] = useState<string | null>(null)
 
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
       .then((d) => setUser(d.user))
       .catch(() => {})
-    setPreviewRole(getPreviewRole())
-  }, [pathname]) // re-read cookie when route changes (after RoleSwitcher click)
+    // Clear any legacy preview-role cookie left from older builds
+    if (typeof document !== 'undefined' && document.cookie.includes('hr_preview_role=')) {
+      document.cookie = 'hr_preview_role=; path=/; max-age=0; SameSite=Lax'
+    }
+  }, [pathname])
 
   // Load + persist desktop sidebar collapsed state
   useEffect(() => {
@@ -305,11 +301,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // ── Multi-role aware effective role ──
   // The "preview" cookie now switches views for ANY user with multiple roles.
   // If the user only has one role, the switcher hides itself.
-  const userRoles = user?.roles ?? [user?.role ?? 'EMPLOYEE']
-  const canSwitchTo = (role: string) => userRoles.includes(role)
-  const isHR = userRoles.includes('HR_ADMIN')
-  const effectiveRole =
-    previewRole && canSwitchTo(previewRole) ? previewRole : (user?.role ?? 'EMPLOYEE')
+  // Strict role enforcement — no preview switching. effectiveRole always = primary.
+  const effectiveRole = user?.role ?? 'EMPLOYEE'
 
   const navGroups = applyFocus(NAV_GROUPS_BY_ROLE[effectiveRole] ?? NAV_GROUPS_BY_ROLE.EMPLOYEE)
 
@@ -457,19 +450,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
           {/* Right cluster */}
           <div className="flex items-center gap-1.5">
-            {/* RoleSwitcher — only HR_ADMIN can preview other views. Page-level
-                routing (attendance/leave/etc.) only honours the preview cookie
-                for HR; showing the switcher to anyone else creates the illusion
-                of switching while nothing actually changes. */}
-            {user?.role === 'HR_ADMIN' && userRoles.length > 1 && (
-              <div className="hidden md:block mr-1">
-                <RoleSwitcher availableRoles={userRoles} primaryRole={user?.role} />
-              </div>
-            )}
-
-            {/* Inbox */}
-            <button
-              type="button"
+            {/* Inbox link */}
+            <Link
+              href="/dashboard/inbox"
               className="relative p-2 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
               aria-label="Inbox"
               title="Inbox"
@@ -478,7 +461,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               {inboxCount > 0 && (
                 <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
               )}
-            </button>
+            </Link>
 
             {/* Notifications — dropdown with unread badge */}
             <NotificationsBell />
@@ -539,26 +522,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </DropdownMenu.Root>
           </div>
         </header>
-
-        {/* Global view-switch banner — only HR Admin uses preview mode.
-            For other roles, page-level routing ignores the cookie, so we
-            don't show the banner (it would be misleading). */}
-        {user?.role === 'HR_ADMIN' && previewRole && previewRole !== user?.role && canSwitchTo(previewRole) && (
-          <div className="bg-amber-50 border-b border-amber-200 px-4 lg:px-6 py-2 flex items-center justify-between gap-2 text-sm flex-shrink-0">
-            <span className="text-amber-800">
-              👁️ Viewing as <strong>{previewRole.replace('_', ' ')}</strong>. Create/issue/approve actions are disabled in this view.
-            </span>
-            <button
-              onClick={() => {
-                document.cookie = 'hr_preview_role=; path=/; max-age=0; SameSite=Lax'
-                window.location.reload()
-              }}
-              className="text-amber-900 hover:text-amber-700 underline text-xs font-medium"
-            >
-              Back to my {(user?.role ?? 'EMPLOYEE').replace('_', ' ')} view
-            </button>
-          </div>
-        )}
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto">
