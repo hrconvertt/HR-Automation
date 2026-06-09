@@ -171,6 +171,8 @@ model Employee {
   assets              AssetAssignment[]
   documents           EmployeeDocument[]
   helpDeskTickets     HelpDeskTicket[]
+  employeeWarnings    EmployeeWarning[] @relation("EmployeeWarnings")
+  celebrationCards    CelebrationCard[] @relation("CelebrationCards")
   notifications       Notification[]
   compensationHistory CompensationHistory[]
   trainingRecords     TrainingRecord[]
@@ -678,6 +680,51 @@ model ShowCause {
   updatedAt     DateTime @updatedAt
 
   @@map("show_causes")
+}
+
+// Lightweight Warning record — issued by Manager / HR for minor infractions
+// before any formal Show Cause. Auto-escalates to ShowCause on the 3rd row
+// per employee (see /api/performance/warnings POST handler).
+model EmployeeWarning {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation("EmployeeWarnings", fields: [employeeId], references: [id])
+  issuedById  String
+  reason      String
+  category    String   @default("OTHER") // ATTENDANCE | CONDUCT | PERFORMANCE | OTHER
+  severity    String   @default("VERBAL") // VERBAL | WRITTEN | FINAL
+  letterId    String?  // FK to generated warning letter, if any
+  isDemo      Boolean  @default(false)
+  issuedAt    DateTime @default(now())
+
+  @@map("employee_warnings")
+}
+
+// Celebration card — teammates leave signatures/messages on an upcoming
+// birthday or anniversary; on the day, the compiled card is shown to
+// the recipient. Minimum-viable comment-thread model.
+model CelebrationCard {
+  id            String   @id @default(cuid())
+  forEmployeeId String
+  forEmployee   Employee @relation("CelebrationCards", fields: [forEmployeeId], references: [id])
+  occasion      String   // BIRTHDAY | ANNIVERSARY_1YR | ANNIVERSARY_3YR | …
+  occasionDate  DateTime
+  status        String   @default("OPEN")  // OPEN | DELIVERED
+  signatures    CelebrationCardSignature[]
+  createdAt     DateTime @default(now())
+
+  @@map("celebration_cards")
+}
+
+model CelebrationCardSignature {
+  id        String          @id @default(cuid())
+  cardId    String
+  card      CelebrationCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  fromId    String
+  message   String
+  createdAt DateTime        @default(now())
+
+  @@map("celebration_card_signatures")
 }
 
 model PIP {
