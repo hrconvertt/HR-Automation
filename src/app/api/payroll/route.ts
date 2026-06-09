@@ -39,14 +39,21 @@ export async function GET(request: NextRequest) {
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
 
-  // Scope payslip query by role
-  let payslipWhere: { employeeId?: string; employee?: { reportingManagerId: string } } = {}
+  // Scope payslip query by role.
+  // EMPLOYEE should NEVER see DRAFT payslips — only finalized ones.
+  // MANAGER also should not see DRAFT (only HR/EXEC do).
+  let payslipWhere: {
+    employeeId?: string
+    employee?: { reportingManagerId: string }
+    status?: { in: string[] }
+  } = {}
+  const FINALIZED = ['APPROVED', 'RELEASED', 'FINALIZED']
   if (effectiveRole === 'EMPLOYEE') {
     if (!employeeId) return NextResponse.json({ payrollRun: null })
-    payslipWhere = { employeeId }
+    payslipWhere = { employeeId, status: { in: FINALIZED } }
   } else if (effectiveRole === 'MANAGER') {
     if (!employeeId) return NextResponse.json({ payrollRun: null })
-    payslipWhere = { employee: { reportingManagerId: employeeId } }
+    payslipWhere = { employee: { reportingManagerId: employeeId }, status: { in: FINALIZED } }
   }
   // HR_ADMIN & EXECUTIVE: no extra filter
 

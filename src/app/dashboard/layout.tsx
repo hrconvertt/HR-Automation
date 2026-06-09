@@ -70,6 +70,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/recruiting',   // Hiring / Recruiting — now in active polishing
   '/dashboard/onboarding',   // Onboarding & Probation — now in active polishing
   '/dashboard/lifecycle',    // Unified Employee Lifecycle (onboarding + active + exit)
+  '/dashboard/performance',  // Performance — Show Cause + PIP workflows
   '/dashboard/probation',    // Probation Tracker (Devsinc-style lifecycle)
   '/dashboard/assets',       // Assets module — typed inventory
   '/dashboard/documents',    // Documents — BYTEA upload + download
@@ -411,7 +412,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white text-xs font-semibold truncate">{displayName}</p>
-              <p className="text-slate-400 text-[11px] truncate">{displayRole}</p>
+              <p className="text-slate-400 text-[11px] truncate">HRMS</p>
             </div>
             <button
               onClick={handleLogout}

@@ -9,6 +9,9 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { verifyToken } from '@/lib/auth'
 import EditEmployeeButton from '@/components/edit-employee-button'
+import UploadDocumentButton from '@/components/upload-document-button'
+import Link from 'next/link'
+import { ExternalLink } from 'lucide-react'
 import CompensationPanel from '@/components/compensation-panel'
 import { SystemRolesPanel } from '@/components/system-roles-panel'
 import { BackButton } from '@/components/ui/back-button'
@@ -398,7 +401,18 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
         {/* Documents */}
         {showDocuments && <TabsContent value="documents">
           <Card>
-            <CardHeader><CardTitle>Documents</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Documents</CardTitle>
+              <div className="flex items-center gap-2">
+                <Link
+                  href={`/dashboard/documents?employee=${employee.id}`}
+                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                >
+                  View in Document Center <ExternalLink className="w-3 h-3" />
+                </Link>
+                <UploadDocumentButton employeeId={employee.id} compact />
+              </div>
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>

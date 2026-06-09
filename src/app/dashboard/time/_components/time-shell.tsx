@@ -7,9 +7,8 @@
  */
 
 import Link from 'next/link'
-import { Clock, Calendar, Plane, Inbox } from 'lucide-react'
+import { Clock, Calendar, Plane } from 'lucide-react'
 import { CalendarView } from './calendar-view'
-import { ApprovalsInbox } from './approvals-inbox'
 import MyTimeView from '@/app/dashboard/attendance/_views/my-time-view'
 import TeamTimeView from '@/app/dashboard/attendance/_views/team-time-view'
 import AdminTimeView from '@/app/dashboard/attendance/_views/admin-time-view'
@@ -19,7 +18,7 @@ import TeamLeaveView from '@/app/dashboard/leave/_views/team-leave-view'
 import AdminLeaveView from '@/app/dashboard/leave/_views/admin-leave-view'
 import ExecutiveLeaveView from '@/app/dashboard/leave/_views/executive-leave-view'
 
-type TabKey = 'today' | 'calendar' | 'leave' | 'approvals'
+type TabKey = 'today' | 'calendar' | 'leave'
 
 interface Props {
   role: string
@@ -29,13 +28,13 @@ interface Props {
 }
 
 export function TimeShell({ role, employeeId, employeeName, initialTab }: Props) {
-  const showApprovals = role === 'MANAGER' || role === 'HR_ADMIN'
-
+  // "Approvals" top-level tab removed — pending requests are now surfaced
+  // via the status-filter chip in the Leave tab (defaults to "Pending" for
+  // HR / Manager, "All" for Employee).
   const tabs: { key: TabKey; label: string; icon: typeof Clock; show: boolean }[] = [
     { key: 'today',     label: 'Today',     icon: Clock,    show: true },
     { key: 'calendar',  label: 'Calendar',  icon: Calendar, show: true },
     { key: 'leave',     label: 'Leave',     icon: Plane,    show: true },
-    { key: 'approvals', label: 'Approvals', icon: Inbox,    show: showApprovals },
   ]
   const activeTab: TabKey = (tabs.find((t) => t.key === initialTab && t.show)?.key ?? 'today') as TabKey
 
@@ -69,7 +68,6 @@ export function TimeShell({ role, employeeId, employeeName, initialTab }: Props)
         {activeTab === 'today' && <TodayPanel role={role} employeeId={employeeId} employeeName={employeeName} />}
         {activeTab === 'calendar' && <CalendarView role={role} />}
         {activeTab === 'leave' && <LeavePanel role={role} employeeId={employeeId} employeeName={employeeName} />}
-        {activeTab === 'approvals' && showApprovals && <ApprovalsInbox role={role} />}
       </div>
     </div>
   )

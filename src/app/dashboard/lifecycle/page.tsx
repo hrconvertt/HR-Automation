@@ -9,6 +9,7 @@
  */
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -42,6 +43,11 @@ interface Clearance {
 }
 
 export default function LifecyclePage() {
+  const sp = useSearchParams()
+  const tabParam = sp.get('tab') ?? 'onboarding'
+  const initialTab = ['onboarding', 'probation', 'active', 'exit'].includes(tabParam)
+    ? tabParam
+    : 'onboarding'
   return (
     <div className="space-y-6">
       <div className="rounded-2xl bg-gradient-to-br from-indigo-600 via-blue-600 to-cyan-600 p-6 text-white shadow-md">
@@ -58,7 +64,7 @@ export default function LifecyclePage() {
         </div>
       </div>
 
-      <Tabs defaultValue="onboarding">
+      <Tabs defaultValue={initialTab}>
         <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex flex-wrap">
           <TabsTrigger value="onboarding"><Sprout className="w-3.5 h-3.5 mr-1.5" /> Onboarding</TabsTrigger>
           <TabsTrigger value="probation"><ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Probation</TabsTrigger>

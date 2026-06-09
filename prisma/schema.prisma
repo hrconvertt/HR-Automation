@@ -151,6 +151,12 @@ model Employee {
   //   and the employee themselves can always see the record. Use sparingly:
   //   protected leave, pre-announcement hires, or sensitive isolation cases.
   hideFromDirectory   Boolean   @default(false)
+  // Personal celebration privacy — when true, this employee opts out of
+  // having their birthday / anniversary surfaced in calendars, the
+  // People & Culture module, "This Week Ahead" widget, and the daily
+  // celebration cron. HR is the only role that can still query these.
+  hideBirthday        Boolean   @default(false)
+  hideAnniversary     Boolean   @default(false)
 
   // Relations
   attendanceLogs      AttendanceLog[]
@@ -514,6 +520,7 @@ model Payslip {
   providentFund   Float      @default(0)  // HR-overridable (PF / EPF deduction)
   healthcare      Float      @default(0)  // employee's health-insurance contribution
   loanDeduction   Float      @default(0)  // monthly instalment for company loan / vehicle
+  vehicleDeduction Float     @default(0)  // company vehicle / fuel-card recovery
   advanceDeduction Float     @default(0)  // recovery of a salary advance
   otherDeductions Float      @default(0)
   netSalary       Float

@@ -10,6 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
@@ -35,17 +36,7 @@ interface Letter {
   employee?: { id: string; fullName: string; employeeCode: string }
 }
 
-const DOC_TYPES = [
-  { value: 'CNIC', label: 'CNIC' },
-  { value: 'RESUME', label: 'Resume' },
-  { value: 'EDUCATIONAL_CERTIFICATE', label: 'Educational Certificate' },
-  { value: 'EXPERIENCE', label: 'Experience Letter' },
-  { value: 'OFFER_LETTER', label: 'Offer Letter' },
-  { value: 'NDA', label: 'NDA' },
-  { value: 'PHOTO', label: 'Photo' },
-  { value: 'SALARY_SLIP', label: 'Salary Slip' },
-  { value: 'OTHER', label: 'Other' },
-]
+import { DOC_TYPES } from '@/lib/document-types'
 
 const LETTER_STATUS_TONE: Record<string, 'default' | 'success' | 'warning' | 'secondary'> = {
   PENDING: 'warning',
@@ -55,6 +46,8 @@ const LETTER_STATUS_TONE: Record<string, 'default' | 'success' | 'warning' | 'se
 }
 
 export default function DocumentCenterPage() {
+  const sp = useSearchParams()
+  const initialTab = sp.get('employee') ? 'files' : (sp.get('tab') ?? 'letters')
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -73,7 +66,7 @@ export default function DocumentCenterPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="letters">
+      <Tabs defaultValue={initialTab}>
         <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex">
           <TabsTrigger value="letters"><Mail className="w-3.5 h-3.5 mr-1.5" /> Letters</TabsTrigger>
           <TabsTrigger value="files"><FileText className="w-3.5 h-3.5 mr-1.5" /> Employee Files</TabsTrigger>
@@ -188,8 +181,10 @@ function LettersTab() {
 /* ─────────────────────── EMPLOYEE FILES TAB ─────────────────────── */
 
 function EmployeeFilesTab() {
+  const searchParams = useSearchParams()
+  const preselectId = searchParams.get('employee') ?? ''
   const [employees, setEmployees] = useState<Employee[]>([])
-  const [selectedEmp, setSelectedEmp] = useState('')
+  const [selectedEmp, setSelectedEmp] = useState(preselectId)
   const [docs, setDocs] = useState<Document[]>([])
   const [loading, setLoading] = useState(false)
   const [uploadOpen, setUploadOpen] = useState(false)
