@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
-import { ShieldCheck, Zap, AlertTriangle, CheckCircle, Clock, FileText } from 'lucide-react'
+import { ShieldCheck, Zap, AlertTriangle, CheckCircle, Clock, FileText, Activity } from 'lucide-react'
 import { BackButton } from '@/components/ui/back-button'
 
 interface ProbationRec {
@@ -76,6 +76,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
 
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [earlyOpen, setEarlyOpen] = useState(false)
+  const [forceOpen, setForceOpen] = useState(false)
 
   const reload = async () => {
     const r = await fetch(`/api/probation/${id}`)
@@ -152,6 +153,11 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
               {rec.status === 'ACTIVE' && (
                 <Button onClick={() => setEarlyOpen(true)} className="bg-amber-500 hover:bg-amber-600 text-white">
                   <Zap className="w-4 h-4 mr-1" /> Early Decision
+                </Button>
+              )}
+              {rec.status === 'UNDER_REVIEW' && rec.hrDecision == null && daysLeft < -30 && (
+                <Button onClick={() => setForceOpen(true)} className="bg-rose-600 hover:bg-rose-700 text-white">
+                  <AlertTriangle className="w-4 h-4 mr-1" /> HR Override: Force Enact
                 </Button>
               )}
             </div>
@@ -326,6 +332,37 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         </DialogContent>
       </Dialog>
 
+      {/* Activity Timeline — chronological audit trail */}
+      <Card className="p-5">
+        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <Activity className="w-4 h-4" /> Activity
+        </h2>
+        <ActivityTimeline rec={rec} canSeeManagerNotes={isHR || isManager || !!rec.outcomeEnactedAt} />
+      </Card>
+
+      {/* Force Enact Dialog */}
+      <Dialog open={forceOpen} onOpenChange={setForceOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>HR Override: Force Enact</DialogTitle></DialogHeader>
+          <ForceEnactDialog
+            onSubmit={async (outcome, reason) => {
+              setBusy(true); setErr('')
+              const r = await fetch(`/api/admin/probation/${id}/force-enact`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ outcome, reason }),
+              })
+              const d = await r.json().catch(() => ({}))
+              setBusy(false)
+              if (!r.ok) { setErr(d.error || 'Force-enact failed'); return }
+              setForceOpen(false)
+              await reload()
+            }}
+            busy={busy}
+          />
+        </DialogContent>
+      </Dialog>
+
       {/* Early Decision Dialog */}
       <Dialog open={earlyOpen} onOpenChange={setEarlyOpen}>
         <DialogContent>
@@ -470,6 +507,141 @@ function AdjustDurationDialog({ current, onSubmit, busy }: { current: number; on
       </div>
       <DialogFooter>
         <Button onClick={() => onSubmit(m, reason)} disabled={busy || !reason.trim()}>Adjust</Button>
+      </DialogFooter>
+    </div>
+  )
+}
+
+function relativeTime(d: Date): string {
+  const diff = Date.now() - d.getTime()
+  const day = 86_400_000
+  if (diff < 60_000) return 'just now'
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`
+  if (diff < day) return `${Math.floor(diff / 3_600_000)}h ago`
+  if (diff < 7 * day) return `${Math.floor(diff / day)}d ago`
+  if (diff < 30 * day) return `${Math.floor(diff / (7 * day))}w ago`
+  if (diff < 0) {
+    const future = Math.abs(diff)
+    if (future < day) return `in ${Math.floor(future / 3_600_000)}h`
+    return `in ${Math.floor(future / day)}d`
+  }
+  return `${Math.floor(diff / (30 * day))}mo ago`
+}
+
+interface TimelineEvent {
+  at: string
+  label: string
+  detail?: string | null
+  tone: 'blue' | 'emerald' | 'amber' | 'rose' | 'violet' | 'slate'
+}
+
+function ActivityTimeline({ rec, canSeeManagerNotes }: { rec: ProbationRec; canSeeManagerNotes: boolean }) {
+  const events: TimelineEvent[] = []
+  events.push({ at: rec.startDate, label: 'Probation started', tone: 'blue', detail: `Duration: ${rec.durationMonths} months` })
+  if (rec.settlingCheckInAt) events.push({
+    at: rec.settlingCheckInAt,
+    label: 'Settling check-in submitted',
+    detail: rec.settlingFlag ? `Flag: ${rec.settlingFlag}${rec.settlingNotes ? ` — ${rec.settlingNotes}` : ''}` : rec.settlingNotes,
+    tone: rec.settlingFlag === 'RED' ? 'rose' : rec.settlingFlag === 'AMBER' ? 'amber' : 'emerald',
+  })
+  if (rec.packetGeneratedAt) events.push({
+    at: rec.packetGeneratedAt,
+    label: 'Decision packet generated',
+    detail: rec.packetSuggestedRec ? `Heuristic: ${rec.packetSuggestedRec}` : null,
+    tone: 'violet',
+  })
+  if (rec.managerSubmittedAt) events.push({
+    at: rec.managerSubmittedAt,
+    label: 'Manager submitted recommendation',
+    detail: `Recommendation: ${rec.managerRecommendation}${canSeeManagerNotes && rec.managerReviewNotes ? ` — ${rec.managerReviewNotes}` : ''}`,
+    tone: 'blue',
+  })
+  if (rec.hrDecidedAt) events.push({
+    at: rec.hrDecidedAt,
+    label: `HR decided: ${rec.hrDecision}`,
+    detail: rec.hrNotes,
+    tone: 'violet',
+  })
+  if (rec.meetingScheduledFor) events.push({
+    at: rec.meetingScheduledFor,
+    label: 'Meeting scheduled',
+    detail: null,
+    tone: 'amber',
+  })
+  if (rec.warningIssuedAt) events.push({
+    at: rec.warningIssuedAt,
+    label: 'Warning issued',
+    detail: rec.warningNotes,
+    tone: 'rose',
+  })
+  if (rec.outcomeEnactedAt) events.push({
+    at: rec.outcomeEnactedAt,
+    label: `Outcome enacted: ${rec.status}`,
+    detail: rec.isEarlyDecision ? `Early decision · ${rec.earlyDecisionReason ?? ''}` : null,
+    tone: 'emerald',
+  })
+
+  events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime())
+
+  if (events.length === 0) {
+    return <p className="text-sm text-slate-500">No activity yet.</p>
+  }
+
+  const toneClass: Record<TimelineEvent['tone'], string> = {
+    blue: 'bg-blue-500',
+    emerald: 'bg-emerald-500',
+    amber: 'bg-amber-500',
+    rose: 'bg-rose-500',
+    violet: 'bg-violet-500',
+    slate: 'bg-slate-400',
+  }
+
+  return (
+    <ol className="relative ml-3">
+      <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" aria-hidden />
+      {events.map((e, i) => {
+        const d = new Date(e.at)
+        return (
+          <li key={i} className="relative pl-6 pb-5 last:pb-0">
+            <span className={`absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full ${toneClass[e.tone]} ring-4 ring-white shadow-sm`} aria-hidden />
+            <p className="text-sm font-semibold text-slate-900">{e.label}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {relativeTime(d)} · {d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+            </p>
+            {e.detail && <p className="text-xs text-slate-700 mt-1 bg-slate-50 rounded px-2 py-1.5 whitespace-pre-wrap">{e.detail}</p>}
+          </li>
+        )
+      })}
+    </ol>
+  )
+}
+
+function ForceEnactDialog({ onSubmit, busy }: { onSubmit: (outcome: string, reason: string) => void; busy: boolean }) {
+  const [outcome, setOutcome] = useState('CONFIRM')
+  const [reason, setReason] = useState('')
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-rose-800 bg-rose-50 border border-rose-200 rounded p-2">
+        Use only when the probation is stuck past its end date with no manager or HR decision. The override reason is logged for audit.
+      </p>
+      <div>
+        <label className="block text-xs font-medium text-slate-700 mb-1">Outcome</label>
+        <Select value={outcome} onValueChange={setOutcome}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="CONFIRM">CONFIRM</SelectItem>
+            <SelectItem value="EXTEND">EXTEND</SelectItem>
+            <SelectItem value="WARNING">WARNING</SelectItem>
+            <SelectItem value="TERMINATE">TERMINATE</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-slate-700 mb-1">Override reason (required)</label>
+        <textarea className="w-full rounded-md border border-slate-300 p-2 text-sm" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is HR forcing this enactment?" />
+      </div>
+      <DialogFooter>
+        <Button onClick={() => onSubmit(outcome, reason)} disabled={busy || !reason.trim()} className="bg-rose-600 hover:bg-rose-700 text-white">Force Enact</Button>
       </DialogFooter>
     </div>
   )

@@ -354,6 +354,12 @@ export default function SettingsPage() {
                   <Input defaultValue="hr@convertt.co" disabled />
                 </Field>
                 <div className="text-xs text-slate-400">Channels: Email · In-app inbox · Future: SMS</div>
+                <div className="pt-3 border-t border-slate-100">
+                  <a href="/dashboard/settings/email-templates" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline">
+                    Edit Email Templates <ChevronRight className="w-4 h-4" />
+                  </a>
+                  <p className="text-xs text-slate-500 mt-1">Subject + body templates with {'{{var}}'} substitution for interview invites, offers, rejections, confirmations.</p>
+                </div>
               </CardContent>
             </Card>
           )}

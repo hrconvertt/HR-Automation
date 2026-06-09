@@ -50,6 +50,9 @@ export async function POST(request: NextRequest) {
   const requestReason = body.requestReason ? String(body.requestReason) : null
   const requestNote   = body.requestNote ? String(body.requestNote).trim().slice(0, 2000) : null
   const closingDate   = body.closingDate ? new Date(body.closingDate) : null
+  const scoreThreshold = body.scoreThreshold != null
+    ? Math.max(1, Math.min(100, Number(body.scoreThreshold) || 60))
+    : 60
 
   if (!title) return NextResponse.json({ error: 'Job title is required' }, { status: 400 })
   if (isManager && !me.employee) {
@@ -66,6 +69,7 @@ export async function POST(request: NextRequest) {
       requestedById,
       requestReason, requestNote,
       closingDate,
+      scoreThreshold,
       status,
       postedDate: status === 'OPEN' ? new Date() : null,
     },

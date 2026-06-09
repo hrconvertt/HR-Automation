@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, User, Calendar, ClipboardCheck } from 'lucide-react'
+import { ArrowLeft, User, Calendar, ClipboardCheck, Printer } from 'lucide-react'
 import { ReviewForm } from '@/components/performance/review-form'
 import { suggestedOverallRating } from '@/lib/performance-metrics'
 
@@ -91,9 +91,20 @@ export default async function ReviewDetailPage({ params }: PageProps) {
               </span>
             </div>
           </div>
-          <Badge variant={statusVariant[review.status] ?? 'secondary'} className="text-sm px-3 py-1">
-            {review.status.replace('_', ' ')}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={statusVariant[review.status] ?? 'secondary'} className="text-sm px-3 py-1">
+              {review.status.replace('_', ' ')}
+            </Badge>
+            {(isHR || ((isOwn || isMyTeamMember) && review.status === 'HR_FINALIZED')) && (
+              <Link
+                href={`/dashboard/performance/${review.id}/report`}
+                target="_blank"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50"
+              >
+                <Printer className="w-3.5 h-3.5" /> Print Report
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Progress timeline */}

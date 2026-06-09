@@ -8,6 +8,7 @@
  */
 
 import type { Prisma } from '@prisma/client'
+import { prisma } from './prisma'
 
 type Emp = Prisma.EmployeeGetPayload<{
   include: { department: true; salary: true; reportingManager: true }
@@ -255,6 +256,35 @@ export function buildEmail(
     case 'NOTICE_PERIOD':     return noticePeriodEmail(emp, extras.lastWorkingDay ?? new Date())
     case 'TERMINATION':       return terminationEmail(emp, extras.lastWorkingDay ?? new Date(), extras.reason ?? 'As discussed.')
     case 'EXPERIENCE_LETTER': return experienceLetterEmail(emp)
+  }
+}
+
+// ─── DB-backed template lookup ────────────────────────────────────────────────
+// Editable from /dashboard/settings/email-templates (HR_ADMIN). Falls back
+// to the hardcoded builders above when no row exists for the given key.
+
+/**
+ * Simple {{var}} substitution. Unmatched placeholders are left in place
+ * so HR sees them in the queue UI and can fill them manually.
+ */
+export function substituteVars(template: string, vars: Record<string, string | undefined>): string {
+  return template.replace(/\{\{\s*([A-Za-z0-9_]+)\s*\}\}/g, (_m, k) => {
+    const v = vars[k]
+    return v == null ? `{{${k}}}` : String(v)
+  })
+}
+
+/**
+ * Look up an EmailTemplate by key. Returns null if not found.
+ * Caller falls back to hardcoded builders.
+ */
+export async function lookupTemplate(key: string): Promise<{ subject: string; body: string } | null> {
+  try {
+    const row = await prisma.emailTemplate.findUnique({ where: { key } })
+    if (!row) return null
+    return { subject: row.subject, body: row.body }
+  } catch {
+    return null
   }
 }
 

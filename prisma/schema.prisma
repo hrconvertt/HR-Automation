@@ -64,6 +64,7 @@ model Department {
   headId      String?
   employees   Employee[]
   positions   Position[]
+  taskTemplates TaskTemplate[]
   createdAt   DateTime   @default(now())
 
   @@map("departments")
@@ -176,6 +177,9 @@ model Employee {
   emailDrafts         EmailDraft[]
   letterRequests      LetterRequest[]
   exitClearances      ExitClearance[]
+  kudosGiven          Kudos[]           @relation("KudosFrom")
+  kudosReceived       Kudos[]           @relation("KudosTo")
+  tasks               TaskAssignment[]
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -939,6 +943,7 @@ model Candidate {
   poolTags        String?   // comma-separated: "UI/UX,Senior,Trusted,Available"
   poolReason      String?   // why they're in the pool (auto or manual note)
   poolAddedAt     DateTime?
+  lastStallNotifiedAt DateTime?
   interviews      Interview[]
   offer           JobOffer?
   createdAt       DateTime       @default(now())
@@ -1298,6 +1303,88 @@ model Config {
 // can compute Cost-of-People % and Revenue-per-Employee. We don't pull
 // from accounting because Convertt's books live elsewhere (manual
 // monthly input is honest and dead simple).
+// ─── PEOPLE & CULTURE ─────────────────────────────────────────────────────────
+
+model CompanyEvent {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  eventDate   DateTime
+  location    String?
+  category    String   @default("GENERAL") // DINNER | TRIP | SPORTS | TRAINING | TOWN_HALL | EID | GENERAL
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@map("company_events")
+}
+
+model Kudos {
+  id        String   @id @default(cuid())
+  fromId    String
+  from      Employee @relation("KudosFrom", fields: [fromId], references: [id])
+  toId      String
+  to        Employee @relation("KudosTo", fields: [toId], references: [id])
+  message   String
+  category  String   @default("APPRECIATION") // APPRECIATION | TEAMWORK | INNOVATION | LEADERSHIP
+  createdAt DateTime @default(now())
+  @@map("kudos")
+}
+
+// ─── EMAIL TEMPLATES ──────────────────────────────────────────────────────────
+
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  subject     String
+  body        String   @db.Text
+  description String?
+  variables   String?
+  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  @@map("email_templates")
+}
+
+// ─── TASK CATALOG ─────────────────────────────────────────────────────────────
+
+model TaskTemplate {
+  id              String   @id @default(cuid())
+  name            String
+  description     String?
+  expectedHours   Float
+  complexity      String   @default("MEDIUM")
+  departmentId    String?
+  department      Department? @relation(fields: [departmentId], references: [id])
+  assignments     TaskAssignment[]
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@map("task_templates")
+}
+
+model TaskAssignment {
+  id                  String   @id @default(cuid())
+  employeeId          String
+  employee            Employee @relation(fields: [employeeId], references: [id])
+  templateId          String?
+  template            TaskTemplate? @relation(fields: [templateId], references: [id])
+  customName          String?
+  customExpectedHours Float?
+  assignedAt          DateTime @default(now())
+  assignedById        String?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  actualHours         Float?
+  qualityScore        Float?
+  delayReason         String?
+  delayJustified      Boolean  @default(false)
+  efficiency          Float?
+  status              String   @default("ASSIGNED")
+  notes               String?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  @@map("task_assignments")
+}
+
 model MonthlyMetric {
   id           String   @id @default(cuid())
   month        Int

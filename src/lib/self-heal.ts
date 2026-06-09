@@ -290,6 +290,78 @@ async function fixMissingOnboarding(): Promise<number> {
   return fixed
 }
 
+/** Pipeline stage stalls — candidates with no movement >7 days, not yet notified. */
+async function checkPipelineStageStalls(): Promise<HealthCheck> {
+  const cutoff = new Date(Date.now() - 7 * 86_400_000)
+  const rows = await prisma.candidate.findMany({
+    where: {
+      updatedAt: { lt: cutoff },
+      stage: { notIn: ['HIRED', 'REJECTED'] },
+      OR: [
+        { lastStallNotifiedAt: null },
+        // notify again only if stall was reset (candidate moved) — we treat
+        // lastStallNotifiedAt < updatedAt as "stall is older than last notice"
+        { lastStallNotifiedAt: { lt: cutoff } },
+      ],
+    },
+    select: { fullName: true, stage: true },
+    take: 100,
+  })
+  return {
+    id: 'pipeline_stage_stalls',
+    label: 'Candidates stalled in pipeline >7 days',
+    severity: rows.length > 0 ? 'warn' : 'info',
+    found: rows.length,
+    sample: rows.slice(0, 5).map((r) => `${r.fullName} (${r.stage})`),
+    autoFixable: true,
+    description: 'Auto-fix notifies HR_ADMIN about each stalled candidate and stamps lastStallNotifiedAt so we do not double-notify.',
+  }
+}
+
+async function fixPipelineStageStalls(): Promise<number> {
+  const cutoff = new Date(Date.now() - 7 * 86_400_000)
+  const stalled = await prisma.candidate.findMany({
+    where: {
+      updatedAt: { lt: cutoff },
+      stage: { notIn: ['HIRED', 'REJECTED'] },
+      OR: [
+        { lastStallNotifiedAt: null },
+        { lastStallNotifiedAt: { lt: cutoff } },
+      ],
+    },
+    include: { requisition: { select: { title: true } } },
+  })
+  if (stalled.length === 0) return 0
+
+  const hrs = await prisma.user.findMany({
+    where: { role: 'HR_ADMIN', employee: { isNot: null } },
+    select: { employee: { select: { id: true } } },
+  })
+  const hrEmployeeIds = hrs.map((h) => h.employee?.id).filter(Boolean) as string[]
+
+  let fixed = 0
+  for (const c of stalled) {
+    const daysStuck = Math.floor((Date.now() - c.updatedAt.getTime()) / 86_400_000)
+    if (hrEmployeeIds.length > 0) {
+      await prisma.notification.createMany({
+        data: hrEmployeeIds.map((employeeId) => ({
+          employeeId,
+          type: 'GENERAL',
+          title: `Pipeline stall — ${c.fullName}`,
+          message: `${c.fullName} has been in ${c.stage} for ${daysStuck} days (${c.requisition?.title ?? 'unknown role'}).`,
+          link: `/dashboard/recruiting?stage=${c.stage}`,
+        })),
+      })
+    }
+    await prisma.candidate.update({
+      where: { id: c.id },
+      data: { lastStallNotifiedAt: new Date() },
+    })
+    fixed++
+  }
+  return fixed
+}
+
 // ─── Public API ──────────────────────────────────────────────────────
 
 const CHECKS = [
@@ -302,6 +374,7 @@ const CHECKS = [
   checkLeaveBalanceDrift,
   checkMissingOnboarding,
   checkProbationLifecycle,
+  checkPipelineStageStalls,
 ] as const
 
 const FIXERS: Record<string, () => Promise<number>> = {
@@ -311,6 +384,7 @@ const FIXERS: Record<string, () => Promise<number>> = {
   leave_balance_drift: fixLeaveBalanceDrift,
   missing_onboarding: fixMissingOnboarding,
   probation_lifecycle: fixProbationLifecycle,
+  pipeline_stage_stalls: fixPipelineStageStalls,
 }
 
 export async function runHealthScan(): Promise<HealthReport> {

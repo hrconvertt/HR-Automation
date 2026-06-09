@@ -163,6 +163,69 @@ async function main() {
   console.log(`  ✓ HR admin: ${HR_ADMIN_EMAIL}`)
   console.log(`     password: ${HR_ADMIN_PASSWORD}  (you'll be forced to change on first login)`)
 
+  // ── Email templates — minimal seed; HR edits these via the admin UI ──
+  console.log('\n▶ Seeding email templates…')
+  const EMAIL_TEMPLATES = [
+    {
+      key: 'interview_invite',
+      subject: 'Interview Invitation – {{role}} at Convertt',
+      description: 'Sent when a candidate moves to INTERVIEW stage.',
+      variables: 'candidateName, role, interviewDate, meetingLink',
+      body: `<p>Hi {{candidateName}},</p>
+<p>Thank you for applying for the <b>{{role}}</b> position at Convertt. We were impressed with your profile and would like to invite you to an interview.</p>
+<p><b>Date &amp; time:</b> {{interviewDate}}<br><b>Meeting link:</b> {{meetingLink}}</p>
+<p>Please confirm your availability by replying to this email.</p>
+<p>Best regards,<br>HR Team, Convertt</p>`,
+    },
+    {
+      key: 'offer_letter',
+      subject: 'Employment Offer – {{designation}} at Convertt',
+      description: 'Sent when an offer is generated.',
+      variables: 'candidateName, designation, salary, joiningDate',
+      body: `<p>Hi {{candidateName}},</p>
+<p>We are pleased to offer you the position of <b>{{designation}}</b> at Convertt.</p>
+<ul><li><b>Compensation:</b> {{salary}}</li><li><b>Joining Date:</b> {{joiningDate}}</li></ul>
+<p>Please reply to confirm your acceptance.</p>
+<p>Best regards,<br>HR Team, Convertt</p>`,
+    },
+    {
+      key: 'rejection_polite',
+      subject: 'Application Update – Convertt',
+      description: 'Polite rejection email.',
+      variables: 'candidateName, role',
+      body: `<p>Hi {{candidateName}},</p>
+<p>Thank you for your interest in the <b>{{role}}</b> position at Convertt. After careful review, we have decided to move forward with other candidates whose experience more closely matches our current needs.</p>
+<p>We genuinely appreciate the time you invested with us and wish you the best in your career.</p>
+<p>Warm regards,<br>HR Team, Convertt</p>`,
+    },
+    {
+      key: 'probation_confirm',
+      subject: 'Confirmation of Employment – Convertt',
+      description: 'Sent when probation is confirmed.',
+      variables: 'employeeName, designation, effectiveDate',
+      body: `<p>Hi {{employeeName}},</p>
+<p><b>Congratulations!</b> Following a successful probation period, we are pleased to confirm your employment with Convertt as a permanent <b>{{designation}}</b>, effective <b>{{effectiveDate}}</b>.</p>
+<p>Best regards,<br>HR Team, Convertt</p>`,
+    },
+    {
+      key: 'settling_checkin_reminder',
+      subject: 'Day-30 Check-in Reminder – {{employeeName}}',
+      description: 'Reminds manager to submit settling check-in.',
+      variables: 'employeeName, managerName, dueDate',
+      body: `<p>Hi {{managerName}},</p>
+<p>It has been ~30 days since <b>{{employeeName}}</b> joined Convertt. Please submit the settling check-in by <b>{{dueDate}}</b> via the Probation Tracker.</p>
+<p>Thanks,<br>HR Team</p>`,
+    },
+  ]
+  for (const t of EMAIL_TEMPLATES) {
+    await p.emailTemplate.upsert({
+      where: { key: t.key },
+      create: t,
+      update: {}, // do not overwrite HR edits on re-seed
+    })
+  }
+  console.log(`  ✓ Seeded ${EMAIL_TEMPLATES.length} email templates`)
+
   console.log('\n▶ Done. Next steps:')
   console.log('   1. Open https://your-vercel-url/login')
   console.log(`   2. Sign in with ${HR_ADMIN_EMAIL} / ${HR_ADMIN_PASSWORD}`)

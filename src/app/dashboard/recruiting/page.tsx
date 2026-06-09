@@ -8,7 +8,7 @@ import {
   Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
 } from '@/components/ui/table'
 import { formatDate, formatCurrency } from '@/lib/utils'
-import { Briefcase, Users, Calendar, FileText, ClipboardList } from 'lucide-react'
+import { Briefcase, Users, FileText, ClipboardList, Activity, AlertTriangle, Timer, TrendingUp } from 'lucide-react'
 import { RequestToHireButton } from '@/components/recruiting/request-to-hire-button'
 import { DecideRequestButtons } from '@/components/recruiting/decide-request-buttons'
 import { AddCandidateButton } from '@/components/recruiting/add-candidate-button'
@@ -38,6 +38,46 @@ const PIPELINE_STAGES = [
   { key: 'HIRED',      label: 'Hired',      tone: 'bg-emerald-50/40 border-emerald-200' },
   { key: 'REJECTED',   label: 'Rejected',   tone: 'bg-rose-50/40 border-rose-200' },
 ]
+
+async function getPipelineHealth() {
+  const now = Date.now()
+  const sevenDaysAgo = new Date(now - 7 * 86_400_000)
+
+  // Stuck candidates: updatedAt > 7 days ago AND not HIRED/REJECTED
+  const stuck = await prisma.candidate.count({
+    where: {
+      updatedAt: { lt: sevenDaysAgo },
+      stage: { notIn: ['HIRED', 'REJECTED'] },
+    },
+  })
+
+  // Avg time in SCREENING (createdAt vs current updatedAt for SCREENING candidates)
+  const screening = await prisma.candidate.findMany({
+    where: { stage: 'SCREENING' },
+    select: { createdAt: true, updatedAt: true },
+    take: 200,
+  })
+  let avgScreenDays: number | null = null
+  if (screening.length > 0) {
+    const total = screening.reduce((sum, c) => sum + (c.updatedAt.getTime() - c.createdAt.getTime()), 0)
+    avgScreenDays = total / screening.length / 86_400_000
+  }
+
+  // Avg time-to-hire from last 10 HIRED candidates (createdAt → updatedAt as proxy for HIRED transition)
+  const hired = await prisma.candidate.findMany({
+    where: { stage: 'HIRED' },
+    orderBy: { updatedAt: 'desc' },
+    take: 10,
+    select: { createdAt: true, updatedAt: true },
+  })
+  let avgTimeToHireDays: number | null = null
+  if (hired.length > 0) {
+    const total = hired.reduce((sum, c) => sum + (c.updatedAt.getTime() - c.createdAt.getTime()), 0)
+    avgTimeToHireDays = total / hired.length / 86_400_000
+  }
+
+  return { stuck, avgScreenDays, avgTimeToHireDays, hiredSampleSize: hired.length }
+}
 
 async function getData() {
   const [requisitions, candidates, interviews, offers, poolCandidates] = await Promise.all([
@@ -107,6 +147,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   const sp = (await searchParams) ?? {}
   const { role, myEmployeeId } = await resolveContext()
   const { requisitions, candidates, interviews, offers, poolCandidates } = await getData()
+  const health = await getPipelineHealth()
 
   const isHR      = role === 'HR_ADMIN'
   const isManager = role === 'MANAGER'
@@ -143,6 +184,49 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           </div>
         )}
       </div>
+
+      {/* Pipeline Health — server-computed flow metrics */}
+      {(isHR || isManager) && (
+        <Card className="rounded-xl border-slate-200 shadow-sm p-4">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <Activity className="w-4 h-4 text-slate-500" />
+              <h2 className="text-sm font-semibold text-slate-900">Pipeline Health</h2>
+            </div>
+            <p className="text-[11px] text-slate-500">Last 7 days · sample {health.hiredSampleSize}/10</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Stuck Candidates</p>
+                <AlertTriangle className={`w-4 h-4 ${health.stuck > 0 ? 'text-amber-500' : 'text-slate-300'}`} />
+              </div>
+              <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">{health.stuck}</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">No movement &gt;7 days</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Avg Screening</p>
+                <Timer className="w-4 h-4 text-blue-500" />
+              </div>
+              <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
+                {health.avgScreenDays != null ? `${health.avgScreenDays.toFixed(1)}d` : '—'}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Days in screening stage</p>
+            </div>
+            <div className="rounded-lg border border-slate-200 bg-white p-3">
+              <div className="flex items-center justify-between">
+                <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Avg Time to Hire</p>
+                <TrendingUp className="w-4 h-4 text-emerald-500" />
+              </div>
+              <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
+                {health.avgTimeToHireDays != null ? `${health.avgTimeToHireDays.toFixed(1)}d` : '—'}
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Apply → hired, last 10</p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Tabs ordered left-to-right by lifecycle:
             Requests (manager → HR) → Requisitions (the live hiring board)

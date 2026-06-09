@@ -31,6 +31,7 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
     requestReason: 'REPLACEMENT',
     requestNote: '',
     closingDate: '',
+    scoreThreshold: 60,
   })
 
   useEffect(() => {
@@ -61,6 +62,7 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
       setForm({
         title: '', departmentId: '', type: 'FULL_TIME', vacancies: 1,
         requestReason: 'REPLACEMENT', requestNote: '', closingDate: '',
+        scoreThreshold: 60,
       })
       router.refresh()
       return
@@ -156,15 +158,28 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">
-                Target Closing Date <span className="text-slate-400 font-normal">(optional)</span>
-              </label>
-              <Input
-                type="date"
-                value={form.closingDate}
-                onChange={(e) => setForm({ ...form, closingDate: e.target.value })}
-              />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Target Closing Date <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <Input
+                  type="date"
+                  value={form.closingDate}
+                  onChange={(e) => setForm({ ...form, closingDate: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Quality Score Threshold</label>
+                <Input
+                  type="number"
+                  min={1}
+                  max={100}
+                  value={form.scoreThreshold}
+                  onChange={(e) => setForm({ ...form, scoreThreshold: Math.max(1, Math.min(100, Number(e.target.value) || 60)) })}
+                />
+                <p className="text-[11px] text-slate-500 mt-1">Candidates scoring above this are auto-added to Talent Pool on rejection.</p>
+              </div>
             </div>
 
             <div>
