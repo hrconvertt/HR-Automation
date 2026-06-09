@@ -48,8 +48,10 @@ prisma/*.db-journal
 prisma/*.db-shm
 prisma/*.db-wal
 
-# Claude session state
-.claude/
+# Claude session state — ignore everything EXCEPT shared agent + command defs
+.claude/*
+!.claude/agents/
+!.claude/commands/
 
 .vercel
 .env*
