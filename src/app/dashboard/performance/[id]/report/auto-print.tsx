@@ -9,3 +9,15 @@ export function AutoPrint() {
   }, [])
   return null
 }
+
+export function PrintButton() {
+  return (
+    <button
+      type="button"
+      className="print-btn"
+      onClick={() => window.print()}
+    >
+      Print
+    </button>
+  )
+}

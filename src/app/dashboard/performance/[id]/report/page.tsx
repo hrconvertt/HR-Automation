@@ -2,7 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { AutoPrint } from './auto-print'
+import { AutoPrint, PrintButton } from './auto-print'
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -140,7 +140,7 @@ export default async function PerformanceReportPage({ params }: PageProps) {
       <AutoPrint />
       <div className="no-print" style={{ maxWidth: 800, margin: '0 auto 12px', padding: '0 16px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
         <a href={`/dashboard/performance/${review.id}`} style={{ background: '#e5e7eb', color: '#374151', padding: '8px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Back</a>
-        <button type="button" className="print-btn" onClick={(e) => { e.preventDefault(); window.print() }}>Print</button>
+        <PrintButton />
       </div>
 
       <article className="report-page">
