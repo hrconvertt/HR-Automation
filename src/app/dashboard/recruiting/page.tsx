@@ -39,6 +39,102 @@ const PIPELINE_STAGES = [
   { key: 'REJECTED',   label: 'Rejected',   tone: 'bg-rose-50/40 border-rose-200' },
 ]
 
+/**
+ * Workable-style top-line KPIs. Each metric carries its own interpretive
+ * label so the card answers "is this good?" not just "what's the number?".
+ */
+async function getRecruitingKpis() {
+  const TARGET_TTF_DAYS = 30
+  const TARGET_OFFER_ACCEPT_PCT = 80
+
+  // ── Time-to-Fill: createdAt of requisition → first HIRED candidate.
+  const filledReqs = await prisma.jobRequisition.findMany({
+    where: { status: 'FILLED' },
+    select: { createdAt: true, updatedAt: true },
+    orderBy: { updatedAt: 'desc' },
+    take: 20,
+  })
+  let avgTtfDays: number | null = null
+  if (filledReqs.length > 0) {
+    const total = filledReqs.reduce((s, r) => s + (r.updatedAt.getTime() - r.createdAt.getTime()), 0)
+    avgTtfDays = total / filledReqs.length / 86_400_000
+  }
+  const ttfLabel = avgTtfDays == null
+    ? 'No data yet'
+    : avgTtfDays <= TARGET_TTF_DAYS
+      ? `Faster than ${TARGET_TTF_DAYS}-day target`
+      : `${(avgTtfDays - TARGET_TTF_DAYS).toFixed(0)}d above ${TARGET_TTF_DAYS}-day target`
+
+  // ── Offer Acceptance Rate (last 10 closed offers)
+  const closedOffers = await prisma.jobOffer.findMany({
+    where: { status: { in: ['ACCEPTED', 'REJECTED', 'EXPIRED'] } },
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+    select: { status: true },
+  })
+  const accepted = closedOffers.filter((o) => o.status === 'ACCEPTED').length
+  const offerAcceptPct = closedOffers.length > 0 ? (accepted / closedOffers.length) * 100 : null
+  const offerLabel = offerAcceptPct == null
+    ? 'No closed offers yet'
+    : offerAcceptPct >= TARGET_OFFER_ACCEPT_PCT
+      ? `On target (≥${TARGET_OFFER_ACCEPT_PCT}%)`
+      : `Below ${TARGET_OFFER_ACCEPT_PCT}% target`
+
+  // ── Pipeline Velocity: avg days a candidate spends in each stage today.
+  //    Use createdAt vs updatedAt as proxy (we don't yet track stage history).
+  const activeCands = await prisma.candidate.findMany({
+    where: { stage: { in: ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER'] } },
+    select: { stage: true, createdAt: true, updatedAt: true },
+    take: 500,
+  })
+  const stageDays: Record<string, number[]> = { APPLIED: [], SCREENING: [], INTERVIEW: [], OFFER: [] }
+  for (const c of activeCands) {
+    const days = (Date.now() - c.updatedAt.getTime()) / 86_400_000
+    stageDays[c.stage]?.push(days)
+  }
+  let worstStage: string | null = null
+  let worstAvg = 0
+  for (const [stage, arr] of Object.entries(stageDays)) {
+    if (arr.length === 0) continue
+    const avg = arr.reduce((s, d) => s + d, 0) / arr.length
+    if (avg > worstAvg) { worstAvg = avg; worstStage = stage }
+  }
+  const velocityLabel = worstStage
+    ? `${worstStage.toLowerCase()} is slowest (${worstAvg.toFixed(1)}d avg)`
+    : 'No active candidates'
+
+  // ── Source Quality: avg score by source.
+  const scoredCands = await prisma.candidate.findMany({
+    where: { matchScore: { not: null }, source: { not: null } },
+    select: { source: true, matchScore: true },
+    take: 1000,
+  })
+  const bySource: Record<string, { total: number; count: number }> = {}
+  for (const c of scoredCands) {
+    const src = c.source ?? 'Unknown'
+    if (!bySource[src]) bySource[src] = { total: 0, count: 0 }
+    bySource[src].total += c.matchScore ?? 0
+    bySource[src].count += 1
+  }
+  let topSource: string | null = null
+  let topAvg = 0
+  for (const [src, agg] of Object.entries(bySource)) {
+    if (agg.count < 2) continue
+    const avg = agg.total / agg.count
+    if (avg > topAvg) { topAvg = avg; topSource = src }
+  }
+  const sourceLabel = topSource
+    ? `${topSource} leads (avg ${topAvg.toFixed(0)})`
+    : 'Not enough scored data'
+
+  return {
+    avgTtfDays, ttfLabel,
+    offerAcceptPct, offerLabel,
+    worstStage, worstAvg, velocityLabel,
+    topSource, topAvg, sourceLabel,
+  }
+}
+
 async function getPipelineHealth() {
   const now = Date.now()
   const sevenDaysAgo = new Date(now - 7 * 86_400_000)
@@ -148,6 +244,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   const { role, myEmployeeId } = await resolveContext()
   const { requisitions, candidates, interviews, offers, poolCandidates } = await getData()
   const health = await getPipelineHealth()
+  const kpis = await getRecruitingKpis()
 
   const isHR      = role === 'HR_ADMIN'
   const isManager = role === 'MANAGER'
@@ -173,10 +270,34 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
       {/* Toolbar — KPIs on left, primary action on right */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-1 min-w-0">
-          <Kpi label="Open Roles"      value={openCount}            Icon={Briefcase}    tone="bg-blue-50 text-blue-600" />
-          <Kpi label="Pending Requests" value={pendingRequests.length} Icon={ClipboardList} tone="bg-amber-50 text-amber-600" />
-          <Kpi label="In Pipeline"     value={activePipeline}       Icon={Users}        tone="bg-purple-50 text-purple-600" />
-          <Kpi label="Pending Offers"  value={pendingOffers}        Icon={FileText}     tone="bg-emerald-50 text-emerald-600" />
+          <Kpi
+            label="Time-to-Fill"
+            value={kpis.avgTtfDays != null ? `${kpis.avgTtfDays.toFixed(0)}d` : '—'}
+            sub={kpis.ttfLabel}
+            Icon={Timer}
+            tone="bg-blue-50 text-blue-600"
+          />
+          <Kpi
+            label="Offer Acceptance"
+            value={kpis.offerAcceptPct != null ? `${kpis.offerAcceptPct.toFixed(0)}%` : '—'}
+            sub={kpis.offerLabel}
+            Icon={FileText}
+            tone="bg-emerald-50 text-emerald-600"
+          />
+          <Kpi
+            label="Pipeline Velocity"
+            value={kpis.worstStage ? kpis.worstStage : '—'}
+            sub={kpis.velocityLabel}
+            Icon={Activity}
+            tone="bg-purple-50 text-purple-600"
+          />
+          <Kpi
+            label="Source Quality"
+            value={kpis.topSource ?? '—'}
+            sub={kpis.sourceLabel}
+            Icon={TrendingUp}
+            tone="bg-amber-50 text-amber-600"
+          />
         </div>
         {(isHR || isManager) && (
           <div className="flex-shrink-0">
@@ -234,7 +355,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           Default tab is the earliest place that needs attention: Requests
           if HR has pending ones, otherwise Pipeline. */}
       <Tabs defaultValue={
-        sp.tab && ['requests','requisitions','pipeline','pool','interviews','offers'].includes(sp.tab)
+        sp.tab && ['requests','requisitions','pipeline','pool','schedule'].includes(sp.tab)
           ? sp.tab
           : sp.stage
             ? 'pipeline'
@@ -255,8 +376,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
               <span className="ml-1.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded-full px-1.5 py-0.5 tabular-nums">{poolCandidates.length}</span>
             )}
           </TabsTrigger>
-          <TabsTrigger value="interviews">Interviews</TabsTrigger>
-          <TabsTrigger value="offers">Offers</TabsTrigger>
+          <TabsTrigger value="schedule">My Schedule</TabsTrigger>
         </TabsList>
 
         {/* Pipeline (kanban) */}
@@ -463,38 +583,46 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           />
         </TabsContent>
 
-        {/* Interviews */}
-        <TabsContent value="interviews" className="mt-4">
+        {/* My Schedule — upcoming interviews this week.
+            Interview + Offer management now lives inside the candidate
+            detail panel (Workable-style), not as separate top-level tabs. */}
+        <TabsContent value="schedule" className="mt-4">
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
               <p className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-900">{interviews.length}</span> recent interviews
+                <span className="font-semibold text-slate-900">
+                  {interviews.filter((i) => !i.result && new Date(i.scheduledAt).getTime() >= Date.now()).length}
+                </span> upcoming interviews
               </p>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>When</TableHead>
                   <TableHead>Candidate</TableHead>
-                  <TableHead>Type</TableHead>
                   <TableHead>Round</TableHead>
-                  <TableHead>Scheduled</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Result</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {interviews.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-slate-400 text-sm">
-                    No interviews scheduled yet.
-                  </TableCell></TableRow>
-                ) : (
-                  interviews.map((i) => (
+                {(() => {
+                  const upcomingIvs = interviews
+                    .filter((i) => !i.result && new Date(i.scheduledAt).getTime() >= Date.now() - 86_400_000)
+                    .sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime())
+                  if (upcomingIvs.length === 0) {
+                    return (
+                      <TableRow><TableCell colSpan={5} className="text-center py-10 text-slate-400 text-sm">
+                        Nothing scheduled. Use the candidate detail panel to schedule interviews.
+                      </TableCell></TableRow>
+                    )
+                  }
+                  return upcomingIvs.map((i) => (
                     <TableRow key={i.id}>
+                      <TableCell className="text-slate-700 text-sm tabular-nums">{formatDate(i.scheduledAt)}</TableCell>
                       <TableCell className="font-medium text-slate-900">{i.candidate.fullName}</TableCell>
-                      <TableCell><Badge variant="secondary">{i.type}</Badge></TableCell>
                       <TableCell className="text-slate-500">{i.round}</TableCell>
-                      <TableCell className="text-slate-500">{formatDate(i.scheduledAt)}</TableCell>
-                      <TableCell className="tabular-nums">{i.rating ? `${i.rating}/5` : '—'}</TableCell>
+                      <TableCell><Badge variant="secondary">{i.type}</Badge></TableCell>
                       <TableCell>
                         {(isHR || isManager) ? (
                           <InterviewFeedbackButton
@@ -507,53 +635,12 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                             initialResult={i.result}
                           />
                         ) : (
-                          i.result
-                            ? <Badge variant={STATUS_TONE[i.result] ?? 'warning'}>{i.result}</Badge>
-                            : <span className="text-slate-400 text-xs">Pending</span>
+                          <span className="text-slate-400 text-xs">Pending</span>
                         )}
                       </TableCell>
                     </TableRow>
                   ))
-                )}
-              </TableBody>
-            </Table>
-          </Card>
-        </TabsContent>
-
-        {/* Offers */}
-        <TabsContent value="offers" className="mt-4">
-          <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-              <p className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-900">{offers.length}</span> offers
-              </p>
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Candidate</TableHead>
-                  <TableHead>Offered Salary</TableHead>
-                  <TableHead>Joining Date</TableHead>
-                  <TableHead>Expiry</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {offers.length === 0 ? (
-                  <TableRow><TableCell colSpan={5} className="text-center py-10 text-slate-400 text-sm">
-                    No offers extended yet.
-                  </TableCell></TableRow>
-                ) : (
-                  offers.map((o) => (
-                    <TableRow key={o.id}>
-                      <TableCell className="font-medium text-slate-900">{o.candidate.fullName}</TableCell>
-                      <TableCell className="tabular-nums">{formatCurrency(o.salary)}</TableCell>
-                      <TableCell className="text-slate-500">{o.joiningDate ? formatDate(o.joiningDate) : '—'}</TableCell>
-                      <TableCell className="text-slate-500">{o.expiryDate ? formatDate(o.expiryDate) : '—'}</TableCell>
-                      <TableCell><Badge variant={STATUS_TONE[o.status] ?? 'warning'}>{o.status}</Badge></TableCell>
-                    </TableRow>
-                  ))
-                )}
+                })()}
               </TableBody>
             </Table>
           </Card>
@@ -563,20 +650,22 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   )
 }
 
-function Kpi({ label, value, Icon, tone }: {
+function Kpi({ label, value, sub, Icon, tone }: {
   label: string
-  value: number
+  value: number | string
+  sub?: string
   Icon: React.ComponentType<{ className?: string }>
   tone: string
 }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">
       <div className="flex items-start justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-          <p className="text-lg font-bold text-slate-900 mt-1.5 tabular-nums">{value}</p>
+          <p className="text-lg font-bold text-slate-900 mt-1.5 tabular-nums truncate">{value}</p>
+          {sub && <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">{sub}</p>}
         </div>
-        <div className={`p-2 rounded-lg ${tone}`}>
+        <div className={`p-2 rounded-lg ${tone} flex-shrink-0 ml-2`}>
           <Icon className="w-4 h-4" />
         </div>
       </div>
