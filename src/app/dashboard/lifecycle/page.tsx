@@ -7,7 +7,7 @@
  *   Active          → directory link (covered by People module)
  *   Exit Clearance  → resigned/terminated employees + 5-section clearance
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -43,6 +43,14 @@ interface Clearance {
 }
 
 export default function LifecyclePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading…</div>}>
+      <LifecyclePageInner />
+    </Suspense>
+  )
+}
+
+function LifecyclePageInner() {
   const sp = useSearchParams()
   const tabParam = sp.get('tab') ?? 'onboarding'
   const initialTab = ['onboarding', 'probation', 'active', 'exit'].includes(tabParam)

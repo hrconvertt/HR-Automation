@@ -8,7 +8,7 @@
  *   Policies        → company policy documents + acknowledgments
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
@@ -46,6 +46,14 @@ const LETTER_STATUS_TONE: Record<string, 'default' | 'success' | 'warning' | 'se
 }
 
 export default function DocumentCenterPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading…</div>}>
+      <DocumentCenterPageInner />
+    </Suspense>
+  )
+}
+
+function DocumentCenterPageInner() {
   const sp = useSearchParams()
   const initialTab = sp.get('employee') ? 'files' : (sp.get('tab') ?? 'letters')
   return (
