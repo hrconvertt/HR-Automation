@@ -117,6 +117,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payroll for this month already exists' }, { status: 409 })
     }
 
+    // Detect prior payslips for this month — these come from the IBFT historical
+    // import (no PayrollRun attached). We'll wrap them in the new run instead of
+    // bulk-creating duplicates and hitting the (employeeId, month, year) unique key.
+    const orphanPayslips = await prisma.payslip.findMany({
+      where: { month, year, payrollRunId: null },
+      select: { id: true, employeeId: true, grossSalary: true, netSalary: true, eobi: true, incomeTax: true },
+    })
+    const orphanEmpIds = new Set(orphanPayslips.map((p) => p.employeeId))
+
     const employees = await prisma.employee.findMany({
       where: { status: 'ACTIVE' },
       include: {
@@ -186,6 +195,7 @@ export async function POST(request: NextRequest) {
 
     const payslipsData = employees
       .filter((emp) => emp.salary != null)
+      .filter((emp) => !orphanEmpIds.has(emp.id))  // skip — historical payslip exists, will be re-linked below
       .map((emp) => {
         const salary = emp.salary!
         // Paid days = actual attendance + paid leave (CASUAL/SICK/etc.).
@@ -248,10 +258,15 @@ export async function POST(request: NextRequest) {
         }
       })
 
-    const totalGross = payslipsData.reduce((sum, p) => sum + p.grossSalary, 0)
-    const totalNet = payslipsData.reduce((sum, p) => sum + p.netSalary, 0)
-    const totalEOBI = payslipsData.reduce((sum, p) => sum + p.eobi, 0)
-    const totalTax = payslipsData.reduce((sum, p) => sum + p.incomeTax, 0)
+    // Aggregate totals from BOTH new computed payslips and pre-existing IBFT-imported ones
+    const totalGross = payslipsData.reduce((s, p) => s + p.grossSalary, 0)
+      + orphanPayslips.reduce((s, p) => s + (p.grossSalary || 0), 0)
+    const totalNet = payslipsData.reduce((s, p) => s + p.netSalary, 0)
+      + orphanPayslips.reduce((s, p) => s + (p.netSalary || 0), 0)
+    const totalEOBI = payslipsData.reduce((s, p) => s + p.eobi, 0)
+      + orphanPayslips.reduce((s, p) => s + (p.eobi || 0), 0)
+    const totalTax = payslipsData.reduce((s, p) => s + p.incomeTax, 0)
+      + orphanPayslips.reduce((s, p) => s + (p.incomeTax || 0), 0)
 
     const payrollRun = await prisma.payrollRun.create({
       data: {
@@ -272,6 +287,14 @@ export async function POST(request: NextRequest) {
         },
       },
     })
+
+    // Link the pre-existing historical payslips to this run so the UI sees them
+    if (orphanPayslips.length > 0) {
+      await prisma.payslip.updateMany({
+        where: { id: { in: orphanPayslips.map((p) => p.id) } },
+        data: { payrollRunId: payrollRun.id },
+      })
+    }
 
     return NextResponse.json({ payrollRun }, { status: 201 })
   } catch (error) {
