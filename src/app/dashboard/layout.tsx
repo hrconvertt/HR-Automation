@@ -169,6 +169,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'Support',
       items: [
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
   ],
@@ -198,6 +199,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
   ],
@@ -226,6 +228,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
   ],
@@ -238,6 +241,7 @@ interface CurrentUser {
   email: string
   role: string
   roles?: string[]   // ← Multi-role
+  mustChangePass?: boolean
   employee?: {
     id: string
     fullName: string
@@ -258,13 +262,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   useEffect(() => {
     fetch('/api/auth/me')
       .then((r) => r.json())
-      .then((d) => setUser(d.user))
+      .then((d) => {
+        setUser(d.user)
+        // Force first-login password change — redirect everywhere except
+        // the password page and the change-password API itself.
+        if (d.user?.mustChangePass && pathname !== '/dashboard/settings/password') {
+          router.replace('/dashboard/settings/password')
+        }
+      })
       .catch(() => {})
     // Clear any legacy preview-role cookie left from older builds
     if (typeof document !== 'undefined' && document.cookie.includes('hr_preview_role=')) {
       document.cookie = 'hr_preview_role=; path=/; max-age=0; SameSite=Lax'
     }
-  }, [pathname])
+  }, [pathname, router])
 
   // Load + persist desktop sidebar collapsed state
   useEffect(() => {

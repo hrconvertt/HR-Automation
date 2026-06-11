@@ -23,11 +23,32 @@ model User {
   mustChangePass Boolean   @default(true)
   isActive       Boolean   @default(true)
   lastLogin      DateTime?
+  // ─── User preferences (Settings/Account) ───
+  theme          String    @default("LIGHT")    // LIGHT | DARK | SYSTEM
+  language       String    @default("EN")       // EN | UR
+  pronouns       String?
+  notificationPrefs NotificationPreference[]
   employee       Employee?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
   @@map("users")
+}
+
+// ─── Per-user notification preferences ──────────────────────────────────────
+// One row per category × user. Missing rows = default (both channels enabled).
+model NotificationPreference {
+  id           String  @id @default(cuid())
+  userId       String
+  user         User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category     String  // LEAVE | PROBATION | PERFORMANCE | DOCUMENTS | CELEBRATIONS | PAYROLL | LIFECYCLE
+  emailEnabled Boolean @default(true)
+  inAppEnabled Boolean @default(true)
+  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, category])
+  @@map("notification_preferences")
 }
 
 // ─── Multi-role membership (Workday-style) ──────────────────────────────────
@@ -86,7 +107,8 @@ model Position {
 
 model Employee {
   id                  String    @id @default(cuid())
-  employeeCode        String    @unique // CON-BD-007
+  employeeCode        String    @unique // CON-BD-007 (system-generated sequential per dept)
+  legacyEmployeeCode  String?              // Original code from master sheet — preserved as backup
   userId              String?   @unique
   user                User?     @relation(fields: [userId], references: [id])
 
@@ -134,6 +156,7 @@ model Employee {
   bankName            String?
   bankAccount         String?
   bankBranch          String?
+  ibanAccount         String?  // IBAN format account # from payroll IBFT sheets
   salary              Salary?
 
   // Statutory / Tax Identifiers (Pakistan)

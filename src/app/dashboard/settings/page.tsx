@@ -18,6 +18,7 @@
  * so HR sees "what changes here" before they touch anything.
  */
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,6 +49,16 @@ const NAV = [
 type NavId = typeof NAV[number]['id']
 
 export default function SettingsPage() {
+  const router = useRouter()
+  // Non-HR users land on the personal /settings/account view.
+  // Only HR_ADMIN sees the org-level settings on this URL.
+  useEffect(() => {
+    fetch('/api/auth/me').then((r) => r.json()).then((d) => {
+      if (d.user && d.user.role !== 'HR_ADMIN') {
+        router.replace('/dashboard/settings/account')
+      }
+    }).catch(() => {})
+  }, [router])
   const [section, setSection] = useState<NavId>('organization')
   const [workingDays, setWorkingDays] = useState<string[]>(['Monday','Tuesday','Wednesday','Thursday','Friday'])
   const [departments, setDepartments] = useState<Department[]>([])
