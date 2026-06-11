@@ -531,7 +531,12 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                         <TableCell><Badge variant="secondary">{doc.type}</Badge></TableCell>
                         <TableCell>{formatDate(doc.createdAt)}</TableCell>
                         <TableCell>
-                          <a href={doc.url} target="_blank" rel="noreferrer" className="text-blue-600 text-xs hover:underline">View</a>
+                          <a
+                            href={`/api/documents/${doc.id}/download`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-blue-600 text-xs hover:underline"
+                          >View</a>
                         </TableCell>
                       </TableRow>
                     ))
