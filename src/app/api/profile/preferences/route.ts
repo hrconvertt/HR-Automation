@@ -18,17 +18,25 @@ export async function GET(request: NextRequest) {
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: {
-      theme: true, language: true,
+      theme: true, language: true, timezone: true,
       employee: { select: { hideBirthday: true, hideAnniversary: true } },
     },
   })
   return NextResponse.json({
     theme: user?.theme ?? 'LIGHT',
     language: user?.language ?? 'EN',
+    timezone: user?.timezone ?? 'Asia/Karachi',
     hideBirthday: user?.employee?.hideBirthday ?? false,
     hideAnniversary: user?.employee?.hideAnniversary ?? false,
   })
 }
+
+const LANG_CODES = ['EN', 'UR', 'AR', 'HI', 'BN', 'ZH', 'ES', 'FR', 'DE', 'RU']
+const TIMEZONES = new Set([
+  'Asia/Karachi', 'Asia/Kolkata', 'Asia/Dubai', 'Asia/Riyadh', 'Asia/Dhaka',
+  'UTC', 'Europe/London', 'America/New_York', 'America/Los_Angeles',
+  'Asia/Singapore', 'Asia/Tokyo', 'Australia/Sydney',
+])
 
 export async function PATCH(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -36,11 +44,12 @@ export async function PATCH(request: NextRequest) {
   const payload = verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
-  const { theme, language, hideBirthday, hideAnniversary } = await request.json().catch(() => ({}))
+  const { theme, language, timezone, hideBirthday, hideAnniversary } = await request.json().catch(() => ({}))
 
-  const userData: { theme?: string; language?: string } = {}
+  const userData: { theme?: string; language?: string; timezone?: string } = {}
   if (theme && ['LIGHT', 'DARK', 'SYSTEM'].includes(theme)) userData.theme = theme
-  if (language && ['EN', 'UR'].includes(language)) userData.language = language
+  if (language && LANG_CODES.includes(language)) userData.language = language
+  if (timezone && TIMEZONES.has(timezone)) userData.timezone = timezone
   if (Object.keys(userData).length > 0) {
     await prisma.user.update({ where: { id: payload.userId }, data: userData })
   }

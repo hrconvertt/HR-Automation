@@ -39,6 +39,9 @@ export async function PATCH(request: NextRequest) {
   const payload = verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
+  // SECURITY: this endpoint only writes to the caller's own row. We
+  // derive userId + employeeId from the verified JWT and ignore any
+  // employeeId in the body — employees cannot impersonate others here.
   const body = await request.json().catch(() => ({}))
   const { fullName, pronouns, photoBase64, photoMimeType } = body as {
     fullName?: string

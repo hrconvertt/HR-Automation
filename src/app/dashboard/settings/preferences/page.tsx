@@ -11,10 +11,39 @@ import { Button } from '@/components/ui/button'
 import SettingsSidebar from '@/components/settings-sidebar'
 import { Sun, Moon, Monitor } from 'lucide-react'
 
+const LANGUAGES = [
+  { code: 'EN', label: 'English' },
+  { code: 'UR', label: 'اردو (Urdu)' },
+  { code: 'AR', label: 'العربية (Arabic)' },
+  { code: 'HI', label: 'हिन्दी (Hindi)' },
+  { code: 'BN', label: 'বাংলা (Bengali)' },
+  { code: 'ZH', label: '中文 (Chinese)' },
+  { code: 'ES', label: 'Español (Spanish)' },
+  { code: 'FR', label: 'Français (French)' },
+  { code: 'DE', label: 'Deutsch (German)' },
+  { code: 'RU', label: 'Русский (Russian)' },
+] as const
+
+const TIMEZONES = [
+  { value: 'Asia/Karachi',        label: 'Asia/Karachi (PKT, UTC+5) — Pakistan' },
+  { value: 'Asia/Kolkata',        label: 'Asia/Kolkata (IST, UTC+5:30) — India' },
+  { value: 'Asia/Dubai',          label: 'Asia/Dubai (GST, UTC+4) — UAE' },
+  { value: 'Asia/Riyadh',         label: 'Asia/Riyadh (AST, UTC+3) — Saudi' },
+  { value: 'Asia/Dhaka',          label: 'Asia/Dhaka (BST, UTC+6) — Bangladesh' },
+  { value: 'UTC',                 label: 'UTC (UTC+0)' },
+  { value: 'Europe/London',       label: 'Europe/London (BST/GMT, UTC+0/+1)' },
+  { value: 'America/New_York',    label: 'America/New_York (EST/EDT, UTC-5/-4)' },
+  { value: 'America/Los_Angeles', label: 'America/Los_Angeles (PST/PDT, UTC-8/-7)' },
+  { value: 'Asia/Singapore',      label: 'Asia/Singapore (SGT, UTC+8)' },
+  { value: 'Asia/Tokyo',          label: 'Asia/Tokyo (JST, UTC+9)' },
+  { value: 'Australia/Sydney',    label: 'Australia/Sydney (AEDT/AEST, UTC+10/+11)' },
+] as const
+
 export default function PreferencesPage() {
   const [role, setRole] = useState<string | undefined>()
   const [theme, setTheme] = useState<'LIGHT' | 'DARK' | 'SYSTEM'>('LIGHT')
-  const [language, setLanguage] = useState<'EN' | 'UR'>('EN')
+  const [language, setLanguage] = useState<string>('EN')
+  const [timezone, setTimezone] = useState<string>('Asia/Karachi')
   const [hideBirthday, setHideBirthday] = useState(false)
   const [hideAnniversary, setHideAnniversary] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -25,6 +54,7 @@ export default function PreferencesPage() {
     fetch('/api/profile/preferences').then((r) => r.json()).then((d) => {
       if (d.theme) setTheme(d.theme)
       if (d.language) setLanguage(d.language)
+      if (d.timezone) setTimezone(d.timezone)
       setHideBirthday(!!d.hideBirthday)
       setHideAnniversary(!!d.hideAnniversary)
     }).catch(() => {})
@@ -36,7 +66,7 @@ export default function PreferencesPage() {
       const res = await fetch('/api/profile/preferences', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ theme, language, hideBirthday, hideAnniversary }),
+        body: JSON.stringify({ theme, language, timezone, hideBirthday, hideAnniversary }),
       })
       if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2500) }
     } finally { setSaving(false) }
@@ -68,16 +98,21 @@ export default function PreferencesPage() {
           <Card>
             <CardHeader className="border-b border-slate-100"><CardTitle>Language & region</CardTitle></CardHeader>
             <CardContent className="p-6 space-y-4 max-w-md">
-              <Field label="Language" hint="Urdu is a placeholder — full translation coming later.">
-                <select value={language} onChange={(e) => setLanguage(e.target.value as 'EN' | 'UR')}
+              <Field label="Language" hint="Most languages are placeholders — full translation rolling out.">
+                <select value={language} onChange={(e) => setLanguage(e.target.value)}
                   className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
-                  <option value="EN">English</option>
-                  <option value="UR">اردو (Urdu)</option>
+                  {LANGUAGES.map((l) => (
+                    <option key={l.code} value={l.code}>{l.label}</option>
+                  ))}
                 </select>
               </Field>
-              <Field label="Time zone">
-                <input value="Asia/Karachi (PKT, UTC+5)" disabled
-                  className="w-full rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-500" />
+              <Field label="Time zone" hint="Affects how dates/times are displayed for you. Server clock unaffected.">
+                <select value={timezone} onChange={(e) => setTimezone(e.target.value)}
+                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+                  {TIMEZONES.map((t) => (
+                    <option key={t.value} value={t.value}>{t.label}</option>
+                  ))}
+                </select>
               </Field>
             </CardContent>
           </Card>

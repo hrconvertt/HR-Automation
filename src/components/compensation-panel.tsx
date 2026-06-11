@@ -120,13 +120,24 @@ export default function CompensationPanel({
             </Button>
           )}
           {access.canEdit && currentSalary && (
-            <Button size="sm" variant="outline" onClick={() => setEditOpen(true)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setEditOpen(true)}
+              title="Override pay components — useful when payroll auto-calculation needs a mid-cycle or retroactive adjustment."
+            >
               <Pencil className="w-3.5 h-3.5 mr-1.5" />
-              Add History Entry
+              Edit Pay Components
             </Button>
           )}
         </div>
       </div>
+      {access.canEdit && currentSalary && (
+        <p className="-mt-2 text-[11px] text-slate-500">
+          Use <strong>Edit Pay Components</strong> when payroll auto-calculation needs override
+          (e.g. mid-cycle changes, retroactive adjustments). Saves a history entry automatically.
+        </p>
+      )}
 
       {/* ─── KPI tiles ────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">

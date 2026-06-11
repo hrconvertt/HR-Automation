@@ -25,7 +25,8 @@ model User {
   lastLogin      DateTime?
   // ─── User preferences (Settings/Account) ───
   theme          String    @default("LIGHT")    // LIGHT | DARK | SYSTEM
-  language       String    @default("EN")       // EN | UR
+  language       String    @default("EN")       // EN | UR | AR | HI | BN | ZH | ES | FR | DE | RU (most are placeholders — full translation rolling out)
+  timezone       String    @default("Asia/Karachi")
   pronouns       String?
   notificationPrefs NotificationPreference[]
   employee       Employee?

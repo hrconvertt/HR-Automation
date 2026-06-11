@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
         search
           ? {
               OR: [
-                { fullName: { contains: search } },
-                { email: { contains: search } },
-                { employeeCode: { contains: search } },
-                { designation: { contains: search } },
+                { fullName: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } },
+                { employeeCode: { contains: search, mode: 'insensitive' } },
+                { designation: { contains: search, mode: 'insensitive' } },
               ],
             }
           : {},

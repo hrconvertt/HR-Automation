@@ -61,6 +61,10 @@ export default function SettingsPage() {
   }, [router])
   const [section, setSection] = useState<NavId>('organization')
   const [workingDays, setWorkingDays] = useState<string[]>(['Monday','Tuesday','Wednesday','Thursday','Friday'])
+  // Snapshot of last-saved working days, so we can disable Save when there
+  // are no changes vs the persisted value (the dirty-state UX glitch fix).
+  const [workingDaysSaved, setWorkingDaysSaved] = useState<string[]>(['Monday','Tuesday','Wednesday','Thursday','Friday'])
+  const [workingDaysOk, setWorkingDaysOk] = useState(false)
   const [departments, setDepartments] = useState<Department[]>([])
   const [positions, setPositions] = useState<Position[]>([])
   const [leavePolicies, setLeavePolicies] = useState<LeavePolicy[]>([])
@@ -93,7 +97,11 @@ export default function SettingsPage() {
       if (d.config?.companyEobi) setCompanyEobi(d.config.companyEobi)
       if (d.config?.companySessi) setCompanySessi(d.config.companySessi)
       if (d.config?.workingDays) {
-        try { setWorkingDays(JSON.parse(d.config.workingDays)) } catch { /* keep default */ }
+        try {
+          const parsed = JSON.parse(d.config.workingDays)
+          setWorkingDays(parsed)
+          setWorkingDaysSaved(parsed)
+        } catch { /* keep default */ }
       }
       if (d.config?.standardHoursPerDay) setStandardHoursPerDay(Number(d.config.standardHoursPerDay))
       if (d.config?.overtimeMultiplier) setOvertimeMultiplier(Number(d.config.overtimeMultiplier))
@@ -118,8 +126,15 @@ export default function SettingsPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ workingDays }),
     })
-    setSaved(true); setTimeout(() => setSaved(false), 2500)
+    setWorkingDaysSaved([...workingDays])
+    setWorkingDaysOk(true); setTimeout(() => setWorkingDaysOk(false), 2000)
   }
+  // Compare current selection to the last-saved snapshot — order-independent.
+  const workingDaysDirty = (() => {
+    if (workingDays.length !== workingDaysSaved.length) return true
+    const s = new Set(workingDaysSaved)
+    return workingDays.some((d) => !s.has(d))
+  })()
   async function savePayroll() {
     await fetch('/api/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -218,7 +233,14 @@ export default function SettingsPage() {
                       }`}>{day}</button>
                   ))}
                 </div>
-                <Button onClick={saveWorkingDays}>{saved ? '✓ Saved' : 'Save Working Days'}</Button>
+                <div className="flex items-center gap-3">
+                  <Button onClick={saveWorkingDays} disabled={!workingDaysDirty || workingDaysOk}>
+                    {workingDaysOk ? '✓ Saved' : 'Save Changes'}
+                  </Button>
+                  {workingDaysOk && (
+                    <span className="text-sm text-emerald-600 font-medium">✓ Saved</span>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}

@@ -313,13 +313,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   // The "preview" cookie now switches views for ANY user with multiple roles.
   // If the user only has one role, the switcher hides itself.
   // Strict role enforcement — no preview switching. effectiveRole always = primary.
-  const effectiveRole = user?.role ?? 'EMPLOYEE'
-
-  const navGroups = applyFocus(NAV_GROUPS_BY_ROLE[effectiveRole] ?? NAV_GROUPS_BY_ROLE.EMPLOYEE)
+  // Avoid the "HR view flashes before Manager view" hydration glitch by not
+  // rendering a nav at all until the role is known. The nav stays an empty
+  // skeleton for the brief moment between mount and the /api/auth/me response.
+  const effectiveRole = user?.role
+  const navGroups = effectiveRole
+    ? applyFocus(NAV_GROUPS_BY_ROLE[effectiveRole] ?? NAV_GROUPS_BY_ROLE.EMPLOYEE)
+    : []
 
   // For HR_ADMIN we prefer the actual designation ("Head of People & Culture")
   // joined with the department, so the sidebar/header doesn't say a generic "HR".
   const displayRole = (() => {
+    if (!effectiveRole) return ''
     if (effectiveRole === 'HR_ADMIN') {
       const desig = user?.employee?.designation ?? 'Head of People & Culture'
       const dept = user?.employee?.department?.name
