@@ -11,6 +11,7 @@ import { verifyToken } from '@/lib/auth'
 import EditEmployeeButton from '@/components/edit-employee-button'
 import DeleteEmployeeButton from '@/components/delete-employee-button'
 import UploadDocumentButton from '@/components/upload-document-button'
+import DeleteDocumentButton from '@/components/delete-document-button'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import CompensationPanel from '@/components/compensation-panel'
@@ -531,12 +532,18 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                         <TableCell><Badge variant="secondary">{doc.type}</Badge></TableCell>
                         <TableCell>{formatDate(doc.createdAt)}</TableCell>
                         <TableCell>
-                          <a
-                            href={`/api/documents/${doc.id}/download`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-600 text-xs hover:underline"
-                          >View</a>
+                          <div className="flex items-center gap-3">
+                            <a
+                              href={`/api/documents/${doc.id}/download`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-600 text-xs hover:underline"
+                            >View</a>
+                            {/* HR-only delete; canEditFull = HR_ADMIN + not in preview */}
+                            {canEditFull && (
+                              <DeleteDocumentButton documentId={doc.id} documentName={doc.name} />
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
