@@ -68,10 +68,16 @@ function parseHeader(header) {
 
     // Summary column patterns — advance month or skip
     const lower = cell.toLowerCase()
-    if (lower.startsWith('total ') || lower.includes('year 2025') || lower.includes('total wfh') || lower.includes('total hd') || lower.includes('total leaves')) {
-      // A "Total Leaves <Month>" column marks the END of that month.
-      // Advance to next month on these markers.
-      if (lower.includes('total leaves')) monthIdx++
+    const isSummary = lower.startsWith('total ') || lower.includes('year 2025')
+    if (isSummary) {
+      // Year-summary cells ("Total Leaves Year 2025") do NOT advance month —
+      // they sit between Dec totals and Jan data without being a month break.
+      // Only the per-month "Total Leaves <month>" advances. WFH / HD summaries
+      // come AFTER the leaves summary in the same trailing block, so don't
+      // advance on those either.
+      const isYearSummary = lower.includes('year 2025') || lower.includes('year 2026')
+      const isLeavesSummary = lower.includes('total leaves') && !isYearSummary
+      if (isLeavesSummary) monthIdx++
       continue
     }
 
@@ -214,15 +220,28 @@ async function main() {
       })
     }
 
-    // Bulk insert in chunks of 100 for this employee
-    for (let i = 0; i < logs.length; i += 100) {
-      const batch = logs.slice(i, i + 100)
+    // Use createMany with skipDuplicates so unique (employeeId, date) collisions
+    // (and any same-employee dupes from header parsing) don't blow the batch.
+    for (let i = 0; i < logs.length; i += 200) {
+      const batch = logs.slice(i, i + 200)
       try {
-        await prisma.attendanceLog.createMany({ data: batch })
-        created += batch.length
+        const res = await prisma.attendanceLog.createMany({
+          data: batch,
+          skipDuplicates: true,
+        })
+        created += res.count
+        skipped += batch.length - res.count
       } catch (e) {
-        console.error(`Batch failed for ${match.name}: ${e.message}`)
-        skipped += batch.length
+        // Fall back to one-by-one if batch fails entirely
+        for (const log of batch) {
+          try {
+            await prisma.attendanceLog.create({ data: log })
+            created++
+          } catch (err) {
+            skipped++
+            if (skipped < 5) console.error(`Row failed for ${match.name} @ ${log.date.toISOString().slice(0,10)}: ${err.message}`)
+          }
+        }
       }
     }
   }
@@ -273,9 +292,9 @@ async function main() {
           fromDate,
           toDate,
           days,
-          reason,
+          reason: reason ?? 'Personal',
           status,
-          appliedAt,
+          // Note: LeaveRequest has no appliedAt field; createdAt fills in.
           ...(status === 'APPROVED' && hrUserId ? { approvedById: hrUserId, approvedAt: appliedAt } : {}),
         },
       })
