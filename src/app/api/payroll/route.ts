@@ -299,7 +299,15 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ payrollRun }, { status: 201 })
   } catch (error) {
     console.error('[POST /api/payroll]', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    // Surface the actual error message in production so HR can debug
+    // instead of staring at "Internal server error". Strip the stack trace
+    // (still logged server-side) — only the human-readable message goes out.
+    const msg = error instanceof Error ? error.message : String(error)
+    // Embed detail in the error string so the existing client alert() shows it
+    return NextResponse.json(
+      { error: `Payroll preparation failed: ${msg.slice(0, 400)}` },
+      { status: 500 },
+    )
   }
 }
 
