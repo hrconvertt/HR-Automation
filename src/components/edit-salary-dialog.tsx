@@ -22,6 +22,7 @@ import { Input } from '@/components/ui/input'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { TrendingUp, TrendingDown, Mail, Bell, Sparkles } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { calculateEOBI, calculateIncomeTax } from '@/lib/payroll'
 
 type Salary = {
   basic: number
@@ -82,6 +83,20 @@ export default function EditSalaryDialog({
     form.fuel + form.medicalAllowance + form.otherAllowance
   const diff = newGross - oldGross
   const pct = oldGross > 0 ? (diff / oldGross) * 100 : null
+
+  // ─── Net Pay calculation (after EOBI + income tax) ───
+  // EOBI: 1% of basic capped at PKR 370/month (Pakistan)
+  // Income tax: progressive slabs applied to annual gross, divided by 12
+  function computeNet(basic: number, gross: number): number {
+    const eobi = calculateEOBI(basic, 0.01, 370)
+    const annualTax = calculateIncomeTax(gross * 12)
+    const monthlyTax = Math.round(annualTax / 12)
+    return Math.max(0, gross - eobi - monthlyTax)
+  }
+  const oldNet = current ? computeNet(current.basic, oldGross) : 0
+  const newNet = computeNet(form.basic, newGross)
+  const netDiff = newNet - oldNet
+  const netPct = oldNet > 0 ? (netDiff / oldNet) * 100 : null
 
   const selectedType = CHANGE_TYPES.find((t) => t.value === form.type)
 
@@ -246,7 +261,7 @@ export default function EditSalaryDialog({
               <SummaryCard label="Previous Gross"  value={oldGross > 0 ? formatCurrency(oldGross) : '—'} tone="neutral" />
               <SummaryCard label="New Gross"       value={formatCurrency(newGross)} tone="primary" />
               <SummaryCard
-                label="Change"
+                label="Gross Change"
                 value={
                   diff === 0
                     ? '—'
@@ -256,6 +271,26 @@ export default function EditSalaryDialog({
                 icon={diff > 0 ? TrendingUp : diff < 0 ? TrendingDown : Sparkles}
               />
             </div>
+
+            {/* Net Pay (take-home) row — after EOBI + income tax */}
+            <div className="grid grid-cols-3 gap-3 mt-3">
+              <SummaryCard label="Previous Net"  value={oldNet > 0 ? formatCurrency(oldNet) : '—'} tone="neutral" />
+              <SummaryCard label="New Net"       value={formatCurrency(newNet)} tone="primary" />
+              <SummaryCard
+                label="Net Change"
+                value={
+                  netDiff === 0
+                    ? '—'
+                    : `${netDiff > 0 ? '+' : ''}${formatCurrency(netDiff)}${netPct != null ? ` (${netPct > 0 ? '+' : ''}${netPct.toFixed(1)}%)` : ''}`
+                }
+                tone={netDiff > 0 ? 'positive' : netDiff < 0 ? 'negative' : 'neutral'}
+                icon={netDiff > 0 ? TrendingUp : netDiff < 0 ? TrendingDown : Sparkles}
+              />
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1.5">
+              Net = Gross − EOBI (1% basic, PKR 370 cap) − Income Tax (per PK slabs).
+              Other deductions (loans, advances, healthcare) are applied at payroll-run time.
+            </p>
 
             {/* Notification controls */}
             <div className="mt-4 border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50/50">
