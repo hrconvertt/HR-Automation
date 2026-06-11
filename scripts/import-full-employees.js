@@ -547,15 +547,47 @@ async function main() {
   console.log('Building payslip history from IBFT tabs…')
   let payslipsCreated = 0
   let payslipsSkipped = 0
+  const unmatchedNames = new Map() // for diagnostics
   const ibftWorkbooks = [ibftA, ibftB]
 
-  // First-name index (multiple employees may share — pick first match
-  // with full-name overlap if possible)
-  const empListByFirstName = new Map()
+  // ─── Robust name matcher ───
+  // IBFT sheets use names like "Taha Adnan" / "Waqas Fareed" / "Affan"
+  // while master sheet has honorific prefixes ("Sheikh Taha Adnan",
+  // "Muhammad Waqas Fareed", "Muhammad Affan Waseem"). First-name
+  // lookup misses these. Strip honorifics then match by token overlap.
+  const HONORIFICS = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'sir', 'madam',
+    'muhammad', 'mohammad', 'mohd', 'syed', 'syeda', 'sheikh', 'sh',
+    'ch', 'chaudhry', 'mr.', 'mrs.', 'hafiz', 'haji', 'malik', 'rana'])
+  function meaningfulTokens(name) {
+    return normalize(name)
+      .split(' ')
+      .map(t => t.replace(/[^a-z0-9]/g, ''))
+      .filter(t => t.length >= 2 && !HONORIFICS.has(t))
+  }
+
+  // Build per-employee token sets for fast scoring
+  const empTokens = []
   for (const [norm, e] of empIdByNorm.entries()) {
-    const fn = norm.split(' ')[0]
-    if (!empListByFirstName.has(fn)) empListByFirstName.set(fn, [])
-    empListByFirstName.get(fn).push({ norm, ...e })
+    empTokens.push({
+      id: e.id,
+      name: e.fullName || norm,
+      norm,
+      tokens: new Set(meaningfulTokens(e.fullName || norm)),
+    })
+  }
+
+  function matchEmployee(rawName) {
+    const wanted = meaningfulTokens(rawName)
+    if (!wanted.length) return null
+    let best = null, bestScore = 0
+    for (const c of empTokens) {
+      let score = 0
+      for (const w of wanted) if (c.tokens.has(w)) score++
+      // Tie-break: prefer match where wanted ⊆ candidate tokens
+      if (score > bestScore) { bestScore = score; best = c }
+    }
+    // Require at least one meaningful token to overlap
+    return bestScore >= 1 ? best : null
   }
 
   for (const wb of ibftWorkbooks) {
@@ -582,24 +614,13 @@ async function main() {
         const bank = idxBank >= 0 ? trimStr(row[idxBank]) : null
         const ref = idxRef >= 0 ? trimStr(row[idxRef]) : null
 
-        // Match by first name (fuzzy)
-        const fn = firstName(name)
-        let candidates = empListByFirstName.get(fn) || []
-        let match = null
-        if (candidates.length === 1) match = candidates[0]
-        else if (candidates.length > 1) {
-          // Pick the one whose full name has the most token overlap
-          const tokens = new Set(normalize(name).split(' '))
-          let best = null, bestScore = 0
-          for (const c of candidates) {
-            const cTok = new Set(c.norm.split(' '))
-            let score = 0
-            for (const t of tokens) if (cTok.has(t)) score++
-            if (score > bestScore) { bestScore = score; best = c }
-          }
-          if (best && bestScore >= 1) match = best
+        // Robust token-overlap match (handles "Taha" vs "Sheikh Taha Adnan")
+        const match = matchEmployee(name)
+        if (!match) {
+          unmatchedNames.set(name, (unmatchedNames.get(name) || 0) + 1)
+          payslipsSkipped++
+          continue
         }
-        if (!match) { continue }
 
         // Persist IBAN + bank on Employee (first time we see them)
         if (iban || bank) {
@@ -664,6 +685,14 @@ async function main() {
   if (issues.length > 0) {
     console.log('\nFirst 10 issues:')
     for (const it of issues.slice(0, 10)) console.log(' •', it)
+  }
+  if (unmatchedNames && unmatchedNames.size > 0) {
+    console.log('\nUnmatched IBFT names (couldn\'t link to any employee):')
+    const sorted = [...unmatchedNames.entries()].sort((a,b) => b[1] - a[1])
+    for (const [name, count] of sorted.slice(0, 20)) {
+      console.log(`  • "${name}" — appeared ${count}x`)
+    }
+    if (sorted.length > 20) console.log(`  ... and ${sorted.length - 20} more`)
   }
   await prisma.$disconnect()
 }
