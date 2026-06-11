@@ -468,6 +468,76 @@ async function main() {
     } catch { /* ignore — manager may be self */ }
   }
 
+  // ─── Build shared fuzzy matcher (used by Pass 3 AND Pass 4) ───
+  // Strips honorific prefixes from BOTH sides then scores by token overlap.
+  // Handles "Abdllah Shafiq" (typo) → "Abdullah Shafiq", "Taha Adnan" →
+  // "Sheikh Taha Adnan", etc.
+  const HONORIFICS = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'sir', 'madam',
+    'muhammad', 'mohammad', 'mohd', 'syed', 'syeda', 'sheikh', 'sh',
+    'ch', 'chaudhry', 'mr.', 'mrs.', 'hafiz', 'haji', 'malik', 'rana'])
+  function meaningfulTokens(name) {
+    return normalize(name)
+      .split(' ')
+      .map(t => t.replace(/[^a-z0-9]/g, ''))
+      .filter(t => t.length >= 2 && !HONORIFICS.has(t))
+  }
+  const empTokens = []
+  // Refresh employee list to include the ones just created in Pass 1
+  const allEmpsForMatch = await prisma.employee.findMany({
+    select: { id: true, fullName: true, employeeCode: true, joiningDate: true },
+  })
+  for (const e of allEmpsForMatch) {
+    empTokens.push({
+      id: e.id,
+      name: e.fullName,
+      joiningDate: e.joiningDate,
+      tokens: new Set(meaningfulTokens(e.fullName)),
+    })
+  }
+  function matchEmployee(rawName) {
+    const wanted = meaningfulTokens(rawName)
+    if (!wanted.length) return null
+    let best = null, bestScore = 0
+    for (const c of empTokens) {
+      let score = 0
+      for (const w of wanted) if (c.tokens.has(w)) score++
+      if (score > bestScore) { bestScore = score; best = c }
+    }
+    return bestScore >= 1 ? best : null
+  }
+
+  // ─── Backfill "Hired at PKR X" baseline for everyone with a Salary ───
+  // Ensures every employee has at least one row in Compensation Timeline,
+  // even if they never had an increment.
+  console.log('Backfilling hire-baseline compensation history…')
+  let hireBaselines = 0
+  const empsWithSalary = await prisma.employee.findMany({
+    where: { salary: { isNot: null } },
+    include: { salary: true, compensationHistory: { take: 1 } },
+  })
+  for (const emp of empsWithSalary) {
+    if (emp.compensationHistory.length > 0) continue // already has entries
+    if (!emp.salary) continue
+    const monthlyGross = emp.salary.basic + emp.salary.houseRent + emp.salary.medicalAllowance
+      + emp.salary.fuel + emp.salary.food + emp.salary.utilities + emp.salary.otherAllowance
+    if (monthlyGross <= 0) continue
+    try {
+      await prisma.compensationHistory.create({
+        data: {
+          employeeId: emp.id,
+          type: 'HIRE',
+          oldSalary: 0,
+          newSalary: monthlyGross,
+          incrementPct: null,
+          reason: 'Hired — joining offer',
+          effectiveDate: emp.joiningDate ?? new Date(),
+          approvedById: hrUserId,
+        },
+      })
+      hireBaselines++
+    } catch { /* ignore */ }
+  }
+
   // ─── Pass 3: Compensation history from Increments tab ─────────────────
   console.log('Building compensation history…')
   let compHistoryCreated = 0
@@ -493,7 +563,9 @@ async function main() {
     if (!row || !row[0]) continue
     const name = trimStr(row[0])
     if (!name) continue
-    const empRef = empIdByNorm.get(normalize(name))
+    // Use the fuzzy matcher (handles "Abdllah Shafiq" typo, short names like "Affan", etc.)
+    const empRef = matchEmployee(name)
+      || empIdByNorm.get(normalize(name))
       || empByNorm.get(normalize(name))
     if (!empRef) continue
 
@@ -550,45 +622,8 @@ async function main() {
   const unmatchedNames = new Map() // for diagnostics
   const ibftWorkbooks = [ibftA, ibftB]
 
-  // ─── Robust name matcher ───
-  // IBFT sheets use names like "Taha Adnan" / "Waqas Fareed" / "Affan"
-  // while master sheet has honorific prefixes ("Sheikh Taha Adnan",
-  // "Muhammad Waqas Fareed", "Muhammad Affan Waseem"). First-name
-  // lookup misses these. Strip honorifics then match by token overlap.
-  const HONORIFICS = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'sir', 'madam',
-    'muhammad', 'mohammad', 'mohd', 'syed', 'syeda', 'sheikh', 'sh',
-    'ch', 'chaudhry', 'mr.', 'mrs.', 'hafiz', 'haji', 'malik', 'rana'])
-  function meaningfulTokens(name) {
-    return normalize(name)
-      .split(' ')
-      .map(t => t.replace(/[^a-z0-9]/g, ''))
-      .filter(t => t.length >= 2 && !HONORIFICS.has(t))
-  }
-
-  // Build per-employee token sets for fast scoring
-  const empTokens = []
-  for (const [norm, e] of empIdByNorm.entries()) {
-    empTokens.push({
-      id: e.id,
-      name: e.fullName || norm,
-      norm,
-      tokens: new Set(meaningfulTokens(e.fullName || norm)),
-    })
-  }
-
-  function matchEmployee(rawName) {
-    const wanted = meaningfulTokens(rawName)
-    if (!wanted.length) return null
-    let best = null, bestScore = 0
-    for (const c of empTokens) {
-      let score = 0
-      for (const w of wanted) if (c.tokens.has(w)) score++
-      // Tie-break: prefer match where wanted ⊆ candidate tokens
-      if (score > bestScore) { bestScore = score; best = c }
-    }
-    // Require at least one meaningful token to overlap
-    return bestScore >= 1 ? best : null
-  }
+  // Note: matchEmployee + HONORIFICS + meaningfulTokens defined above (before Pass 3)
+  // and reused here.
 
   for (const wb of ibftWorkbooks) {
     for (const tabName of wb.SheetNames) {
@@ -676,6 +711,7 @@ async function main() {
     created,
     updated,
     mgrLinked,
+    hireBaselines,
     compHistoryCreated,
     payslipsCreated,
     payslipsSkipped,
