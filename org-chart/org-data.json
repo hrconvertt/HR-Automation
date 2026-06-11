@@ -1,0 +1,386 @@
+{
+  "_schema": {
+    "description": "Convertt org hierarchy. Root = CEO, parentId null. Each node has children[] for nested rendering. To flatten for websocket: walk tree, emit each node WITHOUT children[], retaining parentId. status placeholder/vacant = needs hire/decision. conflict=true = two people hold same role, must be resolved.",
+    "websocketContract": "On change: send full tree OR delta of {id, parentId, name, title, department, status, conflict, note}. Consumer should treat parentId as the single source of truth for reporting line.",
+    "version": "1.0.0",
+    "generatedAt": "2026-06-11"
+  },
+  "id": "ceo",
+  "name": "Syed Aghar",
+  "title": "CEO",
+  "department": "Executive",
+  "status": "active",
+  "conflict": false,
+  "parentId": null,
+  "children": [
+    {
+      "id": "khawer",
+      "name": "Khawer",
+      "title": "Co-Founder & Head of Administration",
+      "department": "Executive",
+      "status": "active",
+      "conflict": false,
+      "parentId": "ceo",
+      "children": [
+        {
+          "id": "arslan",
+          "name": "Arslan",
+          "title": "Office Boy",
+          "department": "Admin & Support",
+          "status": "active",
+          "conflict": false,
+          "parentId": "khawer",
+          "children": []
+        },
+        {
+          "id": "islam",
+          "name": "Islam",
+          "title": "Office Boy",
+          "department": "Admin & Support",
+          "status": "active",
+          "conflict": false,
+          "parentId": "khawer",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "head-fin-vacant",
+      "name": "VACANT",
+      "title": "Head of Finance",
+      "department": "Finance",
+      "status": "placeholder",
+      "conflict": false,
+      "note": "Department has staff (Syeda) but no head/lead. Placeholder inserted so reports are never dropped.",
+      "parentId": "ceo",
+      "children": [
+        {
+          "id": "syeda",
+          "name": "Syeda Manqbat Aelia",
+          "title": "Associate Accounts",
+          "department": "Finance",
+          "status": "active",
+          "conflict": false,
+          "parentId": "head-fin-vacant",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "head-hr-vacant",
+      "name": "VACANT",
+      "title": "Head of Human Resource",
+      "department": "Human Resource",
+      "status": "placeholder",
+      "conflict": false,
+      "note": "Department has staff (Tahreem) but no head/lead. Placeholder inserted so reports are never dropped.",
+      "parentId": "ceo",
+      "children": [
+        {
+          "id": "tahreem",
+          "name": "Tahreem Waheed",
+          "title": "Associate Human Resource",
+          "department": "Human Resource",
+          "status": "active",
+          "conflict": false,
+          "parentId": "head-hr-vacant",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "iqra",
+      "name": "Iqra Naveed",
+      "title": "Head of Business Development & Marketing",
+      "department": "Business Development & Marketing",
+      "status": "active",
+      "conflict": false,
+      "parentId": "ceo",
+      "children": [
+        {
+          "id": "affan",
+          "name": "Muhammad Affan Waseem",
+          "title": "Business Developer Executive",
+          "department": "Business Development & Marketing",
+          "status": "active",
+          "conflict": false,
+          "parentId": "iqra",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "head-marketing-vacant",
+      "name": "VACANT",
+      "title": "Head of Marketing & Media",
+      "department": "Marketing & Media Team",
+      "status": "placeholder",
+      "conflict": false,
+      "note": "Department has staff (Taha, Usman, Tayyab, Momin) but no Head/Lead.",
+      "parentId": "ceo",
+      "children": [
+        {
+          "id": "taha",
+          "name": "Sheikh Taha Adnan",
+          "title": "Senior Graphics & UI Designer",
+          "department": "Marketing & Media Team",
+          "status": "active",
+          "conflict": false,
+          "parentId": "head-marketing-vacant",
+          "children": []
+        },
+        {
+          "id": "usman-ali",
+          "name": "Usman Ali",
+          "title": "Senior Video Editor",
+          "department": "Marketing & Media Team",
+          "status": "active",
+          "conflict": false,
+          "parentId": "head-marketing-vacant",
+          "children": [
+            {
+              "id": "tayyab",
+              "name": "Tayyab Hussain",
+              "title": "Junior Video Editor",
+              "department": "Marketing & Media Team",
+              "status": "active",
+              "conflict": false,
+              "parentId": "usman-ali",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "momin",
+          "name": "Momin Munir",
+          "title": "Associate Marketing",
+          "department": "Marketing & Media Team",
+          "status": "active",
+          "conflict": false,
+          "parentId": "head-marketing-vacant",
+          "children": []
+        }
+      ]
+    },
+    {
+      "id": "abdullah-shafiq",
+      "name": "Abdullah Shafiq",
+      "title": "Head UI/UX Designer",
+      "department": "UI/UX",
+      "status": "active",
+      "conflict": false,
+      "parentId": "ceo",
+      "children": [
+        {
+          "id": "altaf",
+          "name": "Altaf Yaseen",
+          "title": "Associate Design Lead",
+          "department": "UI/UX",
+          "status": "active",
+          "conflict": false,
+          "parentId": "abdullah-shafiq",
+          "children": [
+            {
+              "id": "abdullah-butt",
+              "name": "Abdullah Butt",
+              "title": "UI/UX Designer",
+              "department": "UI/UX",
+              "status": "active",
+              "conflict": false,
+              "parentId": "altaf",
+              "children": []
+            },
+            {
+              "id": "ammar",
+              "name": "Muhammad Ammar Younas",
+              "title": "UI/UX Designer",
+              "department": "UI/UX",
+              "status": "active",
+              "conflict": false,
+              "parentId": "altaf",
+              "children": []
+            },
+            {
+              "id": "ali-hassan",
+              "name": "Ali Hassan",
+              "title": "Junior UI/UX Designer",
+              "department": "UI/UX",
+              "status": "active",
+              "conflict": false,
+              "parentId": "altaf",
+              "children": []
+            },
+            {
+              "id": "umar-ameen",
+              "name": "Umar Ameen",
+              "title": "UI/UX Designer Intern",
+              "department": "UI/UX",
+              "status": "active",
+              "conflict": false,
+              "parentId": "altaf",
+              "children": []
+            },
+            {
+              "id": "taiyba",
+              "name": "Taiyba Naeem",
+              "title": "UI/UX Designer Intern",
+              "department": "UI/UX",
+              "status": "active",
+              "conflict": false,
+              "parentId": "altaf",
+              "children": []
+            }
+          ]
+        },
+        {
+          "id": "usman-saeed",
+          "name": "Muhammad Usman Saeed",
+          "title": "Associate Design Lead",
+          "department": "UI/UX",
+          "status": "active",
+          "conflict": false,
+          "parentId": "abdullah-shafiq",
+          "children": [
+            {
+              "id": "salman",
+              "name": "Salman Shahid",
+              "title": "UI/UX Designer",
+              "department": "UI/UX",
+              "status": "active",
+              "conflict": false,
+              "parentId": "usman-saeed",
+              "children": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "head-tech-vacant",
+      "name": "VACANT",
+      "title": "CTO / Head of Engineering",
+      "department": "Engineering",
+      "status": "placeholder",
+      "conflict": false,
+      "note": "No tech head exists above Shopify, WordPress, and Client-Servicing dept heads. Placeholder until decided.",
+      "parentId": "ceo",
+      "children": [
+        {
+          "id": "atta",
+          "name": "Atta Ur Rehman",
+          "title": "Head of Client Servicing & Operations",
+          "department": "Web - Shopify Development",
+          "status": "active",
+          "conflict": true,
+          "note": "DUPLICATE title with Muhammad Waqas Fareed. Resolve: keep one Head; demote the other or reassign title (e.g., one is 'Head of Operations', other 'Head of Client Servicing').",
+          "parentId": "head-tech-vacant",
+          "children": [
+            {
+              "id": "momna",
+              "name": "Momna Waryam Khan",
+              "title": "Lead Senior Developer",
+              "department": "Web - Shopify Development",
+              "status": "active",
+              "conflict": false,
+              "parentId": "atta",
+              "children": [
+                {
+                  "id": "muzaffar",
+                  "name": "Muzaffar Jamil",
+                  "title": "Shopify Developer",
+                  "department": "Web - Shopify Development",
+                  "status": "active",
+                  "conflict": false,
+                  "parentId": "momna",
+                  "children": []
+                },
+                {
+                  "id": "ahsan",
+                  "name": "Muhammad Ahsan",
+                  "title": "Shopify Developer",
+                  "department": "Web - Shopify Development",
+                  "status": "active",
+                  "conflict": false,
+                  "parentId": "momna",
+                  "children": []
+                },
+                {
+                  "id": "usama",
+                  "name": "Muhammad Usama Aslam",
+                  "title": "Shopify Developer",
+                  "department": "Web - Shopify Development",
+                  "status": "active",
+                  "conflict": false,
+                  "parentId": "momna",
+                  "children": []
+                },
+                {
+                  "id": "zain",
+                  "name": "Zain Rasheed",
+                  "title": "Shopify Developer",
+                  "department": "Web - Shopify Development",
+                  "status": "active",
+                  "conflict": false,
+                  "parentId": "momna",
+                  "children": []
+                },
+                {
+                  "id": "ali-shan",
+                  "name": "Ali Shan",
+                  "title": "Shopify Developer",
+                  "department": "Web - Shopify Development",
+                  "status": "active",
+                  "conflict": false,
+                  "parentId": "momna",
+                  "children": []
+                },
+                {
+                  "id": "rayyan",
+                  "name": "Muhammad Rayyan",
+                  "title": "Junior Shopify Developer",
+                  "department": "Web - Shopify Development",
+                  "status": "active",
+                  "conflict": false,
+                  "parentId": "momna",
+                  "children": []
+                },
+                {
+                  "id": "irfan",
+                  "name": "Muhammad Irfan",
+                  "title": "Junior Shopify Developer",
+                  "department": "Web - Shopify Development",
+                  "status": "active",
+                  "conflict": false,
+                  "parentId": "momna",
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "aqib",
+          "name": "Aqib Aslam",
+          "title": "Senior WordPress Developer",
+          "department": "Web - WordPress",
+          "status": "active",
+          "conflict": false,
+          "note": "Only person in WordPress dept; acting as de facto lead.",
+          "parentId": "head-tech-vacant",
+          "children": []
+        },
+        {
+          "id": "waqas",
+          "name": "Muhammad Waqas Fareed",
+          "title": "Head of Client Servicing & Operations",
+          "department": "Operations / Client Servicing",
+          "status": "active",
+          "conflict": true,
+          "note": "DUPLICATE title with Atta Ur Rehman. Resolve: keep one Head; demote the other or reassign title.",
+          "parentId": "head-tech-vacant",
+          "children": []
+        }
+      ]
+    }
+  ]
+}

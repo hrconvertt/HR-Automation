@@ -1,0 +1,1036 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Convertt — Org Hierarchy Editor</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  /* ─── Brand: Convertt green #1FA463, near-black #111613 ─── */
+  :root {
+    --green: #1FA463;
+    --green-soft: #E8F6EE;
+    --green-dark: #178050;
+    --ink: #111613;
+    --ink-2: #2A3330;
+    --line: #DDE3E0;
+    --line-2: #EEF1EF;
+    --bg: #FAFBFB;
+    --warn: #C24F2D;
+    --warn-soft: #FBEDE6;
+    --muted: #6B7773;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    font-size: 14px;
+    line-height: 1.45;
+    min-height: 100vh;
+  }
+  header.topbar {
+    background: var(--ink);
+    color: #fff;
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 3px solid var(--green);
+  }
+  header .logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  header .logo .dot {
+    width: 22px; height: 22px;
+    background: var(--green);
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 800;
+  }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header .right { margin-left: auto; display: flex; gap: 8px; }
+
+  button {
+    appearance: none;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    padding: 7px 12px;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 120ms ease;
+    background: transparent;
+    color: inherit;
+    line-height: 1;
+  }
+  button.primary {
+    background: var(--green);
+    color: #fff;
+  }
+  button.primary:hover { background: var(--green-dark); }
+  button.ghost {
+    background: transparent;
+    color: #fff;
+    border-color: rgba(255,255,255,0.25);
+  }
+  button.ghost:hover { background: rgba(255,255,255,0.08); }
+  button.small {
+    background: var(--green-soft);
+    color: var(--green-dark);
+    padding: 5px 9px;
+    font-size: 11.5px;
+  }
+  button.small:hover { background: var(--green); color: #fff; }
+  button.danger {
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+  button.danger:hover { background: var(--warn); color: #fff; }
+  button.icon {
+    width: 26px; height: 26px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+  }
+  button.icon:hover { color: var(--ink); border-color: var(--ink-2); }
+
+  /* ─── Toolbar ─── */
+  .toolbar {
+    background: #fff;
+    border-bottom: 1px solid var(--line);
+    padding: 12px 24px;
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .toolbar .group {
+    display: flex; gap: 6px;
+    padding-right: 12px;
+    border-right: 1px solid var(--line);
+  }
+  .toolbar .group:last-child { border-right: none; }
+  .toolbar input[type=file] { display: none; }
+  .toolbar .stat {
+    margin-left: auto;
+    display: flex;
+    gap: 16px;
+    color: var(--muted);
+    font-size: 12px;
+    align-items: center;
+  }
+  .toolbar .stat .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--line-2);
+    padding: 4px 10px;
+    border-radius: 999px;
+    font-weight: 600;
+    color: var(--ink-2);
+  }
+  .toolbar .stat .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .toolbar .stat .pill.green { background: var(--green-soft); color: var(--green-dark); }
+
+  /* ─── Tree ─── */
+  .tree-container {
+    padding: 32px 24px 80px;
+  }
+  .tree, .tree ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0;
+  }
+  .tree ul {
+    margin-left: 32px;
+    border-left: 1px dashed var(--line);
+    padding-left: 20px;
+    margin-top: 8px;
+  }
+  .tree li {
+    position: relative;
+    margin: 8px 0;
+  }
+
+  /* Node card */
+  .node {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border: 1.5px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 14px;
+    min-width: 280px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: border-color 120ms ease, box-shadow 120ms ease;
+    cursor: grab;
+  }
+  .node:hover {
+    border-color: var(--ink-2);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .node.dragging { opacity: 0.45; cursor: grabbing; }
+  .node.drop-target {
+    border-color: var(--green);
+    background: var(--green-soft);
+    box-shadow: 0 0 0 3px rgba(31,164,99,0.18);
+  }
+  .node.placeholder, .node.vacant {
+    border-style: dashed;
+    border-color: var(--muted);
+    background: #FBFCFB;
+  }
+  .node.placeholder .nm, .node.vacant .nm {
+    color: var(--muted);
+    font-style: italic;
+  }
+  .node.conflict {
+    border-color: var(--warn);
+    background: var(--warn-soft);
+  }
+  .node.conflict::after {
+    content: '⚠ DUPLICATE';
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--warn);
+    background: #fff;
+    border: 1px solid var(--warn);
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 6px;
+  }
+
+  .node .avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--green);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .node.placeholder .avatar, .node.vacant .avatar {
+    background: var(--muted);
+    color: #fff;
+  }
+  .node.conflict .avatar {
+    background: var(--warn);
+  }
+  .node .body {
+    flex: 1;
+    min-width: 0;
+  }
+  .node .nm {
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 13px;
+    line-height: 1.15;
+    margin-bottom: 2px;
+  }
+  .node .ttl {
+    color: var(--ink-2);
+    font-size: 12px;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+  .node .dept {
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    font-weight: 600;
+  }
+  .node .actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 120ms ease;
+  }
+  .node:hover .actions { opacity: 1; }
+
+  .toggle {
+    position: relative;
+    background: #fff;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    margin-right: 6px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .toggle.collapsed { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .toggle.leaf { visibility: hidden; }
+
+  /* Hidden when parent is collapsed */
+  li.collapsed > ul { display: none; }
+
+  .note {
+    margin-left: 8px;
+    color: var(--warn);
+    font-size: 11px;
+    background: #fff;
+    border: 1px solid var(--warn-soft);
+    border-radius: 4px;
+    padding: 2px 6px;
+    cursor: help;
+  }
+
+  /* ─── Modal ─── */
+  .modal-bg {
+    position: fixed; inset: 0;
+    background: rgba(17, 22, 19, 0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+  .modal-bg.open { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+  }
+  .modal h2 {
+    margin: 0 0 14px;
+    font-size: 16px;
+    color: var(--ink);
+  }
+  .modal label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+    margin-top: 12px;
+  }
+  .modal input, .modal select, .modal textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 7px;
+    border: 1px solid var(--line);
+    font-size: 13px;
+    font-family: inherit;
+    color: var(--ink);
+    background: #fff;
+  }
+  .modal textarea { min-height: 60px; resize: vertical; font-family: inherit; }
+  .modal input:focus, .modal select:focus, .modal textarea:focus {
+    outline: none;
+    border-color: var(--green);
+    box-shadow: 0 0 0 3px rgba(31,164,99,0.15);
+  }
+  .modal .row { display: flex; gap: 10px; }
+  .modal .row > div { flex: 1; }
+  .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .modal .actions button { padding: 9px 16px; font-size: 13px; }
+  .modal .actions .secondary {
+    background: transparent;
+    color: var(--ink-2);
+    border: 1px solid var(--line);
+  }
+
+  /* JSON peek panel */
+  .json-panel {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: var(--ink);
+    color: #DCE5E0;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 11.5px;
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 220ms ease;
+    border-top: 3px solid var(--green);
+  }
+  .json-panel.open { max-height: 50vh; }
+  .json-panel header {
+    background: var(--ink-2);
+    padding: 8px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: none;
+  }
+  .json-panel header span {
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+  .json-panel header .close {
+    margin-left: auto;
+    background: transparent;
+    color: #DCE5E0;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+  }
+  .json-panel pre {
+    padding: 14px;
+    margin: 0;
+    overflow: auto;
+    max-height: calc(50vh - 40px);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    top: 84px;
+    right: 24px;
+    background: var(--ink);
+    color: #fff;
+    padding: 11px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    opacity: 0;
+    transform: translateX(20px);
+    transition: opacity 180ms ease, transform 180ms ease;
+    z-index: 2000;
+    border-left: 3px solid var(--green);
+    pointer-events: none;
+  }
+  .toast.show { opacity: 1; transform: translateX(0); }
+  .toast.warn { border-left-color: var(--warn); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo">
+    <span class="dot">C</span>
+    <span>Convertt</span>
+  </div>
+  <h1>Org Hierarchy Editor</h1>
+  <div class="right">
+    <button class="ghost" id="btnViewJson">View JSON</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="group">
+    <button class="primary" id="btnAddRoot">+ Add Person</button>
+    <button class="small" id="btnAddPlaceholder">+ Placeholder</button>
+  </div>
+  <div class="group">
+    <button class="small" id="btnImport">Import JSON</button>
+    <input type="file" id="fileImport" accept="application/json,.json" />
+    <button class="small" id="btnExport">Download JSON</button>
+    <button class="small" id="btnCopy">Copy JSON</button>
+  </div>
+  <div class="group">
+    <button class="small" id="btnExpandAll">Expand all</button>
+    <button class="small" id="btnCollapseAll">Collapse all</button>
+  </div>
+  <div class="group">
+    <button class="small" id="btnPushSocket" title="Calls pushToSocket() — wire your endpoint">↪ Push to Websocket</button>
+  </div>
+  <div class="stat">
+    <span class="pill green"><b id="statTotal">0</b> total</span>
+    <span class="pill"><b id="statPlaceholder">0</b> placeholders</span>
+    <span class="pill warn"><b id="statConflict">0</b> conflicts</span>
+  </div>
+</div>
+
+<div class="tree-container">
+  <ul class="tree" id="tree"></ul>
+</div>
+
+<!-- ─── Modal ─── -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal">
+    <h2 id="modalTitle">Edit person</h2>
+    <input type="hidden" id="m_id" />
+    <div class="row">
+      <div>
+        <label>Name</label>
+        <input id="m_name" placeholder="Full name (or VACANT)" />
+      </div>
+      <div>
+        <label>Status</label>
+        <select id="m_status">
+          <option value="active">Active</option>
+          <option value="placeholder">Placeholder</option>
+          <option value="vacant">Vacant</option>
+        </select>
+      </div>
+    </div>
+    <label>Title</label>
+    <input id="m_title" placeholder="e.g. Head of Engineering" />
+    <label>Department</label>
+    <input id="m_department" placeholder="e.g. Engineering" />
+    <label>Note (optional)</label>
+    <textarea id="m_note" placeholder="Reason for placeholder, conflict notes, etc."></textarea>
+    <div style="margin-top:12px;">
+      <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-2);font-size:13px;">
+        <input type="checkbox" id="m_conflict" style="width:auto;" /> Flag as conflict (duplicate/ambiguous role)
+      </label>
+    </div>
+    <div class="actions">
+      <button class="secondary" id="m_cancel">Cancel</button>
+      <button class="danger" id="m_delete" style="margin-right:auto;">Delete</button>
+      <button class="primary" id="m_save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── JSON peek panel ─── -->
+<div class="json-panel" id="jsonPanel">
+  <header>
+    <span>org-data.json</span>
+    <button class="close" id="jsonClose">×</button>
+  </header>
+  <pre id="jsonText"></pre>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   Convertt Org Editor
+   - In-memory state, no localStorage
+   - Import/Export JSON
+   - Drag-to-reparent
+   - Visual gap (placeholder) + conflict flags
+   ============================================================ */
+
+// ─── Initial data (paste of org-data.json — same canonical structure) ───
+const INITIAL_DATA = {
+  "_schema": {
+    "description": "Convertt org hierarchy. Root = CEO, parentId null. Each node has children[] for nested rendering. To flatten for websocket: walk tree, emit each node WITHOUT children[], retaining parentId.",
+    "websocketContract": "On change: send full tree OR delta of {id, parentId, name, title, department, status, conflict, note}. Consumer should treat parentId as the single source of truth for reporting line.",
+    "version": "1.0.0",
+    "generatedAt": "2026-06-11"
+  },
+  "id": "ceo",
+  "name": "Syed Aghar",
+  "title": "CEO",
+  "department": "Executive",
+  "status": "active",
+  "conflict": false,
+  "parentId": null,
+  "children": [
+    { "id": "khawer", "name": "Khawer", "title": "Co-Founder & Head of Administration", "department": "Executive", "status": "active", "conflict": false, "parentId": "ceo", "children": [
+      { "id": "arslan", "name": "Arslan", "title": "Office Boy", "department": "Admin & Support", "status": "active", "conflict": false, "parentId": "khawer", "children": [] },
+      { "id": "islam",  "name": "Islam",  "title": "Office Boy", "department": "Admin & Support", "status": "active", "conflict": false, "parentId": "khawer", "children": [] }
+    ]},
+    { "id": "head-fin-vacant", "name": "VACANT", "title": "Head of Finance", "department": "Finance", "status": "placeholder", "conflict": false, "note": "Department has staff (Syeda) but no head/lead.", "parentId": "ceo", "children": [
+      { "id": "syeda", "name": "Syeda Manqbat Aelia", "title": "Associate Accounts", "department": "Finance", "status": "active", "conflict": false, "parentId": "head-fin-vacant", "children": [] }
+    ]},
+    { "id": "head-hr-vacant", "name": "VACANT", "title": "Head of Human Resource", "department": "Human Resource", "status": "placeholder", "conflict": false, "note": "Department has staff (Tahreem) but no head/lead.", "parentId": "ceo", "children": [
+      { "id": "tahreem", "name": "Tahreem Waheed", "title": "Associate Human Resource", "department": "Human Resource", "status": "active", "conflict": false, "parentId": "head-hr-vacant", "children": [] }
+    ]},
+    { "id": "iqra", "name": "Iqra Naveed", "title": "Head of Business Development & Marketing", "department": "Business Development & Marketing", "status": "active", "conflict": false, "parentId": "ceo", "children": [
+      { "id": "affan", "name": "Muhammad Affan Waseem", "title": "Business Developer Executive", "department": "Business Development & Marketing", "status": "active", "conflict": false, "parentId": "iqra", "children": [] }
+    ]},
+    { "id": "head-marketing-vacant", "name": "VACANT", "title": "Head of Marketing & Media", "department": "Marketing & Media Team", "status": "placeholder", "conflict": false, "note": "Dept has staff (Taha, Usman, Tayyab, Momin) but no Head.", "parentId": "ceo", "children": [
+      { "id": "taha", "name": "Sheikh Taha Adnan", "title": "Senior Graphics & UI Designer", "department": "Marketing & Media Team", "status": "active", "conflict": false, "parentId": "head-marketing-vacant", "children": [] },
+      { "id": "usman-ali", "name": "Usman Ali", "title": "Senior Video Editor", "department": "Marketing & Media Team", "status": "active", "conflict": false, "parentId": "head-marketing-vacant", "children": [
+        { "id": "tayyab", "name": "Tayyab Hussain", "title": "Junior Video Editor", "department": "Marketing & Media Team", "status": "active", "conflict": false, "parentId": "usman-ali", "children": [] }
+      ]},
+      { "id": "momin", "name": "Momin Munir", "title": "Associate Marketing", "department": "Marketing & Media Team", "status": "active", "conflict": false, "parentId": "head-marketing-vacant", "children": [] }
+    ]},
+    { "id": "abdullah-shafiq", "name": "Abdullah Shafiq", "title": "Head UI/UX Designer", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "ceo", "children": [
+      { "id": "altaf", "name": "Altaf Yaseen", "title": "Associate Design Lead", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "abdullah-shafiq", "children": [
+        { "id": "abdullah-butt", "name": "Abdullah Butt", "title": "UI/UX Designer", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "altaf", "children": [] },
+        { "id": "ammar", "name": "Muhammad Ammar Younas", "title": "UI/UX Designer", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "altaf", "children": [] },
+        { "id": "ali-hassan", "name": "Ali Hassan", "title": "Junior UI/UX Designer", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "altaf", "children": [] },
+        { "id": "umar-ameen", "name": "Umar Ameen", "title": "UI/UX Designer Intern", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "altaf", "children": [] },
+        { "id": "taiyba", "name": "Taiyba Naeem", "title": "UI/UX Designer Intern", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "altaf", "children": [] }
+      ]},
+      { "id": "usman-saeed", "name": "Muhammad Usman Saeed", "title": "Associate Design Lead", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "abdullah-shafiq", "children": [
+        { "id": "salman", "name": "Salman Shahid", "title": "UI/UX Designer", "department": "UI/UX", "status": "active", "conflict": false, "parentId": "usman-saeed", "children": [] }
+      ]}
+    ]},
+    { "id": "head-tech-vacant", "name": "VACANT", "title": "CTO / Head of Engineering", "department": "Engineering", "status": "placeholder", "conflict": false, "note": "No tech head exists above Shopify, WordPress, and Client-Servicing dept heads.", "parentId": "ceo", "children": [
+      { "id": "atta", "name": "Atta Ur Rehman", "title": "Head of Client Servicing & Operations", "department": "Web - Shopify Development", "status": "active", "conflict": true, "note": "DUPLICATE title with Waqas Fareed. Resolve in editor.", "parentId": "head-tech-vacant", "children": [
+        { "id": "momna", "name": "Momna Waryam Khan", "title": "Lead Senior Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "atta", "children": [
+          { "id": "muzaffar", "name": "Muzaffar Jamil", "title": "Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] },
+          { "id": "ahsan", "name": "Muhammad Ahsan", "title": "Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] },
+          { "id": "usama", "name": "Muhammad Usama Aslam", "title": "Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] },
+          { "id": "zain",  "name": "Zain Rasheed", "title": "Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] },
+          { "id": "ali-shan", "name": "Ali Shan", "title": "Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] },
+          { "id": "rayyan", "name": "Muhammad Rayyan", "title": "Junior Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] },
+          { "id": "irfan",  "name": "Muhammad Irfan",  "title": "Junior Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] }
+        ]}
+      ]},
+      { "id": "aqib", "name": "Aqib Aslam", "title": "Senior WordPress Developer", "department": "Web - WordPress", "status": "active", "conflict": false, "note": "Only person in WordPress dept; acting as de facto lead.", "parentId": "head-tech-vacant", "children": [] },
+      { "id": "waqas", "name": "Muhammad Waqas Fareed", "title": "Head of Client Servicing & Operations", "department": "Operations / Client Servicing", "status": "active", "conflict": true, "note": "DUPLICATE title with Atta Ur Rehman. Resolve in editor.", "parentId": "head-tech-vacant", "children": [] }
+    ]}
+  ]
+}
+
+// ─── State ───
+let TREE = JSON.parse(JSON.stringify(INITIAL_DATA))
+const collapsed = new Set() // ids currently collapsed
+let editingId = null
+
+// ─── Utilities ───
+function genId(name) {
+  const base = (name || 'node').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+  let id = base || 'node'
+  let n = 1
+  while (findNode(id)) id = (base || 'node') + '-' + (++n)
+  return id
+}
+function findNode(id, node = TREE) {
+  if (!node || !node.id) return null
+  if (node.id === id) return node
+  for (const c of (node.children || [])) {
+    const f = findNode(id, c); if (f) return f
+  }
+  return null
+}
+function findParent(id, node = TREE, parent = null) {
+  if (!node || !node.id) return null
+  if (node.id === id) return parent
+  for (const c of (node.children || [])) {
+    const f = findParent(id, c, node); if (f) return f
+  }
+  return null
+}
+function removeNode(id) {
+  const p = findParent(id)
+  if (!p) return null
+  const idx = p.children.findIndex(c => c.id === id)
+  if (idx === -1) return null
+  return p.children.splice(idx, 1)[0]
+}
+function isDescendant(maybeAncestorId, childId) {
+  const ancestor = findNode(maybeAncestorId)
+  if (!ancestor) return false
+  return !!findNode(childId, ancestor)
+}
+function initials(name) {
+  return name.split(/\s+/).filter(Boolean).slice(0,2).map(w => w[0]).join('').toUpperCase()
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]))
+}
+
+// ─── Stats ───
+function countAll() {
+  let total = 0, ph = 0, conflict = 0
+  function walk(n) {
+    if (!n || !n.id) return
+    total++
+    if (n.status === 'placeholder' || n.status === 'vacant') ph++
+    if (n.conflict) conflict++
+    ;(n.children || []).forEach(walk)
+  }
+  walk(TREE)
+  return { total, ph, conflict }
+}
+
+// ─── Render ───
+function render() {
+  const root = document.getElementById('tree')
+  root.innerHTML = ''
+  root.appendChild(renderNode(TREE))
+  const s = countAll()
+  document.getElementById('statTotal').textContent = s.total
+  document.getElementById('statPlaceholder').textContent = s.ph
+  document.getElementById('statConflict').textContent = s.conflict
+  refreshJsonPanel()
+}
+function renderNode(node) {
+  const li = document.createElement('li')
+  if (collapsed.has(node.id)) li.classList.add('collapsed')
+
+  const hasKids = (node.children && node.children.length > 0)
+  const toggle = document.createElement('span')
+  toggle.className = 'toggle' + (hasKids ? '' : ' leaf') + (collapsed.has(node.id) ? ' collapsed' : '')
+  toggle.textContent = collapsed.has(node.id) ? '+' : '−'
+  toggle.title = collapsed.has(node.id) ? 'Expand' : 'Collapse'
+  toggle.addEventListener('click', (e) => {
+    e.stopPropagation()
+    if (!hasKids) return
+    if (collapsed.has(node.id)) collapsed.delete(node.id)
+    else collapsed.add(node.id)
+    render()
+  })
+
+  const card = document.createElement('div')
+  card.className = 'node'
+  if (node.status === 'placeholder' || node.status === 'vacant') card.classList.add('placeholder')
+  if (node.conflict) card.classList.add('conflict')
+  card.draggable = true
+  card.dataset.id = node.id
+  card.innerHTML = `
+    <div class="avatar">${escapeHtml(initials(node.name || '?'))}</div>
+    <div class="body">
+      <div class="nm">${escapeHtml(node.name || 'Unnamed')}</div>
+      <div class="ttl">${escapeHtml(node.title || '—')}</div>
+      <div class="dept">${escapeHtml(node.department || 'Unassigned')}</div>
+    </div>
+    <div class="actions">
+      <button class="icon" data-act="add" title="Add report">＋</button>
+      <button class="icon" data-act="edit" title="Edit">✎</button>
+      ${node.id === TREE.id ? '' : '<button class="icon" data-act="del" title="Delete">✕</button>'}
+    </div>
+  `
+  if (node.note) {
+    const nt = document.createElement('span')
+    nt.className = 'note'
+    nt.textContent = node.note.length > 80 ? node.note.slice(0,77) + '…' : node.note
+    nt.title = node.note
+    card.appendChild(nt)
+  }
+
+  // Action buttons
+  card.querySelectorAll('button.icon').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      const act = btn.dataset.act
+      if (act === 'add') openModalAdd(node.id)
+      else if (act === 'edit') openModalEdit(node.id)
+      else if (act === 'del') deleteNode(node.id)
+    })
+  })
+
+  // Drag
+  card.addEventListener('dragstart', (e) => {
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', node.id)
+    card.classList.add('dragging')
+  })
+  card.addEventListener('dragend', () => card.classList.remove('dragging'))
+  card.addEventListener('dragover', (e) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    card.classList.add('drop-target')
+  })
+  card.addEventListener('dragleave', () => card.classList.remove('drop-target'))
+  card.addEventListener('drop', (e) => {
+    e.preventDefault()
+    card.classList.remove('drop-target')
+    const draggedId = e.dataTransfer.getData('text/plain')
+    if (!draggedId || draggedId === node.id) return
+    reparent(draggedId, node.id)
+  })
+
+  // Click row to edit
+  card.addEventListener('dblclick', () => openModalEdit(node.id))
+
+  li.appendChild(toggle)
+  li.appendChild(card)
+
+  if (hasKids) {
+    const ul = document.createElement('ul')
+    node.children.forEach(c => ul.appendChild(renderNode(c)))
+    li.appendChild(ul)
+  }
+  return li
+}
+
+// ─── Mutations ───
+function reparent(childId, newParentId) {
+  if (childId === TREE.id) { toast('Cannot move the root', true); return }
+  if (isDescendant(childId, newParentId)) { toast('Cannot move a node into its own descendant', true); return }
+  const child = findNode(childId)
+  if (!child) return
+  // detach
+  const oldP = findParent(childId)
+  oldP.children = oldP.children.filter(c => c.id !== childId)
+  // attach
+  const newP = findNode(newParentId)
+  newP.children = newP.children || []
+  child.parentId = newParentId
+  newP.children.push(child)
+  toast(`Reparented "${child.name}" → "${newP.name}"`)
+  render()
+}
+function deleteNode(id) {
+  if (id === TREE.id) { toast('Cannot delete the root', true); return }
+  const node = findNode(id)
+  if (!node) return
+  const kids = (node.children || []).length
+  const ask = kids > 0
+    ? `Delete "${node.name}" and reattach ${kids} report${kids===1?'':'s'} to its parent?`
+    : `Delete "${node.name}"?`
+  if (!confirm(ask)) return
+  const parent = findParent(id)
+  if (kids > 0) {
+    node.children.forEach(c => { c.parentId = parent.id; parent.children.push(c) })
+  }
+  parent.children = parent.children.filter(c => c.id !== id)
+  toast(`Deleted "${node.name}"`)
+  render()
+}
+function addChild(parentId, data) {
+  const parent = findNode(parentId)
+  if (!parent) return
+  const id = genId(data.name)
+  const node = {
+    id, parentId,
+    name: data.name || 'Unnamed',
+    title: data.title || '',
+    department: data.department || (parent.department || ''),
+    status: data.status || 'active',
+    conflict: !!data.conflict,
+    note: data.note || '',
+    children: []
+  }
+  parent.children = parent.children || []
+  parent.children.push(node)
+  toast(`Added "${node.name}"`)
+  render()
+}
+
+// ─── Modal ───
+function openModalAdd(parentId) {
+  const m = document.getElementById('modalBg')
+  document.getElementById('modalTitle').textContent = 'Add report'
+  editingId = null
+  document.getElementById('m_id').value = ''
+  document.getElementById('m_name').value = ''
+  document.getElementById('m_title').value = ''
+  document.getElementById('m_department').value = ''
+  document.getElementById('m_status').value = 'active'
+  document.getElementById('m_note').value = ''
+  document.getElementById('m_conflict').checked = false
+  document.getElementById('m_delete').style.display = 'none'
+  document.getElementById('m_id').dataset.parentId = parentId
+  m.classList.add('open')
+}
+function openModalEdit(id) {
+  const node = findNode(id)
+  if (!node) return
+  editingId = id
+  document.getElementById('modalTitle').textContent = 'Edit person'
+  document.getElementById('m_id').value = id
+  document.getElementById('m_name').value = node.name || ''
+  document.getElementById('m_title').value = node.title || ''
+  document.getElementById('m_department').value = node.department || ''
+  document.getElementById('m_status').value = node.status || 'active'
+  document.getElementById('m_note').value = node.note || ''
+  document.getElementById('m_conflict').checked = !!node.conflict
+  document.getElementById('m_delete').style.display = (id === TREE.id) ? 'none' : 'inline-flex'
+  document.getElementById('modalBg').classList.add('open')
+}
+function closeModal() {
+  document.getElementById('modalBg').classList.remove('open')
+  editingId = null
+}
+
+document.getElementById('m_cancel').addEventListener('click', closeModal)
+document.getElementById('modalBg').addEventListener('click', (e) => {
+  if (e.target.id === 'modalBg') closeModal()
+})
+document.getElementById('m_save').addEventListener('click', () => {
+  const data = {
+    name: document.getElementById('m_name').value.trim(),
+    title: document.getElementById('m_title').value.trim(),
+    department: document.getElementById('m_department').value.trim(),
+    status: document.getElementById('m_status').value,
+    note: document.getElementById('m_note').value.trim(),
+    conflict: document.getElementById('m_conflict').checked,
+  }
+  if (!data.name) { alert('Name is required'); return }
+  if (editingId) {
+    const node = findNode(editingId)
+    Object.assign(node, data)
+    toast(`Saved "${node.name}"`)
+  } else {
+    const parentId = document.getElementById('m_id').dataset.parentId
+    addChild(parentId, data)
+  }
+  closeModal()
+  render()
+})
+document.getElementById('m_delete').addEventListener('click', () => {
+  if (!editingId) return
+  closeModal()
+  deleteNode(editingId)
+})
+
+// ─── Toolbar ───
+document.getElementById('btnAddRoot').addEventListener('click', () => openModalAdd(TREE.id))
+document.getElementById('btnAddPlaceholder').addEventListener('click', () => {
+  const id = prompt('Add placeholder under which node id? (default: ceo)', 'ceo')
+  if (!id) return
+  if (!findNode(id)) return alert('No node with that id.')
+  addChild(id, { name: 'VACANT', title: 'New Placeholder', department: '', status: 'placeholder', note: 'Created from editor' })
+})
+
+document.getElementById('btnExport').addEventListener('click', () => {
+  const json = JSON.stringify(stripUiState(TREE), null, 2)
+  const blob = new Blob([json], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'org-data.json'
+  document.body.appendChild(a); a.click(); a.remove()
+  URL.revokeObjectURL(url)
+  toast('Downloaded org-data.json')
+})
+document.getElementById('btnCopy').addEventListener('click', async () => {
+  const json = JSON.stringify(stripUiState(TREE), null, 2)
+  try {
+    await navigator.clipboard.writeText(json)
+    toast('Copied to clipboard')
+  } catch (e) {
+    // fallback
+    const ta = document.createElement('textarea')
+    ta.value = json; document.body.appendChild(ta); ta.select()
+    document.execCommand('copy'); ta.remove()
+    toast('Copied to clipboard')
+  }
+})
+document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileImport').click())
+document.getElementById('fileImport').addEventListener('change', (e) => {
+  const f = e.target.files[0]
+  if (!f) return
+  const r = new FileReader()
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result)
+      if (!data.id) throw new Error('Missing root id')
+      TREE = data
+      collapsed.clear()
+      render()
+      toast(`Imported ${f.name}`)
+    } catch (err) {
+      alert('Invalid JSON: ' + err.message)
+    }
+  }
+  r.readAsText(f)
+  e.target.value = '' // allow re-import same file
+})
+document.getElementById('btnExpandAll').addEventListener('click', () => { collapsed.clear(); render() })
+document.getElementById('btnCollapseAll').addEventListener('click', () => {
+  collapsed.clear()
+  function walk(n) {
+    if ((n.children || []).length) {
+      if (n.id !== TREE.id) collapsed.add(n.id) // keep root visible
+      n.children.forEach(walk)
+    }
+  }
+  walk(TREE)
+  render()
+})
+document.getElementById('btnViewJson').addEventListener('click', () => {
+  const panel = document.getElementById('jsonPanel')
+  panel.classList.toggle('open')
+  refreshJsonPanel()
+})
+document.getElementById('jsonClose').addEventListener('click', () => document.getElementById('jsonPanel').classList.remove('open'))
+function refreshJsonPanel() {
+  document.getElementById('jsonText').textContent = JSON.stringify(stripUiState(TREE), null, 2)
+}
+function stripUiState(node) {
+  // Remove any ui-only state from the export. Currently nothing to strip,
+  // but kept as a hook for the future.
+  return JSON.parse(JSON.stringify(node))
+}
+
+// ─── Push to Websocket — wire your endpoint here ───
+/**
+ * Stub for sending the current tree to your company websocket / endpoint.
+ *
+ * Usage: edit `url` below (or pass it in) and call from anywhere.
+ *
+ * @param {object} data  The full tree (TREE)
+ * @param {string} url   Your websocket / HTTP endpoint
+ *
+ * Example wiring:
+ *   const url = 'wss://yourdomain.com/ws/org'  // OR 'https://yourdomain.com/api/org/sync'
+ *   const ws = new WebSocket(url)
+ *   ws.onopen = () => ws.send(JSON.stringify(data))
+ *
+ * Or HTTP POST:
+ *   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
+ *
+ * The data shape matches org-data.json. To flatten to {id,parentId} pairs for a
+ * relational consumer, call flattenForSocket(TREE).
+ */
+function pushToSocket(data, url) {
+  if (!url) {
+    console.warn('[pushToSocket] No URL configured. Edit pushToSocket() to wire your endpoint.')
+    return
+  }
+  // === REPLACE THIS STUB with your transport ===
+  // Example (HTTP POST):
+  // return fetch(url, {
+  //   method: 'POST',
+  //   headers: { 'Content-Type': 'application/json' },
+  //   body: JSON.stringify(data),
+  // })
+  // Example (WebSocket):
+  // const ws = new WebSocket(url)
+  // return new Promise((resolve, reject) => {
+  //   ws.onopen = () => { ws.send(JSON.stringify(data)); ws.close(); resolve() }
+  //   ws.onerror = reject
+  // })
+  console.log('[pushToSocket STUB] Would push to', url, data)
+}
+
+/** Flatten nested tree into rows of {id, parentId, name, title, ...} (no children[]). */
+function flattenForSocket(node, acc = []) {
+  if (!node || !node.id) return acc
+  const { children, ...rest } = node
+  acc.push(rest)
+  ;(children || []).forEach(c => flattenForSocket(c, acc))
+  return acc
+}
+
+document.getElementById('btnPushSocket').addEventListener('click', () => {
+  const url = '' // ← fill in your endpoint here
+  if (!url) {
+    toast('No websocket URL configured. Edit pushToSocket() in the file.', true)
+    console.warn('Flat payload preview:', flattenForSocket(TREE))
+    return
+  }
+  pushToSocket(stripUiState(TREE), url)
+  toast('Pushed to ' + url)
+})
+
+// ─── Toast ───
+let toastTimer
+function toast(msg, isWarn = false) {
+  const el = document.getElementById('toast')
+  el.textContent = msg
+  el.classList.toggle('warn', !!isWarn)
+  el.classList.add('show')
+  clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2400)
+}
+
+// Initial render
+render()
+</script>
+
+</body>
+</html>
