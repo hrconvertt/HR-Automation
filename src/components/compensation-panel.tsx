@@ -10,15 +10,20 @@
  */
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Wallet, TrendingUp, Calendar, Lock,
-  Download, Pencil, Eye, ShieldCheck,
+  Download, Pencil, Eye, ShieldCheck, Trash2,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import EditSalaryDialog from './edit-salary-dialog'
+import CompensationHistoryEntryDialog from './compensation-history-entry-dialog'
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+} from '@/components/ui/dialog'
 
 type Salary = {
   basic: number
@@ -70,7 +75,29 @@ export default function CompensationPanel({
   history: HistoryRow[]
   access: Access
 }) {
+  const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
+  const [editingEntry, setEditingEntry] = useState<HistoryRow | null>(null)
+  const [deletingEntry, setDeletingEntry] = useState<HistoryRow | null>(null)
+  const [deletingBusy, setDeletingBusy] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
+
+  async function confirmDeleteEntry() {
+    if (!deletingEntry) return
+    setDeletingBusy(true)
+    setDeleteError('')
+    const res = await fetch(`/api/compensation/history/${deletingEntry.id}`, {
+      method: 'DELETE',
+    })
+    const data = await res.json().catch(() => ({}))
+    setDeletingBusy(false)
+    if (!res.ok) {
+      setDeleteError(data?.error ?? 'Failed to delete.')
+      return
+    }
+    setDeletingEntry(null)
+    router.refresh()
+  }
 
   const grossMonthly = currentSalary
     ? currentSalary.basic + currentSalary.houseRent + currentSalary.utilities +
@@ -249,13 +276,36 @@ export default function CompensationPanel({
                           ? ((c.newSalary - c.oldSalary) / c.oldSalary) * 100
                           : null
                       const positive = diff >= 0
+                      // Seeded "Hire" rows have no DB row to edit/delete.
+                      const isPersisted = !c.id.startsWith('seed-')
                       return (
-                        <li key={c.id} className="pl-6 relative">
+                        <li key={c.id} className="pl-6 relative group">
                           <span
                             className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full ring-4 ring-white ${
                               positive ? 'bg-emerald-500' : 'bg-rose-500'
                             }`}
                           />
+                          {/* Hover-revealed per-entry actions (HR only) */}
+                          {access.canEdit && isPersisted && (
+                            <div className="absolute right-0 top-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => setEditingEntry(c)}
+                                title="Edit this entry"
+                                className="p-1.5 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+                              >
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => { setDeleteError(''); setDeletingEntry(c) }}
+                                title="Delete this entry"
+                                className="p-1.5 rounded-md text-slate-500 hover:text-rose-700 hover:bg-rose-50"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                             <span className="text-xs font-semibold text-slate-700 tabular-nums">
                               {fmtDate(c.effectiveDate)}
@@ -340,7 +390,67 @@ export default function CompensationPanel({
           current={currentSalary}
         />
       )}
+
+      {/* Per-entry edit dialog */}
+      {access.canEdit && editingEntry && (
+        <CompensationHistoryEntryDialog
+          open={!!editingEntry}
+          onClose={() => setEditingEntry(null)}
+          entry={editingEntry}
+        />
+      )}
+
+      {/* Per-entry delete confirmation */}
+      {access.canEdit && deletingEntry && (
+        <DeleteEntryConfirm
+          entry={deletingEntry}
+          busy={deletingBusy}
+          error={deleteError}
+          onCancel={() => setDeletingEntry(null)}
+          onConfirm={confirmDeleteEntry}
+        />
+      )}
     </div>
+  )
+}
+
+function DeleteEntryConfirm({
+  entry, busy, error, onCancel, onConfirm,
+}: {
+  entry: HistoryRow
+  busy: boolean
+  error: string
+  onCancel: () => void
+  onConfirm: () => void
+}) {
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o && !busy) onCancel() }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Delete this comp history entry?</DialogTitle>
+          <p className="text-sm text-slate-600 mt-2">
+            This cannot be undone. The entry dated{' '}
+            <strong>{fmtDate(entry.effectiveDate)}</strong> will be removed
+            from the compensation timeline.
+          </p>
+        </DialogHeader>
+        {error && (
+          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
+            {error}
+          </p>
+        )}
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel} disabled={busy}>Cancel</Button>
+          <Button
+            onClick={onConfirm}
+            disabled={busy}
+            className="bg-rose-600 hover:bg-rose-700 text-white"
+          >
+            {busy ? 'Deleting…' : 'Delete Entry'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

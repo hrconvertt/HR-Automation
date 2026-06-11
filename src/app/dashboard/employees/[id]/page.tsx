@@ -9,6 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { verifyToken } from '@/lib/auth'
 import EditEmployeeButton from '@/components/edit-employee-button'
+import DeleteEmployeeButton from '@/components/delete-employee-button'
 import UploadDocumentButton from '@/components/upload-document-button'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
@@ -240,6 +241,12 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                 </Badge>
                 {isViewingOwn && employee.status === 'ACTIVE' && !employee.resignation && (
                   <ResignationButton employeeType={employee.employeeType} />
+                )}
+                {canEditFull && (
+                  <DeleteEmployeeButton
+                    employeeId={employee.id}
+                    employeeName={employee.fullName}
+                  />
                 )}
                 {canEdit && (
                   <EditEmployeeButton
