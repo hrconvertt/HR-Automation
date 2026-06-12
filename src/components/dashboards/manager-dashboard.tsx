@@ -5,6 +5,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Users, CalendarDays, Clock, Timer, ArrowUpRight, Cake } from 'lucide-react'
 import { formatDate, getInitials } from '@/lib/utils'
+import { ManagerAnalytics } from './manager-analytics'
 
 async function getManagerData(managerEmployeeId: string) {
   const now = new Date()
@@ -196,6 +197,9 @@ export async function ManagerDashboard({
           iconBg="bg-green-50"
         />
       </div>
+
+      {/* Richer analytics — Team Pulse / Health / Performance / Workload / Compensation */}
+      <ManagerAnalytics managerEmployeeId={managerEmployeeId} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* My Team — Today */}
