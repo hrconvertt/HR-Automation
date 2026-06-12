@@ -148,7 +148,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Capture old manager for ManagerHistory audit trail
     const prior = await prisma.employee.findUnique({
       where: { id },
-      select: { reportingManagerId: true, fullName: true },
+      select: { reportingManagerId: true, fullName: true, status: true, userId: true },
     })
 
     const employee = await prisma.employee.update({
@@ -185,6 +185,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         ...(typeof hideFromDirectory === 'boolean' ? { hideFromDirectory } : {}),
       },
     })
+
+    // Auto-disable login when status flips to INACTIVE (parallel to the
+    // existing RESIGNED/TERMINATED/ABSCONDED flows handled elsewhere).
+    if (status === 'INACTIVE' && prior?.status !== 'INACTIVE' && prior?.userId) {
+      await prisma.user.update({ where: { id: prior.userId }, data: { isActive: false } }).catch(() => {})
+    }
 
     // Log manager change (ManagerHistory) + notify affected parties.
     if (prior && reportingManagerId !== undefined && (prior.reportingManagerId ?? null) !== (reportingManagerId === '' ? null : reportingManagerId)) {

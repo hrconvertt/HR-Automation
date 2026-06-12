@@ -225,6 +225,7 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                       <SelectItem value="ACTIVE">Active</SelectItem>
                       <SelectItem value="PROBATION">Probation</SelectItem>
                       <SelectItem value="ON_LEAVE">On Leave</SelectItem>
+                      <SelectItem value="INACTIVE">Inactive</SelectItem>
                       <SelectItem value="RESIGNED">Resigned</SelectItem>
                       <SelectItem value="TERMINATED">Terminated</SelectItem>
                     </SelectContent>
