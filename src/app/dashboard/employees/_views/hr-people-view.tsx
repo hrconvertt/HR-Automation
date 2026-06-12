@@ -76,6 +76,7 @@ function avatarTone(name: string): string {
 export function HRPeopleView() {
   const [employees, setEmployees] = useState<Employee[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
+  const [designationOptions, setDesignationOptions] = useState<string[]>([])
   const [search, setSearch] = useState('')
   const [filterDept, setFilterDept] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
@@ -140,6 +141,11 @@ export function HRPeopleView() {
     fetch('/api/employees/departments')
       .then((r) => r.json())
       .then((d) => setDepartments(d.departments ?? []))
+    // Pull canonical designations for the combobox suggestions
+    fetch('/api/employees/designations')
+      .then((r) => r.json())
+      .then((d) => setDesignationOptions(d.designations ?? []))
+      .catch(() => {})
   }, [])
 
   // Refresh the auto-suggested employee code whenever the department
@@ -390,11 +396,22 @@ export function HRPeopleView() {
                 <label className="block text-sm font-medium text-slate-700 mb-1">
                   Designation *
                 </label>
+                {/* Combobox: type to add new OR pick from existing designations.
+                    Uses a native <datalist> for accessibility + zero extra deps. */}
                 <Input
+                  list="designation-options"
                   value={form.designation}
                   onChange={(e) => setForm({ ...form, designation: e.target.value })}
-                  placeholder="Software Engineer"
+                  placeholder="Pick existing or type a new one…"
                 />
+                <datalist id="designation-options">
+                  {designationOptions.map((d) => (
+                    <option key={d} value={d} />
+                  ))}
+                </datalist>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Suggestions from current employees. Type to create a new designation.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Department</label>

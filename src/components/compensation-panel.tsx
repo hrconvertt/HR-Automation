@@ -34,6 +34,7 @@ type Salary = {
   medicalAllowance: number
   otherAllowance: number
   effectiveFrom?: Date | string
+  monthlyPayDay?: number | null
 }
 
 type HistoryRow = {
@@ -77,6 +78,7 @@ export default function CompensationPanel({
 }) {
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
+  const [addHistoryOpen, setAddHistoryOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<HistoryRow | null>(null)
   const [deletingEntry, setDeletingEntry] = useState<HistoryRow | null>(null)
   const [deletingBusy, setDeletingBusy] = useState(false)
@@ -147,15 +149,26 @@ export default function CompensationPanel({
             </Button>
           )}
           {access.canEdit && currentSalary && (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setEditOpen(true)}
-              title="Override pay components — useful when payroll auto-calculation needs a mid-cycle or retroactive adjustment."
-            >
-              <Pencil className="w-3.5 h-3.5 mr-1.5" />
-              Edit Pay Components
-            </Button>
+            <>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setAddHistoryOpen(true)}
+                title="Backfill a past compensation entry (e.g. last year's salary at hire) without changing the current cycle."
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                Add History Entry
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setEditOpen(true)}
+                title="Override pay components — useful when payroll auto-calculation needs a mid-cycle or retroactive adjustment."
+              >
+                <Pencil className="w-3.5 h-3.5 mr-1.5" />
+                Edit Pay Components
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -388,6 +401,20 @@ export default function CompensationPanel({
           employeeId={employeeId}
           employeeName={employeeName}
           current={currentSalary}
+        />
+      )}
+
+      {/* Backfill historical entry — separate dialog instance in add-history
+          mode so the "no changes" guard is bypassed and effective date is
+          a required PAST date. */}
+      {access.canEdit && (
+        <EditSalaryDialog
+          open={addHistoryOpen}
+          onClose={() => setAddHistoryOpen(false)}
+          employeeId={employeeId}
+          employeeName={employeeName}
+          current={currentSalary}
+          mode="add-history"
         />
       )}
 

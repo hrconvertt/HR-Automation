@@ -32,6 +32,7 @@ type Salary = {
   fuel: number
   medicalAllowance: number
   otherAllowance: number
+  monthlyPayDay?: number | null
 } | null
 
 interface Props {
@@ -40,6 +41,11 @@ interface Props {
   employeeId: string
   employeeName: string
   current: Salary
+  // 'edit-current'  — modify the current Salary record (default)
+  // 'add-history'   — backfill a historical CompensationHistory entry; the
+  //                   "no changes to save" guard is skipped because the
+  //                   intent is to record past data, not to change anything
+  mode?: 'edit-current' | 'add-history'
 }
 
 const CHANGE_TYPES = [
@@ -51,11 +57,12 @@ const CHANGE_TYPES = [
 ]
 
 export default function EditSalaryDialog({
-  open, onClose, employeeId, employeeName, current,
+  open, onClose, employeeId, employeeName, current, mode = 'edit-current',
 }: Props) {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const isAddHistory = mode === 'add-history'
 
   const [form, setForm] = useState({
     basic:             current?.basic            ?? 0,
@@ -65,11 +72,12 @@ export default function EditSalaryDialog({
     fuel:              current?.fuel             ?? 0,
     medicalAllowance:  current?.medicalAllowance ?? 0,
     otherAllowance:    current?.otherAllowance   ?? 0,
-    effectiveFrom: new Date().toISOString().split('T')[0],
-    type: current ? 'INCREMENT' : 'INITIAL',
+    effectiveFrom: isAddHistory ? '' : new Date().toISOString().split('T')[0],
+    type: isAddHistory ? 'INCREMENT' : (current ? 'INCREMENT' : 'INITIAL'),
     reason: '',
-    notifyInApp: true,
-    notifyEmail: true,
+    notifyInApp: !isAddHistory,
+    notifyEmail: !isAddHistory,
+    monthlyPayDay: current?.monthlyPayDay ?? '' as number | '',
   })
 
   const oldGross = useMemo(() => current
@@ -135,19 +143,41 @@ export default function EditSalaryDialog({
   async function handleSave() {
     setError('')
     if (form.basic <= 0) { setError('Basic salary must be greater than zero.'); return }
-    if (current && diff === 0) {
-      setError('No changes to save. Adjust at least one pay component first.'); return
+
+    if (isAddHistory) {
+      // Backfill mode: NO "no changes" guard — HR is recording past data.
+      if (!form.effectiveFrom) {
+        setError('Effective date is required when adding a historical entry.'); return
+      }
+      const eff = new Date(form.effectiveFrom)
+      if (eff > new Date()) {
+        setError('Historical effective date must be in the past.'); return
+      }
+    } else {
+      if (current && diff === 0) {
+        setError('No changes to save. Adjust at least one pay component first.'); return
+      }
+      if (current && !form.reason.trim()) {
+        setError('Please provide a reason for this compensation change.'); return
+      }
     }
-    if (current && !form.reason.trim()) {
-      setError('Please provide a reason for this compensation change.'); return
+
+    // Validate monthlyPayDay if provided (1–31)
+    if (form.monthlyPayDay !== '' && (form.monthlyPayDay < 1 || form.monthlyPayDay > 31)) {
+      setError('Monthly pay date must be between 1 and 31.'); return
     }
+
     setSaving(true)
-    const res = await fetch(`/api/employees/${employeeId}/salary`, {
-      method: 'PUT',
+    const endpoint = isAddHistory
+      ? `/api/employees/${employeeId}/salary/history`
+      : `/api/employees/${employeeId}/salary`
+    const res = await fetch(endpoint, {
+      method: isAddHistory ? 'POST' : 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...form,
-        notifyEmployee: form.notifyInApp || form.notifyEmail,
+        monthlyPayDay: form.monthlyPayDay === '' ? null : Number(form.monthlyPayDay),
+        notifyEmployee: !isAddHistory && (form.notifyInApp || form.notifyEmail),
       }),
     })
     const data = await res.json()
@@ -165,7 +195,11 @@ export default function EditSalaryDialog({
         <div className="bg-gradient-to-r from-slate-900 to-slate-800 text-white px-6 py-5">
           <DialogHeader>
             <DialogTitle className="text-white text-lg">
-              {current ? 'Request Compensation Change' : 'Set Initial Compensation'}
+              {isAddHistory
+                ? 'Add Historical Compensation Entry'
+                : current
+                  ? 'Request Compensation Change'
+                  : 'Set Initial Compensation'}
             </DialogTitle>
             <p className="text-sm text-slate-300 mt-1">
               {employeeName} · This change will be logged and{' '}
@@ -193,16 +227,37 @@ export default function EditSalaryDialog({
                 {selectedType && <p className="text-[11px] text-slate-500 mt-1">{selectedType.hint}</p>}
               </div>
               <div>
-                <Label>Effective From</Label>
+                <Label>Effective From {isAddHistory && <span className="text-red-500">*</span>}</Label>
                 <Input
                   type="date"
                   value={form.effectiveFrom}
                   onChange={(e) => f('effectiveFrom', e.target.value)}
+                  max={isAddHistory ? new Date().toISOString().split('T')[0] : undefined}
                 />
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Applied to the next payroll run on or after this date.
+                  {isAddHistory
+                    ? 'Past date this compensation took effect.'
+                    : 'Applied to the next payroll run on or after this date.'}
                 </p>
               </div>
+            </div>
+            <div className="mt-3">
+              <Label>Monthly Pay Date (optional)</Label>
+              <Input
+                type="number"
+                min={1}
+                max={31}
+                value={form.monthlyPayDay}
+                onChange={(e) => {
+                  const v = e.target.value
+                  f('monthlyPayDay', v === '' ? '' as never : (parseInt(v, 10) || '' as never))
+                }}
+                placeholder="e.g. 5 (paid on the 5th)"
+                className="w-40 tabular-nums"
+              />
+              <p className="text-[11px] text-slate-500 mt-1">
+                Day-of-month the salary is paid. Leave blank to inherit the org default.
+              </p>
             </div>
             <div className="mt-3">
               <Label>Reason / Justification {current && <span className="text-red-500">*</span>}</Label>
@@ -292,7 +347,9 @@ export default function EditSalaryDialog({
               Other deductions (loans, advances, healthcare) are applied at payroll-run time.
             </p>
 
-            {/* Notification controls */}
+            {/* Notification controls — hidden in add-history mode (we're
+                recording past data, not announcing a change) */}
+            {!isAddHistory && (
             <div className="mt-4 border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50/50">
               <p className="text-[11px] uppercase tracking-wider text-slate-600 font-semibold">
                 Communication
@@ -319,6 +376,7 @@ export default function EditSalaryDialog({
                 The audit log is always written regardless of notification choice.
               </p>
             </div>
+            )}
           </section>
 
           {error && (
@@ -335,7 +393,7 @@ export default function EditSalaryDialog({
             disabled={saving}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {saving ? 'Saving…' : current ? 'Submit Change' : 'Set Salary'}
+            {saving ? 'Saving…' : isAddHistory ? 'Add History Entry' : current ? 'Submit Change' : 'Set Salary'}
           </Button>
         </DialogFooter>
       </DialogContent>

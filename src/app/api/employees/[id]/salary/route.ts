@@ -47,7 +47,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const {
       basic, houseRent, utilities, food, fuel, medicalAllowance, otherAllowance,
-      effectiveFrom, type, reason, notifyEmployee,
+      effectiveFrom, type, reason, notifyEmployee, monthlyPayDay,
     } = body
 
     // Validate
@@ -69,6 +69,13 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     // Upsert salary + write history row in one transaction
     const result = await prisma.$transaction(async (tx) => {
+      // Normalise monthlyPayDay (1–31, or null to clear)
+      const payDay = monthlyPayDay == null
+        ? null
+        : Number.isFinite(Number(monthlyPayDay)) && Number(monthlyPayDay) >= 1 && Number(monthlyPayDay) <= 31
+          ? Number(monthlyPayDay)
+          : null
+
       const salary = await tx.salary.upsert({
         where: { employeeId: id },
         update: {
@@ -76,6 +83,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           food: food ?? 0, fuel: fuel ?? 0,
           medicalAllowance: medicalAllowance ?? 0, otherAllowance: otherAllowance ?? 0,
           effectiveFrom: effective,
+          monthlyPayDay: payDay,
         },
         create: {
           employeeId: id,
@@ -83,6 +91,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
           food: food ?? 0, fuel: fuel ?? 0,
           medicalAllowance: medicalAllowance ?? 0, otherAllowance: otherAllowance ?? 0,
           effectiveFrom: effective,
+          monthlyPayDay: payDay,
         },
       })
 

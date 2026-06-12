@@ -460,6 +460,10 @@ model Salary {
   medicalAllowance Float @default(0)
   otherAllowance   Float @default(0)
   effectiveFrom DateTime
+  // Day-of-month salary is paid (e.g. 5 = paid on the 5th). HR-configurable per
+  // employee — most Convertt staff are paid on the 5th, but contractors and
+  // legacy hires sometimes have different cycles.
+  monthlyPayDay Int?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -661,7 +665,14 @@ model PerformanceReview {
   learnings         String?
   teamContribution  String?
   managerFeedback   String?
-  status            String   @default("PENDING") // PENDING | SELF_SUBMITTED | MANAGER_REVIEWED | HR_FINALIZED
+  status            String   @default("PENDING") // PENDING | SELF_SUBMITTED | MANAGER_REVIEWED | HR_CALIBRATED | HR_FINALIZED | RELEASED
+
+  // HR calibration step — between MANAGER_REVIEWED and HR_FINALIZED, HR can
+  // normalise overall ratings across managers + add calibration notes. Then
+  // "Release Reviews" releases the whole cycle to employees in one batch.
+  calibratedAt      DateTime?
+  calibrationNotes  String?
+  releasedAt        DateTime?  // set when the cycle is released to employees
 
   // ─── Time & Work auto-metrics (computed from Attendance + Goals over cycle window) ───
   cycleStartDate    DateTime?
@@ -724,8 +735,17 @@ model ShowCause {
   followUpDate  DateTime?
   outcome       String?
 
+  // Severity label — surfaced on the Show Cause card, drives default deadline length
+  severity      String   @default("MINOR") // MINOR | MODERATE | SEVERE
+
+  // Cross-module linkage. Lets a ShowCause point back to the source that
+  // triggered it. Format: `<MODULE>:<id>` e.g. "PROBATION:cuid_xxx",
+  // "PERFORMANCE_REVIEW:cuid_xxx", "ATTENDANCE_PATTERN:2026-01_2026-02".
+  // The UI links back to the source on the ShowCause detail page.
+  relatedRef    String?
+
   // Stage machine
-  status        String   @default("MEETING_REQUESTED") // MEETING_REQUESTED | MEETING_HELD | SHOW_CAUSE_REQUESTED | ISSUED | RESPONDED | RESOLVED | ESCALATED_TO_PIP
+  status        String   @default("MEETING_REQUESTED") // MEETING_REQUESTED | MEETING_HELD | SHOW_CAUSE_REQUESTED | ISSUED | RESPONDED | RESOLVED | ESCALATED_TO_PIP | ESCALATED_TERMINATION
 
   isDemo        Boolean  @default(false)
   createdAt     DateTime @default(now())
