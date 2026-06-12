@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     employee?: { reportingManagerId: string }
     status?: { in: string[] }
   } = {}
-  const FINALIZED = ['APPROVED', 'RELEASED', 'FINALIZED']
+  const FINALIZED = ['APPROVED', 'RELEASED', 'FINALIZED', 'PAID', 'SENT']
   if (effectiveRole === 'EMPLOYEE') {
     if (!employeeId) return NextResponse.json({ payrollRun: null })
     payslipWhere = { employeeId, status: { in: FINALIZED } }
@@ -67,6 +67,7 @@ export async function GET(request: NextRequest) {
         },
         orderBy: { employee: { fullName: 'asc' } },
       },
+      approvals: { orderBy: { createdAt: 'asc' } },
     },
   })
 

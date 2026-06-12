@@ -59,7 +59,7 @@ model UserRole {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   // HR_ADMIN | MANAGER | EMPLOYEE | EXECUTIVE
+  role      String   // HR_ADMIN | MANAGER | EMPLOYEE | EXECUTIVE | FINANCE
   assignedAt DateTime @default(now())
   assignedBy String?  // userId of who granted this role
 
@@ -483,15 +483,20 @@ model PayrollRun {
   id            String    @id @default(cuid())
   month         Int
   year          Int
-  // Workday-style stage machine:
-  //   DRAFT → CALCULATED → MANAGER_CONFIRMED → FINANCE_REVIEWED → APPROVED → LOCKED → DISBURSED → CLOSED
-  // (Plus REJECTED — sent back from any approval stage.)
+  // Active multi-stage flow (HR-driven, replaces legacy 8-stage Workday chain):
+  //   DRAFT → PENDING_CEO → PENDING_HR_FINAL → PENDING_FINANCE → PAID
+  //   (Plus REJECTED + Send-Back returns one stage with a reason.)
+  //
+  // Legacy values still in DB on historical rows: CALCULATED, MANAGER_CONFIRMED,
+  // FINANCE_REVIEWED, APPROVED, LOCKED, DISBURSED, CLOSED — all treated as
+  // completed/historical (effectively PAID) by the new UI. Migrate via
+  // scripts/migrate-payroll-status.js.
   status        String    @default("DRAFT")
   totalGross    Float     @default(0)
   totalNet      Float     @default(0)
   totalEOBI     Float     @default(0)
   totalTax      Float     @default(0)
-  // Approval tracking (latest values; full history in PayrollRunApproval)
+  // Approval tracking — legacy fields (kept for back-compat + read by old reports)
   calculatedAt        DateTime?
   managerConfirmedAt  DateTime?
   financeReviewedAt   DateTime?
@@ -501,6 +506,22 @@ model PayrollRun {
   disbursedAt         DateTime?
   closedAt            DateTime?
   sentAt              DateTime?
+  // ─── New 5-stage approval timeline ───
+  submittedToCeoAt    DateTime?
+  submittedToCeoById  String?
+  ceoReviewedAt       DateTime?
+  ceoReviewedById     String?
+  ceoNotes            String?
+  returnedToHrAt      DateTime?
+  hrFinalApprovedAt   DateTime?
+  hrFinalApprovedById String?
+  releasedToFinanceAt DateTime?
+  financePaidAt       DateTime?
+  financePaidById     String?
+  // Send-Back — captures the most recent send-back; full history is in PayrollRunApproval
+  sendBackReason      String?
+  sendBackAt          DateTime?
+  sendBackById        String?
   payslips            Payslip[]
   approvals           PayrollRunApproval[]
   createdAt           DateTime  @default(now())

@@ -3,6 +3,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Users, Wallet, Banknote, TrendingUp, Landmark, ShieldCheck } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { CeoReviewPanel } from './ceo-review-panel'
 
 const monthName = (m: number) =>
   new Date(2000, m - 1, 1).toLocaleDateString('en-GB', { month: 'short' })
@@ -12,6 +13,13 @@ async function getExecutivePayrollData() {
   const month = now.getMonth() + 1
   const year = now.getFullYear()
   const currentYear = year
+
+  // Find a payroll run currently awaiting CEO review (any month).
+  const pendingCeoRun = await prisma.payrollRun.findFirst({
+    where: { status: 'PENDING_CEO' },
+    select: { id: true, month: true, year: true, totalNet: true, totalGross: true },
+    orderBy: [{ year: 'desc' }, { month: 'desc' }],
+  })
 
   const [currentRun, last12Runs, ytdRuns, headcount, deptPayslips] = await Promise.all([
     prisma.payrollRun.findFirst({
@@ -87,6 +95,7 @@ async function getExecutivePayrollData() {
     last12Runs,
     deptCosts,
     maxDept,
+    pendingCeoRun,
   }
 }
 
@@ -102,6 +111,17 @@ export async function ExecutivePayrollView() {
           Strategic payroll insights — no individual payslip data shown.
         </p>
       </div>
+
+      {/* CEO action panel — only shows when a run is awaiting CEO review */}
+      {data.pendingCeoRun && (
+        <CeoReviewPanel
+          runId={data.pendingCeoRun.id}
+          month={data.pendingCeoRun.month}
+          year={data.pendingCeoRun.year}
+          totalNet={data.pendingCeoRun.totalNet}
+          totalGross={data.pendingCeoRun.totalGross}
+        />
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -1,14 +1,13 @@
 'use client'
 
 /**
- * HR Payroll view — AutoPilot style.
+ * HR Payroll view — multi-stage approval workflow.
  *
- *   Status pill: Draft or Finalized.
- *   No multi-stage approval chain. HR sees only what's different from last month,
- *   reviews the anomalies, and clicks one button to approve.
+ *   Pipeline:
+ *     DRAFT → Pending CEO → Pending HR Final → Pending Finance → Paid
  *
- *   The legacy `/transition` API + multi-stage workflow still exist but are
- *   unused here — they can be re-enabled if Convertt grows a Finance team.
+ *   Action buttons gate dynamically by current user roles + stage. Activity
+ *   timeline reads from PayrollRunApproval rows.
  */
 
 import { useState, useEffect, useCallback } from 'react'
@@ -20,42 +19,48 @@ import {
 } from '@/components/ui/table'
 import { formatCurrency } from '@/lib/utils'
 import {
-  Download, Wallet, Banknote, Receipt, Landmark, ShieldCheck,
-  AlertTriangle, CheckCircle2, RefreshCw, Sparkles, Lock, Unlock, Pencil,
+  Download, Wallet, Banknote, Landmark, ShieldCheck,
+  AlertTriangle, CheckCircle2, RefreshCw, Sparkles, Pencil,
+  Send, FileCheck, Undo2, FileSpreadsheet, BadgeCheck,
 } from 'lucide-react'
 import { safeFetch } from '@/lib/safe-fetch'
 import { AdjustPayslipDialog, type AdjustablePayslip } from '@/components/payroll/adjust-payslip-dialog'
+import {
+  PAYROLL_STAGES,
+  stageIndex,
+  stageLabel,
+  canEditPayslipsAtStage,
+  sendBackAllowedRoles,
+} from '@/lib/payroll-workflow'
 
 interface Payslip {
   id: string
   employeeId: string
   employee: { fullName: string; employeeCode: string; designation: string }
   basic: number
-  houseRent: number
-  utilities: number
-  food: number
-  fuel: number
-  medicalAllowance: number
-  otherAllowance: number
-  overtimePay: number
-  bonus: number
-  leaveEncashment: number
-  arrears: number
-  allowances: number
-  grossPay: number
-  grossSalary: number
-  eobi: number
-  incomeTax: number
-  providentFund: number
-  healthcare: number
-  loanDeduction: number
-  advanceDeduction: number
-  otherDeductions: number
-  netPay: number
-  netSalary: number
+  houseRent: number; utilities: number; food: number; fuel: number
+  medicalAllowance: number; otherAllowance: number
+  overtimePay: number; bonus: number
+  leaveEncashment: number; arrears: number
+  allowances: number; grossPay: number; grossSalary: number
+  eobi: number; incomeTax: number
+  providentFund: number; healthcare: number
+  loanDeduction: number; advanceDeduction: number; otherDeductions: number
+  netPay: number; netSalary: number
   status: string
   isAdjusted: boolean
   adjustmentNote: string | null
+}
+
+interface ApprovalRow {
+  id: string
+  fromStatus: string
+  toStatus: string
+  action: string
+  actorName: string | null
+  actorRole: string | null
+  comment: string | null
+  createdAt: string
 }
 
 interface PayrollRun {
@@ -68,6 +73,8 @@ interface PayrollRun {
   totalEOBI: number
   totalTax: number
   payslips: Payslip[]
+  approvals?: ApprovalRow[]
+  sendBackReason?: string | null
 }
 
 interface Anomaly {
@@ -88,6 +95,12 @@ interface AnomaliesResponse {
   priorMonth: { month: number; year: number } | null
 }
 
+interface MeResponse {
+  userId: string
+  roles: string[]
+  primaryRole: string
+}
+
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 const KIND_META: Record<Anomaly['kind'], { label: string; icon: string }> = {
@@ -98,17 +111,41 @@ const KIND_META: Record<Anomaly['kind'], { label: string; icon: string }> = {
   NO_PRIOR:       { label: 'No comparison',   icon: 'ℹ️' },
 }
 
+const ACTION_LABEL: Record<string, string> = {
+  SUBMIT_TO_CEO: 'Submitted to CEO',
+  CEO_APPROVE: 'CEO approved',
+  HR_FINAL_APPROVE: 'HR final approval',
+  RELEASE_TO_FINANCE: 'Released to Finance',
+  MARK_PAID: 'Marked as Paid',
+  SEND_BACK: 'Sent back',
+  // legacy
+  CALCULATE: 'Calculated',
+  CONFIRM: 'Manager confirmed',
+  REVIEW: 'Finance reviewed',
+  APPROVE: 'Approved (legacy)',
+  LOCK: 'Locked',
+  DISBURSE: 'Disbursed',
+  CLOSE: 'Closed',
+  REJECT: 'Rejected',
+}
+
 export function HRPayrollView() {
   const now = new Date()
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [year, setYear] = useState(now.getFullYear())
   const [payrollRun, setPayrollRun] = useState<PayrollRun | null>(null)
   const [anomalies, setAnomalies] = useState<AnomaliesResponse | null>(null)
+  const [me, setMe] = useState<MeResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState(false)
-
-  // Adjustment dialog state
   const [adjustTarget, setAdjustTarget] = useState<AdjustablePayslip | null>(null)
+  const [sendBackOpen, setSendBackOpen] = useState(false)
+  const [sendBackReason, setSendBackReason] = useState('')
+
+  const fetchMe = useCallback(async () => {
+    const r = await safeFetch<MeResponse>('/api/auth/me')
+    if (r.ok) setMe(r.data)
+  }, [])
 
   const fetchPayroll = useCallback(async () => {
     setLoading(true)
@@ -124,7 +161,14 @@ export function HRPayrollView() {
     setLoading(false)
   }, [month, year])
 
+  useEffect(() => { fetchMe() }, [fetchMe])
   useEffect(() => { fetchPayroll() }, [fetchPayroll])
+
+  const roles = me?.roles ?? []
+  const isHR = roles.includes('HR_ADMIN')
+  const isFinance = roles.includes('FINANCE')
+  const status = payrollRun?.status ?? 'DRAFT'
+  const canEdit = canEditPayslipsAtStage(status, roles)
 
   async function handleGenerate() {
     setBusy(true)
@@ -147,18 +191,43 @@ export function HRPayrollView() {
     fetchPayroll()
   }
 
-  async function handleApprove() {
+  async function handleTransition(action: string, reason?: string, confirmMsg?: string) {
     if (!payrollRun) return
-    if (!confirm(`Finalize payroll for ${months[month - 1]} ${year}? Payslips become visible to all employees and the run is locked.`)) return
+    if (confirmMsg && !confirm(confirmMsg)) return
     setBusy(true)
-    const r = await safeFetch(`/api/payroll/${payrollRun.id}/approve`, { method: 'POST' })
+    const r = await safeFetch(`/api/payroll/${payrollRun.id}/transition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, reason }),
+    })
     setBusy(false)
-    if (!r.ok) alert(r.error ?? 'Failed to approve')
+    if (!r.ok) {
+      alert(r.error ?? 'Action failed')
+      return
+    }
     fetchPayroll()
   }
 
-  const isDraft = payrollRun?.status === 'DRAFT'
-  const isFinal = payrollRun && payrollRun.status !== 'DRAFT'
+  function handleSendBack() {
+    if (!payrollRun) return
+    const trimmed = sendBackReason.trim()
+    if (trimmed.length < 3) {
+      alert('Please provide a reason for sending back.')
+      return
+    }
+    setSendBackOpen(false)
+    setSendBackReason('')
+    handleTransition('SEND_BACK', trimmed)
+  }
+
+  function downloadIBFT() {
+    if (!payrollRun) return
+    window.open(`/api/payroll/${payrollRun.id}/export-ibft`, '_blank')
+  }
+
+  const canSendBack = payrollRun
+    ? sendBackAllowedRoles(status).some((r) => roles.includes(r))
+    : false
 
   return (
     <div className="space-y-6">
@@ -168,25 +237,35 @@ export function HRPayrollView() {
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
             <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-600" /> Payroll — AutoPilot
+              <Sparkles className="w-5 h-5 text-blue-600" /> Payroll — Multi-Stage Approval
             </h2>
             <p className="text-sm text-slate-600 mt-1">
-              The system prepares each month&apos;s payroll automatically. You only review what changed.
+              HR prepares, CEO reviews, HR finalises, Finance pays out.
             </p>
           </div>
           {payrollRun && (
-            <Badge
-              variant={isFinal ? 'success' : 'warning'}
-              className="text-sm px-3 py-1 inline-flex items-center gap-1.5"
-            >
-              {isFinal ? <Lock className="w-3.5 h-3.5" /> : <RefreshCw className="w-3.5 h-3.5" />}
-              {isFinal ? 'Finalized' : 'Draft'}
+            <Badge className="text-sm px-3 py-1 inline-flex items-center gap-1.5">
+              {stageLabel(status)}
             </Badge>
           )}
         </div>
       </div>
 
-      {/* Period selector */}
+      {/* Pipeline indicator */}
+      {payrollRun && <StagePipeline status={status} run={payrollRun} />}
+
+      {/* Send-back banner */}
+      {payrollRun?.sendBackReason && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+          <Undo2 className="w-4 h-4 text-amber-600 mt-0.5" />
+          <div className="text-sm">
+            <p className="font-semibold text-amber-900">Last sent back:</p>
+            <p className="text-amber-800">{payrollRun.sendBackReason}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Period selector + action buttons */}
       <Card className="rounded-2xl">
         <div className="flex items-center justify-between gap-3 p-5 flex-wrap">
           <div className="flex items-center gap-3 flex-wrap">
@@ -205,36 +284,123 @@ export function HRPayrollView() {
               {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            {!payrollRun && (
+          <div className="flex items-center gap-2 flex-wrap">
+            {!payrollRun && isHR && (
               <Button onClick={handleGenerate} disabled={busy}>
                 <Sparkles className="w-4 h-4 mr-1.5" />
                 {busy ? 'Preparing…' : `Prepare ${months[month - 1]} ${year} Payroll`}
               </Button>
             )}
-            {isDraft && (
+
+            {/* Stage-specific actions */}
+            {payrollRun && status === 'DRAFT' && isHR && (
               <>
                 <Button onClick={handleRecompute} disabled={busy} variant="outline">
-                  <RefreshCw className="w-4 h-4 mr-1.5" />
-                  {busy ? 'Recomputing…' : 'Recompute'}
+                  <RefreshCw className="w-4 h-4 mr-1.5" /> Recompute
                 </Button>
-                <Button onClick={handleApprove} disabled={busy} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                  <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                  {busy ? 'Approving…' : 'Approve & Send'}
+                <Button
+                  onClick={() => handleTransition(
+                    'SUBMIT_TO_CEO', undefined,
+                    `Submit ${months[month - 1]} ${year} payroll for CEO review?`,
+                  )}
+                  disabled={busy}
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  <Send className="w-4 h-4 mr-1.5" /> Submit to CEO
                 </Button>
               </>
             )}
-            {isFinal && (
-              <Button disabled variant="outline">
-                <Unlock className="w-4 h-4 mr-1.5 opacity-50" /> Finalized
+
+            {payrollRun && status === 'PENDING_CEO' && isHR && (
+              <Badge variant="warning" className="px-3 py-1">Awaiting CEO review</Badge>
+            )}
+
+            {payrollRun && status === 'PENDING_HR_FINAL' && isHR && (
+              <Button
+                onClick={() => handleTransition(
+                  'HR_FINAL_APPROVE', undefined,
+                  `Final approval and release to Finance for ${months[month - 1]} ${year}?`,
+                )}
+                disabled={busy}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              >
+                <FileCheck className="w-4 h-4 mr-1.5" /> Approve &amp; Release to Finance
+              </Button>
+            )}
+
+            {payrollRun && status === 'PENDING_FINANCE' && (
+              <>
+                <Button onClick={downloadIBFT} variant="outline">
+                  <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
+                </Button>
+                {(isFinance || isHR) && (
+                  <Button
+                    onClick={() => handleTransition(
+                      'MARK_PAID', undefined,
+                      `Mark ${months[month - 1]} ${year} payroll as PAID? Employees will see their payslips.`,
+                    )}
+                    disabled={busy}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                  >
+                    <BadgeCheck className="w-4 h-4 mr-1.5" /> Mark as Paid
+                  </Button>
+                )}
+              </>
+            )}
+
+            {payrollRun && status === 'PAID' && (
+              <Button onClick={downloadIBFT} variant="outline">
+                <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
+              </Button>
+            )}
+
+            {/* Legacy / historical paid runs — show download */}
+            {payrollRun && ['APPROVED','LOCKED','DISBURSED','CLOSED'].includes(status) && (
+              <Button onClick={downloadIBFT} variant="outline">
+                <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
+              </Button>
+            )}
+
+            {payrollRun && canSendBack && status !== 'DRAFT' && status !== 'PAID' && (
+              <Button
+                onClick={() => setSendBackOpen(true)}
+                disabled={busy}
+                variant="outline"
+                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+              >
+                <Undo2 className="w-4 h-4 mr-1.5" /> Send Back
               </Button>
             )}
           </div>
         </div>
       </Card>
 
-      {/* Anomalies — only when in draft AND there's data */}
-      {payrollRun && isDraft && anomalies && (
+      {/* Send-back dialog */}
+      {sendBackOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setSendBackOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-900">Send Back</h3>
+            <p className="text-sm text-slate-600">
+              The payroll will return to the previous stage. The reason is shared with the prior reviewer.
+            </p>
+            <textarea
+              value={sendBackReason}
+              onChange={(e) => setSendBackReason(e.target.value)}
+              placeholder="Why are you sending this back?"
+              className="w-full min-h-[100px] px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+            />
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => { setSendBackOpen(false); setSendBackReason('') }}>Cancel</Button>
+              <Button onClick={handleSendBack} className="bg-amber-600 hover:bg-amber-700 text-white">
+                <Undo2 className="w-4 h-4 mr-1.5" /> Send Back
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Anomalies — only when in DRAFT */}
+      {payrollRun && status === 'DRAFT' && anomalies && (
         <Card className="rounded-2xl">
           <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -273,12 +439,7 @@ export function HRPayrollView() {
                       </div>
                       <p className="text-xs text-slate-600 mt-0.5">{a.summary}</p>
                     </div>
-                    <a
-                      href={`/dashboard/payroll/payslip/${a.payslipId}`}
-                      className="text-xs text-blue-600 hover:underline shrink-0"
-                    >
-                      View payslip →
-                    </a>
+                    <a href={`/dashboard/payroll/payslip/${a.payslipId}`} className="text-xs text-blue-600 hover:underline shrink-0">View payslip →</a>
                   </li>
                 )
               })}
@@ -336,7 +497,7 @@ export function HRPayrollView() {
                       </div>
                       {p.isAdjusted && (
                         <span
-                          title={p.adjustmentNote ?? 'Manually adjusted by HR'}
+                          title={p.adjustmentNote ?? 'Manually adjusted'}
                           className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100"
                         >
                           <Pencil className="w-2.5 h-2.5" /> Adjusted
@@ -355,7 +516,7 @@ export function HRPayrollView() {
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      {isDraft && (
+                      {canEdit && (
                         <button
                           onClick={() => setAdjustTarget({
                             id: p.id,
@@ -373,7 +534,7 @@ export function HRPayrollView() {
                             isAdjusted: p.isAdjusted, adjustmentNote: p.adjustmentNote,
                           })}
                           className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                          title="Adjust payslip (add bonus, encashment, PF, etc.)"
+                          title="Adjust payslip"
                         >
                           <Pencil className="w-3.5 h-3.5" />
                         </button>
@@ -394,7 +555,41 @@ export function HRPayrollView() {
         </Table>
       </Card>
 
-      {/* Adjust payslip dialog — mounted when HR clicks a row's pencil */}
+      {/* Activity timeline */}
+      {payrollRun && payrollRun.approvals && payrollRun.approvals.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle>Activity</CardTitle>
+          </CardHeader>
+          <ol className="px-5 pb-5 space-y-3">
+            {payrollRun.approvals.map((a) => (
+              <li key={a.id} className="flex items-start gap-3 text-sm">
+                <span className="mt-0.5 w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <div className="flex-1">
+                  <p className="text-slate-900">
+                    <span className="font-semibold">{ACTION_LABEL[a.action] ?? a.action}</span>
+                    {a.actorName && <> · <span>{a.actorName}</span></>}
+                    {a.actorRole && <span className="text-slate-400"> ({a.actorRole})</span>}
+                  </p>
+                  <p className="text-xs text-slate-500">
+                    {new Date(a.createdAt).toLocaleString('en-GB', {
+                      dateStyle: 'medium', timeStyle: 'short',
+                    })}
+                    {' · '}{a.fromStatus} → {a.toStatus}
+                  </p>
+                  {a.comment && (
+                    <p className="text-xs text-slate-700 mt-1 px-3 py-1.5 rounded bg-slate-50 border border-slate-100">
+                      “{a.comment}”
+                    </p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ol>
+        </Card>
+      )}
+
+      {/* Adjust payslip dialog */}
       {adjustTarget && (
         <AdjustPayslipDialog
           payslip={adjustTarget}
@@ -405,6 +600,64 @@ export function HRPayrollView() {
       )}
     </div>
   )
+}
+
+/** 5-stage pipeline indicator. */
+function StagePipeline({ status, run }: { status: string; run: PayrollRun }) {
+  const currentIdx = stageIndex(status)
+  return (
+    <Card className="rounded-2xl">
+      <div className="p-5">
+        <div className="flex items-center justify-between gap-2">
+          {PAYROLL_STAGES.map((s, i) => {
+            const isDone = i < currentIdx || status === 'PAID'
+            const isCurrent = i === currentIdx && status !== 'PAID'
+            const dotClass = isDone
+              ? 'bg-emerald-500 text-white'
+              : isCurrent
+                ? 'bg-blue-500 text-white ring-4 ring-blue-100 animate-pulse'
+                : 'bg-slate-200 text-slate-500'
+            const labelClass = isDone || isCurrent ? 'text-slate-900 font-semibold' : 'text-slate-400'
+            return (
+              <div key={s} className="flex-1 flex items-center min-w-0">
+                <div className="flex flex-col items-center text-center min-w-0 px-1">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs ${dotClass}`}>
+                    {isDone ? <CheckCircle2 className="w-4 h-4" /> : i + 1}
+                  </div>
+                  <p className={`text-[11px] mt-1.5 leading-tight ${labelClass}`}>
+                    {stageLabel(s)}
+                  </p>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    {stageTimestamp(s, run)}
+                  </p>
+                </div>
+                {i < PAYROLL_STAGES.length - 1 && (
+                  <div className={`flex-1 h-0.5 ${i < currentIdx ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                )}
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+function stageTimestamp(stage: string, run: PayrollRun): string {
+  // Map stage to the relevant timestamp field. We only have createdAt + the
+  // dated fields on the run; everything else is in approvals. To keep this
+  // component dumb, we just show a tiny label.
+  const r = run as unknown as Record<string, string | null | undefined>
+  const key =
+    stage === 'DRAFT' ? null :
+    stage === 'PENDING_CEO' ? 'submittedToCeoAt' :
+    stage === 'PENDING_HR_FINAL' ? 'ceoReviewedAt' :
+    stage === 'PENDING_FINANCE' ? 'releasedToFinanceAt' :
+    stage === 'PAID' ? 'financePaidAt' : null
+  if (!key) return ''
+  const v = r[key]
+  if (!v) return ''
+  return new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
 }
 
 function KpiCard({ label, value, Icon, color }: {

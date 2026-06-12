@@ -49,6 +49,7 @@ export async function GET(request: NextRequest) {
     MANAGER: 0,
     EMPLOYEE: 0,
     EXECUTIVE: 0,
+    FINANCE: 0,
   }
   for (const r of rows) {
     for (const role of r.roles) {

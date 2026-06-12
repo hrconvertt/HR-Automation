@@ -1,125 +1,159 @@
-﻿/**
- * payroll approval chain.
+/**
+ * Payroll approval chain — 5-stage flow.
  *
- * Stages (in order):
- *   DRAFT → CALCULATED → MANAGER_CONFIRMED → FINANCE_REVIEWED → APPROVED → LOCKED → DISBURSED → CLOSED
+ *   DRAFT → PENDING_CEO → PENDING_HR_FINAL → PENDING_FINANCE → PAID
  *
- * Plus REJECTED — any approval stage can send the run back to DRAFT with a comment.
+ * Any reviewer can "Send Back" with a reason, returning the run to the prior
+ * stage. Each transition writes a PayrollRunApproval audit row.
  *
- * Each transition writes a PayrollRunApproval row so HR has a full audit trail
- * of who did what, when. This matches Workday's "Pay Calculation Audit" report.
+ * Legacy 8-stage Workday-style statuses (CALCULATED / MANAGER_CONFIRMED /
+ * FINANCE_REVIEWED / APPROVED / LOCKED / DISBURSED / CLOSED) are treated as
+ * historical / equivalent-to-PAID by the new UI. Use
+ * scripts/migrate-payroll-status.js to normalise old rows.
  */
 
 export const PAYROLL_STAGES = [
   'DRAFT',
-  'CALCULATED',
-  'MANAGER_CONFIRMED',
-  'FINANCE_REVIEWED',
-  'APPROVED',
-  'LOCKED',
-  'DISBURSED',
-  'CLOSED',
+  'PENDING_CEO',
+  'PENDING_HR_FINAL',
+  'PENDING_FINANCE',
+  'PAID',
 ] as const
 
-export type PayrollStage = (typeof PAYROLL_STAGES)[number] | 'REJECTED'
+export type PayrollStage =
+  | (typeof PAYROLL_STAGES)[number]
+  | 'REJECTED'
+  // Legacy statuses still allowed for historical reads
+  | 'CALCULATED'
+  | 'MANAGER_CONFIRMED'
+  | 'FINANCE_REVIEWED'
+  | 'APPROVED'
+  | 'LOCKED'
+  | 'DISBURSED'
+  | 'CLOSED'
 
 export type PayrollAction =
-  | 'CALCULATE'    // DRAFT → CALCULATED
-  | 'CONFIRM'      // CALCULATED → MANAGER_CONFIRMED
-  | 'REVIEW'       // MANAGER_CONFIRMED → FINANCE_REVIEWED
-  | 'APPROVE'      // FINANCE_REVIEWED → APPROVED
-  | 'LOCK'         // APPROVED → LOCKED  (also makes payslips visible / status PAID)
-  | 'DISBURSE'     // LOCKED → DISBURSED
-  | 'CLOSE'        // DISBURSED → CLOSED
-  | 'REJECT'       // any → REJECTED (back to DRAFT)
-  | 'RECALL'       // pull back one stage (HR-only)
+  | 'SUBMIT_TO_CEO'        // HR : DRAFT → PENDING_CEO
+  | 'CEO_APPROVE'          // CEO: PENDING_CEO → PENDING_HR_FINAL
+  | 'HR_FINAL_APPROVE'     // HR : PENDING_HR_FINAL → PENDING_FINANCE
+  | 'RELEASE_TO_FINANCE'   // HR : alias of HR_FINAL_APPROVE — same target stage
+  | 'MARK_PAID'            // FIN: PENDING_FINANCE → PAID
+  | 'SEND_BACK'            // any reviewer → one stage back, captures reason
+  // Legacy actions — preserved so old code paths keep working
+  | 'CALCULATE'
+  | 'CONFIRM'
+  | 'REVIEW'
+  | 'APPROVE'
+  | 'LOCK'
+  | 'DISBURSE'
+  | 'CLOSE'
+  | 'REJECT'
+  | 'RECALL'
 
-/**
- * Defines which action is valid at each stage and what role(s) can perform it.
- * Roles map to UserRole assignments — adjust to your org structure.
- */
 type Transition = {
   from: PayrollStage
   action: PayrollAction
   to: PayrollStage
-  allowedRoles: string[]   // any of these roles can perform
-  label: string            // shown on the button
-  description: string      // shown as helper text
+  allowedRoles: string[]
+  label: string
+  description: string
 }
 
+/**
+ * New 5-stage transitions. The transition handler also supports SEND_BACK as a
+ * dynamic transition (not in this table) — see resolveNextStage.
+ */
 export const TRANSITIONS: Transition[] = [
   {
     from: 'DRAFT',
-    action: 'CALCULATE',
-    to: 'CALCULATED',
+    action: 'SUBMIT_TO_CEO',
+    to: 'PENDING_CEO',
     allowedRoles: ['HR_ADMIN'],
-    label: 'Run Calculation',
-    description: 'Freeze inputs and generate draft payslips for review.',
+    label: 'Submit to CEO',
+    description: 'Send the prepared payroll to the CEO for executive review.',
   },
   {
-    from: 'CALCULATED',
-    action: 'CONFIRM',
-    to: 'MANAGER_CONFIRMED',
-    allowedRoles: ['HR_ADMIN', 'MANAGER'],
-    label: 'Confirm Team Hours',
-    description: 'Managers confirm their team\'s attendance, OT and bonus look correct.',
+    from: 'PENDING_CEO',
+    action: 'CEO_APPROVE',
+    to: 'PENDING_HR_FINAL',
+    allowedRoles: ['EXECUTIVE'],
+    label: 'Approve',
+    description: 'CEO sign-off — returns the run to HR for final review.',
   },
   {
-    from: 'MANAGER_CONFIRMED',
-    action: 'REVIEW',
-    to: 'FINANCE_REVIEWED',
-    allowedRoles: ['HR_ADMIN', 'FINANCE'],
-    label: 'Finance Review',
-    description: 'Verify totals, tax remittance schedule and EOBI numbers.',
-  },
-  {
-    from: 'FINANCE_REVIEWED',
-    action: 'APPROVE',
-    to: 'APPROVED',
-    allowedRoles: ['HR_ADMIN', 'EXECUTIVE'],
-    label: 'Final Approval',
-    description: 'CFO / CEO signs off the disbursement batch.',
-  },
-  {
-    from: 'APPROVED',
-    action: 'LOCK',
-    to: 'LOCKED',
+    from: 'PENDING_HR_FINAL',
+    action: 'HR_FINAL_APPROVE',
+    to: 'PENDING_FINANCE',
     allowedRoles: ['HR_ADMIN'],
-    label: 'Lock Run',
-    description: 'Lock figures and prepare bank-transfer file. No further edits.',
+    label: 'Approve & Release to Finance',
+    description: 'HR final review complete — Finance can now process payment.',
   },
   {
-    from: 'LOCKED',
-    action: 'DISBURSE',
-    to: 'DISBURSED',
-    allowedRoles: ['HR_ADMIN', 'FINANCE'],
-    label: 'Mark Disbursed',
-    description: 'Salaries paid out — payslips become visible to employees.',
-  },
-  {
-    from: 'DISBURSED',
-    action: 'CLOSE',
-    to: 'CLOSED',
+    from: 'PENDING_HR_FINAL',
+    action: 'RELEASE_TO_FINANCE',
+    to: 'PENDING_FINANCE',
     allowedRoles: ['HR_ADMIN'],
-    label: 'Close Period',
-    description: 'Period closed. Read-only audit record.',
+    label: 'Release to Finance',
+    description: 'Same as Approve & Release — alias for clarity in some UIs.',
+  },
+  {
+    from: 'PENDING_FINANCE',
+    action: 'MARK_PAID',
+    to: 'PAID',
+    allowedRoles: ['FINANCE', 'HR_ADMIN'],
+    label: 'Mark as Paid',
+    description: 'Salaries disbursed via bank — employees see their payslips.',
   },
 ]
 
-/** What's the next valid action from a given stage for a user with these roles? */
-export function getAvailableActions(
-  currentStatus: string,
-  userRoles: string[],
-): Transition[] {
+/** Reverse of the chain — used by SEND_BACK to find the prior stage. */
+const PRIOR_STAGE: Record<string, PayrollStage> = {
+  PENDING_CEO: 'DRAFT',
+  PENDING_HR_FINAL: 'PENDING_CEO',
+  PENDING_FINANCE: 'PENDING_HR_FINAL',
+  PAID: 'PENDING_FINANCE',
+}
+
+/** Who can perform SEND_BACK at the given stage? */
+export function sendBackAllowedRoles(currentStatus: string): string[] {
+  switch (currentStatus) {
+    case 'PENDING_CEO':       return ['EXECUTIVE', 'HR_ADMIN']
+    case 'PENDING_HR_FINAL':  return ['HR_ADMIN']
+    case 'PENDING_FINANCE':   return ['FINANCE', 'HR_ADMIN']
+    default:                   return []
+  }
+}
+
+/** Resolve the next stage given current + action; null if invalid. */
+export function resolveNextStage(currentStatus: string, action: PayrollAction): PayrollStage | null {
+  if (action === 'SEND_BACK') {
+    return PRIOR_STAGE[currentStatus] ?? null
+  }
+  // Legacy alias: REJECT behaves like SEND_BACK in the new flow if a prior stage exists.
+  if (action === 'REJECT') {
+    return PRIOR_STAGE[currentStatus] ?? 'DRAFT'
+  }
+  const t = TRANSITIONS.find((t) => t.from === currentStatus && t.action === action)
+  return t ? t.to : null
+}
+
+/** Actions available to a user given the current run status. */
+export function getAvailableActions(currentStatus: string, userRoles: string[]): Transition[] {
   return TRANSITIONS.filter(
     (t) => t.from === currentStatus && t.allowedRoles.some((r) => userRoles.includes(r)),
   )
 }
 
-/** Display label for a stage. */
+/** Display label for a stage (covers new + legacy). */
 export function stageLabel(status: string): string {
   const labels: Record<string, string> = {
     DRAFT: 'Draft',
+    PENDING_CEO: 'Pending CEO',
+    PENDING_HR_FINAL: 'Pending HR Final',
+    PENDING_FINANCE: 'Pending Finance',
+    PAID: 'Paid',
+    REJECTED: 'Sent Back',
+    // Legacy
     CALCULATED: 'Calculated',
     MANAGER_CONFIRMED: 'Manager Confirmed',
     FINANCE_REVIEWED: 'Finance Reviewed',
@@ -127,36 +161,46 @@ export function stageLabel(status: string): string {
     LOCKED: 'Locked',
     DISBURSED: 'Disbursed',
     CLOSED: 'Closed',
-    REJECTED: 'Rejected',
   }
   return labels[status] ?? status
 }
 
-/** Color-code stages for badges. */
 export function stageColor(status: string): 'gray' | 'blue' | 'amber' | 'green' | 'red' {
   if (status === 'REJECTED') return 'red'
-  if (status === 'CLOSED') return 'gray'
-  if (status === 'DISBURSED' || status === 'APPROVED' || status === 'LOCKED') return 'green'
-  if (status === 'FINANCE_REVIEWED' || status === 'MANAGER_CONFIRMED') return 'blue'
-  if (status === 'DRAFT' || status === 'CALCULATED') return 'amber'
+  if (status === 'PAID' || status === 'DISBURSED' || status === 'CLOSED') return 'green'
+  if (status === 'PENDING_FINANCE') return 'blue'
+  if (status === 'PENDING_HR_FINAL' || status === 'PENDING_CEO') return 'amber'
+  if (status === 'DRAFT') return 'gray'
   return 'gray'
 }
 
-/** Resolve the next stage given current + action; null if invalid. */
-export function resolveNextStage(currentStatus: string, action: PayrollAction): PayrollStage | null {
-  if (action === 'REJECT') return 'REJECTED'
-  if (action === 'RECALL') {
-    const idx = PAYROLL_STAGES.indexOf(currentStatus as (typeof PAYROLL_STAGES)[number])
-    if (idx <= 0) return null
-    return PAYROLL_STAGES[idx - 1]
+/** Map any status (incl. legacy) to its position in the 5-stage UI pipeline. */
+export function stageIndex(status: string): number {
+  // Legacy: anything past CALCULATED counts as fully done (PAID).
+  const legacyDone = new Set([
+    'APPROVED', 'LOCKED', 'DISBURSED', 'CLOSED',
+  ])
+  if (legacyDone.has(status)) return PAYROLL_STAGES.indexOf('PAID')
+  if (status === 'CALCULATED' || status === 'MANAGER_CONFIRMED' || status === 'FINANCE_REVIEWED') {
+    return PAYROLL_STAGES.indexOf('PENDING_HR_FINAL')
   }
-  const t = TRANSITIONS.find((t) => t.from === currentStatus && t.action === action)
-  return t ? t.to : null
+  const idx = PAYROLL_STAGES.indexOf(status as (typeof PAYROLL_STAGES)[number])
+  return idx < 0 ? 0 : idx
 }
 
-/** Compute progress 0–1 along the chain. */
+/** True if the given role can edit payslip line items at the current stage. */
+export function canEditPayslipsAtStage(status: string, userRoles: string[]): boolean {
+  if (status === 'DRAFT' || status === 'PENDING_HR_FINAL') {
+    return userRoles.includes('HR_ADMIN')
+  }
+  if (status === 'PENDING_CEO') {
+    return userRoles.includes('EXECUTIVE') || userRoles.includes('HR_ADMIN')
+  }
+  return false
+}
+
+/** Progress 0–1 along the new chain (for progress bars). */
 export function stageProgress(status: string): number {
-  if (status === 'REJECTED') return 0
-  const idx = PAYROLL_STAGES.indexOf(status as (typeof PAYROLL_STAGES)[number])
-  return idx < 0 ? 0 : idx / (PAYROLL_STAGES.length - 1)
+  const idx = stageIndex(status)
+  return idx / (PAYROLL_STAGES.length - 1)
 }

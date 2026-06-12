@@ -4,27 +4,46 @@ import { verifyToken } from '@/lib/auth'
 import {
   TRANSITIONS,
   resolveNextStage,
+  sendBackAllowedRoles,
   type PayrollAction,
 } from '@/lib/payroll-workflow'
 import { notifyMany } from '@/lib/notifications'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
+/**
+ * Single endpoint for all payroll-run state transitions.
+ *
+ * Body: { action: PayrollAction, comment?: string, reason?: string }
+ *   - SUBMIT_TO_CEO      HR_ADMIN  DRAFT → PENDING_CEO
+ *   - CEO_APPROVE        EXECUTIVE PENDING_CEO → PENDING_HR_FINAL
+ *   - HR_FINAL_APPROVE   HR_ADMIN  PENDING_HR_FINAL → PENDING_FINANCE
+ *   - RELEASE_TO_FINANCE HR_ADMIN  alias of HR_FINAL_APPROVE
+ *   - MARK_PAID          FINANCE/HR_ADMIN PENDING_FINANCE → PAID
+ *   - SEND_BACK          reviewer → prior stage, reason required
+ *
+ * Legacy actions (CALCULATE/CONFIRM/REVIEW/APPROVE/LOCK/DISBURSE/CLOSE/REJECT/RECALL)
+ * are no longer routed — they're handled by the legacy /approve endpoint or
+ * dropped. The new 5-stage flow is now canonical.
+ */
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const token = request.cookies.get('hr_token')?.value
   const payload = token ? verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Reject preview-mode actions for HR
+  // Block actions while previewing a non-HR role from an HR_ADMIN session.
   const previewRole = request.cookies.get('hr_preview_role')?.value
-  if (previewRole && previewRole !== 'HR_ADMIN' && payload.role === 'HR_ADMIN') {
-    return NextResponse.json({ error: 'Switch back to HR view to perform this action' }, { status: 403 })
+  if (previewRole && previewRole !== payload.role) {
+    return NextResponse.json(
+      { error: 'Switch back to your primary role to perform this action' },
+      { status: 403 },
+    )
   }
 
   const { id } = await params
   const body = await request.json().catch(() => ({}))
   const action = body.action as PayrollAction | undefined
-  const comment = (body.comment ?? null) as string | null
+  const reason = (body.reason ?? body.comment ?? null) as string | null
   if (!action) return NextResponse.json({ error: 'action required' }, { status: 400 })
 
   const user = await prisma.user.findUnique({
@@ -41,15 +60,20 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const run = await prisma.payrollRun.findUnique({ where: { id } })
   if (!run) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // ── Authorization for this action+stage ───────────────────────────────────
+  // ── Authorization ─────────────────────────────────────────────────────────
   let allowed = false
-  if (action === 'REJECT') {
-    // HR or Executive can reject at any approval stage
-    allowed = userRoles.some((r) => ['HR_ADMIN', 'EXECUTIVE', 'FINANCE'].includes(r))
-  } else if (action === 'RECALL') {
-    // HR can recall before LOCKED
-    allowed =
-      userRoles.includes('HR_ADMIN') && !['LOCKED', 'DISBURSED', 'CLOSED'].includes(run.status)
+  if (action === 'SEND_BACK') {
+    if (!reason || reason.trim().length < 3) {
+      return NextResponse.json({ error: 'A reason is required to send back' }, { status: 400 })
+    }
+    const roles = sendBackAllowedRoles(run.status)
+    if (roles.length === 0) {
+      return NextResponse.json(
+        { error: `Cannot send back from status "${run.status}"` },
+        { status: 400 },
+      )
+    }
+    allowed = roles.some((r) => userRoles.includes(r))
   } else {
     const t = TRANSITIONS.find((t) => t.from === run.status && t.action === action)
     if (!t) {
@@ -61,7 +85,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     allowed = t.allowedRoles.some((r) => userRoles.includes(r))
   }
   if (!allowed) {
-    return NextResponse.json({ error: 'You do not have permission for this action' }, { status: 403 })
+    return NextResponse.json(
+      { error: 'You do not have permission for this action' },
+      { status: 403 },
+    )
   }
 
   const nextStatus = resolveNextStage(run.status, action)
@@ -69,32 +96,44 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Invalid transition' }, { status: 400 })
   }
 
-  // ── Build the update payload ──────────────────────────────────────────────
+  // ── Build update payload ──────────────────────────────────────────────────
   const now = new Date()
   const update: Record<string, unknown> = { status: nextStatus }
-  if (action === 'CALCULATE') update.calculatedAt = now
-  if (action === 'CONFIRM') update.managerConfirmedAt = now
-  if (action === 'REVIEW') update.financeReviewedAt = now
-  if (action === 'APPROVE') {
-    update.approvedAt = now
-    update.approvedById = payload.userId
-  }
-  if (action === 'LOCK') update.lockedAt = now
-  if (action === 'DISBURSE') {
-    update.disbursedAt = now
-    update.sentAt = now
-  }
-  if (action === 'CLOSE') update.closedAt = now
-  if (action === 'REJECT') {
-    // Reset partial-completion timestamps so the run can move forward again
-    update.calculatedAt = null
-    update.managerConfirmedAt = null
-    update.financeReviewedAt = null
-    update.approvedAt = null
-    update.approvedById = null
+
+  switch (action) {
+    case 'SUBMIT_TO_CEO':
+      update.submittedToCeoAt = now
+      update.submittedToCeoById = payload.userId
+      break
+    case 'CEO_APPROVE':
+      update.ceoReviewedAt = now
+      update.ceoReviewedById = payload.userId
+      update.returnedToHrAt = now
+      break
+    case 'HR_FINAL_APPROVE':
+    case 'RELEASE_TO_FINANCE':
+      update.hrFinalApprovedAt = now
+      update.hrFinalApprovedById = payload.userId
+      update.releasedToFinanceAt = now
+      // Legacy compat — keep approvedAt populated so old reports still light up
+      update.approvedAt = now
+      update.approvedById = payload.userId
+      break
+    case 'MARK_PAID':
+      update.financePaidAt = now
+      update.financePaidById = payload.userId
+      // Legacy compat
+      update.disbursedAt = now
+      update.sentAt = now
+      break
+    case 'SEND_BACK':
+      update.sendBackReason = reason
+      update.sendBackAt = now
+      update.sendBackById = payload.userId
+      break
   }
 
-  // ── Transactional update + audit row + side-effects ───────────────────────
+  // ── Transactional update + audit row ──────────────────────────────────────
   await prisma.$transaction(async (tx) => {
     await tx.payrollRun.update({ where: { id }, data: update })
 
@@ -107,68 +146,77 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         actorUserId: payload.userId,
         actorName: user.employee?.fullName ?? user.email ?? null,
         actorRole: userRoles[0] ?? user.role,
-        comment,
+        comment: reason,
       },
     })
 
-    // Side-effect: on LOCK, mark payslips APPROVED. On DISBURSE, mark PAID + send notifications.
-    if (action === 'LOCK') {
-      await tx.payslip.updateMany({
-        where: { payrollRunId: id },
-        data: { status: 'APPROVED' },
-      })
-    }
-    if (action === 'DISBURSE') {
+    // On MARK_PAID, flip payslip statuses so employees see them.
+    if (action === 'MARK_PAID') {
       await tx.payslip.updateMany({
         where: { payrollRunId: id },
         data: { status: 'PAID', sentAt: now },
       })
     }
-    if (action === 'REJECT') {
-      await tx.payslip.updateMany({
-        where: { payrollRunId: id, status: { not: 'PAID' } },
-        data: { status: 'DRAFT' },
-      })
-    }
   })
 
-  // Notifications (outside the transaction so failure can't roll back the action)
-  if (action === 'DISBURSE') {
-    const payslips = await prisma.payslip.findMany({
-      where: { payrollRunId: id },
-      select: { employeeId: true },
-    })
-    const monthName = new Date(run.year, run.month - 1).toLocaleDateString('en-GB', {
-      month: 'long',
-      year: 'numeric',
-    })
-    await notifyMany(
-      payslips.map((p) => p.employeeId),
-      {
-        type: 'PAYSLIP_READY',
-        title: '💰 Payslip Released',
-        message: `Your payslip for ${monthName} is ready to view.`,
-        link: '/dashboard/payroll',
-      },
-    )
-  }
+  // ── Notifications (outside tx so failures can't roll back the action) ─────
+  const monthName = new Date(run.year, run.month - 1).toLocaleDateString('en-GB', {
+    month: 'long',
+    year: 'numeric',
+  })
 
-  if (action === 'CALCULATE') {
-    // Tell HR managers there's work waiting
-    const hrEmpIds = (
+  async function notifyByRole(role: string, title: string, message: string) {
+    const empIds = (
       await prisma.user.findMany({
-        where: { OR: [{ role: 'MANAGER' }, { userRoles: { some: { role: 'MANAGER' } } }] },
+        where: { OR: [{ role }, { userRoles: { some: { role } } }] },
         select: { employee: { select: { id: true } } },
       })
     )
       .map((u) => u.employee?.id)
       .filter((x): x is string => !!x)
-    await notifyMany(hrEmpIds, {
-      type: 'GENERAL',
-      title: 'Payroll ready for team confirmation',
-      message: `Please review your team\'s ${run.month}/${run.year} payroll figures.`,
+    if (empIds.length) {
+      await notifyMany(empIds, {
+        type: 'GENERAL',
+        title,
+        message,
+        link: '/dashboard/payroll',
+      })
+    }
+  }
+
+  if (action === 'SUBMIT_TO_CEO') {
+    await notifyByRole('EXECUTIVE', '📋 Payroll Ready for CEO Review',
+      `Payroll for ${monthName} is ready for your review.`)
+  } else if (action === 'CEO_APPROVE') {
+    await notifyByRole('HR_ADMIN', '✅ CEO Approved Payroll',
+      `CEO approved ${monthName} payroll — awaiting your final review.`)
+  } else if (action === 'HR_FINAL_APPROVE' || action === 'RELEASE_TO_FINANCE') {
+    await notifyByRole('FINANCE', '💸 Payroll Ready for Processing',
+      `${monthName} payroll has been released — please process the bank transfer.`)
+  } else if (action === 'MARK_PAID') {
+    await notifyByRole('HR_ADMIN', '🏦 Payroll Processed',
+      `Finance has marked ${monthName} payroll as paid.`)
+    // Also notify employees their payslip is visible
+    const payslips = await prisma.payslip.findMany({
+      where: { payrollRunId: id },
+      select: { employeeId: true },
+    })
+    await notifyMany(payslips.map((p) => p.employeeId), {
+      type: 'PAYSLIP_READY',
+      title: '💰 Payslip Released',
+      message: `Your payslip for ${monthName} is ready to view.`,
       link: '/dashboard/payroll',
     })
+  } else if (action === 'SEND_BACK') {
+    // Notify whoever was at the prior stage
+    const targetRole = nextStatus === 'DRAFT'             ? 'HR_ADMIN'
+                     : nextStatus === 'PENDING_CEO'        ? 'EXECUTIVE'
+                     : nextStatus === 'PENDING_HR_FINAL'   ? 'HR_ADMIN'
+                     : null
+    if (targetRole) {
+      await notifyByRole(targetRole, '↩️ Payroll Sent Back',
+        `${monthName} payroll was sent back: ${reason ?? 'no reason given'}`)
+    }
   }
 
   return NextResponse.json({ success: true, status: nextStatus })

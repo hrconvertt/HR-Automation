@@ -23,17 +23,32 @@ async function getHrUser(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
   const payload = token ? verifyToken(token) : null
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true, role: true } })
-  if (!me || me.role !== 'HR_ADMIN') return { error: NextResponse.json({ error: 'HR Admin only' }, { status: 403 }) }
-  const previewRole = request.cookies.get('hr_preview_role')?.value
-  if (previewRole && previewRole !== 'HR_ADMIN') {
-    return { error: NextResponse.json({ error: 'Switch back to HR view to edit payslips' }, { status: 403 }) }
+  const me = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { id: true, role: true, userRoles: { select: { role: true } } },
+  })
+  if (!me) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
+  const roles = me.userRoles.length ? me.userRoles.map((r) => r.role) : [me.role]
+  if (!roles.some((r) => ['HR_ADMIN', 'EXECUTIVE'].includes(r))) {
+    return { error: NextResponse.json({ error: 'HR Admin or Executive only' }, { status: 403 }) }
   }
-  return { me }
+  const previewRole = request.cookies.get('hr_preview_role')?.value
+  if (previewRole && previewRole !== me.role) {
+    return { error: NextResponse.json({ error: 'Switch back to your primary view to edit payslips' }, { status: 403 }) }
+  }
+  return { me, roles }
+}
+
+/** Status → roles allowed to edit at that stage. */
+function canEditAtStatus(status: string | undefined, roles: string[]): boolean {
+  if (!status) return roles.includes('HR_ADMIN')
+  if (status === 'DRAFT' || status === 'PENDING_HR_FINAL') return roles.includes('HR_ADMIN')
+  if (status === 'PENDING_CEO') return roles.includes('EXECUTIVE') || roles.includes('HR_ADMIN')
+  return false
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
-  const { me, error } = await getHrUser(request)
+  const { me, roles, error } = await getHrUser(request)
   if (error) return error
   const { id } = await params
 
@@ -59,8 +74,11 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     include: { payrollRun: { select: { status: true } } },
   })
   if (!payslip) return NextResponse.json({ error: 'Payslip not found' }, { status: 404 })
-  if (payslip.payrollRun && payslip.payrollRun.status !== 'DRAFT') {
-    return NextResponse.json({ error: 'Payroll run is already finalized — adjustments must be made before approval.' }, { status: 409 })
+  if (!canEditAtStatus(payslip.payrollRun?.status, roles!)) {
+    return NextResponse.json(
+      { error: `Cannot edit payslip at status "${payslip.payrollRun?.status ?? 'UNKNOWN'}" with your current role.` },
+      { status: 409 },
+    )
   }
 
   // Recompute gross + net using the new overrides while keeping AutoPilot's
@@ -133,7 +151,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
  * from AutoPilot's salary + attendance inputs.
  */
 export async function DELETE(request: NextRequest, { params }: RouteParams) {
-  const { error } = await getHrUser(request)
+  const { roles, error } = await getHrUser(request)
   if (error) return error
   const { id } = await params
 
@@ -142,8 +160,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     include: { payrollRun: { select: { status: true } } },
   })
   if (!payslip) return NextResponse.json({ error: 'Payslip not found' }, { status: 404 })
-  if (payslip.payrollRun && payslip.payrollRun.status !== 'DRAFT') {
-    return NextResponse.json({ error: 'Cannot clear adjustment on a finalized run' }, { status: 409 })
+  if (!canEditAtStatus(payslip.payrollRun?.status, roles!)) {
+    return NextResponse.json({ error: 'Cannot clear adjustment at this stage' }, { status: 409 })
   }
 
   await prisma.payslip.update({
