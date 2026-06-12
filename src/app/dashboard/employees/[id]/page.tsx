@@ -12,6 +12,7 @@ import EditEmployeeButton from '@/components/edit-employee-button'
 import DeleteEmployeeButton from '@/components/delete-employee-button'
 import UploadDocumentButton from '@/components/upload-document-button'
 import DeleteDocumentButton from '@/components/delete-document-button'
+import DocumentVisibilityToggle from '@/components/document-visibility-toggle'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import CompensationPanel from '@/components/compensation-panel'
@@ -159,12 +160,31 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
   // Performance, Documents, Leave, Assets — unchanged
   const showPerformanceTab = isHR || isExec || isViewingOwn || (isManager && isMyTeamMember)
   const showDocuments = isHR || isViewingOwn
+  // Employees can only see docs HR has marked visible. HR sees everything.
+  const documentsForViewer = (isHR && !isPreviewMode)
+    ? employee.documents
+    : employee.documents.filter((d) => d.visibleToEmployee)
   const showLeave = isHR || isViewingOwn || (isManager && isMyTeamMember)
   const showAssets = isHR || isViewingOwn || (isManager && isMyTeamMember)
   // Alias for backward compatibility with existing JSX below
   const showCompensation = canViewCompensation
 
   const currentSalary = employee.salary
+
+  // Recent Payslips for the Compensation tab — HR / Exec / self can see them;
+  // Managers cannot (salary confidentiality, consistent with the rest of the
+  // Compensation tab). Fetch unconditionally only when the viewer is allowed.
+  const canSeePayslips = isHR || isExec || isViewingOwn
+  const recentPayslips = canSeePayslips
+    ? await prisma.payslip.findMany({
+        where: { employeeId: employee.id },
+        orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        select: {
+          id: true, month: true, year: true,
+          grossSalary: true, netSalary: true, status: true,
+        },
+      })
+    : []
 
   // Seed a synthetic "Hire — Joining offer" row from the current Salary when
   // there's no CompensationHistory yet. Read-only — we don't persist it,
@@ -445,6 +465,14 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
               canDownload: canDownloadTotalRewards,
               viewerRole: effectiveRole,
             }}
+            payslips={recentPayslips.map((p) => ({
+              id: p.id,
+              month: p.month,
+              year: p.year,
+              grossSalary: p.grossSalary,
+              netSalary: p.netSalary,
+              status: p.status,
+            }))}
           />
         </TabsContent>}
 
@@ -523,30 +551,44 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {employee.documents.length === 0 ? (
+                  {documentsForViewer.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="text-center text-gray-400">No documents.</TableCell></TableRow>
                   ) : (
-                    employee.documents.map((doc) => (
-                      <TableRow key={doc.id}>
-                        <TableCell>{doc.name}</TableCell>
-                        <TableCell><Badge variant="secondary">{doc.type}</Badge></TableCell>
-                        <TableCell>{formatDate(doc.createdAt)}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-3">
-                            <a
-                              href={`/api/documents/${doc.id}/download`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-blue-600 text-xs hover:underline"
-                            >View</a>
-                            {/* HR-only delete; canEditFull = HR_ADMIN + not in preview */}
-                            {canEditFull && (
-                              <DeleteDocumentButton documentId={doc.id} documentName={doc.name} />
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                    documentsForViewer.map((doc) => {
+                      // Salary slips link straight to the printable route
+                      // (lazy-rendered — no blob to stream).
+                      const viewHref = doc.type === 'SALARY_SLIP' && doc.url
+                        ? doc.url
+                        : `/api/documents/${doc.id}/download`
+                      return (
+                        <TableRow key={doc.id}>
+                          <TableCell>{doc.name}</TableCell>
+                          <TableCell><Badge variant="secondary">{doc.type}</Badge></TableCell>
+                          <TableCell>{formatDate(doc.createdAt)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <a
+                                href={viewHref}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-blue-600 text-xs hover:underline"
+                              >View</a>
+                              {/* HR-only visibility toggle */}
+                              {canEditFull && (
+                                <DocumentVisibilityToggle
+                                  documentId={doc.id}
+                                  initialVisible={doc.visibleToEmployee}
+                                />
+                              )}
+                              {/* HR-only delete; canEditFull = HR_ADMIN + not in preview */}
+                              {canEditFull && (
+                                <DeleteDocumentButton documentId={doc.id} documentName={doc.name} />
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   )}
                 </TableBody>
               </Table>

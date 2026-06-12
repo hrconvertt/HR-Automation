@@ -21,7 +21,7 @@ import { formatCurrency } from '@/lib/utils'
 import {
   Download, Wallet, Banknote, Landmark, ShieldCheck,
   AlertTriangle, CheckCircle2, RefreshCw, Sparkles, Pencil,
-  Send, FileCheck, Undo2, FileSpreadsheet, BadgeCheck,
+  Send, FileCheck, Undo2, FileSpreadsheet, BadgeCheck, FileText,
 } from 'lucide-react'
 import { safeFetch } from '@/lib/safe-fetch'
 import { AdjustPayslipDialog, type AdjustablePayslip } from '@/components/payroll/adjust-payslip-dialog'
@@ -141,6 +141,10 @@ export function HRPayrollView() {
   const [adjustTarget, setAdjustTarget] = useState<AdjustablePayslip | null>(null)
   const [sendBackOpen, setSendBackOpen] = useState(false)
   const [sendBackReason, setSendBackReason] = useState('')
+  const [genDocsOpen, setGenDocsOpen] = useState(false)
+  const [genVisible, setGenVisible] = useState(true)
+  const [genNotify, setGenNotify] = useState(true)
+  const [genBusy, setGenBusy] = useState(false)
 
   const fetchMe = useCallback(async () => {
     const r = await safeFetch<MeResponse>('/api/auth/me')
@@ -223,6 +227,27 @@ export function HRPayrollView() {
   function downloadIBFT() {
     if (!payrollRun) return
     window.open(`/api/payroll/${payrollRun.id}/export-ibft`, '_blank')
+  }
+
+  async function handleGeneratePayslipDocs() {
+    if (!payrollRun) return
+    setGenBusy(true)
+    const r = await safeFetch<{ created: number; skipped: number; notified: number }>(
+      `/api/payroll/${payrollRun.id}/generate-payslip-docs`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visibleToEmployee: genVisible, notify: genNotify }),
+      },
+    )
+    setGenBusy(false)
+    setGenDocsOpen(false)
+    if (!r.ok) {
+      alert(r.error ?? 'Failed to generate payslip documents.')
+      return
+    }
+    const { created = 0, skipped = 0, notified = 0 } = r.data ?? {}
+    alert(`Generated ${created} payslip PDF${created === 1 ? '' : 's'}.${skipped ? ` Skipped ${skipped} existing.` : ''}${notified ? ` Notified ${notified} employee${notified === 1 ? '' : 's'}.` : ''}`)
   }
 
   const canSendBack = payrollRun
@@ -349,9 +374,16 @@ export function HRPayrollView() {
             )}
 
             {payrollRun && status === 'PAID' && (
-              <Button onClick={downloadIBFT} variant="outline">
-                <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
-              </Button>
+              <>
+                <Button onClick={downloadIBFT} variant="outline">
+                  <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
+                </Button>
+                {isHR && (
+                  <Button onClick={() => setGenDocsOpen(true)} variant="outline">
+                    <FileText className="w-4 h-4 mr-1.5" /> Generate Payslip PDFs
+                  </Button>
+                )}
+              </>
             )}
 
             {/* Legacy / historical paid runs — show download */}
@@ -393,6 +425,55 @@ export function HRPayrollView() {
               <Button variant="outline" onClick={() => { setSendBackOpen(false); setSendBackReason('') }}>Cancel</Button>
               <Button onClick={handleSendBack} className="bg-amber-600 hover:bg-amber-700 text-white">
                 <Undo2 className="w-4 h-4 mr-1.5" /> Send Back
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Generate Payslip PDFs dialog */}
+      {genDocsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !genBusy && setGenDocsOpen(false)}>
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-blue-600" /> Generate Payslip PDFs
+            </h3>
+            <p className="text-sm text-slate-600">
+              Creates one document per employee on this run, attached to their profile. Idempotent — runs again won&apos;t duplicate.
+            </p>
+            <label className="flex items-start gap-3 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={genVisible}
+                onChange={(e) => setGenVisible(e.target.checked)}
+                className="mt-0.5 w-4 h-4"
+              />
+              <span>
+                <span className="font-medium text-slate-900">Make payslips visible to employees</span>
+                <span className="block text-xs text-slate-500">Uncheck to keep them HR-only for now.</span>
+              </span>
+            </label>
+            <label className={`flex items-start gap-3 text-sm cursor-pointer ${!genVisible ? 'opacity-50' : ''}`}>
+              <input
+                type="checkbox"
+                checked={genNotify && genVisible}
+                disabled={!genVisible}
+                onChange={(e) => setGenNotify(e.target.checked)}
+                className="mt-0.5 w-4 h-4"
+              />
+              <span>
+                <span className="font-medium text-slate-900">Notify employees by email</span>
+                <span className="block text-xs text-slate-500">In-app notification: &quot;Your payslip is ready.&quot;</span>
+              </span>
+            </label>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setGenDocsOpen(false)} disabled={genBusy}>Cancel</Button>
+              <Button
+                onClick={handleGeneratePayslipDocs}
+                disabled={genBusy}
+                className="bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                {genBusy ? 'Generating…' : 'Generate'}
               </Button>
             </div>
           </div>

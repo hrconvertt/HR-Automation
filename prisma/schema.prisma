@@ -1290,6 +1290,10 @@ model EmployeeDocument {
   fileBlob     Bytes?
   fileMimeType String?
   fileSize     Int?
+  // HR can hide internal/HR-only documents (e.g. background-check report,
+  // disciplinary record) from the employee's own view. Default true so
+  // existing rows remain visible — HR explicitly opts out per-doc.
+  visibleToEmployee Boolean @default(true)
   createdAt    DateTime @default(now())
 
   @@map("employee_documents")

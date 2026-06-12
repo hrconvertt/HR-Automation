@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
   Wallet, TrendingUp, Calendar, Lock,
-  Download, Pencil, Eye, ShieldCheck, Trash2,
+  Download, Pencil, Eye, ShieldCheck, Trash2, FileText, ExternalLink,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import EditSalaryDialog from './edit-salary-dialog'
@@ -53,6 +53,27 @@ type Access = {
   viewerRole: string
 }
 
+export type PayslipRow = {
+  id: string
+  month: number
+  year: number
+  grossSalary: number
+  netSalary: number
+  status: string
+}
+
+const MONTH_LABELS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+]
+
+function payslipStatusTone(status: string): string {
+  if (status === 'PAID') return 'bg-emerald-100 text-emerald-800'
+  if (status === 'RELEASED') return 'bg-blue-100 text-blue-800'
+  if (status === 'APPROVED') return 'bg-amber-100 text-amber-800'
+  return 'bg-slate-100 text-slate-700'
+}
+
 const TYPE_LABELS: Record<string, { label: string; tone: string }> = {
   INCREMENT:   { label: 'Annual Increment', tone: 'bg-emerald-100 text-emerald-800' },
   PROMOTION:   { label: 'Promotion',         tone: 'bg-blue-100 text-blue-800' },
@@ -68,14 +89,16 @@ function fmtDate(s: string | Date) {
 }
 
 export default function CompensationPanel({
-  employeeId, employeeName, currentSalary, history, access,
+  employeeId, employeeName, currentSalary, history, access, payslips = [],
 }: {
   employeeId: string
   employeeName: string
   currentSalary: Salary | null
   history: HistoryRow[]
   access: Access
+  payslips?: PayslipRow[]
 }) {
+  const [showAllPayslips, setShowAllPayslips] = useState(false)
   const router = useRouter()
   const [editOpen, setEditOpen] = useState(false)
   const [addHistoryOpen, setAddHistoryOpen] = useState(false)
@@ -381,6 +404,79 @@ export default function CompensationPanel({
                   </div>
                 )
               })()}
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ─── Recent Payslips ──────────────────────────────────────────
+          Visible to: self / HR / Executive. Managers are NOT given a
+          payslips prop server-side (salary confidentiality). */}
+      <Card>
+        <CardHeader className="border-b border-slate-100">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <FileText className="w-4 h-4 text-slate-500" /> Recent Payslips
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-5">
+          {payslips.length === 0 ? (
+            <p className="text-sm text-slate-400 italic py-4 text-center">
+              No payslips yet — generated automatically after each payroll cycle.
+            </p>
+          ) : (
+            <>
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wider text-slate-500 border-b border-slate-200">
+                    <th className="py-2 font-semibold">Month</th>
+                    <th className="py-2 font-semibold text-right">Gross</th>
+                    <th className="py-2 font-semibold text-right">Net</th>
+                    <th className="py-2 font-semibold">Status</th>
+                    <th className="py-2 font-semibold text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(showAllPayslips ? payslips : payslips.slice(0, 6)).map((p) => (
+                    <tr key={p.id} className="border-b border-slate-100">
+                      <td className="py-2 text-slate-900">
+                        {MONTH_LABELS[p.month - 1]} {p.year}
+                      </td>
+                      <td className="py-2 text-right text-slate-900 tabular-nums">
+                        {formatCurrency(p.grossSalary)}
+                      </td>
+                      <td className="py-2 text-right text-slate-900 tabular-nums">
+                        {formatCurrency(p.netSalary)}
+                      </td>
+                      <td className="py-2">
+                        <span className={`inline-block text-[11px] px-2 py-0.5 rounded-full font-medium ${payslipStatusTone(p.status)}`}>
+                          {p.status}
+                        </span>
+                      </td>
+                      <td className="py-2 text-right">
+                        <a
+                          href={`/payslip/${p.id}/print`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 text-xs hover:underline inline-flex items-center gap-1"
+                        >
+                          View <ExternalLink className="w-3 h-3" />
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {payslips.length > 6 && (
+                <div className="mt-3 text-center">
+                  <button
+                    type="button"
+                    onClick={() => setShowAllPayslips((v) => !v)}
+                    className="text-xs font-medium text-blue-600 hover:underline"
+                  >
+                    {showAllPayslips ? 'Show fewer' : `Show all (${payslips.length})`}
+                  </button>
+                </div>
+              )}
             </>
           )}
         </CardContent>

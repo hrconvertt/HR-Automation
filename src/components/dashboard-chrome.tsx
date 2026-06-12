@@ -34,7 +34,6 @@ import {
   Sprout,
   Heart,
   Sparkles,
-  CheckSquare,
   Network,
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
@@ -74,7 +73,6 @@ const FOCUS_PATHS = new Set([
   '/dashboard/admin/health',
   '/dashboard/culture',
   '/dashboard/calendar',
-  '/dashboard/tasks',
   '/dashboard/org-chart',
   '/dashboard/settings/roles',
 ])
@@ -96,7 +94,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/payroll', label: 'Payroll', icon: Banknote },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
-        { href: '/dashboard/tasks', label: 'Tasks', icon: CheckSquare },
       ],
     },
     {
@@ -149,7 +146,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
-        { href: '/dashboard/tasks', label: 'Tasks', icon: CheckSquare },
       ],
     },
     {
@@ -180,7 +176,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
         { href: '/dashboard/employees', label: 'Directory', icon: Users },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
-        { href: '/dashboard/tasks', label: 'Tasks', icon: CheckSquare },
       ],
     },
     {

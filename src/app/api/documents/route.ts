@@ -57,14 +57,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  // Employees only see docs HR has marked visible. HR / Exec / the
+  // assigned manager see everything (manager doesn't currently land
+  // here, but the gate above already restricted them to their reports).
+  const hideHidden = !isPrivileged && isSelf
   const documents = await prisma.employeeDocument.findMany({
-    where: { employeeId },
+    where: hideHidden
+      ? { employeeId, visibleToEmployee: true }
+      : { employeeId },
     orderBy: [{ type: 'asc' }, { createdAt: 'desc' }],
     // Don't ship blobs in the list payload — they're served via /download.
     select: {
       id: true, employeeId: true, type: true, name: true, url: true,
       size: true, mimeType: true, fileSize: true, fileMimeType: true,
       uploadedById: true, signedAt: true, expiryDate: true, createdAt: true,
+      visibleToEmployee: true,
     },
   })
   return NextResponse.json({ documents })

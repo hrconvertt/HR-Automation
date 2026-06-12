@@ -25,7 +25,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     where: { id },
     select: {
       employeeId: true, name: true, fileBlob: true, fileMimeType: true,
-      mimeType: true, fileSize: true, url: true,
+      mimeType: true, fileSize: true, url: true, visibleToEmployee: true,
       employee: { select: { reportingManagerId: true } },
     },
   })
@@ -39,6 +39,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const isSelf = myEmpId === doc.employeeId
   const isManagerOf = effectiveRole === 'MANAGER' && myEmpId === doc.employee.reportingManagerId
   if (!(isPrivileged || isSelf || isManagerOf)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  // Even authorised employees can't fetch a doc HR has hidden.
+  if (isSelf && !isPrivileged && !doc.visibleToEmployee) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
