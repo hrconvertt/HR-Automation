@@ -17,7 +17,7 @@ async function requireHR() {
 }
 
 export async function GET() {
-  const templates = await prisma.emailTemplate.findMany({ orderBy: { key: 'asc' } })
+  const templates = await prisma.emailTemplate.findMany({ orderBy: [{ category: 'asc' }, { key: 'asc' }] })
   return NextResponse.json({ templates })
 }
 
@@ -27,6 +27,18 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const key = String(body.key || '').trim()
   if (!key) return NextResponse.json({ error: 'Key required' }, { status: 400 })
+
+  const data: Record<string, unknown> = {
+    subject: body.subject !== undefined ? String(body.subject ?? '') : undefined,
+    body: body.body !== undefined ? String(body.body ?? '') : undefined,
+    description: body.description !== undefined ? (body.description ? String(body.description) : null) : undefined,
+    variables: body.variables !== undefined ? (body.variables ? String(body.variables) : null) : undefined,
+    active: typeof body.active === 'boolean' ? body.active : undefined,
+    manualReview: typeof body.manualReview === 'boolean' ? body.manualReview : undefined,
+    condition: body.condition !== undefined ? (body.condition ? String(body.condition) : null) : undefined,
+  }
+  for (const k of Object.keys(data)) if (data[k] === undefined) delete data[k]
+
   const created = await prisma.emailTemplate.upsert({
     where: { key },
     create: {
@@ -35,13 +47,14 @@ export async function POST(request: NextRequest) {
       body: String(body.body || ''),
       description: body.description ? String(body.description) : null,
       variables: body.variables ? String(body.variables) : null,
+      active: typeof body.active === 'boolean' ? body.active : true,
+      manualReview: typeof body.manualReview === 'boolean' ? body.manualReview : false,
+      condition: body.condition ? String(body.condition) : null,
+      category: body.category ? String(body.category) : null,
+      name: body.name ? String(body.name) : null,
+      triggerEvent: body.triggerEvent ? String(body.triggerEvent) : null,
     },
-    update: {
-      subject: String(body.subject ?? ''),
-      body: String(body.body ?? ''),
-      description: body.description !== undefined ? (body.description ? String(body.description) : null) : undefined,
-      variables: body.variables !== undefined ? (body.variables ? String(body.variables) : null) : undefined,
-    },
+    update: data,
   })
   return NextResponse.json({ template: created })
 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 import { notifyMany } from '@/lib/notifications'
+import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -66,6 +67,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     message: `${policy.title} — please review`,
     link: `/dashboard/policies/${id}`,
   })
+
+  // CUL-05 policy.published — one email per active employee
+  const empWithName = await prisma.employee.findMany({
+    where: { status: 'ACTIVE' },
+    select: { id: true, fullName: true },
+  })
+  for (const e of empWithName) {
+    await triggerEmail({
+      event: 'policy.published',
+      employeeId: e.id,
+      variables: {
+        ...employeeVars({ fullName: e.fullName, designation: null, department: null }),
+        'Policy Title': policy.title,
+        'Category': categoryLabel,
+      },
+      createdById: payload.userId,
+      dedupeSalt: id,
+    })
+  }
 
   return NextResponse.json({ ok: true, notified: employees.length })
 }

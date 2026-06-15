@@ -8,6 +8,7 @@ import {
   type PayrollAction,
 } from '@/lib/payroll-workflow'
 import { notifyMany } from '@/lib/notifications'
+import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -207,6 +208,25 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       message: `Your payslip for ${monthName} is ready to view.`,
       link: '/dashboard/payroll',
     })
+
+    // PAY-01 payroll.credited — one email per employee
+    const empRows = await prisma.employee.findMany({
+      where: { id: { in: payslips.map((p) => p.employeeId) } },
+      select: { id: true, fullName: true },
+    })
+    for (const e of empRows) {
+      await triggerEmail({
+        event: 'payroll.credited',
+        employeeId: e.id,
+        variables: {
+          ...employeeVars({ fullName: e.fullName, designation: null, department: null }),
+          'Month': monthName,
+        },
+        conditionContext: { payslip_generated: true },
+        createdById: payload.userId,
+        dedupeSalt: id, // payroll run id — one send per run per employee
+      })
+    }
   } else if (action === 'SEND_BACK') {
     // Notify whoever was at the prior stage
     const targetRole = nextStatus === 'DRAFT'             ? 'HR_ADMIN'

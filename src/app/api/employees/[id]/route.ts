@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
+import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -353,6 +354,18 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     } catch (auditErr) {
       console.error('[audit] Employee archive', auditErr)
     }
+
+    // OFF-02 termination.issued (manual_review → DRAFT for HR to send)
+    await triggerEmail({
+      event: 'termination.issued',
+      employeeId: id,
+      variables: {
+        ...employeeVars({ fullName: emp.fullName, designation: emp.designation, department: null }),
+        'Last Working Day': (emp.exitDate ?? new Date()).toLocaleDateString('en-GB', { dateStyle: 'long' }),
+      },
+      createdById: payload.userId,
+      dedupeSalt: 'termination',
+    })
 
     return NextResponse.json({ ok: true, mode: 'archive' })
   }

@@ -27,6 +27,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
+import { triggerEmail, candidateVars } from '@/lib/email-triggers'
 
 const VALID_TYPES = ['PHONE', 'VIDEO', 'ONSITE', 'TECHNICAL', 'HR']
 
@@ -177,6 +178,23 @@ ${notesLine}
       }),
     ),
   )
+
+  // Template-driven email trigger (REC-03)
+  await triggerEmail({
+    event: 'interview.scheduled',
+    candidateId,
+    variables: {
+      ...candidateVars({ fullName: candidate.fullName, jobTitle: candidate.requisition.title }),
+      'Day, Date, Time + Timezone': slotLine + ' PKT',
+      '~45 minutes': `~${Math.round(duration)} minutes`,
+      'Video call / In-person / Phone': TYPE_LABEL[type],
+      'Meeting link / Office address — Mega Tower, Lahore': meetingLink || 'Mega Tower, Lahore',
+      'Name, Title': interviewers.map((iv) => `${iv.fullName}${iv.designation ? ` (${iv.designation})` : ''}`).join(', ') || 'TBD',
+    },
+    conditionContext: { round },
+    createdById: me.id,
+    dedupeSalt: interview.id,
+  })
 
   return NextResponse.json({ ok: true, interview })
 }

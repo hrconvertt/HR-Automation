@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { triggerEmail, candidateVars } from '@/lib/email-triggers'
 
 function escapeHtml(s: string): string {
   return s.replace(/[<>&"']/g, (c) => ({
@@ -109,6 +110,20 @@ ${note ? `<p>${escapeHtml(note)}</p>` : ''}
       status: 'DRAFT',
       createdById: me.id,
     },
+  })
+
+  // Trigger template-driven offer-created email (REC-09)
+  await triggerEmail({
+    event: 'offer.created',
+    candidateId,
+    variables: {
+      ...candidateVars({ fullName: candidate.fullName, jobTitle: candidate.requisition?.title }),
+      'Compensation': salaryPkr,
+      'Joining Date': joiningLine,
+      'Offer Valid Until': expiryLine,
+    },
+    createdById: me.id,
+    dedupeSalt: offer.id,
   })
 
   return NextResponse.json({ ok: true, offer, emailDrafted: true })

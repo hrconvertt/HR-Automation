@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
+import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 
 // Self-serve resignation submission. The employee themselves submits;
 // the manager must acknowledge before HR opens an ExitClearance.
@@ -55,6 +56,18 @@ export async function POST(request: NextRequest) {
       link: `/dashboard/employees/${me.id}`,
     })
   }
+
+  // OFF-01 resignation.received
+  await triggerEmail({
+    event: 'resignation.received',
+    employeeId: me.id,
+    variables: {
+      ...employeeVars({ fullName: me.fullName, designation: null, department: null }),
+      'Last Working Day': intendedLastDay.toLocaleDateString('en-GB', { dateStyle: 'long' }),
+    },
+    createdById: payload.userId,
+    dedupeSalt: resignation.id,
+  })
 
   return NextResponse.json({ resignation }, { status: 201 })
 }

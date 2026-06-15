@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify, notifyMany } from '@/lib/notifications'
+import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -169,6 +170,23 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       title: '✓ Leave Approved',
       message: `Your ${leaveRequest.leaveType} request (${dateRange}) has been approved.`,
       link: '/dashboard/leave',
+    })
+  }
+
+  // LIF-08 leave.request_decided
+  if (movingToFinal) {
+    await triggerEmail({
+      event: 'leave.request_decided',
+      employeeId: leaveRequest.employeeId,
+      variables: {
+        ...employeeVars({ fullName: leaveRequest.employee.fullName, designation: null, department: null }),
+        'Leave Type': leaveRequest.leaveType,
+        'Date Range': dateRange,
+        'Status': 'APPROVED',
+      },
+      conditionContext: { status: 'approved' },
+      createdById: payload.userId,
+      dedupeSalt: leaveRequest.id,
     })
   }
 

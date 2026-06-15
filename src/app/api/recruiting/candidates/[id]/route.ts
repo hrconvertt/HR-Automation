@@ -10,6 +10,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { autoTags, shouldAutoPool } from '@/lib/talent-pool'
 import { promoteToEmployee } from '@/lib/hire-candidate'
+import { triggerEmail, candidateVars } from '@/lib/email-triggers'
 
 const VALID = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']
 
@@ -69,6 +70,37 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         poolReason: `Rejected for "${c.requisition.title}" but match score was ${Math.round(c.matchScore ?? 0)} — kept for future roles.`,
         poolAddedAt: new Date(),
       },
+    })
+  }
+
+  // Fire stage-change emails (REC-02 shortlisted, REC-04 assessment, REC-07 on_hold, etc.)
+  const stageMap: Record<string, string> = {
+    SCREENING: 'shortlisted',
+    INTERVIEW: 'shortlisted',
+    OFFER: 'shortlisted',
+    REJECTED: 'rejected',
+  }
+  const mappedStage = stageMap[stage] || stage.toLowerCase()
+  const vars = candidateVars({ fullName: c.fullName, jobTitle: c.requisition.title })
+
+  if (stage === 'REJECTED') {
+    await triggerEmail({
+      event: 'candidate.rejected',
+      candidateId: id,
+      variables: vars,
+      conditionContext: {
+        stage: 'rejected',
+        'flag.add_to_pool': c.inTalentPool || (c.matchScore ?? 0) >= (c.requisition.scoreThreshold ?? 60),
+      },
+      createdById: payload.userId,
+    })
+  } else {
+    await triggerEmail({
+      event: 'candidate.stage_changed',
+      candidateId: id,
+      variables: vars,
+      conditionContext: { stage: mappedStage },
+      createdById: payload.userId,
     })
   }
 

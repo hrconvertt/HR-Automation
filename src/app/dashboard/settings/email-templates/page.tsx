@@ -27,9 +27,8 @@ export default async function EmailTemplatesPage() {
     )
   }
 
-  const templates = await prisma.emailTemplate.findMany({ orderBy: { key: 'asc' } })
+  const templates = await prisma.emailTemplate.findMany({ orderBy: [{ category: 'asc' }, { key: 'asc' }] })
 
-  // Surface seed entries that haven't been saved yet so HR can populate them
   const existingKeys = new Set(templates.map((t) => t.key))
   const placeholders = SEED_TEMPLATES.filter((s) => !existingKeys.has(s.key))
 
@@ -38,6 +37,12 @@ export default async function EmailTemplatesPage() {
       templates={templates.map((t) => ({
         id: t.id,
         key: t.key,
+        category: t.category,
+        name: t.name,
+        triggerEvent: t.triggerEvent,
+        condition: t.condition,
+        manualReview: t.manualReview,
+        active: t.active,
         subject: t.subject,
         body: t.body,
         description: t.description,

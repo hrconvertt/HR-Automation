@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { triggerEmail, candidateVars } from '@/lib/email-triggers'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -113,6 +114,29 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const candidate = interview.candidate
     if (candidate.stage !== 'REJECTED') {
       await prisma.candidate.update({ where: { id: candidate.id }, data: { stage: 'REJECTED' } })
+    }
+  }
+
+  // Template-driven triggers
+  if (result) {
+    const cand = interview.candidate
+    const vars = candidateVars({ fullName: cand.fullName, jobTitle: cand.requisition?.title })
+    await triggerEmail({
+      event: 'interview.completed',
+      candidateId: cand.id,
+      variables: vars,
+      conditionContext: { result },
+      createdById: me.id,
+      dedupeSalt: id,
+    })
+    if (result === 'FAIL') {
+      await triggerEmail({
+        event: 'candidate.rejected',
+        candidateId: cand.id,
+        variables: vars,
+        conditionContext: { 'flag.add_to_pool': cand.inTalentPool },
+        createdById: me.id,
+      })
     }
   }
 

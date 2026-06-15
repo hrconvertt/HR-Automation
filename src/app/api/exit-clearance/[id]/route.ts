@@ -16,6 +16,7 @@ import { verifyToken, hasRole } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
 import { generateLetter } from '@/lib/letter-templates'
 import { computeFinalSettlement } from '@/lib/final-settlement'
+import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -284,6 +285,27 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
         title: 'Experience and Relieving letters ready',
         message: `Your Experience (${expNum}) and Relieving (${relNum}) letters are now available in Documents.`,
         link: '/dashboard/letters',
+      })
+
+      // OFF-07 clearance.completed + OFF-08/09 employee.exited
+      const vars = {
+        ...employeeVars({ fullName: emp.fullName, designation: emp.designation, department: { name: emp.department?.name ?? '' } }),
+        'Last Working Day': exitAt.toLocaleDateString('en-GB', { dateStyle: 'long' }),
+      }
+      await triggerEmail({
+        event: 'clearance.completed',
+        employeeId: clearance.employeeId,
+        variables: vars,
+        createdById: payload.userId,
+        dedupeSalt: id,
+      })
+      await triggerEmail({
+        event: 'employee.exited',
+        employeeId: clearance.employeeId,
+        variables: vars,
+        conditionContext: { settlement_computed: !!clearance.finalSettlementAmount, 'flag.alumni_optin': false },
+        createdById: payload.userId,
+        dedupeSalt: id,
       })
     }
 

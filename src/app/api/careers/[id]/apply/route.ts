@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { scoreCandidate } from '@/lib/candidate-scoring'
 import { evaluateCriteria } from '@/lib/knockout-evaluator'
+import { triggerEmail, candidateVars } from '@/lib/email-triggers'
 
 const VALID_EDUCATION = new Set(['HIGH_SCHOOL', 'DIPLOMA', 'BACHELORS', 'MASTERS', 'PHD'])
 
@@ -127,7 +128,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     scoreReason = result.reason
   }
 
-  await prisma.candidate.create({
+  const newCandidate = await prisma.candidate.create({
     data: {
       requisitionId: id,
       fullName, email, phone,
@@ -150,6 +151,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       skills,
       languages,
     },
+  })
+
+  // Trigger acknowledgment email (REC-01)
+  await triggerEmail({
+    event: 'application.received',
+    candidateId: newCandidate.id,
+    variables: { ...candidateVars({ fullName, jobTitle: job.title }) },
+    conditionContext: { stage: 'applied' },
   })
 
   return NextResponse.json({

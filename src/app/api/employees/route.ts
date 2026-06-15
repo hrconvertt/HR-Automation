@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole, hashPassword } from '@/lib/auth'
+import { buildStandardOnboardingTasks } from '@/lib/onboarding-tasks'
 
 // Returns the next available CON-{DEPT}-NNN code by scanning existing
 // codes for the prefix and picking max + 1. Avoids gaps becoming
@@ -358,28 +359,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    const defaultTasks: { title: string; owner: string; category: string; orderIndex: number; description?: string }[] = [
-      // Pre-arrival
-      { title: 'Confirm seat / desk', owner: 'IT', category: 'PRE_ARRIVAL', orderIndex: 1 },
-      { title: 'Send welcome email', owner: 'HR', category: 'PRE_ARRIVAL', orderIndex: 2 },
-      // Day 1
-      { title: 'Welcome & office tour', owner: 'HR', category: 'DAY_1', orderIndex: 1 },
-      { title: 'First-day orientation', owner: 'HR', category: 'DAY_1', orderIndex: 2 },
-      { title: 'Photo for ID card', owner: 'HR', category: 'DAY_1', orderIndex: 3 },
-      { title: 'Introduce to team', owner: 'MANAGER', category: 'DAY_1', orderIndex: 4 },
-      // Week 1 — Paperwork (HR-issued + Employee-submitted docs)
-      { title: 'Offer letter issued', owner: 'HR', category: 'WEEK_1_PAPERWORK', orderIndex: 1 },
-      { title: 'Employment agreement signed', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 2 },
-      { title: 'NDA signed', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 3 },
-      { title: 'CNIC copy submitted', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 4 },
-      { title: 'Bank details collected', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 5 },
-      { title: 'Educational certificates submitted', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 6 },
-      { title: 'Experience / relieving letters submitted', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 7 },
-      // Week 1 — IT & Access
-      { title: 'Laptop / equipment issued', owner: 'IT', category: 'WEEK_1_IT', orderIndex: 1 },
-      { title: 'System access granted', owner: 'IT', category: 'WEEK_1_IT', orderIndex: 2 },
-      { title: 'Email account created', owner: 'IT', category: 'WEEK_1_IT', orderIndex: 3 },
-    ]
+    const defaultTasks = buildStandardOnboardingTasks(empType)
     await prisma.onboardingTask.createMany({
       data: defaultTasks.map((t) => ({
         checklistId: checklist.id,
@@ -388,6 +368,8 @@ export async function POST(request: NextRequest) {
         category: t.category,
         orderIndex: t.orderIndex,
         description: t.description ?? null,
+        isEmployeeUploadable: t.isEmployeeUploadable ?? false,
+        documentType: t.documentType ?? null,
       })),
     })
 

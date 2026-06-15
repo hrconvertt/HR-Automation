@@ -1,0 +1,1438 @@
+{
+  "meta": {
+    "name": "Convertt HR Email Automation Config",
+    "version": "2.0",
+    "sender": "hr@convertt.co",
+    "total_templates": 67,
+    "placeholder_syntax": "[Square Brackets] = fill before send; ALLCAPS: blocks = pick one variant"
+  },
+  "global_guards": {
+    "never_instant_after_interview": "Hold rejection >= 2h post-interview; prefer next business day.",
+    "business_hours": "Queue non-urgent sends to 09:00 next business day in recipient timezone.",
+    "suppress_weekends_holidays": "Do not send non-urgent email on weekends/public holidays.",
+    "dedupe": "Key sends by (employee_id, template_id, event_id) to prevent replay duplicates.",
+    "manual_review": "Auto-draft only; a human must approve and send.",
+    "fraud_alert_if_not_self_requested": "If change not self-initiated, also notify HR with a fraud flag.",
+    "stop_all_on_status_change": "Cancel queued downstream emails if candidate withdraws or exit is cancelled."
+  },
+  "templates": [
+    {
+      "template_id": "REC-01",
+      "category": "Recruitment",
+      "name": "Application Received — Acknowledgment",
+      "trigger_event": "application.received",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "We've received your application — [Job Title] at Convertt",
+      "body": "Hi [Candidate First Name],\n\nThank you for applying for the [Job Title] role at Convertt. We've successfully received your application and our team is reviewing it.\n\nIf your profile matches what we're looking for, we'll reach out with the next steps. Either way, you'll hear back from us.\n\nWe appreciate your interest in joining us.\n\nWarm regards,\n[Your Name]\nHR Team, Convertt\nhr@convertt.co",
+      "variables": [
+        "Job Title",
+        "Candidate First Name",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-02",
+      "category": "Recruitment",
+      "name": "Shortlisted — Moving Forward",
+      "trigger_event": "candidate.stage_changed",
+      "condition": "stage == 'shortlisted'",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Good news — you've been shortlisted for [Job Title]",
+      "body": "Hi [Candidate First Name],\n\nGreat news! After reviewing your application for the [Job Title] role, we'd like to move you forward in our hiring process.\n\nThe next step is [interview / assessment / call]. We'll follow up shortly with details, or feel free to share your availability for [this week / specific dates].\n\nLooking forward to getting to know you better.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Job Title",
+        "Candidate First Name",
+        "interview / assessment / call",
+        "this week / specific dates",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-03",
+      "category": "Recruitment",
+      "name": "Interview Scheduling (Invite / Confirm / Reschedule)",
+      "trigger_event": "interview.scheduled | interview.confirmed | interview.rescheduled",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Interview for [Job Title] at Convertt",
+      "body": "Hi [Candidate First Name],\n\n[INVITE: We enjoyed reviewing your profile and would like to invite you to an interview for the [Job Title] role.]\n[CONFIRM: This confirms your interview for the [Job Title] role.]\n[RESCHEDULE: We need to move your scheduled interview for the [Job Title] role — apologies for any inconvenience.]\n\nDetails:\n• Format: [Video call / In-person / Phone]\n• Date & Time: [Day, Date, Time + Timezone]\n• Duration: [~45 minutes]\n• [Meeting link / Office address — Mega Tower, Lahore]\n• Interviewer(s): [Name, Title]\n\nPlease confirm this works, or suggest an alternative time. A quick tip: [have your portfolio ready / test your camera and mic].\n\nLooking forward to speaking with you.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Job Title",
+        "Candidate First Name",
+        "Video call / In-person / Phone",
+        "Day, Date, Time + Timezone",
+        "~45 minutes",
+        "Meeting link / Office address — Mega Tower, Lahore",
+        "Name, Title",
+        "have your portfolio ready / test your camera and mic",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-04",
+      "category": "Recruitment",
+      "name": "Assessment / Task Invitation",
+      "trigger_event": "candidate.stage_changed",
+      "condition": "stage == 'assessment'",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Next step — [Job Title] assessment",
+      "body": "Hi [Candidate First Name],\n\nAs the next step for the [Job Title] role, we'd like you to complete a short [design task / assessment]. This helps us understand how you approach real work.\n\nDetails:\n• Task: [brief description / attached / link]\n• Estimated time: [X hours]\n• Deadline: [Day, Date]\n• Submit to: [hr@convertt.co / link]\n\nThere are no trick questions — we're interested in your thinking and process. If you need clarification or more time, just let us know.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Job Title",
+        "Candidate First Name",
+        "design task / assessment",
+        "brief description / attached / link",
+        "X hours",
+        "Day, Date",
+        "hr@convertt.co / link",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-05",
+      "category": "Recruitment",
+      "name": "Reference Check Request",
+      "trigger_event": "candidate.stage_changed",
+      "condition": "stage == 'reference_check'",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Reference request for [Candidate Name]",
+      "body": "Dear [Referee Name],\n\n[Candidate Name] has applied for the [Job Title] role at Convertt and listed you as a reference. We'd be grateful for a few minutes of your time.\n\nCould you share your perspective on:\n• Your working relationship and its duration\n• Their key strengths and areas of growth\n• Reliability, teamwork, and overall performance\n\nYou can reply by email, or let us know a good time for a brief call. All information stays confidential.\n\nThank you for your help.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Candidate Name",
+        "Referee Name",
+        "Job Title",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-06",
+      "category": "Recruitment",
+      "name": "Post-Interview Thank You",
+      "trigger_event": "interview.completed",
+      "condition": "always",
+      "delay": "+24h",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "business_hours"
+      ],
+      "subject": "Thank you for your time, [Candidate First Name]",
+      "body": "Hi [Candidate First Name],\n\nThank you for taking the time to interview for the [Job Title] role today. It was a pleasure learning more about your experience and approach.\n\nWe're now completing our evaluations and expect to share an update by [date/timeframe]. If you have any questions in the meantime, feel free to reach out.\n\nThanks again for your interest in Convertt.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Candidate First Name",
+        "Job Title",
+        "date/timeframe",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-07",
+      "category": "Recruitment",
+      "name": "Candidate On Hold",
+      "trigger_event": "candidate.stage_changed",
+      "condition": "stage == 'on_hold'",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "An update on your [Job Title] application",
+      "body": "Hi [Candidate First Name],\n\nThank you for your patience. An honest update: our hiring decision for the [Job Title] role is taking a little longer than expected due to [internal review / multiple strong candidates / timeline shift].\n\nYou're still very much in consideration, and we expect clarity by [date/timeframe]. We didn't want to leave you wondering.\n\nThank you for your continued interest.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Job Title",
+        "Candidate First Name",
+        "internal review / multiple strong candidates / timeline shift",
+        "date/timeframe",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-08",
+      "category": "Recruitment",
+      "name": "Rejection (Application or Interview stage)",
+      "trigger_event": "candidate.rejected",
+      "condition": "always",
+      "delay": "if last_stage>='interview' then +2h (next business day) else end_of_day",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "never_instant_after_interview",
+        "business_hours"
+      ],
+      "subject": "Update on your application — [Job Title]",
+      "body": "Hi [Candidate First Name],\n\nThank you for [applying for / taking the time to interview for] the [Job Title] role at Convertt.\n\nAfter careful consideration, we've decided to move forward with other candidates whose profiles more closely match our current needs. This was not an easy decision.\n\n[INTERVIEW STAGE: We truly enjoyed our conversation, and this doesn't take away from your clear strengths in [specific area].]\n\nWe'd be glad to keep your details on file for future opportunities. We wish you all the best in your search.\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Job Title",
+        "Candidate First Name",
+        "applying for / taking the time to interview for",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-09",
+      "category": "Recruitment",
+      "name": "Job Offer Letter (Email)",
+      "trigger_event": "offer.created",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your offer to join Convertt as [Job Title]",
+      "body": "Hi [Candidate First Name],\n\nWe're delighted to offer you the position of [Job Title] at Convertt! The team was impressed by you.\n\nKey details:\n• Role: [Job Title]\n• Start date: [Date]\n• Compensation: [PKR amount / package]\n• Reporting to: [Manager Name, Title]\n• Probation: 3 months\n• Work location: [On-site / Hybrid — Mega Tower, Lahore]\n\nYour formal offer letter is attached with full terms. Please review and let us know your decision by [date]. We're happy to answer any questions.\n\nWe're excited at the prospect of having you on board!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Job Title",
+        "Candidate First Name",
+        "Date",
+        "PKR amount / package",
+        "Manager Name, Title",
+        "On-site / Hybrid — Mega Tower, Lahore",
+        "date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-10",
+      "category": "Recruitment",
+      "name": "Offer Acceptance Acknowledgment",
+      "trigger_event": "offer.accepted",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Welcome aboard, [Candidate First Name]!",
+      "body": "Hi [Candidate First Name],\n\nWonderful news — we're thrilled you've accepted the [Job Title] offer and will be joining the Convertt family!\n\nWhat happens next:\n• We'll share onboarding details and first-day instructions closer to [start date].\n• Please send over your joining documents (see the separate checklist email).\n\nIf you have any questions before you start, we're just an email away. Welcome to the team!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Candidate First Name",
+        "Job Title",
+        "start date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "REC-11",
+      "category": "Recruitment",
+      "name": "Talent Pool — Future Opportunities",
+      "trigger_event": "candidate.rejected",
+      "condition": "flag.add_to_pool == true",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Let's stay in touch — Convertt",
+      "body": "Hi [Candidate First Name],\n\nWhile we couldn't move forward together for the [Job Title] role this time, your profile genuinely stood out.\n\nWith your permission, we'd love to keep your details on file and reach out when a role that fits your skills opens up. Roles like [relevant area] come up regularly.\n\nIf that works for you, no action is needed — and you're always welcome to apply directly when something interests you.\n\nThank you, and we hope to connect again soon.\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Candidate First Name",
+        "Job Title",
+        "relevant area",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-01",
+      "category": "Onboarding",
+      "name": "Pre-Boarding Welcome",
+      "trigger_event": "offer.accepted",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Welcome to Convertt, [First Name] — we can't wait for [start date]!",
+      "body": "Hi [First Name],\n\nWe're thrilled to officially welcome you to Convertt! Everyone is looking forward to having you join as [Job Title] on [start date].\n\nOver the coming days we'll share your first-day details and onboarding plan. For now, sit back and relax — you're all set.\n\nIf you have any questions before you start, just reply to this email.\n\nWelcome aboard!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "start date",
+        "Job Title",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-02",
+      "category": "Onboarding",
+      "name": "Document & Joining Checklist",
+      "trigger_event": "offer.accepted",
+      "condition": "docs_received == false",
+      "delay": "+1d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "dedupe"
+      ],
+      "subject": "A few documents before your first day",
+      "body": "Hi [First Name],\n\nTo complete your verification and get your onboarding ready, please share the following before [date]:\n\n• CNIC (front & back)\n• Educational certificates / degree\n• Previous experience / relieving letter [if applicable]\n• Bank account details (for payroll)\n• Recent photograph\n• Signed offer letter\n\nPlease send these to hr@convertt.co. All documents are handled strictly confidentially and used only for HR records.\n\nThank you!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date",
+        "if applicable",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-03",
+      "category": "Onboarding",
+      "name": "First-Day Instructions",
+      "trigger_event": "employee.start_date_approaching",
+      "condition": "always",
+      "delay": "start_date-3d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "business_hours"
+      ],
+      "subject": "Your first day at Convertt — what to expect",
+      "body": "Hi [First Name],\n\nWe're excited to see you on [start date]! Here's everything for a smooth first day:\n\n• Reporting time: [time]\n• Location: Mega Tower, Lahore [floor / room]\n• Ask for: [contact person, title]\n• Dress code: [smart casual]\n• Bring: [CNIC, documents]\n• Lunch: [provided / nearby options]\n\nYour first day includes a welcome, workspace setup, and team orientation. No need to prepare anything — just bring yourself.\n\nSee you soon!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "start date",
+        "time",
+        "floor / room",
+        "contact person, title",
+        "smart casual",
+        "CNIC, documents",
+        "provided / nearby options",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-04",
+      "category": "Onboarding",
+      "name": "New Joiner Announcement (Internal)",
+      "trigger_event": "employee.created",
+      "condition": "always",
+      "delay": "start_date-2d",
+      "channel": "email_internal",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Please welcome [New Hire Name] to the team!",
+      "body": "Hi team,\n\nPlease join me in welcoming [New Hire Name], joining us as [Job Title] starting [start date], reporting to [Manager Name].\n\n[A line or two: background, what they'll work on, a fun fact.]\n\n[New Hire Name] will be sitting with the [team] team. Please say hello and help them feel at home.\n\nWelcome aboard, [First Name]!\n\nBest,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "New Hire Name",
+        "Job Title",
+        "start date",
+        "Manager Name",
+        "A line or two: background, what they'll work on, a fun fact.",
+        "team",
+        "First Name",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-05",
+      "category": "Onboarding",
+      "name": "Account & System Access",
+      "trigger_event": "employee.created",
+      "condition": "accounts_provisioned == true",
+      "delay": "start_date-1d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your Convertt accounts and access",
+      "body": "Hi [First Name],\n\nYour accounts are set up. To get started:\n\n• Email: [name@convertt.co]\n• Tools: [Slack, Google Workspace, project tools]\n• Temporary password: [shared securely / set on first login]\n\nPlease change your password on first login and enable any required security settings. For access issues, contact [IT / admin].\n\nWelcome to the team!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "name@convertt.co",
+        "Slack, Google Workspace, project tools",
+        "shared securely / set on first login",
+        "IT / admin",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-06",
+      "category": "Onboarding",
+      "name": "Equipment / Asset Allocation",
+      "trigger_event": "asset.assigned",
+      "condition": "always",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your assigned equipment at Convertt",
+      "body": "Hi [First Name],\n\nThe following equipment has been assigned to you:\n\n• [Laptop — model, asset ID]\n• [Accessories — mouse, headset]\n• [Access card / other]\n\nPlease confirm receipt by replying. Kindly take care of company assets — these are recorded under your name and returned at end of employment.\n\nThank you!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "Laptop — model, asset ID",
+        "Accessories — mouse, headset",
+        "Access card / other",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-07",
+      "category": "Onboarding",
+      "name": "Buddy / Mentor Assignment",
+      "trigger_event": "buddy.assigned",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Meet your onboarding buddy at Convertt",
+      "body": "Hi [First Name],\n\nTo help you settle in, we've paired you with [Buddy Name] ([Buddy Title]) as your onboarding buddy.\n\n[Buddy Name] is your go-to for any questions during your first few weeks — from how things work to where to find the best coffee.\n\n[Buddy Name], please reach out and say hello. Glad to have you both connected!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "Buddy Name",
+        "Buddy Title",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-08",
+      "category": "Onboarding",
+      "name": "Orientation / Induction Schedule",
+      "trigger_event": "employee.created",
+      "condition": "always",
+      "delay": "start_date-1d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your orientation schedule at Convertt",
+      "body": "Hi [First Name],\n\nHere's your orientation plan:\n\n• [Day/Time] — Welcome & company overview\n• [Day/Time] — Tools, systems & workspace setup\n• [Day/Time] — Team & role intro with [Manager]\n• [Day/Time] — HR policies & handbook walkthrough\n• [Day/Time] — Q&A and first tasks\n\nThese sessions help, not overwhelm — ask anything along the way.\n\nLooking forward to it!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "Day/Time",
+        "Manager",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-09",
+      "category": "Onboarding",
+      "name": "Policy & Handbook Acknowledgment",
+      "trigger_event": "employee.onboarded",
+      "condition": "always",
+      "delay": "day_1",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Please review and acknowledge our HR policies",
+      "body": "Hi [First Name],\n\nAttached is the Convertt Employee Handbook with key policies (leave, conduct, NDA, WFH). Please read through them.\n\nOnce reviewed, kindly confirm your acknowledgment by [signing the attached form / replying] by [date].\n\nThese policies keep things clear and fair for everyone. If anything's unclear, we're happy to explain.\n\nThank you!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "signing the attached form / replying",
+        "date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-10",
+      "category": "Onboarding",
+      "name": "Probation Period Confirmation",
+      "trigger_event": "employee.onboarded",
+      "condition": "always",
+      "delay": "day_1",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your probation period at Convertt",
+      "body": "Hi [First Name],\n\nAs outlined in your offer, your role begins with a 3-month probation, from [start date] to [end date].\n\nYou'll receive regular feedback and support throughout. A review near the end will confirm your permanent status.\n\nNote: per policy, work-from-home is not available during probation. We're confident you'll do great — we're here to support you.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "start date",
+        "end date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "ONB-11",
+      "category": "Onboarding",
+      "name": "30 / 60 / 90-Day Check-In",
+      "trigger_event": "tenure.milestone",
+      "condition": "days in [30,60,90]",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "dedupe"
+      ],
+      "subject": "Quick check-in — how's it going so far?",
+      "body": "Hi [First Name],\n\nYou've completed [30 / 60 / 90] days with us — congratulations and thank you!\n\nWe'd love to hear how you're settling in:\n• What's going well?\n• Anything challenging or unclear?\n• How can we support you better?\n\nReply here, or let's grab [a quick call / coffee]. Your honest input helps us improve the experience.\n\nLooking forward to your thoughts!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "30 / 60 / 90",
+        "a quick call / coffee",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-01",
+      "category": "Employee Lifecycle",
+      "name": "Employment Confirmation (Post-Probation)",
+      "trigger_event": "probation.completed",
+      "condition": "result == 'pass'",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Congratulations — you're now a permanent member of Convertt!",
+      "body": "Hi [First Name],\n\nCongratulations! You have successfully completed your 3-month probation as [Job Title]. Effective [date], you are now a permanent employee of Convertt.\n\nYour hard work over the past months has been valued, and we're excited to have you continue growing with us. As a permanent employee, you're now entitled to [leave entitlement / benefits].\n\nHere's to your continued success!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "Job Title",
+        "date",
+        "leave entitlement / benefits",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-02",
+      "category": "Employee Lifecycle",
+      "name": "Probation Extension Notice",
+      "trigger_event": "probation.completed",
+      "condition": "result == 'extend'",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Regarding your probation period",
+      "body": "Hi [First Name],\n\nAfter reviewing your progress, we've decided to extend your probation by [duration], until [new end date].\n\nThis gives us both more time to assess fit in [areas] and gives you the opportunity to strengthen [areas]. [Manager Name] will share specific expectations and support you.\n\nWe're invested in your success. Please reach out if you'd like to discuss.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "duration",
+        "new end date",
+        "areas",
+        "Manager Name",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-03",
+      "category": "Employee Lifecycle",
+      "name": "Promotion Letter",
+      "trigger_event": "employee.promoted",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Congratulations on your promotion, [First Name]!",
+      "body": "Hi [First Name],\n\nIn recognition of your strong performance, you have been promoted to [New Title], effective [date].\n\nAlong with this new role:\n• Revised compensation: [details / see attached]\n• Reporting to: [Manager Name]\n• Key responsibilities: [brief note]\n\nThis is well-deserved. Congratulations from the entire team!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "New Title",
+        "date",
+        "details / see attached",
+        "Manager Name",
+        "brief note",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-04",
+      "category": "Employee Lifecycle",
+      "name": "Salary Increment Letter",
+      "trigger_event": "compensation.changed",
+      "condition": "type == 'increment'",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your salary revision at Convertt",
+      "body": "Hi [First Name],\n\nYour compensation has been revised in recognition of your performance and commitment.\n\n• Revised gross salary: [amount]\n• Effective from: [date]\n\nThis reflects our appreciation of your contributions. Your updated details will appear in your next payroll cycle.\n\nThank you for all that you do — keep up the great work!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "amount",
+        "date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-05",
+      "category": "Employee Lifecycle",
+      "name": "Role / Department Transfer",
+      "trigger_event": "employee.transferred",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your transfer to [New Team/Role]",
+      "body": "Hi [First Name],\n\nWe confirm your transfer to [New Role / Department], effective [date].\n\n• New role: [Title]\n• New reporting manager: [Manager Name]\n• Context: [growth opportunity / business need]\n\nYour current and new managers will coordinate a smooth handover. We're excited about this new chapter for you.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "New Team/Role",
+        "First Name",
+        "New Role / Department",
+        "date",
+        "Title",
+        "Manager Name",
+        "growth opportunity / business need",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-06",
+      "category": "Employee Lifecycle",
+      "name": "Contract Renewal",
+      "trigger_event": "contract.expiry_approaching",
+      "condition": "renewing == true",
+      "delay": "expiry-30d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Renewal of your contract with Convertt",
+      "body": "Hi [First Name],\n\nYour current contract ends on [date], and we're happy to offer a renewal!\n\nProposed terms:\n• Duration: [new term]\n• Role: [Title]\n• Compensation: [amount / unchanged]\n• Start of new term: [date]\n\nWe've valued your contribution and would love to continue. Please review the attached contract and confirm by [date].\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date",
+        "new term",
+        "Title",
+        "amount / unchanged",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-07",
+      "category": "Employee Lifecycle",
+      "name": "Work-From-Home Approval",
+      "trigger_event": "wfh.request_decided",
+      "condition": "status == 'approved'",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your work-from-home request — approved",
+      "body": "Hi [First Name],\n\nYour request to work from home on [date(s) / arrangement] has been approved.\n\nReminders:\n• Remain reachable during working hours ([hours])\n• Update your status / calendar\n• Keep deliverables on track\n\nNote: WFH is not available during probation, per policy. Thanks for keeping the team informed — enjoy the flexibility!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date(s) / arrangement",
+        "hours",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-08",
+      "category": "Employee Lifecycle",
+      "name": "Leave Approval / Rejection",
+      "trigger_event": "leave.request_decided",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your leave request — [Approved / Update]",
+      "body": "Hi [First Name],\n\nThank you for your leave request.\n\n[APPROVED: Your leave from [start] to [end] ([X days]) is approved. Please ensure handover of pending tasks, and enjoy your time off!]\n[NOT APPROVED: Unfortunately we can't approve leave for [dates] due to [coverage / deadlines]. Could we look at [alternative dates]?]\n\nYour remaining leave balance: [X days].\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Approved / Update",
+        "First Name",
+        "end",
+        "X days",
+        "coverage / deadlines",
+        "alternative dates",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-09",
+      "category": "Employee Lifecycle",
+      "name": "Leave Balance Reminder",
+      "trigger_event": "leave.balance_check",
+      "condition": "scheduled (monthly | year_end)",
+      "delay": "scheduled",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your leave balance update",
+      "body": "Hi [First Name],\n\nYour leave balance as of [date]:\n\n• Total entitled: [X days]\n• Used: [X days]\n• Remaining: [X days]\n\n[If near expiry: unused leave [carries over / lapses] by [date].]\n\nWe encourage you to plan time off and take the rest you've earned. Reach out to apply or with any questions.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date",
+        "X days",
+        "If near expiry: unused leave [carries over / lapses",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-10",
+      "category": "Employee Lifecycle",
+      "name": "Attendance / Late Coming Notice",
+      "trigger_event": "attendance.flag",
+      "condition": "late_count >= threshold",
+      "delay": "batch_weekly",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "business_hours"
+      ],
+      "subject": "A note regarding your attendance",
+      "body": "Hi [First Name],\n\nWe've noticed [late arrivals / attendance irregularities] over [period]. We wanted to check in rather than assume anything.\n\nStandard working hours are [hours]. Consistent attendance helps the whole team stay aligned. If something's affecting your schedule, please let us know — we're happy to find a workable solution.\n\nThank you for your understanding.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "late arrivals / attendance irregularities",
+        "period",
+        "hours",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-11",
+      "category": "Employee Lifecycle",
+      "name": "Document Update Request",
+      "trigger_event": "records.refresh_due",
+      "condition": "scheduled (quarterly)",
+      "delay": "scheduled",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Please update your records with HR",
+      "body": "Hi [First Name],\n\nWe're updating our HR records. Please confirm or update:\n\n• Current address\n• Phone number\n• Emergency contact\n• Bank account details\n• [Any other]\n\nPlease reply with any changes by [date], or confirm everything is current. Accurate records ensure smooth payroll and communication.\n\nThank you!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "Any other",
+        "date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "LIF-12",
+      "category": "Employee Lifecycle",
+      "name": "Experience / Salary / Verification Letter",
+      "trigger_event": "letter.requested",
+      "condition": "type in ['experience','salary_cert','verification']",
+      "delay": "on_request",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your requested letter from Convertt",
+      "body": "Hi [First Name],\n\nAs requested, please find attached your [employment verification / experience / salary] letter, issued on Convertt letterhead.\n\nIt confirms [designation, employment dates, salary — as required for your purpose].\n\nIf you need additional details included or the letter sent to a specific party, let us know and we'll be glad to help.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "employment verification / experience / salary",
+        "designation, employment dates, salary — as required for your purpose",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PER-01",
+      "category": "Performance",
+      "name": "Performance Review Cycle Kickoff",
+      "trigger_event": "review_cycle.opened",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "[Quarter/Year] performance reviews are here",
+      "body": "Hi team,\n\nIt's time for our [Q2 / annual] performance review cycle! A chance to reflect on progress, celebrate wins, and set the path ahead.\n\nTimeline:\n• [Date] — Self-assessments due\n• [Date] — Manager reviews\n• [Date] — 1:1 discussions\n• [Date] — Cycle closes\n\nForms: [link]. Reviews are about growth and recognition, not judgment — please engage openly.\n\nQuestions? Reach out to HR. Let's make it a productive cycle!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Quarter/Year",
+        "Q2 / annual",
+        "Date",
+        "link",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PER-02",
+      "category": "Performance",
+      "name": "Review Reminder (Self / Manager)",
+      "trigger_event": "review.pending",
+      "condition": "not submitted",
+      "delay": "deadline-3d, then deadline-1d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "dedupe"
+      ],
+      "subject": "Reminder: your review is due [date]",
+      "body": "Hi [First Name],\n\nA friendly reminder that your [self-assessment / team reviews] for the [cycle] are due by [date]. [You have [X] reviews pending.]\n\n[SELF: This is your space to highlight achievements, reflect on challenges, and share goals. Worth a thoughtful 30 minutes.]\n[MANAGER: Be specific and balanced, tie feedback to examples, and prepare for the 1:1.]\n\nAccess here: [link]. Let us know if you need help.\n\nThank you!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "date",
+        "First Name",
+        "self-assessment / team reviews",
+        "cycle",
+        "You have [X",
+        "link",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PER-03",
+      "category": "Performance",
+      "name": "Appraisal Outcome / Feedback",
+      "trigger_event": "appraisal.finalized",
+      "condition": "manager_1on1_booked == true",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your [cycle] performance review outcome",
+      "body": "Hi [First Name],\n\nThank you for your engagement this cycle. A summary of your outcome:\n\n• Overall: [rating / summary]\n• Key strengths: [points]\n• Growth areas: [points]\n• [Increment / bonus / next steps, if applicable]\n\n[Manager Name] will discuss this in detail during your 1:1. This is a foundation for your growth — we're here to support you.\n\nCongratulations on your progress, and thank you for your contributions.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "cycle",
+        "First Name",
+        "rating / summary",
+        "points",
+        "Increment / bonus / next steps, if applicable",
+        "Manager Name",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PER-04",
+      "category": "Performance",
+      "name": "Goal-Setting (KPI / OKR) Request",
+      "trigger_event": "goal_period.opened",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Let's set your goals for [period]",
+      "body": "Hi [First Name],\n\nAs we head into [period], it's time to set your goals. Clear goals help you focus, grow, and have something concrete to celebrate later.\n\nPlease draft [3–5] specific, measurable goals aligned with your role and team objectives. Submit by [date] via [link], then finalize with [Manager Name].\n\nNeed help framing them? HR and your manager are happy to assist.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "period",
+        "First Name",
+        "3–5",
+        "date",
+        "link",
+        "Manager Name",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PER-05",
+      "category": "Performance",
+      "name": "PIP — Initiation & Check-In/Closure",
+      "trigger_event": "pip.created | pip.midpoint | pip.closed",
+      "condition": "always",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": true,
+      "guards": [
+        "manual_review"
+      ],
+      "subject": "Performance Improvement Plan — [First Name]",
+      "body": "Hi [First Name],\n\n[INITIATION: Following recent discussions, we're putting in place a structured Performance Improvement Plan (PIP) to support you in meeting expectations.\n• Duration: [30 / 60 days], [start] to [end]\n• Focus areas: [points]\n• Support: [coaching, resources, check-ins]\n• Success criteria: [measurable targets]\nThe goal is your success — please treat this as a genuine opportunity.]\n\n[CHECK-IN: At the [midpoint], here's where things stand: [progress]. Going well: [points]. Continue focusing on: [points].]\n\n[CLOSURE — SUCCESS: You've met the goals set in your plan. Thank you for the effort — the plan is now closed.]\n[CLOSURE — NEXT STEPS: After the plan period, [outcome]. Let's meet to discuss next steps.]\n\n[Manager Name] and HR are here throughout. Let's connect on [date].\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "start",
+        "end",
+        "points",
+        "coaching, resources, check-ins",
+        "measurable targets",
+        "progress",
+        "Manager Name",
+        "date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PER-06",
+      "category": "Performance",
+      "name": "Recognition / Appreciation",
+      "trigger_event": "recognition.given",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "A big thank you, [First Name]!",
+      "body": "Hi [First Name],\n\nWe wanted to recognize your outstanding work on [project / achievement]. [Specific note about the impact.]\n\nYour [dedication / creativity / teamwork] doesn't go unnoticed, and it makes a real difference to the team and to Convertt.\n\nThank you for being you — keep shining!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "project / achievement",
+        "Specific note about the impact.",
+        "dedication / creativity / teamwork",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PER-07",
+      "category": "Performance",
+      "name": "Warning Letter (Written Record)",
+      "trigger_event": "warning.issued",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": true,
+      "guards": [
+        "manual_review"
+      ],
+      "subject": "Formal notice regarding [issue]",
+      "body": "Hi [First Name],\n\nThis serves as a formal [verbal record / written warning] regarding [specific issue — e.g. repeated absence, conduct, missed deadlines].\n\n• Concern: [clear description]\n• Previous discussion: [date, if any]\n• Expectation going forward: [corrective action]\n• Review period: [timeframe]\n\nWe value you and want this resolved positively. Continued [issue] may lead to further action per company policy. We're available to discuss and support improvement.\n\nPlease acknowledge receipt of this notice.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "issue",
+        "First Name",
+        "verbal record / written warning",
+        "specific issue — e.g. repeated absence, conduct, missed deadlines",
+        "clear description",
+        "date, if any",
+        "corrective action",
+        "timeframe",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PAY-01",
+      "category": "Payroll & Compensation",
+      "name": "Payroll Processed (Payslip + Credit)",
+      "trigger_event": "payroll.credited",
+      "condition": "payslip_generated == true",
+      "delay": "on_confirmation",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your salary & payslip for [Month Year]",
+      "body": "Hi [First Name],\n\nYour salary for [Month Year] has been processed and credited to your registered bank account.\n\n• Net amount: [amount]\n• Payment date: [date]\n\nYour detailed payslip is attached, with a breakdown of gross salary, deductions, and net pay. Please review, and flag any discrepancy within [X days].\n\nYour payslip is confidential — please keep it secure.\n\nThank you for your continued contribution!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Month Year",
+        "First Name",
+        "amount",
+        "date",
+        "X days",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PAY-02",
+      "category": "Payroll & Compensation",
+      "name": "Overtime / Allowance Confirmation",
+      "trigger_event": "payroll.processed",
+      "condition": "overtime_or_allowance > 0",
+      "delay": "with_payslip",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Overtime / allowance for [Month Year]",
+      "body": "Hi [First Name],\n\nThis confirms the [overtime / allowance] included in your [Month Year] pay:\n\n• [Overtime hours: X]\n• Calculation: [per policy]\n• Amount: [PKR amount]\n\nThis reflects in your payslip. Thank you for the extra effort during [period] — it's genuinely appreciated.\n\nQuestions on the calculation? Just reply here.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Month Year",
+        "First Name",
+        "overtime / allowance",
+        "Overtime hours: X",
+        "per policy",
+        "PKR amount",
+        "period",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PAY-03",
+      "category": "Payroll & Compensation",
+      "name": "Bonus / Incentive Announcement",
+      "trigger_event": "bonus.approved",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Good news — your [bonus/incentive] details",
+      "body": "Hi [First Name],\n\nYou'll be receiving a [performance / annual / project] bonus in recognition of your contributions.\n\n• Amount: [PKR amount]\n• Payout with: [Month Year payroll / separate date]\n\nThank you for the value you bring to Convertt — a small token of our appreciation. Keep up the excellent work!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "bonus/incentive",
+        "First Name",
+        "performance / annual / project",
+        "PKR amount",
+        "Month Year payroll / separate date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PAY-04",
+      "category": "Payroll & Compensation",
+      "name": "Tax Document Issuance",
+      "trigger_event": "tax.statement_ready",
+      "condition": "annual",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your annual tax statement [FY]",
+      "body": "Hi [First Name],\n\nPlease find attached your annual tax statement for [financial year], summarizing your earnings and tax deductions.\n\nYou may need this for your tax filing. If you require additional documentation or have questions about the figures, please reach out.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "FY",
+        "First Name",
+        "financial year",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PAY-05",
+      "category": "Payroll & Compensation",
+      "name": "Payroll Discrepancy Resolution",
+      "trigger_event": "payroll.query_resolved",
+      "condition": "always",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Regarding your payroll query",
+      "body": "Hi [First Name],\n\nThank you for flagging the discrepancy in your [Month Year] pay. We've looked into it.\n\n• Issue: [description]\n• Finding: [explanation]\n• Resolution: [correction / adjustment in next cycle / one-off payment on date]\n\nApologies for any inconvenience. The correction reflects [when]. Please confirm once verified.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "Month Year",
+        "description",
+        "explanation",
+        "correction / adjustment in next cycle / one-off payment on date",
+        "when",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PAY-06",
+      "category": "Payroll & Compensation",
+      "name": "Bank Detail Update Confirmation",
+      "trigger_event": "bank_details.updated",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "fraud_alert_if_not_self_requested"
+      ],
+      "subject": "Your bank details have been updated",
+      "body": "Hi [First Name],\n\nThis confirms your payroll bank details have been updated:\n\n• [Bank name / account ending in XXXX]\n• Effective from: [Month Year payroll]\n\nIf you did NOT request this change, contact HR immediately. Otherwise no action is needed — your next salary credits to the updated account.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "Bank name / account ending in XXXX",
+        "Month Year payroll",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PAY-07",
+      "category": "Payroll & Compensation",
+      "name": "Reimbursement Approval",
+      "trigger_event": "reimbursement.approved",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your reimbursement — approved",
+      "body": "Hi [First Name],\n\nYour reimbursement claim has been approved:\n\n• Claim for: [description]\n• Amount: [PKR amount]\n• Payout: [with next payroll / by date]\n\nThank you for submitting the supporting documents. Let us know if you have any questions.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "description",
+        "PKR amount",
+        "with next payroll / by date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "PAY-08",
+      "category": "Payroll & Compensation",
+      "name": "Final Settlement / Dues Statement",
+      "trigger_event": "employee.exited",
+      "condition": "settlement_computed == true",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": true,
+      "guards": [
+        "manual_review"
+      ],
+      "subject": "Your full and final settlement",
+      "body": "Hi [First Name],\n\nPlease find attached your full and final settlement following your last working day on [date].\n\nIt includes:\n• [Final / pro-rated salary]\n• [Leave encashment, if applicable]\n• [Deductions / recoveries, if any]\n• Net payable: [amount]\n\nThe amount credits to your registered account by [date]. Please review and confirm. We wish you all the very best for the future.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date",
+        "Final / pro-rated salary",
+        "Leave encashment, if applicable",
+        "Deductions / recoveries, if any",
+        "amount",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-01",
+      "category": "Offboarding",
+      "name": "Resignation Acknowledgment & Acceptance",
+      "trigger_event": "resignation.received | resignation.accepted",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your resignation — acknowledged & confirmed",
+      "body": "Hi [First Name],\n\nWe've received your resignation from the position of [Job Title], and we acknowledge it with mixed feelings — sad to see you go, but grateful for your time with us.\n\nWe confirm the following:\n• Last working day: [date]\n• Notice period: [served / details]\n• Pending: handover, asset return, exit interview, final settlement\n\nWe'll guide you through each step to make your transition as smooth as possible. Our door is open if you'd like to discuss anything.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "Job Title",
+        "date",
+        "served / details",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-02",
+      "category": "Offboarding",
+      "name": "Termination Letter",
+      "trigger_event": "termination.issued",
+      "condition": "always",
+      "delay": "immediate",
+      "channel": "email",
+      "manual_review": true,
+      "guards": [
+        "manual_review"
+      ],
+      "subject": "Notice of employment termination",
+      "body": "Hi [First Name],\n\nThis letter formally notifies you that your employment with Convertt will be terminated, effective [date], [for reason / as per terms discussed].\n\n• Last working day: [date]\n• [Notice period / pay in lieu, per policy]\n• Final settlement: shared separately\n• Asset return & access revocation: to be coordinated\n\nWe'll support you through the exit formalities. For questions, please reach out to HR.\n\nWe wish you well in your future endeavors.\n\nRegards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date",
+        "for reason / as per terms discussed",
+        "Notice period / pay in lieu, per policy",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-03",
+      "category": "Offboarding",
+      "name": "Exit Interview Invitation",
+      "trigger_event": "offboarding.started",
+      "condition": "always",
+      "delay": "last_day-5d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Let's have a chat before you go",
+      "body": "Hi [First Name],\n\nBefore your last day on [date], we'd love a short exit interview. It's a relaxed, confidential conversation — your honest feedback genuinely helps us improve.\n\nCould you share your availability for [a 30-minute slot] on [suggested dates]? In person or over a call, whichever you prefer.\n\nThank you, and we appreciate your openness.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date",
+        "a 30-minute slot",
+        "suggested dates",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-04",
+      "category": "Offboarding",
+      "name": "Knowledge Transfer / Handover Request",
+      "trigger_event": "offboarding.started",
+      "condition": "always",
+      "delay": "last_day-5d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Handover plan before your last day",
+      "body": "Hi [First Name],\n\nTo ensure a smooth transition, let's plan your handover ahead of [last working day].\n\nPlease prepare:\n• A summary of ongoing tasks/projects and their status\n• Key contacts, credentials [shared securely], and documentation\n• Anything in-progress needing follow-up\n\nYour work transfers primarily to [Name / team]. Let's align on a session by [date]. Thank you for setting your successor up for success.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "last working day",
+        "shared securely",
+        "Name / team",
+        "date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-05",
+      "category": "Offboarding",
+      "name": "Asset Return Reminder",
+      "trigger_event": "offboarding.started",
+      "condition": "assets_outstanding == true",
+      "delay": "last_day-3d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Returning company assets before your last day",
+      "body": "Hi [First Name],\n\nAs you wrap up on [date], please arrange to return:\n\n• [Laptop — asset ID]\n• [Accessories]\n• [Access card / other]\n\nKindly hand these to [contact / admin] by [date]. Asset return is part of clearance and final settlement. Thank you for taking care of them.\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date",
+        "Laptop — asset ID",
+        "Accessories",
+        "Access card / other",
+        "contact / admin",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-06",
+      "category": "Offboarding",
+      "name": "Access Revocation Notice (Internal)",
+      "trigger_event": "employee.last_day",
+      "condition": "always",
+      "delay": "last_day end_of_day",
+      "channel": "email_internal",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Access revocation — [Employee Name], last day [date]",
+      "body": "Hi [IT / Admin],\n\n[Employee Name] ([Job Title]) leaves Convertt with a last working day of [date]. Please revoke access at end of day:\n\n• Email & Google Workspace\n• [Slack, project tools, repositories]\n• [Building / card access]\n• [Third-party systems]\n\nPlease confirm once completed, and coordinate timing so the handover isn't disrupted before the final day. Thank you!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Employee Name",
+        "date",
+        "IT / Admin",
+        "Job Title",
+        "Slack, project tools, repositories",
+        "Building / card access",
+        "Third-party systems",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-07",
+      "category": "Offboarding",
+      "name": "Relieving & Experience Letter",
+      "trigger_event": "clearance.completed",
+      "condition": "always",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Your relieving & experience letter from Convertt",
+      "body": "Hi [First Name],\n\nPlease find attached your relieving and experience letter on Convertt letterhead.\n\nIt confirms you have been formally relieved effective [last working day], your role as [Job Title], and your tenure from [start] to [end], along with a note on your contribution. This serves as proof for future employment.\n\nShould a future employer need verification, they're welcome to contact hr@convertt.co.\n\nThank you for your service. We wish you the very best ahead.\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "last working day",
+        "Job Title",
+        "start",
+        "end",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-08",
+      "category": "Offboarding",
+      "name": "Farewell Announcement (Internal)",
+      "trigger_event": "employee.exited",
+      "condition": "always",
+      "delay": "last_day",
+      "channel": "email_internal",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Wishing [First Name] all the best",
+      "body": "Hi team,\n\nAs you may know, [First Name] will be moving on from Convertt, with their last day on [date]. After [tenure] as [Job Title], they've left a real mark — [a line on contributions].\n\nPlease take a moment to share your good wishes [in person / here / at the farewell on date].\n\n[First Name], thank you for everything. Wishing you nothing but success ahead!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "date",
+        "tenure",
+        "Job Title",
+        "a line on contributions",
+        "in person / here / at the farewell on date",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "OFF-09",
+      "category": "Offboarding",
+      "name": "Alumni / Stay-in-Touch",
+      "trigger_event": "employee.exited",
+      "condition": "flag.alumni_optin == true",
+      "delay": "+30d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Once a Convertt-er, always a Convertt-er",
+      "body": "Hi [First Name],\n\nNow that you've moved on to your next chapter, we just wanted to say — let's stay in touch!\n\nYou're always welcome to drop by, reach out, or come back if the timing's ever right. We'd also love to keep you in the loop on [alumni updates / opportunities], if you're open to it.\n\nThank you again for everything. Keep us posted on how you're doing!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "First Name",
+        "alumni updates / opportunities",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-01",
+      "category": "Culture & Engagement",
+      "name": "Birthday / Work Anniversary",
+      "trigger_event": "date.is_birthday | tenure.anniversary",
+      "condition": "active_employee",
+      "delay": "09:00 local",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "business_hours_optional"
+      ],
+      "subject": "Happy [Birthday / Work Anniversary], [First Name]!",
+      "body": "Hi [First Name],\n\n[BIRTHDAY: Wishing you a very happy birthday! We hope your day is filled with joy, cake, and a little break from the inbox.]\n[ANNIVERSARY: Congratulations on [X year(s)] with Convertt! Thank you for everything you've brought to the team — here's to many more.]\n\nFrom all of us at Convertt — celebrate well, you've earned it!\n\nWarm wishes,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Birthday / Work Anniversary",
+        "First Name",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-02",
+      "category": "Culture & Engagement",
+      "name": "Holiday / Public Holiday Announcement",
+      "trigger_event": "holiday.approaching",
+      "condition": "always",
+      "delay": "holiday-2d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Office closed for [Holiday] — [dates]",
+      "body": "Hi team,\n\nA quick heads-up: the office will be closed for [Holiday] on [date(s)]. Normal operations resume on [date].\n\nPlease plan deliverables and client communications accordingly, and inform relevant stakeholders. [Any on-call / WFH notes.]\n\nEnjoy the break — you deserve it!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Holiday",
+        "dates",
+        "date(s)",
+        "date",
+        "Any on-call / WFH notes.",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-03",
+      "category": "Culture & Engagement",
+      "name": "Event / Town Hall Invitation",
+      "trigger_event": "event.created",
+      "condition": "always",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "You're invited: [Event Name] on [date]",
+      "body": "Hi team,\n\nWe're excited to invite you to [Event Name — town hall / team lunch / offsite]!\n\n• Date & time: [details]\n• Location: [venue / link]\n• What to expect: [agenda highlights]\n\n[Any RSVP / prep instructions.] These moments are about connecting beyond work — we'd love to see you all there.\n\nSee you on [date]!\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Event Name",
+        "date",
+        "Event Name — town hall / team lunch / offsite",
+        "details",
+        "venue / link",
+        "agenda highlights",
+        "Any RSVP / prep instructions.",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-04",
+      "category": "Culture & Engagement",
+      "name": "Employee Survey / Pulse Check",
+      "trigger_event": "survey.launched",
+      "condition": "always",
+      "delay": "on_launch + reminder at deadline-2d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "dedupe"
+      ],
+      "subject": "We'd love your honest feedback — [Survey Name]",
+      "body": "Hi team,\n\nYour experience at Convertt matters, and we want to keep making it better. Please take [X minutes] to complete our [pulse check / engagement survey].\n\n• Link: [survey link]\n• Deadline: [date]\n• [Anonymous / responses confidential]\n\nNo right or wrong answers — just be honest. We read every response and act on what we learn.\n\nThank you for helping shape a better Convertt!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Survey Name",
+        "X minutes",
+        "pulse check / engagement survey",
+        "survey link",
+        "date",
+        "Anonymous / responses confidential",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-05",
+      "category": "Culture & Engagement",
+      "name": "Policy Update Announcement",
+      "trigger_event": "policy.published",
+      "condition": "always",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Update to our [policy name]",
+      "body": "Hi team,\n\nWe're updating our [policy name], effective [date]. What's changing and why:\n\n• What's changing: [summary]\n• Why: [reason]\n• What it means for you: [practical impact]\n\nThe full updated policy is available [attached / on the HR drive]. Please give it a read, and reach out to HR with any questions.\n\nThank you for staying informed!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "policy name",
+        "date",
+        "summary",
+        "reason",
+        "practical impact",
+        "attached / on the HR drive",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-06",
+      "category": "Culture & Engagement",
+      "name": "Wellness / Benefits Program",
+      "trigger_event": "program.launched",
+      "condition": "always",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Taking care of you — [Program Name]",
+      "body": "Hi team,\n\nYour wellbeing matters, so we're excited to share [Program Name]!\n\n• What it is: [description]\n• How to access / participate: [steps]\n• When: [dates / ongoing]\n\n[Any benefit details.] We encourage you to make the most of it. A healthy, happy team is what makes Convertt great.\n\nQuestions? HR is here to help.\n\nWarm regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Program Name",
+        "description",
+        "steps",
+        "dates / ongoing",
+        "Any benefit details.",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-07",
+      "category": "Culture & Engagement",
+      "name": "Training / L&D Invitation",
+      "trigger_event": "training.scheduled",
+      "condition": "always",
+      "delay": "on_schedule + reminder at event-1d",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [
+        "dedupe"
+      ],
+      "subject": "Level up: [Training Name] on [date]",
+      "body": "Hi team,\n\nWe're hosting a [training / workshop] on [topic] — a great chance to grow your skills.\n\n• Date & time: [details]\n• Format: [in-person / online — link]\n• Facilitator: [name]\n• For: [whole team / specific roles]\n\n[RSVP / prep instructions.] Investing in your growth is investing in all of us. We hope you'll join!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Training Name",
+        "date",
+        "training / workshop",
+        "topic",
+        "details",
+        "in-person / online — link",
+        "name",
+        "whole team / specific roles",
+        "RSVP / prep instructions.",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-08",
+      "category": "Culture & Engagement",
+      "name": "Referral Program",
+      "trigger_event": "referral.window_open",
+      "condition": "active_hiring == true",
+      "delay": "on_event",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "Know someone great? Refer them to Convertt",
+      "body": "Hi team,\n\nWe're hiring, and the best people often know other great people — that's where you come in!\n\nWe're looking for [roles]. Refer someone we hire and you'll receive [referral bonus / reward].\n\nHow to refer:\n• Send their CV/profile to hr@convertt.co\n• Mention the role and why they'd be a fit\n\nHelp us grow the team with people you'd love to work alongside. Thank you!\n\nBest regards,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "roles",
+        "referral bonus / reward",
+        "Your Name"
+      ]
+    },
+    {
+      "template_id": "CUL-09",
+      "category": "Culture & Engagement",
+      "name": "Festive Greetings",
+      "trigger_event": "date.is_festival",
+      "condition": "calendar_match",
+      "delay": "09:00 local",
+      "channel": "email",
+      "manual_review": false,
+      "guards": [],
+      "subject": "[Festival] greetings from Convertt!",
+      "body": "Hi team,\n\nWishing you and your loved ones a wonderful [Eid / New Year / festival]!\n\nMay this occasion bring you joy, rest, and good company. Thank you for everything you do — we're grateful to have you as part of the Convertt family.\n\n[Any holiday/closure note.]\n\nWarm wishes,\n[Your Name]\nHR Team, Convertt",
+      "variables": [
+        "Festival",
+        "Eid / New Year / festival",
+        "Any holiday/closure note.",
+        "Your Name"
+      ]
+    }
+  ]
+}

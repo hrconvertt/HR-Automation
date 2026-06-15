@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
 import { sendEmail, compensationChangeEmail } from '@/lib/email'
+import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -179,6 +180,23 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         })
         await sendEmail({ to: emp.email, subject, html })
       }
+
+      // Template-driven trigger (LIF-04 increment / LIF-03 promotion)
+      const triggerType = (type ?? 'INCREMENT').toUpperCase()
+      const compType = triggerType === 'PROMOTION' ? 'promotion' : triggerType === 'BONUS' ? 'bonus' : 'increment'
+      await triggerEmail({
+        event: compType === 'promotion' ? 'employee.promoted' : 'compensation.changed',
+        employeeId: id,
+        variables: {
+          ...employeeVars({ fullName: emp?.fullName, designation: null, department: null }),
+          'New Gross': `PKR ${Math.round(newGross).toLocaleString('en-PK')}`,
+          'Previous Gross': `PKR ${Math.round(oldGross).toLocaleString('en-PK')}`,
+          'Effective Date': effective.toLocaleDateString('en-GB', { dateStyle: 'long' }),
+        },
+        conditionContext: { type: compType },
+        createdById: auth.payload?.userId,
+        dedupeSalt: newHistoryId || effective.toISOString(),
+      })
     }
 
     return NextResponse.json({ salary: result })

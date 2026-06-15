@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
+import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -84,6 +85,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     title: '✗ Leave Rejected',
     message: `Your ${leaveRequest.leaveType} request (${dateRange}) was rejected by ${who}. ${reason ? 'Reason: ' + reason : ''}`.trim(),
     link: '/dashboard/leave',
+  })
+
+  await triggerEmail({
+    event: 'leave.request_decided',
+    employeeId: leaveRequest.employeeId,
+    variables: {
+      ...employeeVars({ fullName: leaveRequest.employee.fullName, designation: null, department: null }),
+      'Leave Type': leaveRequest.leaveType,
+      'Date Range': dateRange,
+      'Status': 'REJECTED',
+      'Reason': reason ?? '',
+    },
+    conditionContext: { status: 'rejected' },
+    createdById: payload.userId,
+    dedupeSalt: leaveRequest.id,
   })
 
   return NextResponse.json({ success: true })

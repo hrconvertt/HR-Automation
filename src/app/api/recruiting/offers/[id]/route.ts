@@ -21,6 +21,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { promoteToEmployee } from '@/lib/hire-candidate'
 import { notify } from '@/lib/notifications'
+import { triggerEmail, candidateVars } from '@/lib/email-triggers'
 
 const VALID = ['ACCEPTED', 'REJECTED', 'EXPIRED', 'WITHDRAWN']
 
@@ -133,6 +134,32 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         title: `Offer ${status.toLowerCase()}`,
         message: `${offer.candidate.fullName} — offer for ${offer.candidate.requisition.title} is now ${status}.`,
         link: '/dashboard/recruiting/offers',
+      })
+    }
+  }
+
+  // Template-driven email triggers
+  const candVars = candidateVars({
+    fullName: offer.candidate.fullName,
+    jobTitle: offer.candidate.requisition.title,
+  })
+  if (status === 'ACCEPTED') {
+    await triggerEmail({
+      event: 'offer.accepted',
+      candidateId: offer.candidateId,
+      variables: candVars,
+      createdById: me.id,
+      dedupeSalt: offer.id,
+    })
+    // Fire downstream onboarding kickoff (ONB-01, ONB-02)
+    if (promotedEmployeeId) {
+      await triggerEmail({
+        event: 'employee.created',
+        employeeId: promotedEmployeeId,
+        variables: candVars,
+        conditionContext: { accounts_provisioned: false },
+        createdById: me.id,
+        dedupeSalt: promotedEmployeeId,
       })
     }
   }

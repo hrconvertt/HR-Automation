@@ -18,6 +18,7 @@
 import { prisma } from '@/lib/prisma'
 import { hashPassword } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
+import { buildStandardOnboardingTasks } from '@/lib/onboarding-tasks'
 
 /** Generate a 12-char temporary password — mixed case + digits, no symbols
  *  (easier to read in welcome emails). The plaintext is included in the
@@ -202,19 +203,9 @@ export async function promoteToEmployee(
       data: { employeeId: employee.id },
     })
 
-    // Seed a minimal task set so the hiring manager has something to act on.
-    const defaultTasks = [
-      { title: 'Send welcome email',           owner: 'HR',       category: 'PRE_ARRIVAL',       orderIndex: 1 },
-      { title: 'Welcome & office tour',        owner: 'HR',       category: 'DAY_1',             orderIndex: 1 },
-      { title: 'Introduce to team',            owner: 'MANAGER',  category: 'DAY_1',             orderIndex: 2 },
-      { title: 'Employment agreement signed',  owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK',  orderIndex: 1 },
-      { title: 'NDA signed',                   owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK',  orderIndex: 2 },
-      { title: 'CNIC copy submitted',          owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK',  orderIndex: 3 },
-      { title: 'Bank details collected',       owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK',  orderIndex: 4 },
-      { title: 'Laptop / equipment issued',    owner: 'IT',       category: 'WEEK_1_IT',         orderIndex: 1 },
-      { title: 'System access granted',        owner: 'IT',       category: 'WEEK_1_IT',         orderIndex: 2 },
-      { title: 'Email account created',        owner: 'IT',       category: 'WEEK_1_IT',         orderIndex: 3 },
-    ]
+    // Standard 17-item checklist (master sheet). isEmployeeUploadable
+    // on items 7–11 lights up the self-upload widget on the employee profile.
+    const defaultTasks = buildStandardOnboardingTasks(employeeType)
     await tx.onboardingTask.createMany({
       data: defaultTasks.map((t) => ({
         checklistId: checklist.id,
@@ -222,6 +213,9 @@ export async function promoteToEmployee(
         owner: t.owner,
         category: t.category,
         orderIndex: t.orderIndex,
+        description: t.description ?? null,
+        isEmployeeUploadable: t.isEmployeeUploadable ?? false,
+        documentType: t.documentType ?? null,
       })),
     })
 
@@ -262,6 +256,25 @@ export async function promoteToEmployee(
 
     return { employee, plainPassword }
   })
+
+  // Probation record — required for PERMANENT/PROBATION. Defaults to a
+  // 3-month window. INTERNSHIP/TRAINING get a record sized to their
+  // contract length elsewhere; we only seed the standard case here.
+  if (employeeType === 'PROBATION') {
+    const probEnd = new Date(joiningDate)
+    probEnd.setMonth(probEnd.getMonth() + 3)
+    await prisma.probationRecord.upsert({
+      where: { employeeId: result.employee.id },
+      update: {},
+      create: {
+        employeeId: result.employee.id,
+        startDate: joiningDate,
+        endDate: probEnd,
+        durationMonths: 3,
+        status: 'ACTIVE',
+      },
+    }).catch((e) => { console.error('[hire-candidate] probation create failed', e) })
+  }
 
   // Manager notification — outside the transaction; failure to notify must
   // not roll back the hire.
