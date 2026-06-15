@@ -612,6 +612,7 @@ model CompensationHistory {
   newSalary    Float
   incrementPct Float?
   reason       String?
+  notes        String?  // Free-form manager comment shown on the increment letter
   effectiveDate DateTime
   approvedById String?
   createdAt    DateTime @default(now())
@@ -1278,7 +1279,7 @@ model EmployeeDocument {
   id           String   @id @default(cuid())
   employeeId   String
   employee     Employee @relation(fields: [employeeId], references: [id])
-  type         String   // OFFER_LETTER | CNIC | RESUME | EDUCATIONAL_CERTIFICATE | EXPERIENCE | NDA | PHOTO | SALARY_SLIP | OTHER
+  type         String   // OFFER_LETTER | CNIC | RESUME | EDUCATIONAL_CERTIFICATE | EXPERIENCE | NDA | PHOTO | SALARY_SLIP | INCREMENT_LETTER | OTHER
   name         String
   url          String   @default("")
   size         Int?

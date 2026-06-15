@@ -138,6 +138,115 @@ const FALLBACK = [
 // Names that must always be top-of-hierarchy (forced null)
 const TOP_LEVEL = ['Syed Asghar', 'Syed Khawer']
 
+// Defensive stub data for known employees who occasionally vanish from the DB
+// (import drift, manual deletes). If any of these are missing we recreate them
+// with sensible defaults rather than letting the org chart silently lose them.
+// `mgr` is matched against the (post-create) employee list; null = top of tree.
+const REQUIRED_EMPLOYEES = [
+  { fullName: 'Syed Asghar Hassan',           designation: 'Chief Executive Officer',                            department: 'Executive',          mgr: null },
+  { fullName: 'Syed Khawer Iqbal',            designation: 'Co-Founder & Head of Administration',                department: 'Administration',     mgr: null },
+  { fullName: 'Iqra Naveed',                  designation: 'Head of Business Development & Marketing',           department: 'Business Development', mgr: 'Syed Asghar' },
+  { fullName: 'Tahreem Waheed',               designation: 'HR Associate',                                        department: 'Human Resources',    mgr: 'Syed Asghar' },
+  { fullName: 'Syeda Manqbat Aelia',          designation: 'Finance Analyst',                                     department: 'Finance',            mgr: 'Syed Asghar' },
+  { fullName: 'Abdullah Shafiq',              designation: 'Head of UI/UX Design',                                department: 'Design',             mgr: 'Syed Asghar' },
+  { fullName: 'Atta Ur Rehman',               designation: 'Head of Client Servicing & Operations - Shopify',     department: 'Operations',         mgr: 'Syed Asghar' },
+  { fullName: 'Aqib Aslam',                   designation: 'Senior WordPress Developer',                          department: 'Engineering',        mgr: 'Syed Asghar' },
+  { fullName: 'Muhammad Waqas Fareed',        designation: 'Head of Client Servicing & Operations',               department: 'Operations',         mgr: 'Syed Asghar' },
+  { fullName: 'Sheikh Taha Adnan',            designation: 'Senior Graphics & UI Designer',                       department: 'Design',             mgr: 'Syed Asghar' },
+  { fullName: 'Altaf Yaseen',                 designation: 'Associate UI/UX Designer',                            department: 'Design',             mgr: 'Abdullah Shafiq' },
+  { fullName: 'Muhammad Usman Saeed',         designation: 'Associate UI/UX Designer',                            department: 'Design',             mgr: 'Abdullah Shafiq' },
+  { fullName: 'Muhammad Ammar Younas',        designation: 'UI/UX Designer',                                      department: 'Design',             mgr: 'Altaf Yaseen' },
+  { fullName: 'Ali Hassan',                   designation: 'UI/UX Designer',                                      department: 'Design',             mgr: 'Altaf Yaseen' },
+  { fullName: 'Umar Ameen',                   designation: 'UI/UX Designer',                                      department: 'Design',             mgr: 'Altaf Yaseen' },
+  { fullName: 'Zuhaa Jutt',                   designation: 'UI/UX Designer',                                      department: 'Design',             mgr: 'Altaf Yaseen' },
+  { fullName: 'Momna Waryam Khan',            designation: 'Lead Senior Software Engineer',                       department: 'Engineering',        mgr: 'Atta Ur Rehman' },
+  { fullName: 'Muzaffar Jamil',               designation: 'Shopify Developer',                                   department: 'Engineering',        mgr: 'Momna Waryam Khan' },
+  { fullName: 'Muhammad Ahsan',               designation: 'Junior Shopify Developer',                            department: 'Engineering',        mgr: 'Momna Waryam Khan' },
+  { fullName: 'Ali Shan',                     designation: 'WordPress Developer',                                 department: 'Engineering',        mgr: 'Momna Waryam Khan' },
+  { fullName: 'Muhammad Rayyan',              designation: 'Junior Shopify Developer',                            department: 'Engineering',        mgr: 'Momna Waryam Khan' },
+  { fullName: 'Muhammad Irfan',               designation: 'Junior Shopify Developer',                            department: 'Engineering',        mgr: 'Momna Waryam Khan' },
+  { fullName: 'Ayesha Akram',                 designation: 'Backend Intern',                                      department: 'Engineering',        mgr: 'Momna Waryam Khan' },
+  { fullName: 'Mahnoor Riaz',                 designation: 'Backend Intern',                                      department: 'Engineering',        mgr: 'Momna Waryam Khan' },
+  { fullName: 'Usman Ali',                    designation: 'Senior Video Editor',                                 department: 'Media',              mgr: 'Sheikh Taha Adnan' },
+  { fullName: 'Tayyab Hussain',               designation: 'Junior Video Editor',                                 department: 'Media',              mgr: 'Usman Ali' },
+  { fullName: 'Momin Munir',                  designation: 'Marketing Associate',                                 department: 'Marketing',          mgr: 'Sheikh Taha Adnan' },
+  { fullName: 'Arslan',                       designation: 'Office Boy',                                          department: 'Administration',     mgr: 'Syed Khawer' },
+  { fullName: 'Islam',                        designation: 'Office Boy',                                          department: 'Administration',     mgr: 'Syed Khawer' },
+]
+
+function emailFromName(name) {
+  const slug = String(name).toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .join('.')
+  return `${slug}@convertt.co`
+}
+
+function codeFromName(name) {
+  const slug = String(name).toLowerCase()
+    .replace(/[^a-z\s]/g, '')
+    .trim()
+    .split(/\s+/)
+    .map((t) => t[0])
+    .join('')
+    .toUpperCase()
+  return `CON-${slug}-${Math.floor(Math.random() * 900 + 100)}`
+}
+
+// ─── Ensure required employees exist ───────────────────────────────────────
+// Returns the (possibly-grown) list of all employees so the caller can
+// continue with the hierarchy pass without an extra DB round-trip.
+async function ensureRequiredEmployees(prisma, allEmps) {
+  const summary = []
+  for (const spec of REQUIRED_EMPLOYEES) {
+    const existing = fuzzyMatch(spec.fullName, allEmps)
+    if (existing) {
+      summary.push(`${spec.fullName}: already existed`)
+      continue
+    }
+
+    // Ensure department exists.
+    let dept = await prisma.department.findFirst({ where: { name: spec.department } })
+    if (!dept) {
+      dept = await prisma.department.create({
+        data: { name: spec.department, code: spec.department.slice(0, 3).toUpperCase() },
+      })
+    }
+
+    const email = emailFromName(spec.fullName)
+    // If a user with this email exists, drop the @-part so we can still create.
+    const emailUnique = (await prisma.employee.findFirst({ where: { email } }))
+      ? `${spec.fullName.toLowerCase().replace(/\s+/g, '.')}.${Date.now()}@convertt.co`
+      : email
+
+    const created = await prisma.employee.create({
+      data: {
+        employeeCode: codeFromName(spec.fullName),
+        fullName: spec.fullName,
+        email: emailUnique,
+        joiningDate: new Date('2023-01-01'),
+        designation: spec.designation,
+        departmentId: dept.id,
+        status: 'ACTIVE',
+        employeeType: 'PERMANENT',
+        workLocation: 'ONSITE',
+      },
+      select: { id: true, fullName: true, status: true, reportingManagerId: true, employeeCode: true },
+    })
+    allEmps.push(created)
+    summary.push(`${spec.fullName}: CREATED (stub data — review in HR module)`)
+  }
+
+  console.log(`\n[required-employees] summary:`)
+  for (const line of summary) {
+    if (/iqra/i.test(line)) console.log(`  >>> ${line}`)
+    else console.log(`  - ${line}`)
+  }
+  return allEmps
+}
+
 async function main() {
   const prisma = new PrismaClient()
 
@@ -151,9 +260,15 @@ async function main() {
     }
   }
 
-  const allEmps = await prisma.employee.findMany({
+  let allEmps = await prisma.employee.findMany({
     select: { id: true, fullName: true, status: true, reportingManagerId: true, employeeCode: true },
   })
+
+  // ── Defensive: create any missing required employees first ──
+  // Stops people like Iqra Naveed from silently vanishing if a future
+  // import script accidentally deletes them.
+  allEmps = await ensureRequiredEmployees(prisma, allEmps)
+
   const activeEmps = allEmps.filter((e) => e.status === 'ACTIVE')
 
   // ── Diagnostic up front ──

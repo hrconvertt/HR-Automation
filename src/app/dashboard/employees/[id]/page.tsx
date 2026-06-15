@@ -209,6 +209,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
           newSalary: gross,
           incrementPct: null,
           reason: 'Hire — Joining offer',
+          notes: null,
           effectiveDate: employee.joiningDate,
           approvedById: null,
           createdAt: employee.joiningDate,

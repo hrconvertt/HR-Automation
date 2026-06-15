@@ -88,9 +88,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
+  // Include ACTIVE + PROBATION + ON_LEAVE. Excluding only the truly-departed
+  // (RESIGNED / TERMINATED / INACTIVE) means people on probation or extended
+  // leave still appear in the org chart — explains why Iqra Naveed seemed
+  // to vanish when her status was flipped to PROBATION at one point.
   const employees = await prisma.employee.findMany({
-    where: { status: 'ACTIVE' },
+    where: { status: { notIn: ['RESIGNED', 'TERMINATED', 'INACTIVE'] } },
     select: {
+      status: true,
       id: true,
       fullName: true,
       employeeCode: true,
@@ -100,6 +105,12 @@ export async function GET(request: NextRequest) {
       department: { select: { id: true, name: true } },
     },
   })
+
+  console.log(
+    '[org-chart] visible employees:',
+    employees.length,
+    employees.map((e) => `${e.fullName} (${e.status})`).join(', ')
+  )
 
   // Build a node map.
   const nodes = new Map<string, OrgNode>()

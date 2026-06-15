@@ -47,7 +47,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const body = await request.json()
     const {
       basic, houseRent, utilities, food, fuel, medicalAllowance, otherAllowance,
-      effectiveFrom, type, reason, notifyEmployee, monthlyPayDay,
+      effectiveFrom, type, reason, notes, notifyEmployee, monthlyPayDay,
     } = body
 
     // Validate
@@ -67,7 +67,10 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         existing.fuel + existing.medicalAllowance + existing.otherAllowance
       : 0
 
-    // Upsert salary + write history row in one transaction
+    // Upsert salary + write history row in one transaction. We capture the
+    // new CompensationHistory row id so we can render an Increment Letter PDF
+    // out-of-band after the txn commits.
+    let newHistoryId: string | null = null
     const result = await prisma.$transaction(async (tx) => {
       // Normalise monthlyPayDay (1–31, or null to clear)
       const payDay = monthlyPayDay == null
@@ -98,7 +101,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       // Write history (only if there's a real change, or it's the first record)
       if (oldGross !== newGross) {
         const pct = oldGross > 0 ? ((newGross - oldGross) / oldGross) * 100 : null
-        await tx.compensationHistory.create({
+        const hist = await tx.compensationHistory.create({
           data: {
             employeeId: id,
             type: type ?? (existing ? 'ADJUSTMENT' : 'INITIAL'),
@@ -106,27 +109,58 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
             newSalary: newGross,
             incrementPct: pct,
             reason: reason ?? null,
+            notes: notes ?? null,
             effectiveDate: effective,
             approvedById: auth.payload!.userId,
           },
         })
+        newHistoryId = hist.id
       }
 
       return salary
     })
+
+    // Auto-generate Increment Letter document + notification.
+    // Only fires for INCREMENT / PROMOTION / ADJUSTMENT (real comp changes),
+    // not the very first INITIAL setup at hire-time and not for BONUS.
+    const isLetterWorthy =
+      newHistoryId &&
+      oldGross > 0 &&
+      ['INCREMENT', 'PROMOTION', 'ADJUSTMENT'].includes(type ?? 'INCREMENT')
+    if (isLetterWorthy && newHistoryId) {
+      try {
+        const effectiveLabel = effective.toISOString().slice(0, 10)
+        await prisma.employeeDocument.create({
+          data: {
+            employeeId: id,
+            type: 'INCREMENT_LETTER',
+            name: `Increment Letter — ${effectiveLabel}`,
+            url: `/increment-letter/${newHistoryId}/print`,
+            uploadedById: auth.payload!.userId,
+            visibleToEmployee: true,
+          },
+        })
+      } catch (e) {
+        console.error('[salary] failed to write increment-letter document:', e)
+      }
+    }
 
     // Notify employee outside the transaction (in-app bell + email)
     if (notifyEmployee && oldGross !== newGross) {
       const diff = newGross - oldGross
       const verb = diff > 0 ? 'increased' : 'updated'
 
-      // 1) In-app bell notification
+      // 1) In-app bell notification — link points at the printable increment
+      //    letter when we generated one, otherwise the compensation tab.
+      const letterLink = newHistoryId
+        ? `/increment-letter/${newHistoryId}/print`
+        : `/dashboard/employees/${id}?tab=compensation`
       await notify({
         employeeId: id,
         type: 'GENERAL',
-        title: '💼 Your compensation has been updated',
-        message: `Your gross salary has been ${verb} effective ${effective.toLocaleDateString('en-GB', { dateStyle: 'long' })}.`,
-        link: `/dashboard/employees/${id}?tab=compensation`,
+        title: '💼 Your salary has been revised',
+        message: `Your gross salary has been ${verb} effective ${effective.toLocaleDateString('en-GB', { dateStyle: 'long' })}. View letter.`,
+        link: letterLink,
       })
 
       // 2) Email (queued if SMTP not configured)
