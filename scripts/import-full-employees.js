@@ -506,17 +506,122 @@ async function main() {
     return bestScore >= 1 ? best : null
   }
 
-  // ─── Backfill "Hired at PKR X" baseline for everyone with a Salary ───
-  // Ensures every employee has at least one row in Compensation Timeline,
-  // even if they never had an increment.
-  console.log('Backfilling hire-baseline compensation history…')
+  // ─── Pass 3: Compensation history from Increments tab ─────────────────
+  // We walk the Increments tab FIRST so we know each employee's FIRST observed
+  // amount — that becomes the HIRE baseline, NOT the current salary. (The
+  // previous version backfilled HIRE at current-salary value, which made the
+  // joining-offer wrong for anyone who had received an increment.)
+  console.log('Building compensation history…')
+  let compHistoryCreated = 0
   let hireBaselines = 0
+  const incRows = XLSX.utils.sheet_to_json(
+    masterWb.Sheets['Payroll - Increments Performanc'],
+    { defval: null, header: 1 }
+  )
+  // Row 3 has the date headers; find the date columns
+  const headerRow = incRows[3] || []
+  // Build [{dateCol, notesCol, date}] sorted by dateCol asc
+  const cols = []
+  for (let i = 1; i < headerRow.length; i++) {
+    const cell = headerRow[i]
+    if (typeof cell === 'number') {
+      // The next column is "Notes"
+      cols.push({ dateCol: i, notesCol: i + 1, date: xlsxDate(cell) })
+    }
+  }
+
+  // Track which employees we generated history for so the fallback baseline
+  // pass below knows who still needs a HIRE row.
+  const empsWithGeneratedHistory = new Set()
+
+  // Walk each data row (rows 4..end)
+  for (let r = 4; r < incRows.length; r++) {
+    const row = incRows[r]
+    if (!row || !row[0]) continue
+    const name = trimStr(row[0])
+    if (!name) continue
+    // Use the fuzzy matcher (handles "Abdllah Shafiq" typo, short names like "Affan", etc.)
+    const empRef = matchEmployee(name)
+      || empIdByNorm.get(normalize(name))
+      || empByNorm.get(normalize(name))
+    if (!empRef) continue
+
+    // Wipe any previous history for this employee so re-runs don't double-up
+    // (especially the bogus HIRE-at-current-salary rows from earlier scripts).
+    await prisma.compensationHistory.deleteMany({ where: { employeeId: empRef.id } })
+
+    // Collect every non-zero (date, amount, note) in chronological order
+    const points = []
+    for (const c of cols) {
+      const amount = Number(row[c.dateCol]) || 0
+      const reason = trimStr(row[c.notesCol])
+      if (amount > 0) points.push({ date: c.date, amount, reason })
+    }
+    if (!points.length) continue
+
+    // HIRE baseline = first observed amount
+    const first = points[0]
+    try {
+      await prisma.compensationHistory.create({
+        data: {
+          employeeId: empRef.id,
+          type: 'HIRE',
+          oldSalary: 0,
+          newSalary: first.amount,
+          incrementPct: null,
+          reason: 'Hired — joining offer',
+          effectiveDate: empRef.joiningDate || first.date || new Date(),
+          approvedById: hrUserId,
+        },
+      })
+      hireBaselines++
+    } catch { /* ignore */ }
+
+    // Then each change
+    let prev = first
+    for (let i = 1; i < points.length; i++) {
+      const cur = points[i]
+      if (cur.amount === prev.amount) continue
+      const incPct = prev.amount > 0
+        ? Math.round(((cur.amount - prev.amount) / prev.amount) * 1000) / 10
+        : null
+      const lower = (cur.reason || '').toLowerCase()
+      const type = lower.includes('promotion') ? 'PROMOTION'
+        : lower.includes('bonus') ? 'BONUS'
+        : lower.includes('overtime') ? 'BONUS'
+        : cur.amount < prev.amount ? 'ADJUSTMENT'
+        : 'INCREMENT'
+      try {
+        await prisma.compensationHistory.create({
+          data: {
+            employeeId: empRef.id,
+            type,
+            oldSalary: prev.amount,
+            newSalary: cur.amount,
+            incrementPct: incPct,
+            reason: cur.reason || 'Salary revision',
+            effectiveDate: cur.date || new Date(),
+            approvedById: hrUserId,
+          },
+        })
+        compHistoryCreated++
+      } catch { /* skip duplicates */ }
+      prev = cur
+    }
+    empsWithGeneratedHistory.add(empRef.id)
+  }
+
+  // ─── Fallback HIRE baseline for employees NOT in the Increments tab ───
+  // For people who never appeared in the increments grid (new hires, etc.)
+  // we still want one row in Compensation Timeline based on current Salary.
+  console.log('Backfilling hire-baseline compensation history for employees missing from Increments tab…')
   const empsWithSalary = await prisma.employee.findMany({
     where: { salary: { isNot: null } },
     include: { salary: true, compensationHistory: { take: 1 } },
   })
   for (const emp of empsWithSalary) {
-    if (emp.compensationHistory.length > 0) continue // already has entries
+    if (empsWithGeneratedHistory.has(emp.id)) continue
+    if (emp.compensationHistory.length > 0) continue
     if (!emp.salary) continue
     const monthlyGross = emp.salary.basic + emp.salary.houseRent + emp.salary.medicalAllowance
       + emp.salary.fuel + emp.salary.food + emp.salary.utilities + emp.salary.otherAllowance
@@ -536,83 +641,6 @@ async function main() {
       })
       hireBaselines++
     } catch { /* ignore */ }
-  }
-
-  // ─── Pass 3: Compensation history from Increments tab ─────────────────
-  console.log('Building compensation history…')
-  let compHistoryCreated = 0
-  const incRows = XLSX.utils.sheet_to_json(
-    masterWb.Sheets['Payroll - Increments Performanc'],
-    { defval: null, header: 1 }
-  )
-  // Row 3 has the date headers; find the date columns
-  const headerRow = incRows[3] || []
-  // Build [{dateCol, notesCol, date}] sorted by dateCol asc
-  const cols = []
-  for (let i = 1; i < headerRow.length; i++) {
-    const cell = headerRow[i]
-    if (typeof cell === 'number') {
-      // The next column is "Notes"
-      cols.push({ dateCol: i, notesCol: i + 1, date: xlsxDate(cell) })
-    }
-  }
-
-  // Walk each data row (rows 4..end)
-  for (let r = 4; r < incRows.length; r++) {
-    const row = incRows[r]
-    if (!row || !row[0]) continue
-    const name = trimStr(row[0])
-    if (!name) continue
-    // Use the fuzzy matcher (handles "Abdllah Shafiq" typo, short names like "Affan", etc.)
-    const empRef = matchEmployee(name)
-      || empIdByNorm.get(normalize(name))
-      || empByNorm.get(normalize(name))
-    if (!empRef) continue
-
-    let prevAmount = null
-    let prevDate = null
-    for (const c of cols) {
-      const amount = Number(row[c.dateCol]) || 0
-      const reason = trimStr(row[c.notesCol])
-      if (amount > 0) {
-        if (prevAmount != null && amount !== prevAmount) {
-          // Salary changed at c.date — record it
-          try {
-            // Idempotency: skip if a CompensationHistory for this date+emp already exists
-            const exists = await prisma.compensationHistory.findFirst({
-              where: {
-                employeeId: empRef.id,
-                effectiveDate: c.date,
-                newSalary: amount,
-              },
-            })
-            if (!exists) {
-              const incPct = prevAmount > 0
-                ? Math.round(((amount - prevAmount) / prevAmount) * 1000) / 10
-                : null
-              const type = (reason || '').toLowerCase().includes('promotion') ? 'PROMOTION'
-                : (reason || '').toLowerCase().includes('bonus') ? 'BONUS'
-                : 'INCREMENT'
-              await prisma.compensationHistory.create({
-                data: {
-                  employeeId: empRef.id,
-                  type,
-                  oldSalary: prevAmount,
-                  newSalary: amount,
-                  incrementPct: incPct,
-                  reason: reason || 'Salary revision',
-                  effectiveDate: c.date || new Date(),
-                  approvedById: hrUserId,
-                },
-              })
-              compHistoryCreated++
-            }
-          } catch { /* skip duplicates */ }
-        }
-        prevAmount = amount
-        prevDate = c.date
-      }
-    }
   }
 
   // ─── Pass 4: Payslip history from IBFT sheets ─────────────────────────

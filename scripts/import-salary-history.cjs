@@ -120,22 +120,34 @@ async function main() {
 
     // ─── Set current Salary record to latest amount ─────────────────────────
     // Preserve existing salary breakdown (HR/Util/Fuel etc.) if it exists; just update basic to latest total
+    // BUG FIX: previously this set `basic = latestSal` while leaving the
+    // existing houseRent/otherAllowance from the 60/30/10 import-full-employees
+    // run untouched — inflating the computed gross by ~40%. Now we split the
+    // latest amount cleanly across the same 60/30/10 buckets and zero out
+    // anything else, regardless of whether the row exists.
+    const newBasic = Math.round(latestSal * 0.6)
+    const newHouseRent = Math.round(latestSal * 0.3)
+    const newOther = latestSal - newBasic - newHouseRent
     const existingSalary = await prisma.salary.findUnique({ where: { employeeId: emp.id } })
     if (existingSalary) {
-      // The existing record has the breakdown — update basic to total, keep other components if their sum < latestSal
-      // Treat the latest amount as the total CTC; replace basic only
       await prisma.salary.update({
         where: { employeeId: emp.id },
-        data: { basic: latestSal },
+        data: {
+          basic: newBasic,
+          houseRent: newHouseRent,
+          otherAllowance: newOther,
+          utilities: 0, food: 0, fuel: 0, medicalAllowance: 0,
+        },
       })
       salariesUpdated++
     } else {
       await prisma.salary.create({
         data: {
           employeeId: emp.id,
-          basic: latestSal,
-          houseRent: 0, utilities: 0, food: 0, fuel: 0,
-          medicalAllowance: 0, otherAllowance: 0,
+          basic: newBasic,
+          houseRent: newHouseRent,
+          otherAllowance: newOther,
+          utilities: 0, food: 0, fuel: 0, medicalAllowance: 0,
           effectiveFrom: latestDate || new Date('2025-11-01'),
         },
       })
