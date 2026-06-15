@@ -15,13 +15,11 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { Input } from '@/components/ui/input'
-import { Sprout, Users, DoorOpen, Plus, X, ShieldCheck } from 'lucide-react'
+import { Sprout, Users, DoorOpen, X, ShieldCheck, Info } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { ProbationTrackerTabs, type ProbationListItem } from '@/components/probation/tracker-tabs'
 
-interface Employee { id: string; fullName: string; employeeCode: string; status: string; designation: string }
 interface OnboardingItem {
   id: string
   progress: number
@@ -327,9 +325,7 @@ function ActiveEmployeesTab() {
 
 function ExitClearanceTab() {
   const [clearances, setClearances] = useState<Clearance[]>([])
-  const [employees, setEmployees] = useState<Employee[]>([])
   const [loading, setLoading] = useState(true)
-  const [initOpen, setInitOpen] = useState(false)
   const [activeId, setActiveId] = useState<string | null>(null)
 
   function refresh() {
@@ -345,16 +341,21 @@ function ExitClearanceTab() {
       setClearances(d.clearances ?? [])
       setLoading(false)
     }).catch(() => setLoading(false))
-    fetch('/api/employees?limit=200&status=ACTIVE').then((r) => r.json()).then((d) => setEmployees(d.employees ?? []))
   }, [])
 
   return (
     <Card>
-      <CardHeader className="border-b border-slate-100 flex items-center justify-between flex-row">
+      <CardHeader className="border-b border-slate-100">
         <CardTitle>Exit Clearance</CardTitle>
-        <Button size="sm" onClick={() => setInitOpen(true)}>
-          <Plus className="w-3.5 h-3.5 mr-1.5" /> Initiate Exit
-        </Button>
+        <div className="flex items-start gap-2 mt-2 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-900">
+          <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+          <p>
+            Employees appear here automatically when their status changes to{' '}
+            <span className="font-medium">Resigned</span>, <span className="font-medium">Terminated</span>, or{' '}
+            <span className="font-medium">Laid Off</span>. Update status from the{' '}
+            <Link href="/dashboard/employees" className="underline font-medium">People module</Link>.
+          </p>
+        </div>
       </CardHeader>
       {loading ? (
         <CardContent className="py-8 text-center text-slate-400">Loading…</CardContent>
@@ -400,13 +401,6 @@ function ExitClearanceTab() {
         </Table>
       )}
 
-      {initOpen && (
-        <InitiateExitDialog
-          employees={employees}
-          onClose={() => setInitOpen(false)}
-          onDone={() => { setInitOpen(false); refresh() }}
-        />
-      )}
       {activeId && (
         <ClearanceDetailDialog
           id={activeId}
@@ -415,61 +409,6 @@ function ExitClearanceTab() {
         />
       )}
     </Card>
-  )
-}
-
-function InitiateExitDialog({ employees, onClose, onDone }: { employees: Employee[]; onClose: () => void; onDone: () => void }) {
-  const [employeeId, setEmployeeId] = useState('')
-  const [lastWorkingDay, setLastWorkingDay] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!employeeId) { setError('Pick an employee.'); return }
-    setBusy(true)
-    const res = await fetch('/api/exit-clearance', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ employeeId, lastWorkingDay: lastWorkingDay || null }),
-    })
-    setBusy(false)
-    if (!res.ok) {
-      const d = await res.json().catch(() => ({}))
-      setError(d?.error ?? 'Could not initiate.')
-      return
-    }
-    onDone()
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
-      <div className="bg-white rounded-xl shadow-xl w-full max-w-md" onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-center justify-between px-5 py-3 border-b border-slate-100">
-          <h2 className="text-base font-semibold">Initiate Exit Clearance</h2>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
-        </div>
-        <form onSubmit={handleSubmit} className="p-5 space-y-4">
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Employee</label>
-            <Select value={employeeId} onValueChange={setEmployeeId}>
-              <SelectTrigger><SelectValue placeholder="Pick employee" /></SelectTrigger>
-              <SelectContent>
-                {employees.map((e) => <SelectItem key={e.id} value={e.id}>{e.fullName} ({e.employeeCode})</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-slate-600 mb-1">Last Working Day</label>
-            <Input type="date" value={lastWorkingDay} onChange={(e) => setLastWorkingDay(e.target.value)} />
-          </div>
-          {error && <p className="text-sm text-rose-600">{error}</p>}
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
-            <Button type="submit" disabled={busy}>{busy ? 'Initiating…' : 'Initiate'}</Button>
-          </div>
-        </form>
-      </div>
-    </div>
   )
 }
 

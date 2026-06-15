@@ -228,8 +228,14 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                       <SelectItem value="INACTIVE">Inactive</SelectItem>
                       <SelectItem value="RESIGNED">Resigned</SelectItem>
                       <SelectItem value="TERMINATED">Terminated</SelectItem>
+                      <SelectItem value="LAYOFF">Laid Off</SelectItem>
                     </SelectContent>
                   </Select>
+                  {['RESIGNED', 'TERMINATED', 'LAYOFF'].includes(form.status) && (
+                    <p className="text-[11px] text-amber-700 mt-1">
+                      Exit clearance will be auto-created when you save.
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Work Location</label>

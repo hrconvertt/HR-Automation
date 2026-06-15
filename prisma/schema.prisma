@@ -154,7 +154,7 @@ model Employee {
   reportingManager    Employee?   @relation("Reports", fields: [reportingManagerId], references: [id])
   directReports       Employee[]  @relation("Reports")
   employeeType        String      @default("PROBATION") // PERMANENT | PROBATION | INTERNSHIP | TRAINING
-  status              String      @default("ACTIVE")    // ACTIVE | RESIGNED | TERMINATED | ON_LEAVE | INACTIVE
+  status              String      @default("ACTIVE")    // ACTIVE | PROBATION | ON_LEAVE | RESIGNED | TERMINATED | LAYOFF | INACTIVE
   workLocation        String      @default("ONSITE")    // ONSITE | WFH | HYBRID
   timings             String?
   workDays            String      @default("Mon,Tue,Wed,Thu,Fri") // comma-separated: Mon,Tue,Wed,Thu,Fri,Sat,Sun

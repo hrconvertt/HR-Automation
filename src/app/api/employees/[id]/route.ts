@@ -192,6 +192,74 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       await prisma.user.update({ where: { id: prior.userId }, data: { isActive: false } }).catch(() => {})
     }
 
+    // Auto-create ExitClearance when status flips to one of the 3 exit paths.
+    // Idempotent: skip if an open (non-COMPLETED, non-CANCELLED) clearance
+    // already exists for this employee. lastWorkingDay falls back to the
+    // submitted exitDate (Edit Profile) or body.lastWorkingDay if present.
+    const EXIT_STATUSES = ['RESIGNED', 'TERMINATED', 'LAYOFF'] as const
+    const newStatusIsExit = EXIT_STATUSES.includes(status as typeof EXIT_STATUSES[number])
+    if (newStatusIsExit && prior?.status !== status) {
+      // Cancel is a hard-delete in this app; an existing row that isn't
+      // COMPLETED means there's an open clearance we shouldn't duplicate.
+      const openClearance = await prisma.exitClearance.findFirst({
+        where: {
+          employeeId: id,
+          status: { not: 'COMPLETED' },
+        },
+        select: { id: true },
+      })
+      if (!openClearance) {
+        const lwdSource = body.lastWorkingDay ?? exitDate ?? null
+        const lastWorkingDay = lwdSource ? new Date(String(lwdSource)) : null
+        const { computeFinalSettlement } = await import('@/lib/final-settlement')
+        const settlement = await computeFinalSettlement(id, lastWorkingDay).catch(() => null)
+        await prisma.exitClearance.create({
+          data: {
+            employeeId: id,
+            initiatedById: payload.userId,
+            lastWorkingDay,
+            prorataSalary: settlement?.prorataSalary ?? null,
+            leaveEncashment: settlement?.leaveEncashment ?? null,
+            outstandingDeductions: settlement?.outstandingDeductions ?? null,
+            finalSettlementAmount: settlement?.finalSettlementAmount ?? null,
+          },
+        }).catch((err) => {
+          console.error('[auto-exit-clearance] create failed', err)
+        })
+
+        // Notify HR + employee's manager
+        const { notify } = await import('@/lib/notifications')
+        const statusLabel = status === 'LAYOFF' ? 'LAYOFF' : status
+        const title = 'Exit clearance initiated'
+        const message = `Exit clearance initiated for ${prior?.fullName ?? 'employee'} (status: ${statusLabel})`
+        const link = '/dashboard/lifecycle?tab=exit'
+
+        const hrUsers = await prisma.user.findMany({
+          where: { role: 'HR_ADMIN' },
+          select: { employee: { select: { id: true } } },
+        })
+        for (const u of hrUsers) {
+          if (u.employee?.id) {
+            await notify({ employeeId: u.employee.id, type: 'GENERAL', title, message, link })
+          }
+        }
+        // Manager (if any)
+        const targetEmp = await prisma.employee.findUnique({
+          where: { id },
+          select: { reportingManagerId: true },
+        })
+        if (targetEmp?.reportingManagerId) {
+          await notify({
+            employeeId: targetEmp.reportingManagerId,
+            type: 'GENERAL',
+            title,
+            message,
+            link,
+          })
+        }
+      }
+    }
+
     // Log manager change (ManagerHistory) + notify affected parties.
     if (prior && reportingManagerId !== undefined && (prior.reportingManagerId ?? null) !== (reportingManagerId === '' ? null : reportingManagerId)) {
       const newMgrId = reportingManagerId === '' ? null : reportingManagerId
