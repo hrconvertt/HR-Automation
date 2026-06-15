@@ -18,19 +18,21 @@ interface ApiResponse {
   stats: Record<string, number>
 }
 
-const ROLES = ['HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'] as const
+const ROLES = ['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'] as const
 const ROLE_COLORS: Record<string, string> = {
   HR_ADMIN: 'bg-purple-500',
   MANAGER: 'bg-blue-500',
+  LEAD: 'bg-indigo-500',
   EMPLOYEE: 'bg-emerald-500',
   EXECUTIVE: 'bg-amber-500',
   FINANCE: 'bg-rose-500',
 }
 const ROLE_LABELS: Record<string, string> = {
-  HR_ADMIN: 'HR Admin',
+  HR_ADMIN: 'HR',
   MANAGER: 'Manager',
+  LEAD: 'Lead',
   EMPLOYEE: 'Employee',
-  EXECUTIVE: 'Executive',
+  EXECUTIVE: 'CEO / Executive',
   FINANCE: 'Finance',
 }
 

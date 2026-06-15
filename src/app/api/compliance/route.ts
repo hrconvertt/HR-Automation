@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
   const effectiveRole = previewRole ?? me.role
 
   if (!['HR_ADMIN', 'EXECUTIVE'].includes(effectiveRole)) {
-    return NextResponse.json({ error: 'HR Admin or Executive only' }, { status: 403 })
+    return NextResponse.json({ error: 'HR or CEO only' }, { status: 403 })
   }
 
   const reports = await prisma.complianceReport.findMany({

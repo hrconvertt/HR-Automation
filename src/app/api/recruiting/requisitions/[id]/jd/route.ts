@@ -21,7 +21,7 @@ async function gateHR(request: NextRequest) {
   const payload = token ? verifyToken(token) : null
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true, role: true } })
-  if (!me || me.role !== 'HR_ADMIN') return { error: NextResponse.json({ error: 'HR Admin only' }, { status: 403 }) }
+  if (!me || me.role !== 'HR_ADMIN') return { error: NextResponse.json({ error: 'HR only' }, { status: 403 }) }
   const previewRole = request.cookies.get('hr_preview_role')?.value
   if (previewRole && previewRole !== 'HR_ADMIN') {
     return { error: NextResponse.json({ error: 'Switch back to HR view' }, { status: 403 }) }

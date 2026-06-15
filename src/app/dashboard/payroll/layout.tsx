@@ -7,15 +7,19 @@ import { Banknote } from 'lucide-react'
 const roleLabels: Record<string, string> = {
   HR_ADMIN: 'HR',
   MANAGER: 'Manager',
+  LEAD: 'Lead',
   EMPLOYEE: 'Employee',
-  EXECUTIVE: 'Executive',
+  EXECUTIVE: 'CEO / Executive',
+  FINANCE: 'Finance',
 }
 
 const roleStyles: Record<string, string> = {
   HR_ADMIN: 'bg-blue-100 text-blue-700 border-blue-200',
   MANAGER: 'bg-purple-100 text-purple-700 border-purple-200',
+  LEAD: 'bg-indigo-100 text-indigo-700 border-indigo-200',
   EMPLOYEE: 'bg-emerald-100 text-emerald-700 border-emerald-200',
   EXECUTIVE: 'bg-slate-900 text-slate-100 border-slate-700',
+  FINANCE: 'bg-rose-100 text-rose-700 border-rose-200',
 }
 
 export default async function PayrollLayout({ children }: { children: React.ReactNode }) {

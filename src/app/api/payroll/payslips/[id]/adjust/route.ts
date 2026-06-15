@@ -30,7 +30,7 @@ async function getHrUser(request: NextRequest) {
   if (!me) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   const roles = me.userRoles.length ? me.userRoles.map((r) => r.role) : [me.role]
   if (!roles.some((r) => ['HR_ADMIN', 'EXECUTIVE'].includes(r))) {
-    return { error: NextResponse.json({ error: 'HR Admin or Executive only' }, { status: 403 }) }
+    return { error: NextResponse.json({ error: 'HR or CEO only' }, { status: 403 }) }
   }
   const previewRole = request.cookies.get('hr_preview_role')?.value
   if (previewRole && previewRole !== me.role) {

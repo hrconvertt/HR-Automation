@@ -6,8 +6,10 @@ import { prisma } from '@/lib/prisma'
 const roleLabels: Record<string, string> = {
   HR_ADMIN: 'HR',
   MANAGER: 'Manager',
+  LEAD: 'Lead',
   EMPLOYEE: 'Employee',
-  EXECUTIVE: 'Executive',
+  EXECUTIVE: 'CEO / Executive',
+  FINANCE: 'Finance',
 }
 
 export default async function EmployeesLayout({ children }: { children: React.ReactNode }) {

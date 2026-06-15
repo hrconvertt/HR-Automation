@@ -8,7 +8,7 @@ import { verifyToken, hasRole } from '@/lib/auth'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
-const VALID_ROLES = ['HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'EXECUTIVE']
+const VALID_ROLES = ['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE']
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value

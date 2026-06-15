@@ -486,7 +486,7 @@ export default function CompensationPanel({
       {!access.canEdit && (
         <p className="text-xs text-slate-400 text-center pt-1 flex items-center justify-center gap-1.5">
           <Eye className="w-3.5 h-3.5" />
-          You can view but not edit. Only HR Admin can modify compensation.
+          You can view but not edit. Only HR can modify compensation.
         </p>
       )}
 

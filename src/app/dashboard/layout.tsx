@@ -41,7 +41,7 @@ export default async function DashboardLayout({
 
   // Normalise role — if null/unknown, fall back to EMPLOYEE so the user
   // is never stranded with an empty sidebar.
-  const knownRoles = new Set(['HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'EXECUTIVE'])
+  const knownRoles = new Set(['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'])
   const role = knownRoles.has(user.role) ? user.role : 'EMPLOYEE'
 
   const displayName = user.employee?.fullName ?? user.email ?? 'User'

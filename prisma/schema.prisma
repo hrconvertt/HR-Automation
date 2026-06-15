@@ -18,7 +18,7 @@ model User {
   id             String    @id @default(cuid())
   email          String    @unique
   password       String
-  role           String    @default("EMPLOYEE") // PRIMARY view (HR_ADMIN | MANAGER | EMPLOYEE | EXECUTIVE) — used for default landing page
+  role           String    @default("EMPLOYEE") // PRIMARY view (HR_ADMIN | MANAGER | LEAD | EMPLOYEE | EXECUTIVE | FINANCE) — used for default landing page
   userRoles      UserRole[]                     // FULL set of roles — Workday-style multi-role
   mustChangePass Boolean   @default(true)
   isActive       Boolean   @default(true)
@@ -59,7 +59,7 @@ model UserRole {
   id        String   @id @default(cuid())
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role      String   // HR_ADMIN | MANAGER | EMPLOYEE | EXECUTIVE | FINANCE
+  role      String   // HR_ADMIN | MANAGER | LEAD | EMPLOYEE | EXECUTIVE | FINANCE
   assignedAt DateTime @default(now())
   assignedBy String?  // userId of who granted this role
 
@@ -95,12 +95,18 @@ model Department {
 model Position {
   id           String     @id @default(cuid())
   title        String
-  level        String     // L1 Intern … L7 C-Suite
+  // INTERN | JUNIOR | EXECUTIVE | ASSOCIATE | SENIOR | LEAD | MANAGER | HEAD | DIRECTOR | C_SUITE
+  level        String
   departmentId String?
   department   Department? @relation(fields: [departmentId], references: [id])
+  description  String?
+  active       Boolean    @default(true)
   employees    Employee[]
   salaryBands  SalaryBand[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt @default(now())
 
+  @@unique([title, departmentId])
   @@map("positions")
 }
 

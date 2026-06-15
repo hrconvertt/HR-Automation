@@ -16,7 +16,7 @@ export default async function SeedPage() {
     return (
       <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
         <h2 className="text-lg font-semibold text-amber-900">HR-only area</h2>
-        <p className="text-sm text-amber-800 mt-2">Only HR Admins can seed demo data.</p>
+        <p className="text-sm text-amber-800 mt-2">Only HR can seed demo data.</p>
       </div>
     )
   }

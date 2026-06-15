@@ -76,6 +76,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/calendar',
   '/dashboard/org-chart',
   '/dashboard/settings/roles',
+  '/dashboard/settings/positions',
 ])
 
 function applyFocus(groups: NavGroup[]): NavGroup[] {
@@ -127,6 +128,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
         { href: '/dashboard/settings/roles', label: 'Role Assignment', icon: Shield },
+        { href: '/dashboard/settings/positions', label: 'Positions', icon: Briefcase },
         { href: '/dashboard/help', label: 'Help Center', icon: HelpCircle },
       ],
     },
@@ -188,6 +190,53 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/performance', label: 'My Reviews', icon: TrendingUp },
         { href: '/dashboard/learning', label: 'My Learning', icon: GraduationCap },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
+      ],
+    },
+    {
+      label: 'Support',
+      items: [
+        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
+        { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+      ],
+    },
+  ],
+
+  LEAD: [
+    {
+      label: 'My Team',
+      items: [
+        { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { href: '/dashboard/employees', label: 'My Team', icon: Users },
+        { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
+        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
+      ],
+    },
+    {
+      label: 'My Workspace',
+      items: [
+        { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
+        { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
+        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
+      ],
+    },
+    {
+      label: 'Support',
+      items: [
+        { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+      ],
+    },
+  ],
+
+  FINANCE: [
+    {
+      label: 'Finance',
+      items: [
+        { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+        { href: '/dashboard/payroll', label: 'Payroll', icon: Banknote },
+        { href: '/dashboard/compensation', label: 'Compensation', icon: Award },
+        { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
       ],
     },
     {
@@ -308,7 +357,9 @@ export default function DashboardChrome({
       return departmentName ? `${desig} · ${departmentName}` : desig
     }
     if (role === 'MANAGER') return 'Manager'
-    if (role === 'EXECUTIVE') return 'Executive'
+    if (role === 'LEAD') return designation ? `${designation} · Lead` : 'Lead'
+    if (role === 'EXECUTIVE') return 'CEO / Executive'
+    if (role === 'FINANCE') return 'Finance'
     return designation ?? 'Employee'
   })()
 

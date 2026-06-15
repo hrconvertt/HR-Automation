@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const payload = token ? verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })
-  if (!me || me.role !== 'HR_ADMIN') return NextResponse.json({ error: 'HR Admin only' }, { status: 403 })
+  if (!me || me.role !== 'HR_ADMIN') return NextResponse.json({ error: 'HR only' }, { status: 403 })
 
   const recent = await prisma.monthlyMetric.findMany({
     orderBy: [{ year: 'desc' }, { month: 'desc' }],
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
   const payload = token ? verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true, role: true } })
-  if (!me || me.role !== 'HR_ADMIN') return NextResponse.json({ error: 'HR Admin only' }, { status: 403 })
+  if (!me || me.role !== 'HR_ADMIN') return NextResponse.json({ error: 'HR only' }, { status: 403 })
   const previewRole = request.cookies.get('hr_preview_role')?.value
   if (previewRole && previewRole !== 'HR_ADMIN') {
     return NextResponse.json({ error: 'Switch back to HR view to record revenue' }, { status: 403 })

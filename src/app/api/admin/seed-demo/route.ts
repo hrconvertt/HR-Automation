@@ -14,7 +14,7 @@ async function requireHR(request: NextRequest) {
   const payload = token ? verifyToken(token) : null
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   if (!hasRole(payload, 'HR_ADMIN')) {
-    return { error: NextResponse.json({ error: 'Forbidden — HR Admin only' }, { status: 403 }) }
+    return { error: NextResponse.json({ error: 'Forbidden — HR only' }, { status: 403 }) }
   }
   const previewRole = request.cookies.get('hr_preview_role')?.value
   if (previewRole && previewRole !== 'HR_ADMIN') {

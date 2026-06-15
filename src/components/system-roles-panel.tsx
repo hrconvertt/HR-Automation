@@ -8,13 +8,15 @@ import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Save, CheckCircle2, Pencil, X } from 'lucide-react'
 
 const ROLE_META: Record<string, { label: string; description: string; color: string }> = {
-  HR_ADMIN:  { label: 'HR',        description: 'Full org access, hire/fire, payroll, settings', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  MANAGER:   { label: 'Manager',   description: 'Approve leaves, review team performance', color: 'bg-purple-50 text-purple-700 border-purple-200' },
-  EMPLOYEE:  { label: 'Employee',  description: 'Self-service (own pay, leave, attendance)', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  EXECUTIVE: { label: 'Executive', description: 'Strategic KPIs, read-only across org', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  HR_ADMIN:  { label: 'HR',              description: 'Full org access, hire/fire, payroll, settings',          color: 'bg-blue-50 text-blue-700 border-blue-200' },
+  MANAGER:   { label: 'Manager',         description: 'Approve leaves, review team performance',                 color: 'bg-purple-50 text-purple-700 border-purple-200' },
+  LEAD:      { label: 'Lead',            description: 'Informal team lead: read team data, approve team leaves', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  EMPLOYEE:  { label: 'Employee',        description: 'Self-service (own pay, leave, attendance)',               color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  EXECUTIVE: { label: 'CEO / Executive', description: 'Strategic KPIs, read-only across org',                    color: 'bg-amber-50 text-amber-700 border-amber-200' },
+  FINANCE:   { label: 'Finance',         description: 'Payroll disbursement + finance views',                    color: 'bg-rose-50 text-rose-700 border-rose-200' },
 }
 
-const ROLE_ORDER = ['HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'EXECUTIVE']
+const ROLE_ORDER = ['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE']
 
 interface Props {
   employeeId: string

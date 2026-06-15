@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-const VALID_ROLES = new Set(['HR_ADMIN', 'MANAGER', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'])
+const VALID_ROLES = new Set(['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'])
 
 interface Body {
   role?: string

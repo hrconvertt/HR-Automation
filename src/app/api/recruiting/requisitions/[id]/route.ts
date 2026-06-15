@@ -24,7 +24,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     select: { id: true, role: true },
   })
   if (!me || me.role !== 'HR_ADMIN') {
-    return NextResponse.json({ error: 'HR Admin only' }, { status: 403 })
+    return NextResponse.json({ error: 'HR only' }, { status: 403 })
   }
   const previewRole = request.cookies.get('hr_preview_role')?.value
   if (previewRole && previewRole !== 'HR_ADMIN') {

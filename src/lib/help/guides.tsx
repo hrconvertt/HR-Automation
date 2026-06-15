@@ -76,13 +76,13 @@ function GettingStarted() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Employee</strong> — My Time, My Leave, My Payslips, My Reviews, My Documents</li>
           <li><strong>Manager</strong> — everything above + Team Time, leave approvals, Show Cause flagging, performance reviews for direct reports</li>
-          <li><strong>HR Admin</strong> — full org access: hire/terminate, run payroll, configure security, send emails, manage policies, issue formal Show Cause</li>
-          <li><strong>Executive</strong> — strategic dashboards: headcount, payroll cost, attrition, performance distribution (read-only)</li>
+          <li><strong>HR</strong> — full org access: hire/terminate, run payroll, configure security, send emails, manage policies, issue formal Show Cause</li>
+          <li><strong>CEO / Executive</strong> — strategic dashboards: headcount, payroll cost, attrition, performance distribution (read-only)</li>
         </ul>
       </Section>
 
       <Section title="HR can preview as any role">
-        <p>HR Admins can switch view via the role pill in the top bar. While in preview:</p>
+        <p>HR users can switch view via the role pill in the top bar. While in preview:</p>
         <ul className="list-disc pl-5 space-y-1">
           <li>Amber banner appears at the top: <em>"Viewing as X"</em>.</li>
           <li>The sidebar, dashboard, and module tabs all switch to that role&apos;s experience.</li>
@@ -116,8 +116,8 @@ function DashboardGuide() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Employee</strong> — your leave balance, recent payslip, today&apos;s attendance status, pending acknowledgments, announcements.</li>
           <li><strong>Manager</strong> — team status today, leaves pending your approval, team performance review progress, Show Cause matters you&apos;re managing.</li>
-          <li><strong>HR Admin</strong> — Total Employees, On Leave Today, Pending Approvals, This Month Payroll, Quick Actions (Add Employee, Run Payroll, Compliance Reports, Hiring Pipeline), Recent Leave Requests, Payroll Status, Announcements.</li>
-          <li><strong>Executive</strong> — strategic KPIs only: headcount, payroll spend, attrition, performance distribution.</li>
+          <li><strong>HR</strong> — Total Employees, On Leave Today, Pending Approvals, This Month Payroll, Quick Actions (Add Employee, Run Payroll, Compliance Reports, Hiring Pipeline), Recent Leave Requests, Payroll Status, Announcements.</li>
+          <li><strong>CEO / Executive</strong> — strategic KPIs only: headcount, payroll spend, attrition, performance distribution.</li>
         </ul>
       </Section>
       <Section title="Quick action cards (HR only)">
@@ -166,7 +166,7 @@ function AttendanceGuide() {
         <ul className="list-disc pl-5 space-y-1">
           <li><strong>Employee</strong> sees <em>"My Time"</em> — big Check-In card with live timer, this week&apos;s hours bar, recent punches.</li>
           <li><strong>Manager</strong> sees <em>"Team Time"</em> — team status pills, exceptions inbox (anomalies + no-clockouts), direct reports roster.</li>
-          <li><strong>HR Admin</strong> sees <em>"Time &amp; Attendance Administration"</em> — full Today snapshot, monthly calendar, monthly report, overtime approvals, devices, plus a link to Clock-in Security settings.</li>
+          <li><strong>HR</strong> sees <em>"Time &amp; Attendance Administration"</em> — full Today snapshot, monthly calendar, monthly report, overtime approvals, devices, plus a link to Clock-in Security settings.</li>
         </ul>
       </Section>
 
@@ -300,7 +300,7 @@ function PayrollGuide() {
           <li><strong>Employee</strong> — only their own payslips. Big &quot;View / Print PDF&quot; button. Year-to-date stats (gross, net, tax, EOBI).</li>
           <li><strong>Manager</strong> — their team&apos;s payslips + their own. Same View/Print on each row.</li>
           <li><strong>HR</strong> — everything: all employees, approval stepper, approval history, totals dashboard.</li>
-          <li><strong>Executive</strong> — totals + status only (no individual amounts unless they&apos;re managing a team).</li>
+          <li><strong>CEO / Executive</strong> — totals + status only (no individual amounts unless they&apos;re managing a team).</li>
         </ul>
       </Section>
     </>
@@ -537,7 +537,7 @@ function CompensationGuide() {
 
       <Section title="Access matrix">
         <ul className="list-disc pl-5 space-y-1">
-          <li><strong>HR Admin</strong> — view + edit any employee + Total Rewards download</li>
+          <li><strong>HR</strong> — view + edit any employee + Total Rewards download</li>
           <li><strong>Executive / Finance</strong> — view all + Total Rewards download (no edit)</li>
           <li><strong>Manager</strong> — view own + direct reports + Total Rewards download for those (no edit)</li>
           <li><strong>Employee</strong> — view own only + Total Rewards download (no edit)</li>
