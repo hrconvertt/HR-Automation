@@ -217,6 +217,7 @@ model Employee {
   managerHistory      ManagerHistory[]
   promotionRequests   PromotionRequest[]
   onboardingFeedback  OnboardingFeedback?
+  policyReviews       PolicyReview[]
 
   // Rehire / boomerang
   rehireDate          DateTime?
@@ -1311,14 +1312,53 @@ model PolicyDocument {
   effectiveDate   DateTime?
   audience        String    @default("ALL")     // ALL | MANAGERS | HR_ONLY
   requiresAck     Boolean   @default(false)
-  status          String    @default("DRAFT")   // DRAFT | PUBLISHED | ARCHIVED
+  // Workflow status:
+  //   DRAFT     — HR writing it, no one else sees it
+  //   IN_REVIEW — Submitted to a set of reviewers (Executives + HR admins)
+  //   APPROVED  — All reviewers approved; awaiting HR activation
+  //   ACTIVE    — Live, visible to its audience, an Announcement was created
+  //   ARCHIVED  — Retired; hidden from non-HR
+  //   (legacy "PUBLISHED" rows in existing DBs continue to work — read as ACTIVE)
+  status          String    @default("ACTIVE")
+  // Legacy publishedAt kept for backwards-compatibility (= activatedAt for new rows).
   publishedAt     DateTime?
   archivedAt      DateTime?
+  // ─── Multi-stage approval workflow ───
+  submittedForReviewAt   DateTime?
+  submittedForReviewById String?
+  reviewerIds            String[]  @default([])  // employees picked as reviewers (snapshot)
+  approvedAt             DateTime?
+  approvedById           String?
+  rejectedAt             DateTime?
+  rejectedById           String?
+  rejectionReason        String?
+  activatedAt            DateTime?
+  activatedById          String?
+
+  reviews                PolicyReview[]
   acknowledgments PolicyAcknowledgment[]
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
   @@map("policy_documents")
+}
+
+// One PolicyReview row per (policy, reviewer). Reviewer can APPROVE or REJECT.
+// When ALL rows for a policy reach APPROVED, the policy moves to APPROVED status.
+// Any single REJECTED bounces it back to DRAFT.
+model PolicyReview {
+  id          String           @id @default(cuid())
+  policy      PolicyDocument   @relation(fields: [policyId], references: [id], onDelete: Cascade)
+  policyId    String
+  reviewer    Employee         @relation(fields: [reviewerId], references: [id])
+  reviewerId  String
+  status      String           @default("PENDING")  // PENDING | APPROVED | REJECTED
+  comment     String?
+  reviewedAt  DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@unique([policyId, reviewerId])
+  @@map("policy_reviews")
 }
 
 model PolicyAcknowledgment {

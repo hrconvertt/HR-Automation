@@ -116,12 +116,6 @@ export default function HRPoliciesView() {
     fetchPolicies()
   }
 
-  async function handlePublish(id: string) {
-    if (!confirm('Publish this policy? It will become visible to the chosen audience.')) return
-    await fetch(`/api/policies/${id}/publish`, { method: 'POST' })
-    fetchPolicies()
-  }
-
   async function handleArchive(id: string) {
     if (!confirm('Archive this policy? It will no longer be visible to employees.')) return
     await fetch(`/api/policies/${id}`, { method: 'DELETE' })
@@ -132,7 +126,8 @@ export default function HRPoliciesView() {
 
   const stats = {
     total: visible.length,
-    published: visible.filter((p) => p.status === 'PUBLISHED').length,
+    // "Active" = workflow ACTIVE + legacy PUBLISHED rows.
+    published: visible.filter((p) => p.status === 'ACTIVE' || p.status === 'PUBLISHED').length,
     drafts: visible.filter((p) => p.status === 'DRAFT').length,
     archived: visible.filter((p) => p.status === 'ARCHIVED').length,
   }
@@ -227,9 +222,14 @@ export default function HRPoliciesView() {
                   <TableCell className="text-right">
                     <div className="flex items-center gap-1 justify-end">
                       {p.status === 'DRAFT' && (
-                        <Button size="sm" onClick={() => handlePublish(p.id)} title="Publish">
-                          <Send className="w-3.5 h-3.5" />
-                        </Button>
+                        <Link href={`/dashboard/policies/${p.id}`} title="Send for Review">
+                          <Button size="sm"><Send className="w-3.5 h-3.5" /></Button>
+                        </Link>
+                      )}
+                      {p.status === 'APPROVED' && (
+                        <Link href={`/dashboard/policies/${p.id}`} title="Activate">
+                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">Activate</Button>
+                        </Link>
                       )}
                       <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title="Edit">
                         <Edit3 className="w-3.5 h-3.5" />
@@ -359,8 +359,11 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
 }
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === 'PUBLISHED') return <Badge variant="success">Published</Badge>
+  // ACTIVE (new workflow) + PUBLISHED (legacy) both render as "Active".
+  if (status === 'ACTIVE' || status === 'PUBLISHED') return <Badge variant="success">Active</Badge>
   if (status === 'ARCHIVED') return <Badge variant="secondary">Archived</Badge>
+  if (status === 'IN_REVIEW') return <Badge variant="warning">In Review</Badge>
+  if (status === 'APPROVED') return <Badge variant="default">Approved · Awaiting HR</Badge>
   return <Badge variant="warning">Draft</Badge>
 }
 

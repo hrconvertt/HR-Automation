@@ -18,13 +18,14 @@ export async function GET(request: NextRequest) {
   const category = searchParams.get('category')
   const q = searchParams.get('q')?.toLowerCase() ?? ''
 
-  // Non-HR users only see PUBLISHED policies in their audience
+  // Non-HR users only see ACTIVE policies in their audience.
+  // Legacy "PUBLISHED" rows (pre-workflow) are treated as ACTIVE.
   let where: Record<string, unknown> = {}
   if (!isHR) {
     const audiences = ['ALL']
     if (user.role === 'MANAGER') audiences.push('MANAGERS')
     where = {
-      status: 'PUBLISHED',
+      status: { in: ['ACTIVE', 'PUBLISHED'] },
       audience: { in: audiences },
     }
   }
@@ -101,6 +102,7 @@ export async function POST(request: NextRequest) {
       audience: audience ?? 'ALL',
       requiresAck: !!requiresAck,
       status: 'DRAFT',
+      reviewerIds: [],
     },
   })
 

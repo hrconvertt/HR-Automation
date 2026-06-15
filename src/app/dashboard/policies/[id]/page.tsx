@@ -7,6 +7,7 @@ import { ArrowLeft, ExternalLink, Calendar, Users, FileText } from 'lucide-react
 import { formatDate } from '@/lib/utils'
 import { renderMarkdown } from '@/lib/markdown'
 import { PrintButton } from '@/components/policies/print-button'
+import { PolicyApprovalActions } from '@/components/policy-approval-actions'
 
 /**
  * Policy reader page — Notion / Stripe Docs style:
@@ -29,15 +30,28 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
   })
   if (!user) redirect('/login')
 
-  const policy = await prisma.policyDocument.findUnique({ where: { id } })
+  const policy = await prisma.policyDocument.findUnique({
+    where: { id },
+    include: {
+      reviews: {
+        include: { reviewer: { select: { id: true, fullName: true, designation: true } } },
+        orderBy: { createdAt: 'asc' },
+      },
+    },
+  })
   if (!policy) notFound()
 
   const isHR = user.role === 'HR_ADMIN'
-  // Non-HR users only see PUBLISHED policies in their audience
+  // Non-HR users only see ACTIVE / PUBLISHED policies in their audience.
+  // (Executives assigned as reviewers see IN_REVIEW too — see assignment lookup below.)
+  const isReviewer = !!user.employee && policy.reviewerIds.includes(user.employee.id)
   if (!isHR) {
-    if (policy.status !== 'PUBLISHED') notFound()
-    if (policy.audience === 'HR_ONLY') notFound()
-    if (policy.audience === 'MANAGERS' && user.role !== 'MANAGER') notFound()
+    const visibleStatuses = isReviewer
+      ? ['ACTIVE', 'PUBLISHED', 'IN_REVIEW', 'APPROVED']
+      : ['ACTIVE', 'PUBLISHED']
+    if (!visibleStatuses.includes(policy.status)) notFound()
+    if (policy.audience === 'HR_ONLY' && !isReviewer) notFound()
+    if (policy.audience === 'MANAGERS' && user.role !== 'MANAGER' && !isReviewer) notFound()
   }
 
   const audienceLabel: Record<string, string> = {
@@ -133,12 +147,49 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
 
         {/* Metadata sidebar — quiet, no card chrome. Hidden in print. */}
         <aside className="print:hidden lg:sticky lg:top-6 space-y-5">
-          {policy.status === 'PUBLISHED' && (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100 text-xs font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Published
-            </span>
+          <PolicyStatusPill status={policy.status} />
+
+          {/* Workflow panel — Send for Review (HR draft), Approve/Reject (assigned
+              reviewer), Activate (HR once APPROVED). Only renders relevant buttons. */}
+          <PolicyApprovalActions
+            policyId={policy.id}
+            policyTitle={policy.title}
+            status={policy.status}
+            isHR={isHR}
+            isReviewer={isReviewer}
+            myReview={
+              user.employee
+                ? policy.reviews.find((r) => r.reviewerId === user.employee!.id) ?? null
+                : null
+            }
+          />
+
+          {/* Review timeline */}
+          {(policy.status === 'IN_REVIEW' || policy.status === 'APPROVED' || policy.reviews.length > 0) && (
+            <div>
+              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mb-2">Reviewers</p>
+              <ul className="space-y-2">
+                {policy.reviews.map((r) => (
+                  <li key={r.id} className="flex items-start gap-2 text-xs">
+                    <span
+                      className={`mt-0.5 inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                        r.status === 'APPROVED' ? 'bg-emerald-500' :
+                        r.status === 'REJECTED' ? 'bg-rose-500' : 'bg-amber-400'
+                      }`}
+                    />
+                    <div className="min-w-0">
+                      <p className="text-slate-900 font-medium truncate">{r.reviewer.fullName}</p>
+                      <p className="text-slate-500 truncate">
+                        {r.status === 'APPROVED' ? 'Approved' : r.status === 'REJECTED' ? 'Rejected' : 'Pending'}
+                        {r.comment ? ` · ${r.comment}` : ''}
+                      </p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
+
           <MetaRow Icon={Calendar} label="Effective" value={policy.effectiveDate ? formatDate(policy.effectiveDate) : '—'} />
           <MetaRow Icon={Calendar} label="Published" value={policy.publishedAt ? formatDate(policy.publishedAt) : '—'} />
           <MetaRow Icon={Users} label="Audience" value={audienceLabel[policy.audience] ?? policy.audience} />
@@ -200,3 +251,21 @@ function MetaRow({ Icon, label, value }: {
 }
 
 // PrintButton lives in @/components/policies/print-button.tsx (client component).
+
+function PolicyStatusPill({ status }: { status: string }) {
+  const map: Record<string, { label: string; cls: string; dot: string }> = {
+    ACTIVE:    { label: 'Active',                 cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-500' },
+    PUBLISHED: { label: 'Active',                 cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-500' },
+    DRAFT:     { label: 'Draft',                  cls: 'bg-slate-100 text-slate-700 border-slate-200',     dot: 'bg-slate-400' },
+    IN_REVIEW: { label: 'In Review',              cls: 'bg-amber-50 text-amber-700 border-amber-100',      dot: 'bg-amber-500' },
+    APPROVED:  { label: 'Approved · Awaiting HR', cls: 'bg-blue-50 text-blue-700 border-blue-100',         dot: 'bg-blue-500' },
+    ARCHIVED:  { label: 'Archived',               cls: 'bg-slate-100 text-slate-600 border-slate-200',     dot: 'bg-slate-400' },
+  }
+  const s = map[status] ?? map.DRAFT
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${s.cls}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+      {s.label}
+    </span>
+  )
+}

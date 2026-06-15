@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Search, RefreshCw, AlertTriangle } from 'lucide-react'
+import { Search, RefreshCw, AlertTriangle, Maximize2, Plus, Minus } from 'lucide-react'
 import OrgNodeCard from './org-node'
 
 export interface OrgNode {
@@ -16,6 +16,7 @@ export interface OrgNode {
   directReports: number
   warning?: string
   isVirtual?: boolean
+  isPeer?: boolean
   children: OrgNode[]
 }
 
@@ -27,71 +28,107 @@ interface ApiResponse {
   canEdit: boolean
 }
 
-const NODE_WIDTH = 200
-const NODE_HEIGHT = 110
-const H_GAP = 28
-const V_GAP = 70
+// Card dimensions vary by mode — set at render time and threaded through layout.
+type Mode = 'compact' | 'detailed'
 
 interface Positioned {
   node: OrgNode
   x: number
   y: number
   width: number
+  height: number
   depth: number
+  // True for nodes that should render as peers of the root rather than as children
+  // (i.e. drawn at depth 0 horizontally adjacent to the CEO with a dotted connector).
+  isRootPeer?: boolean
 }
 
-// Layout: compute subtree widths, then place left-to-right, centered above children.
-function layout(root: OrgNode): { positioned: Positioned[]; width: number; height: number } {
+interface Layout {
+  positioned: Positioned[]
+  width: number
+  height: number
+}
+
+// Layout: walk the tree, compute subtree widths, then place left-to-right,
+// centered above children. Root-level peers (Co-Founders) render at depth 0
+// alongside the CEO with a dotted connector — handled separately at the top.
+function layout(root: OrgNode, nodeW: number, nodeH: number, hGap: number, vGap: number): Layout {
+  // Separate root peers from "true" children of the root so they don't get
+  // drawn as a hierarchical edge below the CEO.
+  const rootPeers = root.children.filter((c) => c.isPeer)
+  const rootChildren = root.children.filter((c) => !c.isPeer)
+
+  const realRoot: OrgNode = { ...root, children: rootChildren }
+
   const subtreeWidth = new Map<string, number>()
 
   function measure(n: OrgNode): number {
     if (!n.children.length) {
-      subtreeWidth.set(n.id, NODE_WIDTH)
-      return NODE_WIDTH
+      subtreeWidth.set(n.id, nodeW)
+      return nodeW
     }
     let total = 0
     for (let i = 0; i < n.children.length; i++) {
       total += measure(n.children[i])
-      if (i < n.children.length - 1) total += H_GAP
+      if (i < n.children.length - 1) total += hGap
     }
-    const w = Math.max(NODE_WIDTH, total)
+    const w = Math.max(nodeW, total)
     subtreeWidth.set(n.id, w)
     return w
   }
-  measure(root)
+  measure(realRoot)
 
   const positioned: Positioned[] = []
   let maxDepth = 0
 
   function place(n: OrgNode, left: number, depth: number) {
-    const w = subtreeWidth.get(n.id) ?? NODE_WIDTH
+    const w = subtreeWidth.get(n.id) ?? nodeW
     const cx = left + w / 2
     positioned.push({
       node: n,
-      x: cx - NODE_WIDTH / 2,
-      y: depth * (NODE_HEIGHT + V_GAP),
-      width: NODE_WIDTH,
+      x: cx - nodeW / 2,
+      y: depth * (nodeH + vGap),
+      width: nodeW,
+      height: nodeH,
       depth,
     })
     maxDepth = Math.max(maxDepth, depth)
     let childLeft = left
     if (n.children.length) {
-      // Center children block under node when wider than total subtree
       const childrenTotal = n.children.reduce(
-        (s, c, i) => s + (subtreeWidth.get(c.id) ?? NODE_WIDTH) + (i < n.children.length - 1 ? H_GAP : 0),
+        (s, c, i) => s + (subtreeWidth.get(c.id) ?? nodeW) + (i < n.children.length - 1 ? hGap : 0),
         0,
       )
       childLeft = left + (w - childrenTotal) / 2
       for (const c of n.children) {
         place(c, childLeft, depth + 1)
-        childLeft += (subtreeWidth.get(c.id) ?? NODE_WIDTH) + H_GAP
+        childLeft += (subtreeWidth.get(c.id) ?? nodeW) + hGap
       }
     }
   }
-  place(root, 0, 0)
 
-  const width = subtreeWidth.get(root.id) ?? NODE_WIDTH
-  const height = (maxDepth + 1) * NODE_HEIGHT + maxDepth * V_GAP
+  // Reserve room on the left for root peers so the CEO still sits centered.
+  const peerBlockW = rootPeers.length * (nodeW + hGap)
+  place(realRoot, peerBlockW, 0)
+
+  // Place root peers to the left of the CEO at depth 0.
+  let peerX = 0
+  for (const peer of rootPeers) {
+    positioned.push({
+      node: peer,
+      x: peerX,
+      y: 0,
+      width: nodeW,
+      height: nodeH,
+      depth: 0,
+      isRootPeer: true,
+    })
+    peerX += nodeW + hGap
+  }
+
+  const baseWidth = (subtreeWidth.get(realRoot.id) ?? nodeW) + peerBlockW
+  const width = baseWidth
+  const height = (maxDepth + 1) * nodeH + maxDepth * vGap
   return { positioned, width, height }
 }
 
@@ -104,8 +141,12 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
   const [dragging, setDragging] = useState<string | null>(null)
   const [dropTarget, setDropTarget] = useState<string | null>(null)
   const [zoom, setZoom] = useState(0.9)
+  const [mode, setMode] = useState<Mode>('detailed')
   const [reparenting, setReparenting] = useState(false)
+  const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
+  const panRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
 
   const fetchTree = useCallback(async () => {
     setLoading(true)
@@ -129,19 +170,18 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
     fetchTree()
   }, [fetchTree])
 
-  const filteredTree = useMemo(() => {
-    if (!data) return null
-    const q = query.trim().toLowerCase()
-    if (!q && !deptFilter) return data.tree
-    // Mark nodes that match; keep ancestors. Don't prune actual structure,
-    // just dim non-matching cards via CSS — that keeps the layout stable.
-    return data.tree
-  }, [data, query, deptFilter])
+  // Card dimensions per mode.
+  const dims = useMemo(() => {
+    if (mode === 'compact') {
+      return { w: 180, h: 56, hGap: 18, vGap: 44 }
+    }
+    return { w: 220, h: 116, hGap: 28, vGap: 70 }
+  }, [mode])
 
   const laidOut = useMemo(() => {
-    if (!filteredTree) return null
-    return layout(filteredTree)
-  }, [filteredTree])
+    if (!data) return null
+    return layout(data.tree, dims.w, dims.h, dims.hGap, dims.vGap)
+  }, [data, dims])
 
   const matchSet = useMemo(() => {
     if (!data) return null
@@ -161,6 +201,50 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
     walk(data.tree)
     return matches
   }, [data, query, deptFilter])
+
+  // ─── Pan + zoom interactions ────────────────────────────────────────────
+  // Mouse-wheel zoom: requires Ctrl held to avoid hijacking page scroll.
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    if (!e.ctrlKey && !e.metaKey) return
+    e.preventDefault()
+    const dir = e.deltaY > 0 ? -1 : 1
+    setZoom((z) => {
+      const next = +(z + dir * 0.1).toFixed(2)
+      return Math.max(0.25, Math.min(2, next))
+    })
+  }, [])
+
+  // Click-drag panning anywhere on the canvas background (not on a card).
+  function onPanMouseDown(e: React.MouseEvent) {
+    // Only start a pan when the mousedown lands on the canvas/background, not on a card.
+    const target = e.target as HTMLElement
+    if (target.closest('[data-org-card]')) return
+    panRef.current = { startX: e.clientX, startY: e.clientY, panX: pan.x, panY: pan.y }
+    window.addEventListener('mousemove', onPanMove)
+    window.addEventListener('mouseup', onPanUp)
+  }
+  function onPanMove(e: MouseEvent) {
+    const p = panRef.current
+    if (!p) return
+    setPan({ x: p.panX + (e.clientX - p.startX), y: p.panY + (e.clientY - p.startY) })
+  }
+  function onPanUp() {
+    panRef.current = null
+    window.removeEventListener('mousemove', onPanMove)
+    window.removeEventListener('mouseup', onPanUp)
+  }
+
+  // Fit to screen: scale the tree to fit the viewport, then recenter.
+  function fitToScreen() {
+    if (!laidOut || !viewportRef.current) return
+    const vp = viewportRef.current.getBoundingClientRect()
+    const padding = 40
+    const sx = (vp.width - padding) / laidOut.width
+    const sy = (vp.height - padding) / laidOut.height
+    const next = Math.max(0.25, Math.min(2, Math.min(sx, sy)))
+    setZoom(+next.toFixed(2))
+    setPan({ x: 0, y: 0 })
+  }
 
   async function handleDrop(employeeId: string, newManagerId: string) {
     if (!canEdit || employeeId === newManagerId) return
@@ -200,89 +284,133 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
   }
   if (!data || !laidOut) return null
 
+  const nodeW = dims.w
+  const nodeH = dims.h
+
   return (
     <div className="space-y-3">
-      {/* Toolbar */}
-      <div className="flex flex-wrap gap-2 items-center">
-        <div className="relative flex-1 min-w-[200px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <input
-            type="text"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search name, role, code…"
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
-          />
-        </div>
-        <select
-          value={deptFilter}
-          onChange={(e) => setDeptFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-400"
-        >
-          <option value="">All departments</option>
-          {data.departments.map((d) => (
-            <option key={d.id} value={d.id}>
-              {d.name}
-            </option>
-          ))}
-        </select>
-        <div className="flex items-center gap-1 ml-auto">
-          <button
-            onClick={() => setZoom((z) => Math.max(0.4, +(z - 0.1).toFixed(2)))}
-            className="px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50"
+      {/* Sticky toolbar — search, filter, mode toggle, zoom controls */}
+      <div className="sticky top-0 z-20 bg-white/85 backdrop-blur border-b border-slate-100 pb-2 pt-1">
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search name, role, code…"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+            />
+          </div>
+          <select
+            value={deptFilter}
+            onChange={(e) => setDeptFilter(e.target.value)}
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-400"
           >
-            −
-          </button>
-          <span className="text-xs text-gray-500 w-12 text-center">
-            {Math.round(zoom * 100)}%
+            <option value="">All departments</option>
+            {data.departments.map((d) => (
+              <option key={d.id} value={d.id}>
+                {d.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Compact / Detailed pill */}
+          <div className="inline-flex border border-gray-200 rounded-full p-0.5 text-xs">
+            <button
+              onClick={() => setMode('compact')}
+              className={`px-3 py-1 rounded-full ${mode === 'compact' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+            >
+              Compact
+            </button>
+            <button
+              onClick={() => setMode('detailed')}
+              className={`px-3 py-1 rounded-full ${mode === 'detailed' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+            >
+              Detailed
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 ml-auto">
+            <button
+              onClick={() => setZoom((z) => Math.max(0.25, +(z - 0.1).toFixed(2)))}
+              className="px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 flex items-center"
+              title="Zoom out"
+            >
+              <Minus className="w-3 h-3" />
+            </button>
+            <span className="text-xs text-gray-500 w-12 text-center">
+              {Math.round(zoom * 100)}%
+            </span>
+            <button
+              onClick={() => setZoom((z) => Math.min(2, +(z + 0.1).toFixed(2)))}
+              className="px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 flex items-center"
+              title="Zoom in"
+            >
+              <Plus className="w-3 h-3" />
+            </button>
+            <button
+              onClick={fitToScreen}
+              className="ml-1 px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50 flex items-center gap-1"
+              title="Fit to screen"
+            >
+              <Maximize2 className="w-3 h-3" />
+              <span className="hidden sm:inline">Fit</span>
+            </button>
+            <button
+              onClick={fetchTree}
+              className="ml-2 p-1.5 text-gray-500 hover:bg-gray-100 rounded"
+              title="Refresh"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Stats line */}
+        <div className="flex flex-wrap gap-3 text-xs text-gray-500 mt-2">
+          <span>
+            <strong className="text-gray-900">{data.totalActive}</strong> active employees
           </span>
-          <button
-            onClick={() => setZoom((z) => Math.min(1.5, +(z + 0.1).toFixed(2)))}
-            className="px-2 py-1 text-xs border border-gray-200 rounded hover:bg-gray-50"
-          >
-            +
-          </button>
-          <button
-            onClick={fetchTree}
-            className="ml-2 p-1.5 text-gray-500 hover:bg-gray-100 rounded"
-            title="Refresh"
-          >
-            <RefreshCw className="w-3.5 h-3.5" />
-          </button>
+          <span>·</span>
+          <span>
+            <strong className="text-gray-900">{data.roots}</strong> top-level
+          </span>
+          {canEdit ? (
+            <>
+              <span>·</span>
+              <span className="text-blue-600">HR can drag to reparent</span>
+            </>
+          ) : (
+            <>
+              <span>·</span>
+              <span>Read-only view</span>
+            </>
+          )}
+          <span>·</span>
+          <span>Hold <kbd className="px-1 border rounded text-[10px]">Ctrl</kbd> + scroll to zoom · drag background to pan</span>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="flex flex-wrap gap-3 text-xs text-gray-500">
-        <span>
-          <strong className="text-gray-900">{data.totalActive}</strong> active employees
-        </span>
-        <span>·</span>
-        <span>
-          <strong className="text-gray-900">{data.roots}</strong> top-level
-        </span>
-        {canEdit && (
-          <>
-            <span>·</span>
-            <span className="text-blue-600">HR can drag to reparent</span>
-          </>
-        )}
-      </div>
-
-      {/* Canvas */}
+      {/* Canvas viewport */}
       <div
-        ref={containerRef}
-        className="overflow-auto bg-slate-50 border border-gray-200 rounded-xl"
-        style={{ maxHeight: '70vh' }}
+        ref={viewportRef}
+        className="overflow-hidden bg-slate-50 border border-gray-200 rounded-xl relative select-none"
+        style={{ height: '70vh', cursor: panRef.current ? 'grabbing' : 'grab' }}
+        onWheel={handleWheel}
+        onMouseDown={onPanMouseDown}
       >
         <div
+          ref={containerRef}
           style={{
-            width: laidOut.width * zoom + 40,
-            height: laidOut.height * zoom + 40,
-            transform: `scale(${zoom})`,
-            transformOrigin: 'top left',
+            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+            transformOrigin: '0 0',
+            position: 'absolute',
+            top: 0,
+            left: 0,
             padding: 20,
-            position: 'relative',
+            width: laidOut.width + 40,
+            height: laidOut.height + 40,
           }}
         >
           <svg
@@ -291,40 +419,71 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
             style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
           >
             {laidOut.positioned.map((p) => {
-              return p.node.children.map((c) => {
-                const child = laidOut.positioned.find((q) => q.node.id === c.id)
-                if (!child) return null
-                const x1 = p.x + NODE_WIDTH / 2 + 20
-                const y1 = p.y + NODE_HEIGHT + 20
-                const x2 = child.x + NODE_WIDTH / 2 + 20
-                const y2 = child.y + 20
-                const midY = (y1 + y2) / 2
-                return (
-                  <path
-                    key={`${p.node.id}-${c.id}`}
-                    d={`M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`}
-                    stroke="#cbd5e1"
-                    strokeWidth={1.5}
-                    fill="none"
-                  />
-                )
-              })
+              // For each node, draw a connector down to each child that is NOT a root peer
+              // (peers are linked horizontally with a dotted line, see below).
+              return p.node.children
+                .filter((c) => !c.isPeer)
+                .map((c) => {
+                  const child = laidOut.positioned.find((q) => q.node.id === c.id)
+                  if (!child) return null
+                  const x1 = p.x + nodeW / 2 + 20
+                  const y1 = p.y + nodeH + 20
+                  const x2 = child.x + nodeW / 2 + 20
+                  const y2 = child.y + 20
+                  const midY = (y1 + y2) / 2
+                  return (
+                    <path
+                      key={`${p.node.id}-${c.id}`}
+                      d={`M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`}
+                      stroke="#cbd5e1"
+                      strokeWidth={1.5}
+                      fill="none"
+                    />
+                  )
+                })
             })}
+            {/* Dotted peer-connector(s) between the CEO and each Co-Founder. */}
+            {(() => {
+              const ceoPos = laidOut.positioned.find((p) => !p.isRootPeer && p.depth === 0)
+              if (!ceoPos) return null
+              return laidOut.positioned
+                .filter((p) => p.isRootPeer)
+                .map((peer) => {
+                  const y = ceoPos.y + nodeH / 2 + 20
+                  const x1 = Math.min(peer.x, ceoPos.x) + nodeW + 20
+                  const x2 = Math.max(peer.x, ceoPos.x) + 20
+                  return (
+                    <line
+                      key={`peer-${peer.node.id}`}
+                      x1={x1}
+                      y1={y}
+                      x2={x2}
+                      y2={y}
+                      stroke="#94a3b8"
+                      strokeWidth={1.5}
+                      strokeDasharray="4 4"
+                    />
+                  )
+                })
+            })()}
           </svg>
 
           {laidOut.positioned.map((p) => (
             <div
               key={p.node.id}
+              data-org-card
               style={{
                 position: 'absolute',
                 left: p.x + 20,
                 top: p.y + 20,
-                width: NODE_WIDTH,
-                height: NODE_HEIGHT,
+                width: nodeW,
+                height: nodeH,
               }}
             >
               <OrgNodeCard
                 node={p.node}
+                mode={mode}
+                isPeer={!!p.isRootPeer}
                 canEdit={canEdit && !p.node.isVirtual}
                 isDragging={dragging === p.node.id}
                 isDropTarget={dropTarget === p.node.id}
@@ -341,6 +500,7 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
                   if (dropTarget === p.node.id) setDropTarget(null)
                 }}
                 onDrop={(employeeId) => {
+                  // Disallow dropping onto a virtual bucket like "Unassigned".
                   if (!p.node.isVirtual) handleDrop(employeeId, p.node.id)
                 }}
               />

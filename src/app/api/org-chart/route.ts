@@ -3,10 +3,14 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 
 // ─── Org Chart — nested tree from Employee.reportingManagerId ────────────────
-// Role-gated to HR_ADMIN + EXECUTIVE. Builds a tree live from the DB; if
-// multiple roots exist they are wrapped under a synthetic "Convertt" root so
-// the page can render a single tree. Cycles are broken gracefully — the
-// second occurrence is marked with a warning rather than recursing infinitely.
+// Role-gated to HR_ADMIN + EXECUTIVE + MANAGER + EMPLOYEE (read-only for non-HR).
+// Builds a tree live from the DB. The CEO (designation contains "CEO" or
+// "Chief Executive") becomes the visual root; a Co-Founder (designation contains
+// "Co-Founder" / "Founder") renders as a peer of the CEO with a soft connector.
+// Any other root-level employees with no manager are bucketed under a small
+// "Unassigned" virtual node at the bottom so HR can drag them to a real parent.
+// Cycles are broken gracefully — the second occurrence is marked with a warning
+// rather than recursing infinitely.
 
 export interface OrgNode {
   id: string
@@ -20,8 +24,23 @@ export interface OrgNode {
   directReports: number
   warning?: string
   children: OrgNode[]
-  // Marks the synthetic root wrapper when multiple top-level employees exist.
+  // Marks a synthetic wrapper (e.g. "Unassigned" bucket). Not draggable.
   isVirtual?: boolean
+  // Marks a peer node (e.g. Co-Founder) that renders next to the CEO with a
+  // dotted connector rather than as a child.
+  isPeer?: boolean
+}
+
+function isCeo(d: string): boolean {
+  const s = d.toLowerCase()
+  return s.includes('chief executive') || /\bceo\b/.test(s)
+}
+
+function isCoFounder(d: string): boolean {
+  const s = d.toLowerCase()
+  if (s.includes('co-founder') || s.includes('cofounder') || s.includes('co founder')) return true
+  // "Founder" alone also qualifies, but exclude CEO matches above.
+  return /\bfounder\b/.test(s) && !isCeo(d)
 }
 
 // Senior keywords ranked first when sorting siblings.
@@ -59,7 +78,13 @@ export async function GET(request: NextRequest) {
     : undefined
   const effectiveRole = previewRole ?? payload.role
 
-  if (effectiveRole !== 'HR_ADMIN' && effectiveRole !== 'EXECUTIVE') {
+  // All 4 roles can READ the org chart. Only HR_ADMIN can edit (drag-reparent).
+  if (
+    effectiveRole !== 'HR_ADMIN' &&
+    effectiveRole !== 'EXECUTIVE' &&
+    effectiveRole !== 'MANAGER' &&
+    effectiveRole !== 'EMPLOYEE'
+  ) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
@@ -146,23 +171,56 @@ export async function GET(request: NextRequest) {
   sortChildren(roots)
   roots.forEach(sortRec)
 
+  // Identify the CEO (visual top) and any Co-Founders (peers).
+  // If multiple matches exist we pick the first by sort order; everyone else
+  // who has no manager becomes "Unassigned" at the bottom.
+  const ceo = roots.find((r) => isCeo(r.designation)) ?? null
+  const coFounders = roots.filter((r) => r !== ceo && isCoFounder(r.designation))
+  const orphans = roots.filter((r) => r !== ceo && !coFounders.includes(r))
+
+  // Orphans get a small warning so HR notices them.
+  for (const o of orphans) {
+    if (!o.warning) o.warning = 'No manager set — drag onto a manager to fix'
+  }
+
   let tree: OrgNode
-  if (roots.length === 1) {
+  if (ceo) {
+    // Tree starts from the CEO. Co-Founders ride along as peers (rendered next
+    // to the CEO by the UI). We tag them with isPeer so the layout can place
+    // them at the same depth as the CEO instead of as children.
+    const peers: OrgNode[] = coFounders.map((c) => ({ ...c, isPeer: true }))
+    tree = { ...ceo }
+    // Attach peers as a sibling-list on the root via a synthetic property —
+    // we re-use children but tag them isPeer to keep the existing layout code
+    // happy. The UI inspects isPeer to render them at the same depth.
+    if (peers.length) {
+      tree.children = [...peers, ...tree.children]
+    }
+  } else if (roots.length === 1) {
     tree = roots[0]
   } else {
-    tree = {
-      id: '__convertt_root__',
-      fullName: 'Convertt',
+    // No CEO and multiple roots — fall back to the first root and bucket the
+    // rest under "Unassigned". This is a degraded state HR should fix.
+    tree = roots[0]
+    orphans.push(...roots.slice(1))
+  }
+
+  if (orphans.length) {
+    const unassigned: OrgNode = {
+      id: '__unassigned__',
+      fullName: 'Unassigned',
       employeeCode: '',
-      designation: 'Organisation',
+      designation: 'No manager assigned',
       department: null,
       departmentId: null,
       photoUrl: null,
       reportingManagerId: null,
-      directReports: roots.length,
+      directReports: orphans.length,
       isVirtual: true,
-      children: roots,
+      children: orphans,
     }
+    // Hang the Unassigned bucket off the root so it appears at the bottom.
+    tree.children = [...tree.children, unassigned]
   }
 
   // Departments list for filter chips.

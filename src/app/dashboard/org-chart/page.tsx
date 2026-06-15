@@ -10,18 +10,12 @@ export default async function OrgChartPage() {
   const payload = verifyToken(token)
   if (!payload) redirect('/login')
 
-  if (payload.role !== 'HR_ADMIN' && payload.role !== 'EXECUTIVE') {
-    return (
-      <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl">
-        <h2 className="text-lg font-semibold text-rose-900">Access denied</h2>
-        <p className="text-sm text-rose-800 mt-2">
-          The org chart is only available to HR and Executive roles.
-        </p>
-      </div>
-    )
-  }
-
-  const canEdit = payload.role === 'HR_ADMIN'
+  // Org chart is visible to ALL roles — it's the company directory hierarchy.
+  // Only HR_ADMIN can edit (drag-reparent). Non-HR_ADMIN roles see read-only.
+  const previewRole =
+    payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined
+  const effectiveRole = previewRole ?? payload.role
+  const canEdit = effectiveRole === 'HR_ADMIN'
 
   return (
     <div className="space-y-4">

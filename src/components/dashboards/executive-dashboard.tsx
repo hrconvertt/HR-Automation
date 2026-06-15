@@ -15,6 +15,7 @@
  */
 import Link from 'next/link'
 import { computeExecMetrics } from '@/lib/exec-metrics'
+import { PoliciesPendingReview } from '@/components/dashboards/policies-pending-review'
 import { formatCurrency } from '@/lib/utils'
 import {
   Users, Banknote, TrendingUp, TrendingDown, AlertTriangle,
@@ -26,6 +27,9 @@ export async function ExecutiveDashboard() {
 
   return (
     <div className="space-y-5">
+      {/* Action prompt: any policies the CEO/Co-Founder needs to review */}
+      <PoliciesPendingReview />
+
       {/* Hero — three signal-driven KPIs that frame the rest. */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <HeroCard

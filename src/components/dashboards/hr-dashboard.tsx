@@ -15,6 +15,7 @@ import {
   FileText, Users, TrendingUp, Sparkles, ClipboardList,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { PoliciesPendingReview } from '@/components/dashboards/policies-pending-review'
 
 function startOfToday(): Date {
   const d = new Date(); d.setHours(0,0,0,0); return d
@@ -245,6 +246,9 @@ export async function HRDashboard({ userName }: Props) {
 
   return (
     <div className="space-y-5">
+
+      {/* Policy approvals where HR is also a reviewer */}
+      <PoliciesPendingReview />
 
       {/* ─── HERO ────────────────────────────────────────────────────
           Layered card with a soft gradient. Greeting on the left,
