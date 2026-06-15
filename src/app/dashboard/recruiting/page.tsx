@@ -17,6 +17,9 @@ import { RequisitionStatusMenu } from '@/components/recruiting/requisition-statu
 import { JdReviewButton } from '@/components/recruiting/jd-review-button'
 import { InterviewFeedbackButton } from '@/components/recruiting/interview-feedback-button'
 import { TalentPoolView } from '@/components/recruiting/talent-pool-view'
+import { KnockoutEditorButton } from '@/components/recruiting/knockout-editor-button'
+import { KnockoutOverrideButton } from '@/components/recruiting/knockout-override-button'
+import { BulkPipelineActions } from '@/components/recruiting/bulk-pipeline-actions'
 
 const AVATAR_PALETTE = [
   'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700',
@@ -261,6 +264,10 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
 
   const openCount      = requisitions.filter((r) => r.status === 'OPEN').length
   const pendingRequests = requestsVisible.filter((r) => r.status === 'PENDING')
+  // Workday-style "gate before score": kanban shows only PASSED + OVERRIDDEN.
+  // FAILED knockouts live in their own tab.
+  const shortlist        = candidates.filter((c) => ['PASSED', 'OVERRIDDEN'].includes(c.knockoutStatus))
+  const knockedOut       = candidates.filter((c) => c.knockoutStatus === 'FAILED')
   const activePipeline = candidates.filter((c) => !['HIRED', 'REJECTED'].includes(c.stage)).length
   const upcoming       = interviews.filter((i) => !i.result).length
   const pendingOffers  = offers.filter((o) => o.status === 'PENDING').length
@@ -355,7 +362,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           Default tab is the earliest place that needs attention: Requests
           if HR has pending ones, otherwise Pipeline. */}
       <Tabs defaultValue={
-        sp.tab && ['requests','requisitions','pipeline','pool','schedule'].includes(sp.tab)
+        sp.tab && ['requests','requisitions','pipeline','knockouts','pool','schedule'].includes(sp.tab)
           ? sp.tab
           : sp.stage
             ? 'pipeline'
@@ -370,6 +377,14 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           </TabsTrigger>
           <TabsTrigger value="requisitions">Job Requisitions</TabsTrigger>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          {(isHR || isManager) && (
+            <TabsTrigger value="knockouts">
+              Knockouts
+              {knockedOut.length > 0 && (
+                <span className="ml-1.5 text-[10px] font-bold bg-rose-100 text-rose-700 rounded-full px-1.5 py-0.5 tabular-nums">{knockedOut.length}</span>
+              )}
+            </TabsTrigger>
+          )}
           <TabsTrigger value="pool">
             Talent Pool
             {poolCandidates.length > 0 && (
@@ -379,25 +394,38 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           <TabsTrigger value="schedule">My Schedule</TabsTrigger>
         </TabsList>
 
-        {/* Pipeline (kanban) */}
+        {/* Pipeline (kanban) — shortlist only (PASSED + OVERRIDDEN).
+            Failed knockouts live in the Knockouts tab. */}
         <TabsContent value="pipeline" className="mt-4">
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
               <p className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-900">{candidates.length}</span> candidates across {requisitions.filter((r) => r.status === 'OPEN').length} open {requisitions.filter((r) => r.status === 'OPEN').length === 1 ? 'role' : 'roles'}
+                <span className="font-semibold text-slate-900">{shortlist.length}</span> shortlisted candidates across {requisitions.filter((r) => r.status === 'OPEN').length} open {requisitions.filter((r) => r.status === 'OPEN').length === 1 ? 'role' : 'roles'}
+                {knockedOut.length > 0 && (
+                  <span className="text-rose-600 ml-2">· {knockedOut.length} filtered out</span>
+                )}
               </p>
-              {(isHR || isManager) && (
-                <AddCandidateButton
-                  openRequisitions={requisitions
-                    .filter((r) => r.status === 'OPEN')
-                    .map((r) => ({ id: r.id, title: r.title }))}
-                />
-              )}
+              <div className="flex items-center gap-2 flex-wrap">
+                {(isHR || isManager) && (
+                  <BulkPipelineActions
+                    openRequisitions={requisitions
+                      .filter((r) => r.status === 'OPEN')
+                      .map((r) => ({ id: r.id, title: r.title }))}
+                  />
+                )}
+                {(isHR || isManager) && (
+                  <AddCandidateButton
+                    openRequisitions={requisitions
+                      .filter((r) => r.status === 'OPEN')
+                      .map((r) => ({ id: r.id, title: r.title }))}
+                  />
+                )}
+              </div>
             </div>
             <div className="p-4 bg-slate-50/60 overflow-x-auto">
               <div className="grid gap-3 min-w-[1100px]" style={{ gridTemplateColumns: `repeat(${PIPELINE_STAGES.length}, 1fr)` }}>
                 {PIPELINE_STAGES.map((stage) => {
-                  const stageCandidates = candidates.filter((c) => c.stage === stage.key)
+                  const stageCandidates = shortlist.filter((c) => c.stage === stage.key)
                   return (
                     <div key={stage.key} className={`rounded-lg border ${stage.tone}`}>
                       <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200/50">
@@ -429,6 +457,57 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             </div>
           </Card>
         </TabsContent>
+
+        {/* Knockouts — candidates that failed hard filters at intake.
+            HR can override here; on override they get scored + move to kanban. */}
+        {(isHR || isManager) && (
+          <TabsContent value="knockouts" className="mt-4">
+            <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
+              <div className="px-4 py-3 border-b border-slate-100">
+                <p className="text-xs text-slate-500">
+                  <span className="font-semibold text-slate-900">{knockedOut.length}</span> candidate{knockedOut.length === 1 ? '' : 's'} filtered out by knockout criteria
+                </p>
+              </div>
+              <div className="p-4 space-y-2 bg-slate-50/60">
+                {knockedOut.length === 0 ? (
+                  <p className="text-xs text-slate-400 text-center py-10">
+                    No knockouts yet. Set up knockout filters on a requisition&apos;s row to start filtering.
+                  </p>
+                ) : (
+                  knockedOut.map((c) => {
+                    let reasons: Array<{ type: string; reason: string }> = []
+                    if (c.knockoutReasons) {
+                      try {
+                        const parsed = JSON.parse(c.knockoutReasons)
+                        if (Array.isArray(parsed)) reasons = parsed
+                      } catch { /* ignore */ }
+                    }
+                    return (
+                      <div key={c.id} className="rounded-lg border border-rose-200 bg-white p-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="font-medium text-slate-900 text-sm">{c.fullName}</p>
+                            <p className="text-[11px] text-slate-500">{c.requisition.title}</p>
+                            {reasons.length > 0 && (
+                              <ul className="mt-1.5 space-y-0.5">
+                                {reasons.map((r, i) => (
+                                  <li key={i} className="text-[11px] text-rose-700">· {r.reason}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                          {isHR && (
+                            <KnockoutOverrideButton candidateId={c.id} candidateName={c.fullName} />
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
+                )}
+              </div>
+            </Card>
+          </TabsContent>
+        )}
 
         {/* Requisitions — the active hiring board.
             Excludes PENDING + REJECTED (those live in the Requests tab).
@@ -469,7 +548,10 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                           <TableCell><Badge variant={STATUS_TONE[r.status] ?? 'secondary'}>{r.status}</Badge></TableCell>
                           {isHR && (
                             <TableCell>
-                              <JdReviewButton requisitionId={r.id} title={r.title} jdStatus={r.jdStatus} />
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <JdReviewButton requisitionId={r.id} title={r.title} jdStatus={r.jdStatus} />
+                                <KnockoutEditorButton requisitionId={r.id} title={r.title} jdContent={r.jdContent} />
+                              </div>
                             </TableCell>
                           )}
                           <TableCell className="text-slate-500">{r.closingDate ? formatDate(r.closingDate) : '—'}</TableCell>

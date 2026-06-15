@@ -11,6 +11,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { scoreCandidate } from '@/lib/candidate-scoring'
+import { evaluateCriteria } from '@/lib/knockout-evaluator'
+
+const VALID_EDUCATION = new Set(['HIGH_SCHOOL', 'DIPLOMA', 'BACHELORS', 'MASTERS', 'PHD'])
+
+function toJsonArray(input: unknown): string | null {
+  if (input == null) return null
+  let arr: string[] = []
+  if (Array.isArray(input)) {
+    arr = input.map((x) => String(x).trim()).filter(Boolean)
+  } else if (typeof input === 'string') {
+    arr = input.split(',').map((s) => s.trim()).filter(Boolean)
+  }
+  if (arr.length === 0) return null
+  return JSON.stringify(arr.slice(0, 30).map((s) => s.slice(0, 80)))
+}
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -32,6 +47,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const sourceRaw      = body.source ? String(body.source).toUpperCase() : 'CAREERS_PAGE'
   const VALID_SOURCES  = new Set(['LINKEDIN', 'REFERRAL', 'PORTAL', 'WALK_IN', 'CAREERS_PAGE', 'OTHER'])
   const source         = VALID_SOURCES.has(sourceRaw) ? sourceRaw : 'CAREERS_PAGE'
+
+  // ─── Knockout filter inputs ──────────────────────────────────────
+  const workAuthorization = body.workAuthorization ? String(body.workAuthorization).trim().toUpperCase().slice(0, 10) : null
+  const yearsExpRaw       = body.yearsExperience != null ? Number(body.yearsExperience) : null
+  const yearsExperience   = yearsExpRaw != null && Number.isFinite(yearsExpRaw) && yearsExpRaw >= 0
+    ? Math.min(60, Math.floor(yearsExpRaw))
+    : (experience != null ? Math.floor(experience) : null)
+  const educationRaw      = body.educationLevel ? String(body.educationLevel).toUpperCase().trim() : null
+  const educationLevel    = educationRaw && VALID_EDUCATION.has(educationRaw) ? educationRaw : null
+  const location          = body.location ? String(body.location).trim().slice(0, 120) : null
+  const openToRemote      = body.openToRemote === true || body.openToRemote === 'true'
+  const skills            = toJsonArray(body.skills)
+  const languages         = toJsonArray(body.languages)
 
   // Basic validation — strict enough to keep junk out, lenient enough
   // to not block real applicants.
@@ -64,11 +92,40 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     })
   }
 
-  // Phase C — auto-score the applicant right at intake.
-  const { score, reason } = scoreCandidate(
-    { experience, currentCompany, currentRole, source, notes, cvUrl, fullName },
-    { title: job.title, type: job.type, jdContent: job.jdContent },
+  // ─── Workday-style "gate before score" ────────────────────────────
+  // Load criteria + evaluate BEFORE scoring. If hard filters fail, skip
+  // the AI score entirely (saves CPU + keeps the kanban clean).
+  const criteria = await prisma.knockoutCriterion.findMany({
+    where: { requisitionId: id },
+    select: { type: true, value: true, isHard: true },
+  })
+  const knockout = evaluateCriteria(
+    {
+      workAuthorization,
+      location,
+      openToRemote,
+      skills,
+      languages,
+      yearsExperience,
+      experience,
+      educationLevel,
+    },
+    criteria,
   )
+  // No criteria defined → backwards-compatible: everyone passes & gets scored.
+  const passed = criteria.length === 0 ? true : knockout.passed
+  const knockoutStatus = passed ? 'PASSED' : 'FAILED'
+
+  let score: number | null = null
+  let scoreReason: string | null = null
+  if (passed) {
+    const result = scoreCandidate(
+      { experience, currentCompany, currentRole, source, notes, cvUrl, fullName },
+      { title: job.title, type: job.type, jdContent: job.jdContent },
+    )
+    score = result.score
+    scoreReason = result.reason
+  }
 
   await prisma.candidate.create({
     data: {
@@ -81,7 +138,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       source,
       stage: 'APPLIED',
       matchScore: score,
-      scoreReason: reason,
+      scoreReason,
+      // Knockout fields
+      knockoutStatus,
+      knockoutReasons: passed ? null : JSON.stringify(knockout.failures),
+      workAuthorization,
+      yearsExperience,
+      educationLevel,
+      location,
+      openToRemote,
+      skills,
+      languages,
     },
   })
 

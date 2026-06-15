@@ -20,6 +20,14 @@ export function ApplyForm({ requisitionId, jobTitle }: Props) {
     fullName: '', email: '', phone: '',
     currentCompany: '', currentRole: '',
     experience: '' as string, cvUrl: '', notes: '',
+    // ─── Knockout filter inputs ───
+    yearsExperience: '' as string,
+    educationLevel: '' as string,
+    workAuthorization: '' as string,
+    location: '',
+    openToRemote: false,
+    skills: '',
+    languages: '',
   })
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
@@ -38,6 +46,9 @@ export function ApplyForm({ requisitionId, jobTitle }: Props) {
         body: JSON.stringify({
           ...form,
           experience: form.experience ? Number(form.experience) : null,
+          yearsExperience: form.yearsExperience ? Number(form.yearsExperience) : null,
+          skills: form.skills ? form.skills.split(',').map((s) => s.trim()).filter(Boolean) : null,
+          languages: form.languages ? form.languages.split(',').map((s) => s.trim()).filter(Boolean) : null,
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -110,6 +121,92 @@ export function ApplyForm({ requisitionId, jobTitle }: Props) {
           CV / Portfolio Link <span className="text-slate-400 font-normal">(LinkedIn, Drive, Behance, GitHub…)</span>
         </label>
         <Input type="url" value={form.cvUrl} onChange={(e) => setForm({ ...form, cvUrl: e.target.value })} placeholder="https://…" />
+      </div>
+
+      {/* ─── Knockout filter inputs ─────────────────────────────────── */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Years of Experience</label>
+          <Input
+            type="number"
+            min={0}
+            step={1}
+            value={form.yearsExperience}
+            onChange={(e) => setForm({ ...form, yearsExperience: e.target.value })}
+            placeholder="3"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Education</label>
+          <select
+            value={form.educationLevel}
+            onChange={(e) => setForm({ ...form, educationLevel: e.target.value })}
+            className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+          >
+            <option value="">Select…</option>
+            <option value="HIGH_SCHOOL">High School</option>
+            <option value="DIPLOMA">Diploma</option>
+            <option value="BACHELORS">Bachelor&apos;s</option>
+            <option value="MASTERS">Master&apos;s</option>
+            <option value="PHD">PhD</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Work Authorization</label>
+          <select
+            value={form.workAuthorization}
+            onChange={(e) => setForm({ ...form, workAuthorization: e.target.value })}
+            className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+          >
+            <option value="">Select…</option>
+            <option value="PK">Pakistan</option>
+            <option value="OTHER">Other</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">Location (City)</label>
+          <Input
+            value={form.location}
+            onChange={(e) => setForm({ ...form, location: e.target.value })}
+            placeholder="Lahore"
+          />
+        </div>
+        <div className="flex items-end pb-1">
+          <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              checked={form.openToRemote}
+              onChange={(e) => setForm({ ...form, openToRemote: e.target.checked })}
+              className="rounded border-slate-300"
+            />
+            Open to remote work
+          </label>
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          Key Skills <span className="text-slate-400 font-normal">(comma-separated)</span>
+        </label>
+        <Input
+          value={form.skills}
+          onChange={(e) => setForm({ ...form, skills: e.target.value })}
+          placeholder="Shopify Liquid, React, Figma"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-1">
+          Languages <span className="text-slate-400 font-normal">(comma-separated)</span>
+        </label>
+        <Input
+          value={form.languages}
+          onChange={(e) => setForm({ ...form, languages: e.target.value })}
+          placeholder="English, Urdu"
+        />
       </div>
 
       <div>

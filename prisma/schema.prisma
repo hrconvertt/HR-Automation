@@ -1081,11 +1081,31 @@ model JobRequisition {
   scoreThreshold Int        @default(60)
 
   candidates     Candidate[]
+  knockoutCriteria KnockoutCriterion[]
   isDemo         Boolean    @default(false)
   createdAt      DateTime    @default(now())
   updatedAt      DateTime    @updatedAt
 
   @@map("job_requisitions")
+}
+
+// ─── KNOCKOUT FILTERS ──────────────────────────────────────────────────────────
+// Per-requisition hard/soft filter criteria. Applied at application intake
+// BEFORE the candidate is scored — failed candidates get knockoutStatus=FAILED
+// and skip AI scoring entirely.
+model KnockoutCriterion {
+  id              String   @id @default(cuid())
+  requisitionId   String
+  requisition     JobRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  // WORK_AUTH | LOCATION | SKILL | MIN_YEARS | MIN_EDUCATION | LANGUAGE
+  type            String
+  // Interpreted per type — see src/lib/knockout-evaluator.ts
+  value           String
+  isHard          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([requisitionId])
+  @@map("knockout_criteria")
 }
 
 model Candidate {
@@ -1115,6 +1135,27 @@ model Candidate {
   poolReason      String?   // why they're in the pool (auto or manual note)
   poolAddedAt     DateTime?
   lastStallNotifiedAt DateTime?
+
+  // ─── Workday-style knockout filter pipeline ────────────────────────
+  //   PENDING    — evaluator hasn't run yet (default for legacy rows)
+  //   PASSED     — meets all hard criteria for the requisition
+  //   FAILED     — failed at least one hard criterion, scoring skipped
+  //   OVERRIDDEN — HR manually overrode a FAILED result; gets scored
+  knockoutStatus         String    @default("PENDING")
+  knockoutReasons        String?   // JSON array of {type, reason}
+  knockoutOverrideBy     String?
+  knockoutOverrideReason String?
+  knockoutOverrideAt     DateTime?
+
+  // Knockout filter inputs collected on the apply form
+  workAuthorization String?  // country code, e.g. "PK"
+  yearsExperience   Int?
+  educationLevel    String?  // HIGH_SCHOOL | DIPLOMA | BACHELORS | MASTERS | PHD
+  location          String?
+  openToRemote      Boolean  @default(false)
+  skills            String?  // JSON array of strings
+  languages         String?  // JSON array of strings
+
   interviews      Interview[]
   offer           JobOffer?
   isDemo          Boolean        @default(false)
