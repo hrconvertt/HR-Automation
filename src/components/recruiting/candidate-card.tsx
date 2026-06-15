@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { getInitials } from '@/lib/utils'
-import { ChevronDown, Star } from 'lucide-react'
+import { ChevronDown, Star, CalendarClock } from 'lucide-react'
 import { CreateOfferDialog } from './create-offer-dialog'
+import { ScheduleInterviewDialog } from './schedule-interview-dialog'
 
 const AVATAR_PALETTE = [
   'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700',
@@ -56,6 +57,7 @@ export function CandidateCard({ candidate, canMove }: Props) {
   // the Create Offer dialog so they capture salary, joining date, etc.
   // The dialog handles the move + JobOffer creation + email draft.
   const [offerOpen, setOfferOpen] = useState(false)
+  const [interviewOpen, setInterviewOpen] = useState(false)
 
   async function move(stage: string) {
     if (stage === candidate.stage) { setOpen(false); return }
@@ -147,6 +149,20 @@ export function CandidateCard({ candidate, canMove }: Props) {
         </div>
       )}
 
+      {/* Schedule Interview — visible once the candidate has cleared APPLIED.
+          Hidden for HIRED/REJECTED (terminal) and for non-actors. */}
+      {canMove && !['HIRED', 'REJECTED'].includes(candidate.stage) && (
+        <button
+          type="button"
+          onClick={() => setInterviewOpen(true)}
+          className="mt-2 w-full text-[10px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded px-2 py-1 flex items-center justify-center gap-1"
+          title="Schedule an interview for this candidate"
+        >
+          <CalendarClock className="w-3 h-3" />
+          Schedule Interview
+        </button>
+      )}
+
       {/* Move-to-OFFER opens this dialog instead of a silent stage flip. */}
       <CreateOfferDialog
         candidateId={candidate.id}
@@ -154,6 +170,14 @@ export function CandidateCard({ candidate, canMove }: Props) {
         roleTitle={candidate.requisition?.title ?? 'the role'}
         open={offerOpen}
         onOpenChange={setOfferOpen}
+      />
+
+      <ScheduleInterviewDialog
+        candidateId={candidate.id}
+        candidateName={candidate.fullName}
+        roleTitle={candidate.requisition?.title ?? 'the role'}
+        open={interviewOpen}
+        onOpenChange={setInterviewOpen}
       />
     </div>
   )

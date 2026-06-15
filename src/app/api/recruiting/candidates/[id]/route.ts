@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { autoTags, shouldAutoPool } from '@/lib/talent-pool'
+import { promoteToEmployee } from '@/lib/hire-candidate'
 
 const VALID = ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER', 'HIRED', 'REJECTED']
 
@@ -38,6 +39,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     include: { requisition: { select: { title: true, type: true, scoreThreshold: true } } },
   })
   if (!c) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
+
+  // Stage = HIRED is special: we must FIRST run the promotion (in its own
+  // transaction). Only if that succeeds do we flip the stage. This guards
+  // against the pipeline showing "HIRED" with no Employee behind it.
+  if (stage === 'HIRED') {
+    try {
+      await promoteToEmployee(id, payload.userId)
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Promotion failed'
+      return NextResponse.json(
+        { error: `Could not promote candidate to employee: ${msg}` },
+        { status: 400 },
+      )
+    }
+  }
 
   await prisma.candidate.update({ where: { id }, data: { stage } })
 

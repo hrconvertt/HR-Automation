@@ -1134,6 +1134,7 @@ model Interview {
   duration      Int       // minutes
   interviewerIds String?  // JSON array of employee IDs
   meetingLink   String?   // Optional Google Meet / Zoom URL — HR pastes manually
+  notes         String?   // pre-interview notes / location / what to bring
   feedback      String?
   rating        Float?
   result        String?   // PASS | FAIL | HOLD
@@ -1151,7 +1152,9 @@ model JobOffer {
   offerDate    DateTime
   salary       Float
   joiningDate  DateTime?
-  status       String    @default("PENDING") // PENDING | ACCEPTED | REJECTED | EXPIRED
+  status       String    @default("PENDING") // PENDING | ACCEPTED | REJECTED | EXPIRED | WITHDRAWN
+  statusChangedAt DateTime?
+  rejectionReason String?
   letterUrl    String?
   expiryDate   DateTime?
   createdAt    DateTime  @default(now())

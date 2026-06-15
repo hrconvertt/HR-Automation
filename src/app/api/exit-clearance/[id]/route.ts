@@ -292,3 +292,25 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   return NextResponse.json({ error: 'Unknown action' }, { status: 400 })
 }
+
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const token = request.cookies.get('hr_token')?.value
+  const payload = token ? verifyToken(token) : null
+  if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const previewRole = request.cookies.get('hr_preview_role')?.value
+  if (previewRole && previewRole !== 'HR_ADMIN') {
+    return NextResponse.json({ error: 'View-only while previewing role' }, { status: 403 })
+  }
+
+  const clearance = await prisma.exitClearance.findUnique({ where: { id } })
+  if (!clearance) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  if (clearance.status === 'COMPLETED') {
+    return NextResponse.json({ error: 'Cannot cancel a completed clearance' }, { status: 400 })
+  }
+
+  await prisma.exitClearance.delete({ where: { id } })
+  return NextResponse.json({ ok: true })
+}

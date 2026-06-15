@@ -495,6 +495,20 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
     onChanged()
   }
 
+  async function cancelClearance() {
+    if (!confirm('Cancel this exit clearance? This will permanently delete the clearance record. The employee will remain active. This cannot be undone.')) return
+    setBusy(true)
+    const res = await fetch(`/api/exit-clearance/${id}`, { method: 'DELETE' })
+    setBusy(false)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      alert(err.error || 'Failed to cancel clearance')
+      return
+    }
+    onChanged()
+    onClose()
+  }
+
   if (!data) {
     return (
       <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onClick={onClose}>
@@ -514,7 +528,18 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
             <h2 className="text-base font-semibold">Exit Clearance — {e.fullName}</h2>
             <p className="text-xs text-slate-500">{e.employeeCode} · {e.designation}</p>
           </div>
-          <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          <div className="flex items-center gap-2">
+            {c.status !== 'COMPLETED' && (
+              <button
+                onClick={cancelClearance}
+                disabled={busy}
+                className="text-xs px-2.5 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+              >
+                Cancel Clearance
+              </button>
+            )}
+            <button onClick={onClose}><X className="w-4 h-4 text-slate-400" /></button>
+          </div>
         </div>
         <div className="p-5 space-y-5">
 
