@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { TimeClockCard } from '@/components/time-clock-card'
+import { SeedLeaveBalancesButton } from '@/components/seed-leave-balances-button'
 
 async function getEmployeeData(employeeId: string) {
   const now = new Date()
@@ -104,9 +105,11 @@ const monthName = (m: number) =>
 export async function EmployeeDashboard({
   employeeId,
   userName,
+  viewerRole,
 }: {
   employeeId: string
   userName: string
+  viewerRole?: string
 }) {
   const data = await getEmployeeData(employeeId)
   const firstName = userName.split(' ')[0]
@@ -225,7 +228,12 @@ export async function EmployeeDashboard({
         </CardHeader>
         <CardContent>
           {data.leaveBalances.length === 0 ? (
-            <p className="text-sm text-gray-400">No leave balances configured.</p>
+            <div>
+              <p className="text-sm text-gray-400">No leave balances configured.</p>
+              {viewerRole === 'HR_ADMIN' && (
+                <SeedLeaveBalancesButton employeeId={employeeId} />
+              )}
+            </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {data.leaveBalances.map((b) => {

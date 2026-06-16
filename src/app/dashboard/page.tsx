@@ -37,7 +37,7 @@ export default async function DashboardPage() {
     }
   } else if (effectiveRole === 'EMPLOYEE') {
     if (user.employee) {
-      dashboard = <EmployeeDashboard employeeId={user.employee.id} userName={userName} />
+      dashboard = <EmployeeDashboard employeeId={user.employee.id} userName={userName} viewerRole={user.role} />
     }
   } else if (effectiveRole === 'HR_ADMIN') {
     dashboard = <HRDashboard userName={userName} />
