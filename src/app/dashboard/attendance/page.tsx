@@ -1,14 +1,54 @@
 /**
- * Legacy /dashboard/attendance entry — now merged into the unified
- * "Time & Attendance" page at /dashboard/time.
+ * Workday-style attendance & leave grid view.
  *
- * Kept as a redirect so existing bookmarks / links continue to work.
- * The per-employee detail drill-down at /dashboard/attendance/[employeeId]
- * stays where it is.
+ * Mirrors the layout of the source "Attendance & Leave Tracking" xlsx:
+ *   - Grid view   — wide table, employee rows × day columns, P/L/WFH/HD/A badges
+ *   - Summary view — compact month totals per employee with YTD
+ *   - Detail view  — per-employee 8-month calendar (separate route)
+ *
+ * Role gating happens server-side in /api/attendance/grid; this page just
+ * decides the default view per role and (for EMPLOYEE) auto-redirects to
+ * their own detail.
  */
 
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { verifyToken } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import { AttendanceGridShell } from './_components/grid-shell'
 
-export default function AttendanceRedirect() {
-  redirect('/dashboard/time?tab=grid')
+export default async function AttendanceGridPage() {
+  const cookieStore = await cookies()
+  const token = cookieStore.get('hr_token')?.value
+  if (!token) redirect('/login')
+  const payload = verifyToken(token)
+  if (!payload) redirect('/login')
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    include: { employee: { select: { id: true, fullName: true } } },
+  })
+  if (!user) redirect('/login')
+
+  const previewRole =
+    user.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined
+  const effectiveRole = previewRole ?? user.role
+
+  // Employees default straight to their own detail view — they only ever
+  // have one row anyway, and the calendar is a friendlier landing UI.
+  if (effectiveRole === 'EMPLOYEE' && user.employee?.id) {
+    redirect(`/dashboard/attendance/${user.employee.id}`)
+  }
+
+  const departments = await prisma.department.findMany({
+    select: { name: true },
+    orderBy: { name: 'asc' },
+  })
+
+  return (
+    <AttendanceGridShell
+      role={effectiveRole}
+      departments={departments.map((d) => d.name)}
+    />
+  )
 }
