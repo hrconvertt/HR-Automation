@@ -144,6 +144,15 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
   const [zoom, setZoom] = useState(0.9)
   const [mode, setMode] = useState<Mode>('detailed')
   const [reparenting, setReparenting] = useState(false)
+  // Last successful move, surfaced as an Undo toast for ~10 seconds. Captures
+  // the previous manager so a single click can revert. Cleared when the timer
+  // expires, the undo runs, or another reparent happens.
+  const [lastMove, setLastMove] = useState<
+    | { employeeId: string; employeeName: string; previousManagerId: string | null; newManagerName: string; timestamp: number }
+    | null
+  >(null)
+  const [undoBusy, setUndoBusy] = useState(false)
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [pan, setPan] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const panRef = useRef<{ startX: number; startY: number; panX: number; panY: number } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -247,8 +256,37 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
     setPan({ x: 0, y: 0 })
   }
 
+  // Walk the laid-out tree to look up a node by id — used to capture the
+  // employee's name + previous manager before reparenting, so the Undo toast
+  // has the right copy and target.
+  function findNode(id: string): OrgNode | null {
+    if (!data) return null
+    let found: OrgNode | null = null
+    function walk(n: OrgNode) {
+      if (found) return
+      if (n.id === id) { found = n; return }
+      for (const c of n.children) walk(c)
+    }
+    walk(data.tree)
+    return found
+  }
+
+  function clearUndoTimer() {
+    if (undoTimerRef.current) {
+      clearTimeout(undoTimerRef.current)
+      undoTimerRef.current = null
+    }
+  }
+
   async function handleDrop(employeeId: string, newManagerId: string) {
     if (!canEdit || employeeId === newManagerId) return
+    // Snapshot the pre-move state for Undo (the tree refetch below will
+    // overwrite reportingManagerId, so we must read it before saving).
+    const movedNode = findNode(employeeId)
+    const previousManagerId = movedNode?.reportingManagerId ?? null
+    const employeeName = movedNode?.fullName ?? 'Employee'
+    const newManagerName = findNode(newManagerId)?.fullName ?? 'their new manager'
+
     setReparenting(true)
     try {
       const r = await fetch('/api/org-chart/reparent', {
@@ -261,6 +299,20 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
         alert(j.error ?? 'Failed to reparent')
       } else {
         await fetchTree()
+        // Surface the Undo toast — auto-dismisses after 10s. A subsequent
+        // move replaces it (only the most recent move is undo-able).
+        clearUndoTimer()
+        setLastMove({
+          employeeId,
+          employeeName,
+          previousManagerId,
+          newManagerName,
+          timestamp: Date.now(),
+        })
+        undoTimerRef.current = setTimeout(() => {
+          setLastMove(null)
+          undoTimerRef.current = null
+        }, 10_000)
       }
     } catch (e) {
       alert((e as Error).message)
@@ -270,6 +322,37 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
       setDropTarget(null)
     }
   }
+
+  async function handleUndo() {
+    if (!lastMove || undoBusy) return
+    setUndoBusy(true)
+    try {
+      const r = await fetch('/api/org-chart/reparent', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          employeeId: lastMove.employeeId,
+          newManagerId: lastMove.previousManagerId,
+        }),
+      })
+      const j = await r.json()
+      if (!r.ok) {
+        alert(j.error ?? 'Failed to undo')
+        return
+      }
+      await fetchTree()
+      clearUndoTimer()
+      setLastMove(null)
+    } catch (e) {
+      alert((e as Error).message)
+    } finally {
+      setUndoBusy(false)
+    }
+  }
+
+  // Clean up the undo timer on unmount so we don't try to set state after
+  // the component is gone.
+  useEffect(() => () => clearUndoTimer(), [])
 
   if (loading) {
     return (
@@ -419,53 +502,115 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
             height={laidOut.height + 40}
             style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
           >
-            {laidOut.positioned.map((p) => {
-              // For each node, draw a connector down to each child that is NOT a root peer
-              // (peers are linked horizontally with a dotted line, see below).
-              return p.node.children
-                .filter((c) => !c.isPeer)
-                .map((c) => {
-                  const child = laidOut.positioned.find((q) => q.node.id === c.id)
-                  if (!child) return null
-                  const x1 = p.x + nodeW / 2 + 20
-                  const y1 = p.y + nodeH + 20
-                  const x2 = child.x + nodeW / 2 + 20
-                  const y2 = child.y + 20
-                  const midY = (y1 + y2) / 2
-                  return (
-                    <path
-                      key={`${p.node.id}-${c.id}`}
-                      d={`M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`}
-                      stroke="#cbd5e1"
-                      strokeWidth={1.5}
-                      fill="none"
-                    />
-                  )
-                })
-            })}
-            {/* Dotted peer-connector(s) between the CEO and each Co-Founder. */}
             {(() => {
+              // ─── Connector strategy ──────────────────────────────────
+              // For non-root nodes, draw the usual orthogonal parent→child
+              // connector. For the ROOT (CEO + Co-Founder peers), draw a
+              // single shared executive bar that spans across both cards,
+              // then one vertical trunk down to the shared row of children.
               const ceoPos = laidOut.positioned.find((p) => !p.isRootPeer && p.depth === 0)
-              if (!ceoPos) return null
-              return laidOut.positioned
-                .filter((p) => p.isRootPeer)
-                .map((peer) => {
-                  const y = ceoPos.y + nodeH / 2 + 20
-                  const x1 = Math.min(peer.x, ceoPos.x) + nodeW + 20
-                  const x2 = Math.max(peer.x, ceoPos.x) + 20
-                  return (
-                    <line
-                      key={`peer-${peer.node.id}`}
-                      x1={x1}
-                      y1={y}
-                      x2={x2}
-                      y2={y}
-                      stroke="#94a3b8"
-                      strokeWidth={1.5}
-                      strokeDasharray="4 4"
-                    />
-                  )
-                })
+              const peerPositions = laidOut.positioned.filter((p) => p.isRootPeer)
+              const rootChildren = ceoPos
+                ? ceoPos.node.children
+                    .filter((c) => !c.isPeer)
+                    .map((c) => laidOut.positioned.find((q) => q.node.id === c.id))
+                    .filter((q): q is Positioned => Boolean(q))
+                : []
+
+              // Shared horizontal bar + trunk for the executive row.
+              let executiveBar: React.ReactNode = null
+              if (ceoPos && rootChildren.length) {
+                // Center the joining point in the midpoint of all exec cards
+                // (CEO + peers), so the trunk hangs from the visual center
+                // of the executive row regardless of how many co-founders.
+                const execCenters = [ceoPos, ...peerPositions].map((p) => p.x + nodeW / 2 + 20)
+                const sharedX = execCenters.reduce((a, b) => a + b, 0) / execCenters.length
+                const barY = ceoPos.y + nodeH + 20            // just below the cards
+                const trunkBottomY = barY + dims.vGap / 2     // halfway down to the children row
+                const childTopY = rootChildren[0].y + 20
+                const trunkY = Math.min(trunkBottomY, childTopY)
+
+                // 1. Horizontal bar across the executive row (CEO + peers).
+                const leftEdge  = Math.min(...execCenters)
+                const rightEdge = Math.max(...execCenters)
+
+                executiveBar = (
+                  <g key="exec-bar">
+                    {/* horizontal bar bridging the execs */}
+                    <line x1={leftEdge} y1={barY} x2={rightEdge} y2={barY} stroke="#475569" strokeWidth={2} />
+                    {/* short vertical stubs from each exec card down to the bar */}
+                    {[ceoPos, ...peerPositions].map((p) => (
+                      <line
+                        key={`stub-${p.node.id}`}
+                        x1={p.x + nodeW / 2 + 20}
+                        y1={p.y + nodeH + 20}
+                        x2={p.x + nodeW / 2 + 20}
+                        y2={barY}
+                        stroke="#475569"
+                        strokeWidth={2}
+                      />
+                    ))}
+                    {/* single trunk drops from the bar centre to the children row */}
+                    <line x1={sharedX} y1={barY} x2={sharedX} y2={trunkY} stroke="#475569" strokeWidth={2} />
+                    {/* horizontal manifold linking all child top-centres */}
+                    {rootChildren.length > 1 && (
+                      <line
+                        x1={Math.min(...rootChildren.map((c) => c.x + nodeW / 2 + 20))}
+                        y1={trunkY}
+                        x2={Math.max(...rootChildren.map((c) => c.x + nodeW / 2 + 20))}
+                        y2={trunkY}
+                        stroke="#475569"
+                        strokeWidth={2}
+                      />
+                    )}
+                    {/* drop from manifold to each child */}
+                    {rootChildren.map((c) => (
+                      <line
+                        key={`drop-${c.node.id}`}
+                        x1={c.x + nodeW / 2 + 20}
+                        y1={trunkY}
+                        x2={c.x + nodeW / 2 + 20}
+                        y2={c.y + 20}
+                        stroke="#475569"
+                        strokeWidth={2}
+                      />
+                    ))}
+                  </g>
+                )
+              }
+
+              // Connectors for every NON-root parent → child relationship.
+              const otherConnectors = laidOut.positioned.map((p) => {
+                // Skip root (handled above) and peer nodes (peers have no children).
+                if (p === ceoPos || p.isRootPeer) return null
+                return p.node.children
+                  .filter((c) => !c.isPeer)
+                  .map((c) => {
+                    const child = laidOut.positioned.find((q) => q.node.id === c.id)
+                    if (!child) return null
+                    const x1 = p.x + nodeW / 2 + 20
+                    const y1 = p.y + nodeH + 20
+                    const x2 = child.x + nodeW / 2 + 20
+                    const y2 = child.y + 20
+                    const midY = (y1 + y2) / 2
+                    return (
+                      <path
+                        key={`${p.node.id}-${c.id}`}
+                        d={`M ${x1} ${y1} L ${x1} ${midY} L ${x2} ${midY} L ${x2} ${y2}`}
+                        stroke="#cbd5e1"
+                        strokeWidth={1.5}
+                        fill="none"
+                      />
+                    )
+                  })
+              })
+
+              return (
+                <>
+                  {executiveBar}
+                  {otherConnectors}
+                </>
+              )
             })()}
           </svg>
 
@@ -513,6 +658,31 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
       {reparenting && (
         <div className="fixed bottom-6 right-6 bg-slate-900 text-white text-sm px-4 py-2 rounded-lg shadow-lg">
           Updating reporting line…
+        </div>
+      )}
+
+      {/* Undo toast — visible for 10 seconds after a successful reparent.
+          Clicking Undo reverts to the previous manager and dismisses. */}
+      {lastMove && !reparenting && (
+        <div className="fixed bottom-6 right-6 z-30 flex items-center gap-3 bg-slate-900 text-white text-sm px-4 py-2.5 rounded-lg shadow-lg max-w-md">
+          <span>
+            Moved <strong>{lastMove.employeeName}</strong> to{' '}
+            <strong>{lastMove.newManagerName}</strong>
+          </span>
+          <button
+            onClick={handleUndo}
+            disabled={undoBusy}
+            className="font-semibold text-blue-300 hover:text-blue-200 disabled:opacity-60"
+          >
+            {undoBusy ? 'Undoing…' : 'Undo'}
+          </button>
+          <button
+            onClick={() => { clearUndoTimer(); setLastMove(null) }}
+            className="text-slate-400 hover:text-white text-xs"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
         </div>
       )}
     </div>

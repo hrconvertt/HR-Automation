@@ -21,16 +21,22 @@ async function getEmployeeData(employeeId: string) {
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
+  const yesterday = new Date(today)
+  yesterday.setDate(yesterday.getDate() - 1)
   const currentYear = now.getFullYear()
 
   const [
     employee,
     todayAttendance,
+    yesterdayAttendance,
     leaveBalances,
     latestPayslip,
     pendingPolicies,
     pendingLeaves,
     announcements,
+    pendingOnboardingTasks,
+    pendingSelfReviews,
+    existingDocs,
   ] = await Promise.all([
     prisma.employee.findUnique({
       where: { id: employeeId },
@@ -44,6 +50,10 @@ async function getEmployeeData(employeeId: string) {
     prisma.attendanceLog.findFirst({
       where: { employeeId, date: { gte: today, lt: tomorrow } },
       select: { clockIn: true, clockOut: true, workType: true, hoursWorked: true, status: true },
+    }),
+    prisma.attendanceLog.findFirst({
+      where: { employeeId, date: { gte: yesterday, lt: today } },
+      select: { id: true, clockIn: true, status: true },
     }),
     prisma.leaveBalance.findMany({
       where: { employeeId, year: currentYear },
@@ -69,6 +79,34 @@ async function getEmployeeData(employeeId: string) {
       orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
       take: 3,
     }),
+    // Onboarding tasks the employee themselves must complete (e.g. upload
+    // CNIC / Photo / Education / Experience). OnboardingTask.owner === 'EMPLOYEE'
+    // OR isEmployeeUploadable is true and not yet complete.
+    prisma.onboardingTask.findMany({
+      where: {
+        checklist: { employeeId },
+        isComplete: false,
+        OR: [{ owner: 'EMPLOYEE' }, { isEmployeeUploadable: true }],
+      },
+      select: { id: true, title: true, documentType: true, isEmployeeUploadable: true },
+      orderBy: { orderIndex: 'asc' },
+      take: 8,
+    }),
+    // Self-assessment forms due — review is open and the employee hasn't
+    // submitted their self section yet.
+    prisma.performanceReview.findMany({
+      where: { employeeId, status: 'PENDING' },
+      select: { id: true, reviewPeriod: true, reviewType: true },
+      orderBy: { createdAt: 'desc' },
+      take: 4,
+    }),
+    // Existing documents — used to flag missing required uploads independently
+    // of any OnboardingTask row (early hires without a checklist still need
+    // to be reminded to upload their CNIC etc.).
+    prisma.employeeDocument.findMany({
+      where: { employeeId, type: { in: ['CNIC', 'PHOTO', 'EDUCATIONAL_CERTIFICATE', 'EXPERIENCE'] } },
+      select: { type: true },
+    }),
   ])
 
   // My probation — show only while still in-progress
@@ -85,12 +123,17 @@ async function getEmployeeData(employeeId: string) {
   return {
     employee,
     todayAttendance,
+    yesterdayAttendance,
     leaveBalances,
     latestPayslip,
     pendingPolicies,
     pendingLeaves,
     announcements,
     myProbation,
+    pendingOnboardingTasks,
+    pendingSelfReviews,
+    existingDocs,
+    yesterday,
   }
 }
 
@@ -118,18 +161,71 @@ export async function EmployeeDashboard({
   const att = data.todayAttendance
   const isClockedIn = !!att?.clockIn && !att?.clockOut
 
-  // Task list: combine pending policies and pending leaves
-  type Task = { key: string; icon: 'policy' | 'leave'; label: string; href: string; action: string }
+  // Task list — aggregates anything that needs the employee's action across
+  // onboarding, performance, policy acks, documents, leave, and timesheets.
+  // We don't have a generic Task table; everything is computed live from the
+  // canonical source models.
+  type TaskIcon = 'policy' | 'leave' | 'onboarding' | 'review' | 'document' | 'timesheet'
+  type Task = { key: string; icon: TaskIcon; label: string; href: string; action: string }
   const tasks: Task[] = []
+
+  // 1. Pending onboarding checklist items (employee-owned or upload tasks)
+  for (const t of data.pendingOnboardingTasks) {
+    tasks.push({
+      key: `onb-${t.id}`,
+      icon: 'onboarding',
+      label: t.title,
+      href: emp ? `/dashboard/employees/${emp.id}` : '/dashboard',
+      action: t.isEmployeeUploadable ? 'Upload' : 'Complete',
+    })
+  }
+
+  // 2. Self-assessment reviews due
+  for (const r of data.pendingSelfReviews) {
+    tasks.push({
+      key: `rev-${r.id}`,
+      icon: 'review',
+      label: `Self-assessment: ${r.reviewType} — ${r.reviewPeriod}`,
+      href: '/dashboard/performance',
+      action: 'Start',
+    })
+  }
+
+  // 3. Policy acknowledgments
   for (const p of data.pendingPolicies) {
     tasks.push({
       key: `pol-${p.id}`,
       icon: 'policy',
-      label: `Sign: ${p.policy.title}`,
+      label: `Sign policy: ${p.policy.title}`,
       href: '/dashboard/documents',
       action: 'Sign now',
     })
   }
+
+  // 4. Missing required documents (independent of any OnboardingTask row).
+  const haveDocTypes = new Set(data.existingDocs.map((d) => d.type))
+  const requiredDocs: { type: string; label: string }[] = [
+    { type: 'CNIC',                   label: 'Upload CNIC copy' },
+    { type: 'PHOTO',                  label: 'Upload passport-size photo' },
+    { type: 'EDUCATIONAL_CERTIFICATE',label: 'Upload education certificate' },
+    { type: 'EXPERIENCE',             label: 'Upload experience letter (if any)' },
+  ]
+  for (const d of requiredDocs) {
+    if (!haveDocTypes.has(d.type)) {
+      // Skip Experience for employees who don't have one — surface only as a
+      // soft reminder when nothing else is pending.
+      if (d.type === 'EXPERIENCE' && tasks.length > 0) continue
+      tasks.push({
+        key: `doc-${d.type}`,
+        icon: 'document',
+        label: d.label,
+        href: emp ? `/dashboard/employees/${emp.id}` : '/dashboard',
+        action: 'Upload',
+      })
+    }
+  }
+
+  // 5. Pending leave requests (so the employee can see them in-flight).
   for (const l of data.pendingLeaves) {
     tasks.push({
       key: `lr-${l.id}`,
@@ -139,7 +235,20 @@ export async function EmployeeDashboard({
       action: 'Pending review',
     })
   }
-  const limitedTasks = tasks.slice(0, 6)
+
+  // 6. Missing timesheet entry — yesterday wasn't a weekend AND no AttendanceLog.
+  const yDay = data.yesterday.getDay() // 0 Sun, 6 Sat
+  if (yDay !== 0 && yDay !== 6 && !data.yesterdayAttendance) {
+    tasks.push({
+      key: `ts-${data.yesterday.toISOString().split('T')[0]}`,
+      icon: 'timesheet',
+      label: `No clock-in recorded for ${formatDate(data.yesterday)}`,
+      href: '/dashboard/time',
+      action: 'Log time',
+    })
+  }
+
+  const limitedTasks = tasks.slice(0, 8)
 
   return (
     <div className="space-y-6">
@@ -316,6 +425,9 @@ export async function EmployeeDashboard({
           <Card>
             <CardHeader>
               <CardTitle>My Tasks</CardTitle>
+              <p className="text-xs text-gray-500 mt-1">
+                Anything that needs your action — onboarding, reviews, policy sign-offs, document uploads.
+              </p>
             </CardHeader>
             <CardContent>
               {limitedTasks.length === 0 ? (
@@ -325,25 +437,31 @@ export async function EmployeeDashboard({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  {limitedTasks.map((t) => (
-                    <Link
-                      key={t.key}
-                      href={t.href}
-                      className="flex items-center gap-3 py-2.5 px-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="p-1.5 rounded-lg bg-amber-50">
-                        {t.icon === 'policy' ? (
-                          <FileText className="w-4 h-4 text-amber-600" />
-                        ) : (
-                          <Clock className="w-4 h-4 text-amber-600" />
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{t.label}</p>
-                      </div>
-                      <span className="text-xs font-semibold text-blue-600">{t.action}</span>
-                    </Link>
-                  ))}
+                  {limitedTasks.map((t) => {
+                    // Icon palette per task category — keeps the list scannable.
+                    const Icon =
+                      t.icon === 'policy'     ? FileText :
+                      t.icon === 'leave'      ? CalendarDays :
+                      t.icon === 'onboarding' ? CheckCircle2 :
+                      t.icon === 'review'     ? UserCog :
+                      t.icon === 'document'   ? FileText :
+                      /* timesheet */            Clock
+                    return (
+                      <Link
+                        key={t.key}
+                        href={t.href}
+                        className="flex items-center gap-3 py-2.5 px-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="p-1.5 rounded-lg bg-amber-50">
+                          <Icon className="w-4 h-4 text-amber-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{t.label}</p>
+                        </div>
+                        <span className="text-xs font-semibold text-blue-600">{t.action}</span>
+                      </Link>
+                    )
+                  })}
                 </div>
               )}
             </CardContent>

@@ -104,10 +104,15 @@ const FALLBACK = [
   { who: 'Atta Ur Rehman', mgr: 'Syed Asghar' },
   { who: 'Aqib Aslam', mgr: 'Syed Asghar' },
   { who: 'Muhammad Waqas Fareed', mgr: 'Syed Asghar' },
-  // Iqra heads BD + Marketing + Media Team — Sheikh Taha (Media) reports to her, not the CEO directly.
+  // Iqra heads BD + Marketing + Media Team — full team reports directly to her:
+  //   Sheikh Taha Adnan (Media lead) · Usman Ali · Tayyab Hussain ·
+  //   Muhammad Hashir Siddiqui (Marketing Associate, PROBATION)
   { who: 'Sheikh Taha Adnan', mgr: 'Iqra Naveed' },
+  { who: 'Usman Ali', mgr: 'Iqra Naveed' },
+  { who: 'Tayyab Hussain', mgr: 'Iqra Naveed' },
+  { who: 'Muhammad Hashir Siddiqui', mgr: 'Iqra Naveed' },
 
-  // Iqra's reports
+  // Other Iqra reports
   { who: 'Muhammad Affan Waseem', mgr: 'Iqra Naveed' },
   { who: 'Momin Munir', mgr: 'Iqra Naveed' },
 
@@ -131,9 +136,8 @@ const FALLBACK = [
   { who: 'Ayesha Akram', mgr: 'Momna Waryam Khan' },
   { who: 'Mahnoor Riaz', mgr: 'Momna Waryam Khan' },
 
-  // Media Team → Sheikh Taha Adnan (senior of the team); Taha → Iqra (above)
-  { who: 'Usman Ali', mgr: 'Sheikh Taha Adnan' },
-  { who: 'Tayyab Hussain', mgr: 'Usman Ali' },
+  // (Media Team chain removed — Usman/Tayyab/Hashir now report to Iqra directly,
+  //  set above. Sheikh Taha is the most senior on the team but does not manage them.)
 ]
 
 // Names that must always be top-of-hierarchy (forced null)
@@ -168,8 +172,9 @@ const REQUIRED_EMPLOYEES = [
   { fullName: 'Muhammad Irfan',               designation: 'Junior Shopify Developer',                            department: 'Engineering',        mgr: 'Momna Waryam Khan' },
   { fullName: 'Ayesha Akram',                 designation: 'Backend Intern',                                      department: 'Engineering',        mgr: 'Momna Waryam Khan' },
   { fullName: 'Mahnoor Riaz',                 designation: 'Backend Intern',                                      department: 'Engineering',        mgr: 'Momna Waryam Khan' },
-  { fullName: 'Usman Ali',                    designation: 'Senior Video Editor',                                 department: 'Media',              mgr: 'Sheikh Taha Adnan' },
-  { fullName: 'Tayyab Hussain',               designation: 'Junior Video Editor',                                 department: 'Media',              mgr: 'Usman Ali' },
+  { fullName: 'Usman Ali',                    designation: 'Senior Video Editor',                                 department: 'Media',              mgr: 'Iqra Naveed' },
+  { fullName: 'Tayyab Hussain',               designation: 'Junior Video Editor',                                 department: 'Media',              mgr: 'Iqra Naveed' },
+  { fullName: 'Muhammad Hashir Siddiqui',     designation: 'Marketing Associate',                                 department: 'Marketing',          mgr: 'Iqra Naveed', employeeType: 'PROBATION' },
   { fullName: 'Momin Munir',                  designation: 'Marketing Associate',                                 department: 'Marketing',          mgr: 'Iqra Naveed' },
   { fullName: 'Arslan',                       designation: 'Office Boy',                                          department: 'Administration',     mgr: 'Syed Khawer' },
   { fullName: 'Islam',                        designation: 'Office Boy',                                          department: 'Administration',     mgr: 'Syed Khawer' },
@@ -231,7 +236,7 @@ async function ensureRequiredEmployees(prisma, allEmps) {
         designation: spec.designation,
         departmentId: dept.id,
         status: 'ACTIVE',
-        employeeType: 'PERMANENT',
+        employeeType: spec.employeeType || 'PERMANENT',
         workLocation: 'ONSITE',
       },
       select: { id: true, fullName: true, status: true, reportingManagerId: true, employeeCode: true },

@@ -46,6 +46,10 @@ interface Props {
   //                   "no changes to save" guard is skipped because the
   //                   intent is to record past data, not to change anything
   mode?: 'edit-current' | 'add-history'
+  // Caller's effective role — drives the title copy ("Update Compensation"
+  // when HR opens this, "Request Compensation Change" otherwise). HR makes
+  // changes directly, so the wording shouldn't imply a request workflow.
+  viewerRole?: string
 }
 
 const CHANGE_TYPES = [
@@ -57,8 +61,9 @@ const CHANGE_TYPES = [
 ]
 
 export default function EditSalaryDialog({
-  open, onClose, employeeId, employeeName, current, mode = 'edit-current',
+  open, onClose, employeeId, employeeName, current, mode = 'edit-current', viewerRole,
 }: Props) {
+  const isHR = viewerRole === 'HR_ADMIN'
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -198,7 +203,7 @@ export default function EditSalaryDialog({
               {isAddHistory
                 ? 'Add Historical Compensation Entry'
                 : current
-                  ? 'Request Compensation Change'
+                  ? (isHR ? 'Update Compensation' : 'Request Compensation Change')
                   : 'Set Initial Compensation'}
             </DialogTitle>
             <p className="text-sm text-slate-300 mt-1">
@@ -393,7 +398,13 @@ export default function EditSalaryDialog({
             disabled={saving}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {saving ? 'Saving…' : isAddHistory ? 'Add History Entry' : current ? 'Submit Change' : 'Set Salary'}
+            {saving
+              ? 'Saving…'
+              : isAddHistory
+                ? 'Add Compensation History Entry'
+                : current
+                  ? (isHR ? 'Save Changes' : 'Submit Change')
+                  : 'Set Salary'}
           </Button>
         </DialogFooter>
       </DialogContent>

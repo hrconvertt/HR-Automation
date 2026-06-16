@@ -210,13 +210,25 @@ export async function GET(request: NextRequest) {
     // Tree starts from the CEO. Co-Founders ride along as peers (rendered next
     // to the CEO by the UI). We tag them with isPeer so the layout can place
     // them at the same depth as the CEO instead of as children.
-    const peers: OrgNode[] = coFounders.map((c) => ({ ...c, isPeer: true }))
-    tree = { ...ceo }
-    // Attach peers as a sibling-list on the root via a synthetic property —
-    // we re-use children but tag them isPeer to keep the existing layout code
-    // happy. The UI inspects isPeer to render them at the same depth.
+    //
+    // Per Convertt's preferred org chart layout, the CEO + Co-Founder render
+    // as a single "executive bar" with ONE combined downward line to all
+    // their direct reports. To make this work without inventing a new layout
+    // primitive, we merge each Co-Founder's direct reports into the CEO's
+    // children list (and clear them off the peer node so the renderer doesn't
+    // draw a second downward edge from the peer). The UI then draws a single
+    // connector from the midpoint between the two execs down to the shared
+    // row of heads/leads beneath.
+    const mergedChildren: OrgNode[] = [...ceo.children]
+    const peers: OrgNode[] = coFounders.map((c) => {
+      mergedChildren.push(...c.children)
+      return { ...c, children: [], isPeer: true }
+    })
+    tree = { ...ceo, children: mergedChildren }
+    // Re-sort the merged children so heads/leads sit first.
+    sortChildren(tree.children)
     if (peers.length) {
-      tree.children = [...peers, ...tree.children]
+      tree.children = [...peers, ...tree.children.filter((c) => !c.isPeer)]
     }
   } else if (roots.length === 1) {
     tree = roots[0]

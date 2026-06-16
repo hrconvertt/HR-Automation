@@ -2,22 +2,17 @@
 /**
  * scripts/seed-leave-balances.cjs
  * ────────────────────────────────
- * Seed LeaveBalance rows for the current year based on Convertt's actual
- * leave policy (read verbatim from the master sheet's "Leave Policy" tab):
+ * Seed LeaveBalance rows for the current year based on Convertt's 4-stage
+ * lifecycle leave policy:
  *
- *   Internship          : 1 emergency leave (no regular leaves)
- *   Probation           : 2 per month, 6 total
- *   Permanent Full-time : 3 per month, 24 total (6 with 1 week notice)
+ *   Training    (2–3 mo)  : 1 emergency / month → max 3 total
+ *   Internship  (3 mo)    : 1 emergency / month → 3 total
+ *   Probation   (3 mo)    : 2 / month           → 6 total
+ *   Permanent   (ongoing) : 3 / month capped 24/year + 1 WFH / month = 12 WFH/year
  *
- * Plus Pakistan statutory:
- *   Maternity: 90 days (female permanent employees)
- *   Paternity: 10 days (male permanent employees)
- *
- * We split the totals into CASUAL + SICK buckets so the rest of the app's
- * leave-type taxonomy works:
- *   PERMANENT : CASUAL 14 / SICK 10 / (MATERNITY 90 | PATERNITY 10)
- *   PROBATION : CASUAL 4  / SICK 2
- *   INTERNSHIP: CASUAL 1
+ * Plus Pakistan statutory (PERMANENT only):
+ *   Maternity: 90 days (female)
+ *   Paternity: 10 days (male)
  *
  * Allocations are pro-rated by joining date for employees who joined mid-year.
  *
@@ -40,13 +35,21 @@ const YEAR = parseInt(process.env.SEED_LEAVE_YEAR || String(new Date().getFullYe
 const ONLY_EMP = process.env.SEED_LEAVE_EMPLOYEE || null
 
 // Per-employee-type policy (full-year allocations). Maternity/Paternity added
-// per gender for PERMANENT only.
+// per gender for PERMANENT only. Per Convertt's 4-stage lifecycle:
+//   TRAINING / INTERNSHIP → 3 emergency leaves total (1/month for up to 3 mo)
+//   PROBATION             → 6 leaves (2/month × 3 months)
+//   PERMANENT             → 24 (3/month capped at 24) + 12 WFH (1/month)
+//
+// `WFH` is a string leave type — LeaveBalance.leaveType is a free String
+// column so any token is valid. Treat it as a separate balance the
+// employee can spend independently from CASUAL.
 const POLICY = {
-  PERMANENT:  { CASUAL: 14, SICK: 10 },
-  PROBATION:  { CASUAL: 4,  SICK: 2 },
-  INTERNSHIP: { CASUAL: 1 },
-  // TRAINING — treat like INTERNSHIP
-  TRAINING:   { CASUAL: 1 },
+  PERMANENT:  { CASUAL: 24, WFH: 12 },
+  PROBATION:  { CASUAL: 6 },
+  INTERNSHIP: { CASUAL: 3 },
+  // Some imports stored interns as 'INTERN' rather than 'INTERNSHIP' — alias.
+  INTERN:     { CASUAL: 3 },
+  TRAINING:   { CASUAL: 3 },
 }
 
 function prorate(fullYearDays, joiningDate, year) {

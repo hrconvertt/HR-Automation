@@ -137,9 +137,12 @@ export default function CompensationPanel({
   ).length
 
   function handleDownload() {
-    // Opens the printable A4 Total Rewards page in a new tab; that page
-    // auto-fires window.print() so HR/employee can save it as PDF.
-    window.open(`/dashboard/employees/${employeeId}/total-rewards`, '_blank', 'noopener')
+    // Opens the printable A4 Total Rewards statement in a new tab. The
+    // dashboard-wrapped page previously rendered with the sidebar/header
+    // chrome and the resulting print was unusable, so we hit the API route
+    // directly — it returns a self-contained HTML document that auto-fires
+    // window.print() once rendered.
+    window.open(`/api/employees/${employeeId}/total-rewards`, '_blank', 'noopener')
   }
 
   return (
@@ -180,7 +183,7 @@ export default function CompensationPanel({
                 title="Backfill a past compensation entry (e.g. last year's salary at hire) without changing the current cycle."
               >
                 <Pencil className="w-3.5 h-3.5 mr-1.5" />
-                Add History Entry
+                Add Compensation History Entry
               </Button>
               <Button
                 size="sm"
@@ -497,6 +500,7 @@ export default function CompensationPanel({
           employeeId={employeeId}
           employeeName={employeeName}
           current={currentSalary}
+          viewerRole={access.viewerRole}
         />
       )}
 
