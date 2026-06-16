@@ -17,7 +17,7 @@
  *   DATABASE_URL=… node scripts/check-attendance-match.cjs
  *
  * Optional env:
- *   ATTENDANCE_PATH    default: C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (4).xlsx
+ *   ATTENDANCE_PATH    default: C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (5).xlsx
  *   CHECK_LIMIT        max mismatches to print per employee (default 25)
  */
 
@@ -25,7 +25,7 @@ const XLSX = require('xlsx')
 const { PrismaClient } = require('@prisma/client')
 
 const ATTENDANCE_PATH = process.env.ATTENDANCE_PATH
-  || String.raw`C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (4).xlsx`
+  || String.raw`C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (5).xlsx`
 const LIMIT = parseInt(process.env.CHECK_LIMIT || '25', 10)
 
 const HONORIFICS = new Set(['mr', 'mrs', 'ms', 'miss', 'dr', 'sir', 'madam',

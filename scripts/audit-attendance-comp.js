@@ -13,7 +13,7 @@
  *
  * Optional env vars:
  *   MASTER_SHEET_PATH   default: C:\Users\HRConvertt\Downloads\Master Sheet - Convertt_HR (2).xlsx
- *   ATTENDANCE_PATH     default: C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (3).xlsx
+ *   ATTENDANCE_PATH     default: C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (5).xlsx
  *   AUDIT_LIMIT         default: 25 (max rows of detail printed per section)
  */
 
@@ -23,7 +23,7 @@ const { PrismaClient } = require('@prisma/client')
 const MASTER_PATH = process.env.MASTER_SHEET_PATH
   || String.raw`C:\Users\HRConvertt\Downloads\Master Sheet - Convertt_HR (2).xlsx`
 const ATTENDANCE_PATH = process.env.ATTENDANCE_PATH
-  || String.raw`C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (3).xlsx`
+  || String.raw`C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (5).xlsx`
 const LIMIT = parseInt(process.env.AUDIT_LIMIT || '25', 10)
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
