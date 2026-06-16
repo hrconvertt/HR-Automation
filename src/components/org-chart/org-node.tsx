@@ -146,9 +146,16 @@ export default function OrgNodeCard({
               ) : (
                 <span />
               )}
-              {node.directReports > 0 && (
-                <span className="text-[10px] text-gray-500">
-                  {node.directReports} report{node.directReports === 1 ? '' : 's'}
+              {node.totalReports > 0 && (
+                <span
+                  className="text-[10px] text-gray-500"
+                  title={
+                    node.totalReports !== node.directReports
+                      ? `${node.directReports} direct, ${node.totalReports} total`
+                      : undefined
+                  }
+                >
+                  {node.totalReports} report{node.totalReports === 1 ? '' : 's'}
                 </span>
               )}
             </div>

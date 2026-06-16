@@ -104,10 +104,12 @@ const FALLBACK = [
   { who: 'Atta Ur Rehman', mgr: 'Syed Asghar' },
   { who: 'Aqib Aslam', mgr: 'Syed Asghar' },
   { who: 'Muhammad Waqas Fareed', mgr: 'Syed Asghar' },
-  { who: 'Sheikh Taha Adnan', mgr: 'Syed Asghar' },
+  // Iqra heads BD + Marketing + Media Team — Sheikh Taha (Media) reports to her, not the CEO directly.
+  { who: 'Sheikh Taha Adnan', mgr: 'Iqra Naveed' },
 
   // Iqra's reports
   { who: 'Muhammad Affan Waseem', mgr: 'Iqra Naveed' },
+  { who: 'Momin Munir', mgr: 'Iqra Naveed' },
 
   // UI/UX team → Abdullah Shafiq
   { who: 'Altaf Yaseen', mgr: 'Abdullah Shafiq' },
@@ -129,10 +131,9 @@ const FALLBACK = [
   { who: 'Ayesha Akram', mgr: 'Momna Waryam Khan' },
   { who: 'Mahnoor Riaz', mgr: 'Momna Waryam Khan' },
 
-  // Media Team → Sheikh Taha Adnan (senior, de-facto lead)
+  // Media Team → Sheikh Taha Adnan (senior of the team); Taha → Iqra (above)
   { who: 'Usman Ali', mgr: 'Sheikh Taha Adnan' },
   { who: 'Tayyab Hussain', mgr: 'Usman Ali' },
-  { who: 'Momin Munir', mgr: 'Sheikh Taha Adnan' },
 ]
 
 // Names that must always be top-of-hierarchy (forced null)
@@ -152,7 +153,7 @@ const REQUIRED_EMPLOYEES = [
   { fullName: 'Atta Ur Rehman',               designation: 'Head of Client Servicing & Operations - Shopify',     department: 'Operations',         mgr: 'Syed Asghar' },
   { fullName: 'Aqib Aslam',                   designation: 'Senior WordPress Developer',                          department: 'Engineering',        mgr: 'Syed Asghar' },
   { fullName: 'Muhammad Waqas Fareed',        designation: 'Head of Client Servicing & Operations',               department: 'Operations',         mgr: 'Syed Asghar' },
-  { fullName: 'Sheikh Taha Adnan',            designation: 'Senior Graphics & UI Designer',                       department: 'Design',             mgr: 'Syed Asghar' },
+  { fullName: 'Sheikh Taha Adnan',            designation: 'Senior Graphics & UI Designer',                       department: 'Media Team',         mgr: 'Iqra Naveed' },
   { fullName: 'Altaf Yaseen',                 designation: 'Associate UI/UX Designer',                            department: 'Design',             mgr: 'Abdullah Shafiq' },
   { fullName: 'Muhammad Usman Saeed',         designation: 'Associate UI/UX Designer',                            department: 'Design',             mgr: 'Abdullah Shafiq' },
   { fullName: 'Muhammad Ammar Younas',        designation: 'UI/UX Designer',                                      department: 'Design',             mgr: 'Altaf Yaseen' },
@@ -169,7 +170,7 @@ const REQUIRED_EMPLOYEES = [
   { fullName: 'Mahnoor Riaz',                 designation: 'Backend Intern',                                      department: 'Engineering',        mgr: 'Momna Waryam Khan' },
   { fullName: 'Usman Ali',                    designation: 'Senior Video Editor',                                 department: 'Media',              mgr: 'Sheikh Taha Adnan' },
   { fullName: 'Tayyab Hussain',               designation: 'Junior Video Editor',                                 department: 'Media',              mgr: 'Usman Ali' },
-  { fullName: 'Momin Munir',                  designation: 'Marketing Associate',                                 department: 'Marketing',          mgr: 'Sheikh Taha Adnan' },
+  { fullName: 'Momin Munir',                  designation: 'Marketing Associate',                                 department: 'Marketing',          mgr: 'Iqra Naveed' },
   { fullName: 'Arslan',                       designation: 'Office Boy',                                          department: 'Administration',     mgr: 'Syed Khawer' },
   { fullName: 'Islam',                        designation: 'Office Boy',                                          department: 'Administration',     mgr: 'Syed Khawer' },
 ]

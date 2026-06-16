@@ -22,6 +22,7 @@ export interface OrgNode {
   photoUrl: string | null
   reportingManagerId: string | null
   directReports: number
+  totalReports: number   // recursive: all descendants under this node
   warning?: string
   children: OrgNode[]
   // Marks a synthetic wrapper (e.g. "Unassigned" bucket). Not draggable.
@@ -125,6 +126,7 @@ export async function GET(request: NextRequest) {
       photoUrl: e.photoUrl,
       reportingManagerId: e.reportingManagerId,
       directReports: 0,
+      totalReports: 0,
       children: [],
     })
   }
@@ -172,15 +174,24 @@ export async function GET(request: NextRequest) {
     parent.directReports += 1
   }
 
-  // Recursively sort.
+  // Recursively sort + compute totalReports (count every descendant).
   function sortRec(n: OrgNode) {
     if (n.children.length) {
       sortChildren(n.children)
       n.children.forEach(sortRec)
     }
   }
+  function countDescendants(n: OrgNode): number {
+    let total = n.children.length
+    for (const child of n.children) {
+      total += countDescendants(child)
+    }
+    n.totalReports = total
+    return total
+  }
   sortChildren(roots)
   roots.forEach(sortRec)
+  roots.forEach(countDescendants)
 
   // Identify the CEO (visual top) and any Co-Founders (peers).
   // If multiple matches exist we pick the first by sort order; everyone else
@@ -227,6 +238,7 @@ export async function GET(request: NextRequest) {
       photoUrl: null,
       reportingManagerId: null,
       directReports: orphans.length,
+      totalReports: orphans.reduce((sum, o) => sum + 1 + o.totalReports, 0),
       isVirtual: true,
       children: orphans,
     }

@@ -14,6 +14,7 @@ export interface OrgNode {
   photoUrl: string | null
   reportingManagerId: string | null
   directReports: number
+  totalReports: number
   warning?: string
   isVirtual?: boolean
   isPeer?: boolean
