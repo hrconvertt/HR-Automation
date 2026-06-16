@@ -297,7 +297,12 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           </p>
           {rec.earlyDecisionReason && <p className="text-xs text-emerald-800 mt-1">Reason: {rec.earlyDecisionReason}</p>}
           {rec.confirmationLetterId && (
-            <a href={`/dashboard/letters/${rec.confirmationLetterId}`} className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline mt-2">
+            <a
+              href={`/letters/${rec.confirmationLetterId}/print`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline mt-2"
+            >
               <FileText className="w-4 h-4" /> View confirmation letter
             </a>
           )}

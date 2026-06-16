@@ -40,8 +40,10 @@ export async function GET(request: NextRequest) {
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
 
   // Scope payslip query by role.
+  // SALARY VISIBILITY RULE (locked down): Manager + Lead do NOT see team
+  // payslip amounts. They only see their OWN payslip here — team attendance
+  // is rendered separately by the manager-payroll-view (no amounts).
   // EMPLOYEE should NEVER see DRAFT payslips — only finalized ones.
-  // MANAGER also should not see DRAFT (only HR/EXEC do).
   let payslipWhere: {
     employeeId?: string
     employee?: { reportingManagerId: string }
@@ -51,11 +53,13 @@ export async function GET(request: NextRequest) {
   if (effectiveRole === 'EMPLOYEE') {
     if (!employeeId) return NextResponse.json({ payrollRun: null })
     payslipWhere = { employeeId, status: { in: FINALIZED } }
-  } else if (effectiveRole === 'MANAGER') {
+  } else if (effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') {
     if (!employeeId) return NextResponse.json({ payrollRun: null })
-    payslipWhere = { employee: { reportingManagerId: employeeId }, status: { in: FINALIZED } }
+    // Only their own payslip — never their team's. Compensation amounts
+    // are HR/Exec/Finance + owner-only.
+    payslipWhere = { employeeId, status: { in: FINALIZED } }
   }
-  // HR_ADMIN & EXECUTIVE: no extra filter
+  // HR_ADMIN, EXECUTIVE, FINANCE: no extra filter (full payroll)
 
   const payrollRun = await prisma.payrollRun.findFirst({
     where: { month, year },

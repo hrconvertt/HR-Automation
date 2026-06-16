@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { canSeeAggregateSalary } from '@/lib/can-see-salary'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
   const payload = token ? verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  // Determine effective role for salary gating on the payroll_summary report.
+  const previewRole = payload.role === 'HR_ADMIN'
+    ? request.cookies.get('hr_preview_role')?.value
+    : undefined
+  const effectiveRole = previewRole ?? payload.role
 
   const { searchParams } = new URL(request.url)
   const type = searchParams.get('type') ?? 'employee_list'
@@ -78,6 +85,22 @@ export async function GET(request: NextRequest) {
     }
 
     case 'payroll_summary': {
+      // Salary lockdown: payroll_summary exposes gross/eobi/tax/net amounts.
+      // Only HR_ADMIN, EXECUTIVE, FINANCE may export it.
+      if (!canSeeAggregateSalary(effectiveRole)) {
+        try {
+          await prisma.auditLog.create({
+            data: {
+              userId: payload.userId,
+              action: 'READ',
+              entity: 'PayrollReport',
+              entityId: 'payroll_summary',
+              newValue: JSON.stringify({ blocked: true, role: effectiveRole }),
+            },
+          })
+        } catch { /* audit must not block the 403 */ }
+        return NextResponse.json({ error: 'Forbidden — payroll data is restricted' }, { status: 403 })
+      }
       const payslips = await prisma.payslip.findMany({
         where: {
           payrollRun: {

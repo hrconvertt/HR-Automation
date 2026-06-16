@@ -1,42 +1,60 @@
 /**
  * Outer-tab shell for the unified Time & Attendance module.
  *
- * Server component — renders the appropriate Attendance / Leave / Calendar /
- * Approvals view based on the active tab and the caller's role. Tabs are
- * URL-driven (?tab=…) so they're bookmarkable and back-button works.
+ * Server component — renders the appropriate view based on the active tab
+ * and the caller's role. Tabs are URL-driven (?tab=…) so they're
+ * bookmarkable and back-button works.
+ *
+ * Tab visibility matrix:
+ *   EMPLOYEE          : My Time | My Leave
+ *   LEAD / MANAGER    : My Time | My Leave | Attendance Grid (team) | Approvals
+ *   HR_ADMIN          : My Time | My Leave | Attendance Grid (all + edit) | Approvals
+ *   EXECUTIVE         : My Time | My Leave | Attendance Grid (read-only, no export)
+ *
+ * Role gating is enforced both here (tab visibility) and server-side in the
+ * underlying API routes — a user who deep-links to ?tab=approvals without
+ * permission falls back to My Time.
  */
 
 import Link from 'next/link'
-import { Clock, Calendar, Plane } from 'lucide-react'
-import { CalendarView } from './calendar-view'
+import { Clock, Plane, Inbox } from 'lucide-react'
 import MyTimeView from '@/app/dashboard/attendance/_views/my-time-view'
-import TeamTimeView from '@/app/dashboard/attendance/_views/team-time-view'
-import AdminTimeView from '@/app/dashboard/attendance/_views/admin-time-view'
-import ExecutiveTimeView from '@/app/dashboard/attendance/_views/executive-time-view'
 import MyLeaveView from '@/app/dashboard/leave/_views/my-leave-view'
-import TeamLeaveView from '@/app/dashboard/leave/_views/team-leave-view'
-import AdminLeaveView from '@/app/dashboard/leave/_views/admin-leave-view'
-import ExecutiveLeaveView from '@/app/dashboard/leave/_views/executive-leave-view'
+import { ApprovalsInbox } from './approvals-inbox'
 
-type TabKey = 'today' | 'calendar' | 'leave'
+type TabKey = 'my-time' | 'my-leave' | 'approvals'
 
 interface Props {
   role: string
   employeeId: string | null
   employeeName: string | null
   initialTab: string
+  departments: string[]
 }
 
-export function TimeShell({ role, employeeId, employeeName, initialTab }: Props) {
-  // "Approvals" top-level tab removed — pending requests are now surfaced
-  // via the status-filter chip in the Leave tab (defaults to "Pending" for
-  // HR / Manager, "All" for Employee).
+function canSeeApprovals(role: string): boolean {
+  return role === 'HR_ADMIN' || role === 'MANAGER' || role === 'LEAD'
+}
+
+// Legacy aliases for back-compat with old URLs.
+function normalizeTab(tab: string): string {
+  if (tab === 'today') return 'my-time'
+  if (tab === 'leave') return 'my-leave'
+  if (tab === 'calendar') return 'my-time'
+  if (tab === 'grid') return 'my-time'  // legacy redirect — grid lives in /dashboard/attendance now
+  return tab
+}
+
+export function TimeShell({ role, employeeId, employeeName, initialTab, departments }: Props) {
   const tabs: { key: TabKey; label: string; icon: typeof Clock; show: boolean }[] = [
-    { key: 'today',     label: 'Today',     icon: Clock,    show: true },
-    { key: 'calendar',  label: 'Calendar',  icon: Calendar, show: true },
-    { key: 'leave',     label: 'Leave',     icon: Plane,    show: true },
+    { key: 'my-time',   label: 'My Time',   icon: Clock, show: true },
+    { key: 'my-leave',  label: 'My Leave',  icon: Plane, show: true },
+    { key: 'approvals', label: 'Approvals', icon: Inbox, show: canSeeApprovals(role) },
   ]
-  const activeTab: TabKey = (tabs.find((t) => t.key === initialTab && t.show)?.key ?? 'today') as TabKey
+
+  const normalized = normalizeTab(initialTab)
+  const activeTab: TabKey =
+    (tabs.find((t) => t.key === normalized && t.show)?.key ?? 'my-time') as TabKey
 
   return (
     <div className="space-y-6">
@@ -65,31 +83,26 @@ export function TimeShell({ role, employeeId, employeeName, initialTab }: Props)
 
       {/* Tab content */}
       <div>
-        {activeTab === 'today' && <TodayPanel role={role} employeeId={employeeId} employeeName={employeeName} />}
-        {activeTab === 'calendar' && <CalendarView role={role} />}
-        {activeTab === 'leave' && <LeavePanel role={role} employeeId={employeeId} employeeName={employeeName} />}
+        {activeTab === 'my-time' && employeeId && (
+          <MyTimeView employeeId={employeeId} employeeName={employeeName ?? ''} />
+        )}
+        {activeTab === 'my-time' && !employeeId && (
+          <div className="rounded-2xl bg-gray-50 border border-gray-200 p-6 text-sm text-gray-600">
+            No personal time record for this account.
+          </div>
+        )}
+        {activeTab === 'my-leave' && employeeId && (
+          <MyLeaveView employeeId={employeeId} employeeName={employeeName ?? ''} />
+        )}
+        {activeTab === 'my-leave' && !employeeId && (
+          <div className="rounded-2xl bg-gray-50 border border-gray-200 p-6 text-sm text-gray-600">
+            No personal leave record for this account.
+          </div>
+        )}
+        {activeTab === 'approvals' && canSeeApprovals(role) && (
+          <ApprovalsInbox role={role} />
+        )}
       </div>
     </div>
   )
 }
-
-function TodayPanel({ role, employeeId, employeeName }: { role: string; employeeId: string | null; employeeName: string | null }) {
-  if (role === 'HR_ADMIN') return <AdminTimeView />
-  if (role === 'EXECUTIVE') return <ExecutiveTimeView />
-  if (role === 'MANAGER' && employeeId)
-    return <TeamTimeView managerEmployeeId={employeeId} managerName={employeeName ?? ''} />
-  if (employeeId)
-    return <MyTimeView employeeId={employeeId} employeeName={employeeName ?? ''} />
-  return null
-}
-
-function LeavePanel({ role, employeeId, employeeName }: { role: string; employeeId: string | null; employeeName: string | null }) {
-  if (role === 'HR_ADMIN') return <AdminLeaveView />
-  if (role === 'EXECUTIVE') return <ExecutiveLeaveView />
-  if (role === 'MANAGER' && employeeId)
-    return <TeamLeaveView managerEmployeeId={employeeId} managerName={employeeName ?? ''} />
-  if (employeeId)
-    return <MyLeaveView employeeId={employeeId} employeeName={employeeName ?? ''} />
-  return null
-}
-

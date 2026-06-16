@@ -21,6 +21,8 @@ import { BackButton } from '@/components/ui/back-button'
 import { ResignationButton } from '@/components/resignation-button'
 import EmployeeLifecycleTab from '@/components/employee-lifecycle-tab'
 import { ResignationBanner } from '@/components/resignation-banner'
+import EmployeeSelfUploadCard from '@/components/employee-self-upload-card'
+import AddAssetDialog from '@/components/add-asset-dialog'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -141,19 +143,23 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
   const canEditOwn = isViewingOwn && !isPreviewMode
   const canEdit = canEditFull || canEditOwn
 
-  // Compensation access matrix:
+  // Compensation access matrix — single source of truth in src/lib/can-see-salary.ts
   //  ┌──────────────┬──────┬──────┬────────────┐
   //  │ Role         │ View │ Edit │ Download   │
   //  ├──────────────┼──────┼──────┼────────────┤
   //  │ HR_ADMIN     │  ✓   │  ✓   │     ✓      │
-  //  │ EXECUTIVE    │  ✓   │      │     ✓      │
-  //  │ FINANCE      │  ✓   │      │     ✓      │
-  //  │ MANAGER      │ team │      │     ✓      │  (own + direct reports)
+  //  │ EXECUTIVE    │  ✓   │      │     ✓      │  (all employees)
+  //  │ FINANCE      │  ✓   │      │     ✓      │  (all employees, payroll work)
+  //  │ MANAGER      │ own  │      │   own      │  NEVER sees direct reports' salary
+  //  │ LEAD         │ own  │      │   own      │  NEVER sees team's salary
   //  │ EMPLOYEE     │ own  │      │   own      │
   //  └──────────────┴──────┴──────┴────────────┘
-  // Salary is HR + employee only (Pakistani culture / explicit spec):
-  // managers and executives do NOT see compensation, even for their reports.
-  const canViewCompensation = isHR || isViewingOwn
+  const { canSeeSalary } = await import('@/lib/can-see-salary')
+  const canViewCompensation = canSeeSalary({
+    viewerRole: effectiveRole,
+    viewerEmployeeId: myEmpId,
+    targetEmployeeId: employee.id,
+  })
   const canEditCompensation = isHR && !isPreviewMode
   const canDownloadTotalRewards = canViewCompensation
 
@@ -171,10 +177,9 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
 
   const currentSalary = employee.salary
 
-  // Recent Payslips for the Compensation tab — HR / Exec / self can see them;
-  // Managers cannot (salary confidentiality, consistent with the rest of the
-  // Compensation tab). Fetch unconditionally only when the viewer is allowed.
-  const canSeePayslips = isHR || isExec || isViewingOwn
+  // Recent Payslips — same gate as Compensation. Managers + Leads never see
+  // payslip amounts (compensation lockdown).
+  const canSeePayslips = canViewCompensation
   const recentPayslips = canSeePayslips
     ? await prisma.payslip.findMany({
         where: { employeeId: employee.id },
@@ -528,6 +533,20 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
 
         {/* Documents */}
         {showDocuments && <TabsContent value="documents">
+          {isViewingOwn && !isPreviewMode && (
+            <div className="mb-4">
+              <EmployeeSelfUploadCard
+                employeeId={employee.id}
+                documents={employee.documents.map((d) => ({
+                  id: d.id,
+                  type: d.type,
+                  createdAt: d.createdAt.toISOString(),
+                  visibleToEmployee: d.visibleToEmployee,
+                  signedAt: d.signedAt?.toISOString() ?? null,
+                }))}
+              />
+            </div>
+          )}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Documents</CardTitle>
@@ -635,7 +654,10 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
         {/* Assets */}
         {showAssets && <TabsContent value="assets">
           <Card>
-            <CardHeader><CardTitle>Assigned Assets</CardTitle></CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <CardTitle>Assigned Assets</CardTitle>
+              {canEditFull && <AddAssetDialog employeeId={employee.id} />}
+            </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>

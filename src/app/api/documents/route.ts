@@ -153,5 +153,33 @@ export async function POST(request: NextRequest) {
     },
     select: { id: true, name: true, type: true, fileSize: true, createdAt: true },
   })
+
+  // Auto-flip the matching OnboardingTask to DONE if the doc type maps to
+  // one of the 5 employee-uploadable items (CNIC / PHOTO / ADDRESS_PROOF /
+  // EDUCATIONAL_CERTIFICATE / EXPERIENCE). Idempotent — skips if already done.
+  try {
+    const checklist = await prisma.onboardingChecklist.findUnique({
+      where: { employeeId },
+      select: { id: true },
+    })
+    if (checklist) {
+      await prisma.onboardingTask.updateMany({
+        where: {
+          checklistId: checklist.id,
+          documentType: type,
+          isComplete: false,
+        },
+        data: {
+          isComplete: true,
+          completedAt: new Date(),
+          completedById: payload.userId,
+        },
+      })
+    }
+  } catch (e) {
+    // Non-fatal — the upload itself succeeded.
+    console.error('[documents POST] task flip failed', e)
+  }
+
   return NextResponse.json({ document: doc })
 }

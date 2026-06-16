@@ -51,11 +51,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   })
   if (!target) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  // Access check — salary confidentiality: HR + the employee themselves only.
-  const isHR = effectiveRole === 'HR_ADMIN'
-  const isOwn = target.id === myEmpId
-  const allowed = isHR || isOwn
-  if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  // Access check — salary confidentiality. Allowed: HR_ADMIN, EXECUTIVE,
+  // FINANCE, or the employee viewing their own statement. Managers/Leads
+  // explicitly cannot see compensation, even for their direct reports.
+  const { canSeeSalary } = await import('@/lib/can-see-salary')
+  const allowed = canSeeSalary({
+    viewerRole: effectiveRole,
+    viewerEmployeeId: myEmpId,
+    targetEmployeeId: target.id,
+  })
+  if (!allowed) {
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: payload.userId,
+          employeeId: target.id,
+          action: 'READ',
+          entity: 'TotalRewards',
+          entityId: target.id,
+          newValue: JSON.stringify({ blocked: true, role: effectiveRole }),
+        },
+      })
+    } catch { /* ignore audit failure */ }
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
 
   // YTD totals
   const currentYear = new Date().getFullYear()

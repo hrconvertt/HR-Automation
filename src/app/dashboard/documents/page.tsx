@@ -1,56 +1,27 @@
 'use client'
 
 /**
- * Document Center — unified module for HR-issued letters and company policies.
+ * Document Center — company policies + acknowledgments.
  *
- *   Letters   → formal HR-issued letters (experience, salary cert, NOC, etc.)
- *   Policies  → company policy documents + acknowledgments
- *
- * Per-employee files live ONLY on the People profile (Documents tab) —
- * no duplicate upload entry-point here.
+ * Letters (experience, salary cert, NOC, etc.) live in /dashboard/letters
+ * which is the dedicated workflow surface for letter requests.
+ * Per-employee files live on the employee profile (Documents tab).
  */
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
-import { Mail, FolderOpen, ShieldCheck } from 'lucide-react'
+import { FolderOpen, ShieldCheck, ArrowRight } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 interface PolicyDoc {
   id: string; title: string; type: string; version: string | null;
   effectiveDate: string | null; acknowledgments: { status: string }[]
 }
-interface Letter {
-  id: string; letterNumber: string | null; letterType: string;
-  purpose: string | null; status: string; requestedAt: string;
-  employee?: { id: string; fullName: string; employeeCode: string }
-}
-
-const LETTER_STATUS_TONE: Record<string, 'default' | 'success' | 'warning' | 'secondary'> = {
-  PENDING: 'warning',
-  APPROVED: 'default',
-  GENERATED: 'success',
-  REJECTED: 'secondary',
-}
 
 export default function DocumentCenterPage() {
-  return (
-    <Suspense fallback={<div className="p-8 text-center text-slate-400">Loading…</div>}>
-      <DocumentCenterPageInner />
-    </Suspense>
-  )
-}
-
-function DocumentCenterPageInner() {
-  const sp = useSearchParams()
-  // Employee Files tab was removed (uploads live on the People profile only).
-  // If a legacy ?employee=... or ?tab=files link lands here, fall through to
-  // Letters — the link target was deprecated.
-  const initialTab = sp.get('tab') === 'policies' ? 'policies' : 'letters'
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -62,121 +33,36 @@ function DocumentCenterPageInner() {
           <div className="flex-1">
             <h1 className="text-2xl font-bold tracking-tight">Document Center</h1>
             <p className="text-white/85 mt-1 text-sm">
-              Issued letters and company policies. Employee files are in each employee&apos;s profile.
+              Company policies and acknowledgments. Employee files live on each person&apos;s profile.
             </p>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue={initialTab}>
-        <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex">
-          <TabsTrigger value="letters"><Mail className="w-3.5 h-3.5 mr-1.5" /> Letters</TabsTrigger>
-          <TabsTrigger value="policies"><ShieldCheck className="w-3.5 h-3.5 mr-1.5" /> Policies</TabsTrigger>
-        </TabsList>
+      {/* Pointer to Letters workflow (moved out) */}
+      <Card className="border-blue-100 bg-blue-50/40">
+        <div className="p-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="text-sm font-medium text-slate-900">Letter requests</p>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Experience, salary certificate, NOC, confirmation, and other formal letters are managed in the Letters workflow.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/letters"
+            className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap"
+          >
+            Open Letters <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
+      </Card>
 
-        <TabsContent value="letters" className="mt-4 transition-opacity duration-150">
-          <LettersTab />
-        </TabsContent>
-
-        <TabsContent value="policies" className="mt-4 transition-opacity duration-150">
-          <PoliciesTab />
-        </TabsContent>
-      </Tabs>
+      <PoliciesTab />
     </div>
   )
 }
 
-/* ─────────────────────── LETTERS TAB ─────────────────────── */
-
-const LETTER_STATUSES = ['PENDING', 'APPROVED', 'GENERATED', 'REJECTED'] as const
-
-function LettersTab() {
-  const [letters, setLetters] = useState<Letter[]>([])
-  const [loading, setLoading] = useState(true)
-  const [statusTab, setStatusTab] = useState<string>('PENDING')
-
-  useEffect(() => {
-    fetch('/api/letters').then((r) => r.json()).then((d) => {
-      setLetters(d.letters ?? d.requests ?? [])
-      setLoading(false)
-    }).catch(() => setLoading(false))
-  }, [])
-
-  const counts: Record<string, number> = {}
-  for (const s of LETTER_STATUSES) counts[s] = letters.filter((l) => l.status === s).length
-  const filtered = letters.filter((l) => l.status === statusTab)
-
-  return (
-    <Card>
-      <CardHeader className="border-b border-slate-100 flex items-center justify-between flex-row">
-        <CardTitle>Letter Requests</CardTitle>
-        <Link href="/dashboard/letters" className="text-xs text-blue-600 hover:underline">Open full Letters page →</Link>
-      </CardHeader>
-      <CardContent className="p-4">
-        <Tabs value={statusTab} onValueChange={setStatusTab}>
-          <TabsList className="bg-slate-50 border border-slate-200 rounded-md p-1 inline-flex mb-3">
-            {LETTER_STATUSES.map((s) => (
-              <TabsTrigger key={s} value={s}>
-                {s.charAt(0) + s.slice(1).toLowerCase()}
-                <span className="ml-1.5 text-xs text-slate-500">({counts[s] ?? 0})</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
-
-          {LETTER_STATUSES.map((s) => (
-            <TabsContent key={s} value={s}>
-              {loading ? (
-                <p className="py-8 text-center text-sm text-slate-400">Loading…</p>
-              ) : filtered.length === 0 ? (
-                <p className="py-8 text-center text-sm text-slate-400">
-                  {s === 'PENDING' && 'No pending letter requests.'}
-                  {s === 'APPROVED' && 'No approved letters waiting to be handed over.'}
-                  {s === 'GENERATED' && 'No generated letters yet.'}
-                  {s === 'REJECTED' && 'No rejected letters.'}
-                </p>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Letter #</TableHead>
-                      <TableHead>Employee</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Purpose</TableHead>
-                      <TableHead>Requested</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead></TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filtered.map((l) => (
-                      <TableRow key={l.id} className="hover:bg-slate-50 transition-colors">
-                        <TableCell className="font-mono text-xs">{l.letterNumber ?? '—'}</TableCell>
-                        <TableCell>
-                          <p className="font-medium text-sm">{l.employee?.fullName ?? '—'}</p>
-                          <p className="text-xs text-slate-500">{l.employee?.employeeCode}</p>
-                        </TableCell>
-                        <TableCell><Badge variant="secondary">{l.letterType.replace(/_/g, ' ')}</Badge></TableCell>
-                        <TableCell className="text-sm text-slate-700 truncate max-w-[200px]">{l.purpose ?? '—'}</TableCell>
-                        <TableCell className="text-sm text-slate-600">{formatDate(l.requestedAt)}</TableCell>
-                        <TableCell><Badge variant={LETTER_STATUS_TONE[l.status] ?? 'default'}>{l.status}</Badge></TableCell>
-                        <TableCell>
-                          <Link href={`/dashboard/letters?focus=${l.id}`} prefetch className="text-blue-600 hover:underline text-sm">Open →</Link>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </TabsContent>
-          ))}
-        </Tabs>
-      </CardContent>
-    </Card>
-  )
-}
-
-/* ─────────────────────── POLICIES TAB ─────────────────────── */
+/* ─────────────────────── POLICIES ─────────────────────── */
 
 function PoliciesTab() {
   const [policies, setPolicies] = useState<PolicyDoc[]>([])
@@ -192,11 +78,13 @@ function PoliciesTab() {
   return (
     <Card>
       <CardHeader className="border-b border-slate-100 flex items-center justify-between flex-row">
-        <CardTitle>Company Policies</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-slate-600" /> Company Policies
+        </CardTitle>
         <Link href="/dashboard/policies" className="text-xs text-blue-600 hover:underline">Manage policies →</Link>
       </CardHeader>
       {loading ? (
-        <CardContent className="py-8 text-center text-sm text-slate-400">Loading…</CardContent>
+        <div className="py-8 text-center text-sm text-slate-400">Loading…</div>
       ) : (
         <Table>
           <TableHeader>

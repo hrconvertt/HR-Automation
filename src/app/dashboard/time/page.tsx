@@ -2,10 +2,10 @@
  * Unified "Time & Attendance" page.
  *
  * Single sidebar entry → role-routed view → outer tabs:
- *   Today      — attendance / personal timer / team status (depending on role)
- *   Calendar   — unified attendance + leave + holiday grid (Phase 2)
- *   Leave      — existing leave views
- *   Approvals  — unified OT + leave pending inbox, Manager/HR only (Phase 3)
+ *   My Time          — personal clock-in / calendar
+ *   My Leave         — leave application + history
+ *   Attendance Grid  — company-wide / team grid (HR / Manager / Lead / Executive)
+ *   Approvals        — pending leave + OT inbox (HR / Manager / Lead)
  *
  * The underlying Attendance + Leave modules stay intact; this is composition,
  * not a rewrite of their internals.
@@ -39,8 +39,7 @@ export default async function TimePage({ searchParams }: PageProps) {
   const effectiveRole = previewRole ?? user.role
 
   const { tab } = await searchParams
-  // Default tab is "today" for everyone; HR can deep-link to specific sub-areas.
-  const initialTab = tab ?? 'today'
+  const initialTab = tab ?? 'my-time'
 
   if (!user.employee && effectiveRole !== 'HR_ADMIN' && effectiveRole !== 'EXECUTIVE') {
     return (
@@ -53,12 +52,26 @@ export default async function TimePage({ searchParams }: PageProps) {
     )
   }
 
+  // Departments are only needed when the user can see the grid tab — fetch
+  // them up-front so the client shell doesn't need a second round-trip.
+  const canSeeGrid =
+    effectiveRole === 'HR_ADMIN' ||
+    effectiveRole === 'MANAGER' ||
+    effectiveRole === 'LEAD' ||
+    effectiveRole === 'EXECUTIVE'
+  const departments = canSeeGrid
+    ? (await prisma.department.findMany({ select: { name: true }, orderBy: { name: 'asc' } })).map(
+        (d) => d.name,
+      )
+    : []
+
   return (
     <TimeShell
       role={effectiveRole}
       employeeId={user.employee?.id ?? null}
       employeeName={user.employee?.fullName ?? null}
       initialTab={initialTab}
+      departments={departments}
     />
   )
 }

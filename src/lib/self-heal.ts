@@ -282,10 +282,56 @@ async function fixProbationLifecycle(): Promise<number> {
 }
 
 async function fixMissingOnboarding(): Promise<number> {
-  const ids = (await prisma.employee.findMany({ where: { onboarding: null }, select: { id: true } })).map((e) => e.id)
+  const { buildStandardOnboardingTasks } = await import('./onboarding-tasks')
+  const employees = await prisma.employee.findMany({
+    where: { onboarding: null },
+    select: { id: true, employeeType: true },
+  })
   let fixed = 0
-  for (const employeeId of ids) {
-    await prisma.onboardingChecklist.create({ data: { employeeId } }).then(() => { fixed++ }).catch(() => {})
+  for (const emp of employees) {
+    try {
+      const checklist = await prisma.onboardingChecklist.create({ data: { employeeId: emp.id } })
+      const tasks = buildStandardOnboardingTasks(emp.employeeType)
+      await prisma.onboardingTask.createMany({
+        data: tasks.map((t) => ({
+          checklistId: checklist.id,
+          title: t.title,
+          owner: t.owner,
+          category: t.category,
+          orderIndex: t.orderIndex,
+          description: t.description ?? null,
+          isEmployeeUploadable: t.isEmployeeUploadable ?? false,
+          documentType: t.documentType ?? null,
+        })),
+      })
+      fixed++
+    } catch { /* skip */ }
+  }
+  // Also backfill the 5 employee-uploadable tasks for existing checklists
+  // that don't have them yet (older checklists pre-dating the master sheet).
+  const checklistsWithoutUploadable = await prisma.onboardingChecklist.findMany({
+    where: {
+      tasks: { none: { isEmployeeUploadable: true } },
+    },
+    include: { employee: { select: { employeeType: true } } },
+  })
+  for (const cl of checklistsWithoutUploadable) {
+    try {
+      const tasks = buildStandardOnboardingTasks(cl.employee.employeeType).filter((t) => t.isEmployeeUploadable)
+      await prisma.onboardingTask.createMany({
+        data: tasks.map((t) => ({
+          checklistId: cl.id,
+          title: t.title,
+          owner: t.owner,
+          category: t.category,
+          orderIndex: t.orderIndex,
+          description: t.description ?? null,
+          isEmployeeUploadable: t.isEmployeeUploadable ?? false,
+          documentType: t.documentType ?? null,
+        })),
+      })
+      fixed++
+    } catch { /* skip */ }
   }
   return fixed
 }

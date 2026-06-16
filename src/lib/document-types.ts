@@ -1,12 +1,13 @@
 // Shared document type catalog (used by Document Center + Employee Profile).
 export const DOC_TYPES = [
   { value: 'CNIC', label: 'CNIC' },
+  { value: 'PHOTO', label: 'Photo' },
+  { value: 'ADDRESS_PROOF', label: 'Address Proof' },
   { value: 'RESUME', label: 'Resume' },
   { value: 'EDUCATIONAL_CERTIFICATE', label: 'Educational Certificate' },
   { value: 'EXPERIENCE', label: 'Experience Letter' },
   { value: 'OFFER_LETTER', label: 'Offer Letter' },
   { value: 'NDA', label: 'NDA' },
-  { value: 'PHOTO', label: 'Photo' },
   { value: 'SALARY_SLIP', label: 'Salary Slip' },
   { value: 'MEDICAL_REPORT', label: 'Medical Report' },
   { value: 'INSURANCE_CARD', label: 'Insurance Card' },
