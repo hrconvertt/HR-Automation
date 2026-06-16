@@ -93,7 +93,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'People', icon: Users },
-        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
+        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
         { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
         { href: '/dashboard/payroll', label: 'Payroll', icon: Banknote },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
@@ -147,7 +147,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'Team Members', icon: Users },
-        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
+        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
         { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
@@ -177,7 +177,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'My Workspace',
       items: [
         { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
+        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
         { href: '/dashboard/attendance', label: 'My Attendance', icon: CalendarCheck },
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
         { href: '/dashboard/employees', label: 'Directory', icon: Users },
@@ -209,7 +209,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'My Team', icon: Users },
         { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
-        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
+        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
       ],
     },
     {

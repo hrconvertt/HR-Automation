@@ -19,7 +19,7 @@ const XLSX = require('xlsx')
 const { PrismaClient } = require('@prisma/client')
 
 const ATTENDANCE_PATH = process.env.ATTENDANCE_PATH
-  || String.raw`C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (3).xlsx`
+  || String.raw`C:\Users\HRConvertt\Downloads\Attendance & Leave Tracking (4).xlsx`
 
 if (!process.argv.includes('--confirm')) {
   console.error('Refusing to wipe attendance data without --confirm flag.')

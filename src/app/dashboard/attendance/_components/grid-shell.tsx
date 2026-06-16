@@ -7,10 +7,10 @@
  * - Click any employee row → /dashboard/attendance/<id> (detail view)
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Download, CalendarDays, ArrowRight, LayoutGrid, LayoutList } from 'lucide-react'
+import { Search, Download, CalendarDays, ArrowRight, LayoutGrid, LayoutList, X } from 'lucide-react'
 import { StatusBadge, StatusLegend, type Status } from '@/components/attendance/status-badge'
 import { getInitials } from '@/lib/utils'
 
@@ -235,7 +235,28 @@ export function AttendanceGridShell({ role, departments }: ShellProps) {
 
       {/* GRID VIEW */}
       {view === 'grid' && gridData && !loading && (
-        <GridTable data={gridData} today={today} onRowClick={(id) => router.push(`/dashboard/attendance/${id}`)} />
+        <GridTable
+          data={gridData}
+          today={today}
+          canEdit={role === 'HR_ADMIN'}
+          onRowClick={(id) => router.push(`/dashboard/attendance/${id}`)}
+          onCellSaved={(empId, day, status) => {
+            setGridData((prev) => {
+              if (!prev) return prev
+              return {
+                ...prev,
+                employees: prev.employees.map((e) =>
+                  e.id !== empId
+                    ? e
+                    : {
+                        ...e,
+                        days: e.days.map((d) => (d.day === day ? { ...d, status } : d)),
+                      },
+                ),
+              }
+            })
+          }}
+        />
       )}
 
       {/* SUMMARY VIEW */}
@@ -253,7 +274,15 @@ export function AttendanceGridShell({ role, departments }: ShellProps) {
 
 // ──────────────────────────────────────────────────────────────────────────
 
-function GridTable({ data, today, onRowClick }: { data: GridResponse; today: string; onRowClick: (id: string) => void }) {
+interface GridTableProps {
+  data: GridResponse
+  today: string
+  canEdit: boolean
+  onRowClick: (id: string) => void
+  onCellSaved: (employeeId: string, day: number, status: Status) => void
+}
+
+function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableProps) {
   // Parse month-year for weekday header row
   const [year, month] = data.month.split('-').map(Number)
   const days = Array.from({ length: data.daysInMonth }, (_, i) => {
@@ -265,6 +294,14 @@ function GridTable({ data, today, onRowClick }: { data: GridResponse; today: str
     const isToday = iso === today
     return { day: i + 1, dowLabel, isWeekend, isToday }
   })
+
+  const [editing, setEditing] = useState<{ empId: string; empName: string; day: number; iso: string } | null>(null)
+  const [flashKey, setFlashKey] = useState<string | null>(null)
+  useEffect(() => {
+    if (!flashKey) return
+    const t = setTimeout(() => setFlashKey(null), 900)
+    return () => clearTimeout(t)
+  }, [flashKey])
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
@@ -305,10 +342,12 @@ function GridTable({ data, today, onRowClick }: { data: GridResponse; today: str
             {data.employees.map((emp) => (
               <tr
                 key={emp.id}
-                onClick={() => onRowClick(emp.id)}
-                className="hover:bg-blue-50/40 cursor-pointer transition group"
+                className="hover:bg-blue-50/40 transition group"
               >
-                <td className="sticky left-0 z-10 bg-white group-hover:bg-blue-50/40 border-b border-r border-slate-200 px-3 py-1.5">
+                <td
+                  onClick={() => onRowClick(emp.id)}
+                  className="sticky left-0 z-10 bg-white group-hover:bg-blue-50/40 border-b border-r border-slate-200 px-3 py-1.5 cursor-pointer"
+                >
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                       {getInitials(emp.fullName)}
@@ -322,8 +361,26 @@ function GridTable({ data, today, onRowClick }: { data: GridResponse; today: str
                 {emp.days.map((d) => {
                   const iso = `${year}-${String(month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
                   const isFuture = !d.isWeekend && iso > today
+                  const cellKey = `${emp.id}|${d.day}`
+                  const flashing = flashKey === cellKey
+                  // HR can edit any non-weekend, non-future cell
+                  const isEditable = canEdit && !d.isWeekend && !isFuture
                   return (
-                    <td key={d.day} className={`border-b border-slate-100 p-0.5 text-center ${d.isWeekend ? 'bg-slate-50/40' : ''}`}>
+                    <td
+                      key={d.day}
+                      onClick={isEditable
+                        ? (e) => {
+                            e.stopPropagation()
+                            setEditing({ empId: emp.id, empName: emp.fullName, day: d.day, iso })
+                          }
+                        : undefined}
+                      className={`border-b border-slate-100 p-0.5 text-center ${
+                        d.isWeekend ? 'bg-slate-50/40' : ''
+                      } ${isEditable ? 'cursor-pointer hover:ring-1 hover:ring-blue-300 hover:bg-blue-50/60' : ''} ${
+                        flashing ? 'bg-amber-100 transition-colors' : ''
+                      }`}
+                      title={isEditable ? 'Click to edit (HR only)' : undefined}
+                    >
                       <StatusBadge status={d.status} future={isFuture} />
                     </td>
                   )
@@ -336,6 +393,157 @@ function GridTable({ data, today, onRowClick }: { data: GridResponse; today: str
             ))}
           </tbody>
         </table>
+      </div>
+      {editing && (
+        <CellEditPopover
+          employeeId={editing.empId}
+          employeeName={editing.empName}
+          day={editing.day}
+          iso={editing.iso}
+          onClose={() => setEditing(null)}
+          onSaved={(status) => {
+            onCellSaved(editing.empId, editing.day, status)
+            setFlashKey(`${editing.empId}|${editing.day}`)
+            setEditing(null)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+const EDIT_STATUS_OPTIONS: { value: 'PRESENT' | 'LEAVE' | 'WFH' | 'HALF_DAY' | 'ABSENT'; label: string; badge: Status }[] = [
+  { value: 'PRESENT',  label: 'Present',   badge: 'P' },
+  { value: 'WFH',      label: 'Work From Home', badge: 'WFH' },
+  { value: 'LEAVE',    label: 'Leave (Full Day)', badge: 'L' },
+  { value: 'HALF_DAY', label: 'Half Day',  badge: 'H' },
+  { value: 'ABSENT',   label: 'Absent',    badge: 'A' },
+]
+
+const API_TO_BADGE: Record<string, Status> = {
+  PRESENT: 'P', WFH: 'WFH', LEAVE: 'L', HALF_DAY: 'H', ABSENT: 'A',
+}
+
+function CellEditPopover({
+  employeeId,
+  employeeName,
+  day,
+  iso,
+  onClose,
+  onSaved,
+}: {
+  employeeId: string
+  employeeName: string
+  day: number
+  iso: string
+  onClose: () => void
+  onSaved: (status: Status) => void
+}) {
+  const [selected, setSelected] = useState<typeof EDIT_STATUS_OPTIONS[number]['value']>('PRESENT')
+  const [note, setNote] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  async function save() {
+    setSaving(true)
+    setErr(null)
+    try {
+      const res = await fetch(`/api/attendance/${employeeId}/${iso}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: selected, note }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error ?? 'Save failed')
+      }
+      onSaved(API_TO_BADGE[selected])
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Save failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/30"
+      onClick={onClose}
+    >
+      <div
+        ref={dialogRef}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-lg shadow-xl border border-slate-200 w-full max-w-sm p-4"
+        role="dialog"
+        aria-label="Edit attendance cell"
+      >
+        <div className="flex items-start justify-between gap-2 mb-3">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-900">Edit attendance</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {employeeName} · Day {day} ({iso})
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-slate-400 hover:text-slate-700 p-1 -mr-1 -mt-1 rounded"
+            aria-label="Close"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <label className="block text-xs font-medium text-slate-700 mb-1">Status</label>
+        <select
+          value={selected}
+          onChange={(e) => setSelected(e.target.value as typeof selected)}
+          className="w-full text-sm border border-slate-300 rounded-md px-2 py-1.5 bg-white mb-3"
+        >
+          {EDIT_STATUS_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+
+        <label className="block text-xs font-medium text-slate-700 mb-1">Note (optional)</label>
+        <textarea
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          rows={2}
+          maxLength={500}
+          placeholder="Why is this being adjusted?"
+          className="w-full text-sm border border-slate-300 rounded-md px-2 py-1.5 bg-white"
+        />
+
+        {err && (
+          <div className="mt-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-md px-2 py-1.5">
+            {err}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-md"
+          >
+            {saving ? 'Saving…' : 'Save'}
+          </button>
+        </div>
       </div>
     </div>
   )
