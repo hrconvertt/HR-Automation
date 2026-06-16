@@ -26,7 +26,16 @@ export default async function AttendanceGridPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    include: { employee: { select: { id: true, fullName: true } } },
+    include: {
+      employee: {
+        select: {
+          id: true,
+          fullName: true,
+          departmentId: true,
+          department: { select: { id: true, name: true } },
+        },
+      },
+    },
   })
   if (!user) redirect('/login')
 
@@ -40,10 +49,20 @@ export default async function AttendanceGridPage() {
     redirect(`/dashboard/attendance/${user.employee.id}`)
   }
 
-  const departments = await prisma.department.findMany({
-    select: { name: true },
-    orderBy: { name: 'asc' },
-  })
+  // Department filter scope:
+  //   HR / Executive  — see all departments
+  //   Manager / Lead  — see only their own department
+  //   (Employee already redirected to detail view above)
+  const seesAllDepts =
+    effectiveRole === 'HR_ADMIN' || effectiveRole === 'EXECUTIVE'
+  const departments = seesAllDepts
+    ? await prisma.department.findMany({
+        select: { name: true },
+        orderBy: { name: 'asc' },
+      })
+    : user.employee?.department
+      ? [{ name: user.employee.department.name }]
+      : []
 
   return (
     <AttendanceGridShell
