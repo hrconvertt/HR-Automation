@@ -233,6 +233,14 @@ export function AttendanceGridShell({ role, departments }: ShellProps) {
         <div className="text-sm text-slate-500 px-3 py-2">Loading…</div>
       )}
 
+      {/* HR-only edit hint */}
+      {view === 'grid' && role === 'HR_ADMIN' && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 flex items-center gap-2">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white font-semibold text-[10px]">HR</span>
+          Click any cell to edit attendance. Only HR can edit. All edits are logged.
+        </div>
+      )}
+
       {/* GRID VIEW */}
       {view === 'grid' && gridData && !loading && (
         <GridTable
