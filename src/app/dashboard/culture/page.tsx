@@ -16,12 +16,27 @@ export default async function CulturePage() {
 
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
-    select: { role: true, employee: { select: { id: true, fullName: true } } },
+    select: {
+      role: true,
+      employee: {
+        select: { id: true, fullName: true, departmentId: true, reportingManagerId: true },
+      },
+    },
   })
   if (!me) redirect('/login')
   const previewRole = me.role === 'HR_ADMIN' ? c.get('hr_preview_role')?.value : undefined
   const effectiveRole = previewRole ?? me.role
   const isHR = effectiveRole === 'HR_ADMIN' && !previewRole
+
+  // Scope birthdays / anniversaries by role.
+  //   HR / Executive  — company-wide (they coordinate celebrations)
+  //   Everyone else   — own department only ("the team that he is")
+  // No-employee accounts (HR-only logins) fall back to company-wide.
+  const seesCompanyWide =
+    effectiveRole === 'HR_ADMIN' ||
+    effectiveRole === 'EXECUTIVE' ||
+    !me.employee
+  const scopedDepartmentId = seesCompanyWide ? null : me.employee?.departmentId ?? null
 
   const now = new Date()
   const thisYear = now.getFullYear()
@@ -39,7 +54,10 @@ export default async function CulturePage() {
       },
     }),
     prisma.employee.findMany({
-      where: { status: 'ACTIVE' },
+      where: {
+        status: 'ACTIVE',
+        ...(scopedDepartmentId ? { departmentId: scopedDepartmentId } : {}),
+      },
       select: { id: true, fullName: true, employeeCode: true, designation: true, dob: true, joiningDate: true, department: { select: { name: true } } },
       orderBy: { fullName: 'asc' },
     }),
