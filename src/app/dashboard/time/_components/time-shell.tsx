@@ -17,12 +17,15 @@
  */
 
 import Link from 'next/link'
-import { Clock, Plane, Inbox } from 'lucide-react'
+import { Clock, Plane, Inbox, Users } from 'lucide-react'
 import MyTimeView from '@/app/dashboard/attendance/_views/my-time-view'
 import MyLeaveView from '@/app/dashboard/leave/_views/my-leave-view'
+import AdminTimeView from '@/app/dashboard/attendance/_views/admin-time-view'
+import TeamTimeView from '@/app/dashboard/attendance/_views/team-time-view'
+import ExecutiveTimeView from '@/app/dashboard/attendance/_views/executive-time-view'
 import { ApprovalsInbox } from './approvals-inbox'
 
-type TabKey = 'my-time' | 'my-leave' | 'approvals'
+type TabKey = 'my-time' | 'my-leave' | 'team-time' | 'approvals'
 
 interface Props {
   role: string
@@ -36,6 +39,10 @@ function canSeeApprovals(role: string): boolean {
   return role === 'HR_ADMIN' || role === 'MANAGER' || role === 'LEAD'
 }
 
+function canSeeTeamTime(role: string): boolean {
+  return role === 'HR_ADMIN' || role === 'MANAGER' || role === 'LEAD' || role === 'EXECUTIVE'
+}
+
 // Legacy aliases for back-compat with old URLs.
 function normalizeTab(tab: string): string {
   if (tab === 'today') return 'my-time'
@@ -46,9 +53,12 @@ function normalizeTab(tab: string): string {
 }
 
 export function TimeShell({ role, employeeId, employeeName, initialTab, departments }: Props) {
+  const teamLabel =
+    role === 'HR_ADMIN' || role === 'EXECUTIVE' ? 'Everyone' : 'Team Time'
   const tabs: { key: TabKey; label: string; icon: typeof Clock; show: boolean }[] = [
     { key: 'my-time',   label: 'My Time',   icon: Clock, show: true },
     { key: 'my-leave',  label: 'My Leave',  icon: Plane, show: true },
+    { key: 'team-time', label: teamLabel,   icon: Users, show: canSeeTeamTime(role) },
     { key: 'approvals', label: 'Approvals', icon: Inbox, show: canSeeApprovals(role) },
   ]
 
@@ -98,6 +108,15 @@ export function TimeShell({ role, employeeId, employeeName, initialTab, departme
           <div className="rounded-2xl bg-gray-50 border border-gray-200 p-6 text-sm text-gray-600">
             No personal leave record for this account.
           </div>
+        )}
+        {activeTab === 'team-time' && canSeeTeamTime(role) && (
+          <>
+            {role === 'HR_ADMIN' && <AdminTimeView />}
+            {(role === 'MANAGER' || role === 'LEAD') && employeeId && (
+              <TeamTimeView managerEmployeeId={employeeId} managerName={employeeName ?? ''} />
+            )}
+            {role === 'EXECUTIVE' && <ExecutiveTimeView />}
+          </>
         )}
         {activeTab === 'approvals' && canSeeApprovals(role) && (
           <ApprovalsInbox role={role} />
