@@ -39,7 +39,17 @@ export default async function TimePage({ searchParams }: PageProps) {
   const effectiveRole = previewRole ?? user.role
 
   const { tab } = await searchParams
-  const initialTab = tab ?? 'my-time'
+  // HR / Exec / Manager / Lead land on the team view by default — that's the
+  // page they need 95% of the time (who is clocked in, who's late, who's on
+  // leave). They can switch to My Time if they want their personal panel.
+  const defaultTab =
+    effectiveRole === 'HR_ADMIN' ||
+    effectiveRole === 'EXECUTIVE' ||
+    effectiveRole === 'MANAGER' ||
+    effectiveRole === 'LEAD'
+      ? 'team-time'
+      : 'my-time'
+  const initialTab = tab ?? defaultTab
 
   if (!user.employee && effectiveRole !== 'HR_ADMIN' && effectiveRole !== 'EXECUTIVE') {
     return (
