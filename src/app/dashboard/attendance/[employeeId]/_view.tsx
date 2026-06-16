@@ -1,9 +1,60 @@
 'use client'
 
+import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Printer, CalendarPlus } from 'lucide-react'
-import { StatusBadge, StatusLegend, type Status } from '@/components/attendance/status-badge'
+import { StatusBadge, type Status } from '@/components/attendance/status-badge'
 import { getInitials } from '@/lib/utils'
+
+// Inline filterable legend — click a status to dim everything else across all
+// month blocks. Click again to clear. 'WE' (weekend) intentionally not filterable.
+const FILTER_OPTIONS: { status: Status; label: string }[] = [
+  { status: 'P',   label: 'Present' },
+  { status: 'WFH', label: 'WFH' },
+  { status: 'L',   label: 'Leave' },
+  { status: 'H',   label: 'Half Day' },
+  { status: 'A',   label: 'Absent' },
+]
+
+function FilterableLegend({
+  active,
+  onToggle,
+}: {
+  active: Status | null
+  onToggle: (s: Status) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      {FILTER_OPTIONS.map((opt) => {
+        const isActive = active === opt.status
+        return (
+          <button
+            key={opt.status}
+            onClick={() => onToggle(opt.status)}
+            className={
+              'inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium transition ' +
+              (isActive
+                ? 'bg-blue-50 ring-1 ring-blue-400 text-blue-900'
+                : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50')
+            }
+            title={isActive ? 'Clear filter' : `Show only ${opt.label}`}
+          >
+            <StatusBadge status={opt.status} />
+            {opt.label}
+          </button>
+        )
+      })}
+      {active && (
+        <button
+          onClick={() => onToggle(active)}
+          className="text-[11px] text-slate-500 underline hover:text-slate-700"
+        >
+          Clear
+        </button>
+      )}
+    </div>
+  )
+}
 
 interface Cell {
   day: number
@@ -74,6 +125,13 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
   const currentYear = leaveBalances[0]?.year ?? new Date().getFullYear()
   const currentBalances = leaveBalances.filter((b) => b.year === currentYear)
 
+  // Status filter — click a legend chip to dim non-matching cells across all
+  // month blocks. Click again (or "Clear") to remove the filter.
+  const [statusFilter, setStatusFilter] = useState<Status | null>(null)
+  const handleToggleFilter = (s: Status) => {
+    setStatusFilter((cur) => (cur === s ? null : s))
+  }
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -115,9 +173,11 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
         {/* Calendar blocks */}
         <div className="space-y-4">
-          <div className="print:hidden"><StatusLegend /></div>
+          <div className="print:hidden">
+            <FilterableLegend active={statusFilter} onToggle={handleToggleFilter} />
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {months.map((m) => <MonthCalendar key={m.key} month={m} />)}
+            {months.map((m) => <MonthCalendar key={m.key} month={m} filter={statusFilter} />)}
           </div>
         </div>
 
@@ -195,7 +255,7 @@ function Stat({ label, value, accent }: { label: string; value: number; accent: 
   )
 }
 
-function MonthCalendar({ month }: { month: MonthBlock }) {
+function MonthCalendar({ month, filter }: { month: MonthBlock; filter: Status | null }) {
   const blanks = Array.from({ length: month.firstDow }, (_, i) => i)
   const dowHeader = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
   return (
@@ -208,12 +268,23 @@ function MonthCalendar({ month }: { month: MonthBlock }) {
       </div>
       <div className="grid grid-cols-7 gap-1">
         {blanks.map((b) => <div key={`b${b}`} />)}
-        {month.cells.map((c) => (
-          <div key={c.day} className="flex flex-col items-center gap-0.5">
-            <div className="text-[9px] text-slate-400">{c.day}</div>
-            <StatusBadge status={c.status} future={c.isFuture} />
-          </div>
-        ))}
+        {month.cells.map((c) => {
+          // When a filter is active, dim every cell except matching ones.
+          // Weekends + future days always stay neutral (not part of the data set).
+          const dimmed =
+            filter !== null && !c.isFuture && c.status !== filter
+          return (
+            <div
+              key={c.day}
+              className={`flex flex-col items-center gap-0.5 transition-opacity ${
+                dimmed ? 'opacity-25' : 'opacity-100'
+              }`}
+            >
+              <div className="text-[9px] text-slate-400">{c.day}</div>
+              <StatusBadge status={c.status} future={c.isFuture} />
+            </div>
+          )
+        })}
       </div>
     </div>
   )
