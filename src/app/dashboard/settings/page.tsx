@@ -473,7 +473,7 @@ function tick(v: 'full' | 'self' | 'team' | 'no') {
 const ROLE_MATRIX = [
   { cap: 'View employee directory',     hr: 'full', mgr: 'full', lead: 'full', emp: 'full', exec: 'full', fin: 'full' },
   { cap: 'Edit employee records',       hr: 'full', mgr: 'team', lead: 'no',   emp: 'no',   exec: 'no',   fin: 'no'   },
-  { cap: 'View salary',                 hr: 'full', mgr: 'no',   lead: 'team', emp: 'self', exec: 'no',   fin: 'full' },
+  { cap: 'View salary',                 hr: 'full', mgr: 'no',   lead: 'no',   emp: 'self', exec: 'full', fin: 'full' },
   { cap: 'Approve leave',               hr: 'full', mgr: 'team', lead: 'team', emp: 'no',   exec: 'no',   fin: 'no'   },
   { cap: 'Run payroll',                 hr: 'full', mgr: 'no',   lead: 'no',   emp: 'no',   exec: 'no',   fin: 'full' },
   { cap: 'Hire / Recruit',              hr: 'full', mgr: 'team', lead: 'no',   emp: 'no',   exec: 'no',   fin: 'no'   },
