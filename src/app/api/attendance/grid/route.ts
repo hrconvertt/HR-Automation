@@ -44,7 +44,8 @@ function parseMonth(monthStr: string | null): { year: number; month: number } {
 }
 
 function deriveStatus(log: { status: string; workType: string } | undefined, isWeekend: boolean, isLeaveDay: boolean, isHalfDay: boolean): CellStatus {
-  if (isWeekend) return 'WE'
+  // Check the actual logged status FIRST — if the employee was marked PRESENT
+  // on a Saturday (e.g. weekend on-call work), show "P", not "WE".
   if (log) {
     if (log.status === 'LEAVE') return isHalfDay ? 'H' : 'L'
     if (log.status === 'HALF_DAY') return 'H'
@@ -52,9 +53,11 @@ function deriveStatus(log: { status: string; workType: string } | undefined, isW
       return log.workType === 'WFH' ? 'WFH' : 'P'
     }
     if (log.status === 'WEEKEND') return 'WE'
-    if (log.status === 'HOLIDAY') return 'WE' // visually treat as non-working
+    if (log.status === 'HOLIDAY') return 'WE'
     if (log.status === 'ABSENT') return 'A'
   }
+  // No explicit log for this day — fall back to weekend / leave / absent.
+  if (isWeekend) return 'WE'
   if (isLeaveDay) return isHalfDay ? 'H' : 'L'
   return 'A'
 }
