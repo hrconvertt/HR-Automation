@@ -11,8 +11,9 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
-import { FileText, Plus, ExternalLink, Search, Send, Archive, Edit3, Check, Eye } from 'lucide-react'
+import { FileText, Plus, ExternalLink, Search, Send, Archive, Edit3, Check, Eye, Sparkles } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { recommendAudience } from '@/lib/policy-access'
 
 type Policy = {
   id: string
@@ -349,8 +350,31 @@ export default function HRPoliciesView() {
             </div>
 
             {/* ── Per-role audience picker (Workday-style chips) ── */}
-            <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
-              <label className="block text-sm font-semibold text-slate-800">Who can see this policy?</label>
+            {(() => {
+              const rec = recommendAudience(form.title, form.type)
+              const matchesCurrent =
+                rec.audience.length === form.audienceRoles.length &&
+                rec.audience.every((r) => form.audienceRoles.includes(r))
+              return (
+                <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+                  <div className="flex items-start justify-between gap-3 flex-wrap">
+                    <label className="block text-sm font-semibold text-slate-800">Who can see this policy?</label>
+                    {form.title.trim().length > 2 && !matchesCurrent && (
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, audienceRoles: rec.audience })}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] font-medium bg-slate-900 text-white hover:bg-slate-800"
+                        title={rec.rationale}
+                      >
+                        <Sparkles className="w-3 h-3" /> Apply suggestion
+                      </button>
+                    )}
+                  </div>
+                  {form.title.trim().length > 2 && (
+                    <p className="text-[11px] text-slate-500 italic">
+                      Suggested: {rec.audience.join(' · ')} — {rec.rationale}
+                    </p>
+                  )}
               <div className="flex flex-wrap gap-2">
                 {AUDIENCE_OPTIONS.map((opt) => {
                   const selected = form.audienceRoles.includes(opt.role)
@@ -375,12 +399,14 @@ export default function HRPoliciesView() {
               <p className="text-xs text-slate-500">
                 HR always sees every policy. Pick which other roles can read it once activated.
               </p>
-              {form.audienceRoles.length === 0 && (
-                <p className="text-xs text-slate-700 font-medium">
-                  At least one role must be selected.
-                </p>
-              )}
-            </div>
+                  {form.audienceRoles.length === 0 && (
+                    <p className="text-xs text-slate-700 font-medium">
+                      At least one role must be selected.
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
             {/* requiresAck checkbox removed — policies are read-only references.
                 Schema field stays and defaults to false. Re-enable here if signing returns. */}
             {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}

@@ -525,11 +525,11 @@ export default function DashboardChrome({
                   <DropdownMenu.Separator className="h-px bg-gray-100 my-1" />
                   <DropdownMenu.Item asChild>
                     <Link
-                      href="/dashboard/settings"
+                      href="/dashboard/settings/profile"
                       className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-gray-700 hover:bg-gray-100 outline-none cursor-pointer data-[highlighted]:bg-gray-100"
                     >
                       <User className="w-4 h-4 text-gray-500" />
-                      Profile
+                      My Profile &amp; Photo
                     </Link>
                   </DropdownMenu.Item>
                   <DropdownMenu.Item asChild>

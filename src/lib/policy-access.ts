@@ -38,6 +38,94 @@ export function parseAudienceRoles(s: string | null | undefined): string[] {
   }
 }
 
+/**
+ * Heuristic recommender — given a policy title + type, suggest which roles
+ * should see it. HR reviews + tweaks before saving.
+ *
+ * Match order: most specific keyword → fall back to type → fall back to "everyone".
+ */
+const RECOMMENDATION_RULES: Array<{ match: RegExp; audience: string[]; rationale: string }> = [
+  // Confidential / HR-only
+  { match: /\b(termination|show ?cause|disciplinary|grievance|investigation|fraud|whistleblow.*confidential)\b/i,
+    audience: ['HR_ADMIN'],
+    rationale: 'Confidential disciplinary matter — restrict to HR.' },
+
+  // Compensation strategy / bands → HR + Exec + Finance only
+  { match: /\b(compensation ?(band|strategy|guideline)|salary ?band|increment ?policy|bonus ?policy|retention ?bonus)\b/i,
+    audience: ['HR_ADMIN', 'EXECUTIVE', 'FINANCE'],
+    rationale: 'Compensation strategy — sensitive financial detail.' },
+
+  // Management process / calibration
+  { match: /\b(calibration|pip ?(procedure|guideline)|manager ?(playbook|workflow)|hire ?(workflow|playbook)|performance ?review.*manager)\b/i,
+    audience: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'],
+    rationale: 'Manager-facing process — leads + managers + executives.' },
+
+  // Finance / payroll mechanics
+  { match: /\b(payroll ?(process|deduction)|tax ?(filing|policy)|reimbursement|eobi|expense ?approval)\b/i,
+    audience: ['HR_ADMIN', 'FINANCE', 'EXECUTIVE', 'EMPLOYEE'],
+    rationale: 'Pay-related — finance owns, everyone affected.' },
+
+  // Code of Conduct / handbook / general policies → everyone
+  { match: /\b(code ?of ?conduct|handbook|anti[- ]?harassment|whistleblower|equal ?opportunity|diversity)\b/i,
+    audience: ['EMPLOYEE', 'LEAD', 'MANAGER', 'EXECUTIVE', 'FINANCE'],
+    rationale: 'Standard conduct policy — visible to everyone.' },
+
+  // Attendance / leave / WFH
+  { match: /\b(attendance|punctuality|leave|wfh|work ?from ?home|remote|holiday)\b/i,
+    audience: ['EMPLOYEE', 'LEAD', 'MANAGER', 'EXECUTIVE', 'FINANCE'],
+    rationale: 'Daily operations — visible to everyone.' },
+
+  // Travel / expense / IT
+  { match: /\b(travel|expense|business ?trip|it ?(policy|acceptable ?use)|security ?policy|byod)\b/i,
+    audience: ['EMPLOYEE', 'LEAD', 'MANAGER', 'EXECUTIVE', 'FINANCE'],
+    rationale: 'Universal operating rule.' },
+
+  // Probation / confirmation
+  { match: /\b(probation|confirmation|onboarding ?policy|new ?hire)\b/i,
+    audience: ['EMPLOYEE', 'LEAD', 'MANAGER', 'EXECUTIVE', 'FINANCE'],
+    rationale: 'New-hire facing — everyone should see.' },
+]
+
+const TYPE_DEFAULTS: Record<string, { audience: string[]; rationale: string }> = {
+  CODE_OF_CONDUCT: {
+    audience: ['EMPLOYEE', 'LEAD', 'MANAGER', 'EXECUTIVE', 'FINANCE'],
+    rationale: 'Code of Conduct — visible to everyone.',
+  },
+  HR_POLICY: {
+    audience: ['EMPLOYEE', 'LEAD', 'MANAGER', 'EXECUTIVE', 'FINANCE'],
+    rationale: 'Standard HR policy — visible to everyone.',
+  },
+  COMPENSATION_POLICY: {
+    audience: ['HR_ADMIN', 'EXECUTIVE', 'FINANCE'],
+    rationale: 'Compensation policy — HR / Finance / Exec only.',
+  },
+  CONFIDENTIAL: {
+    audience: ['HR_ADMIN'],
+    rationale: 'Confidential — HR only.',
+  },
+}
+
+export function recommendAudience(
+  title: string,
+  type?: string | null,
+): { audience: string[]; rationale: string } {
+  // 1. Try keyword rules on the title (most specific).
+  for (const rule of RECOMMENDATION_RULES) {
+    if (rule.match.test(title)) {
+      return { audience: rule.audience, rationale: rule.rationale }
+    }
+  }
+  // 2. Fall back to type-based default.
+  if (type && TYPE_DEFAULTS[type]) {
+    return TYPE_DEFAULTS[type]
+  }
+  // 3. Default: everyone.
+  return {
+    audience: [...DEFAULT_AUDIENCE_ROLES],
+    rationale: "No specific signal — defaulted to everyone. Tighten if it's sensitive.",
+  }
+}
+
 export function canSeePolicy(
   policy: Policy,
   role: string,
