@@ -16,13 +16,29 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
 
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
-    select: { role: true, employee: { select: { id: true } } },
+    select: {
+      role: true,
+      employee: {
+        select: { id: true, departmentId: true, reportingManagerId: true },
+      },
+    },
   })
   if (!me) redirect('/login')
   const previewRole = me.role === 'HR_ADMIN' ? c.get('hr_preview_role')?.value : undefined
   const effectiveRole = previewRole ?? me.role
   const isHR = effectiveRole === 'HR_ADMIN'
+  const isExec = effectiveRole === 'EXECUTIVE'
   const isManager = effectiveRole === 'MANAGER'
+  const isLead = effectiveRole === 'LEAD'
+
+  // Calendar visibility:
+  //   HR / Executive  — see everyone's birthdays + anniversaries
+  //   Manager / Lead  — see own department only (their team feels like home)
+  //   Employee        — see own department only
+  // Probation milestones stay HR-only (already enforced below).
+  // Holidays + company events are company-wide for everyone.
+  const seesAllPeople = isHR || isExec
+  const scopedDeptId = seesAllPeople ? null : me.employee?.departmentId ?? null
 
   const today = new Date()
   const year = sp.year ? Number(sp.year) : today.getFullYear()
@@ -34,7 +50,10 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
 
   const [employees, companyEvents, probationRecords, leaveRequests, holidaysDb] = await Promise.all([
     prisma.employee.findMany({
-      where: { status: 'ACTIVE' },
+      where: {
+        status: 'ACTIVE',
+        ...(scopedDeptId ? { departmentId: scopedDeptId } : {}),
+      },
       select: { id: true, fullName: true, dob: true, joiningDate: true, reportingManagerId: true },
     }),
     prisma.companyEvent.findMany({
