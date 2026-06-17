@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
+import { parseAudienceRoles, ALLOWED_AUDIENCE_ROLES, DEFAULT_AUDIENCE_ROLES } from '@/lib/policy-access'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -43,6 +44,14 @@ export async function GET(request: NextRequest) {
     },
   })
 
+  // ── Per-role audience filter (HR_ADMIN bypasses).
+  if (!isHR) {
+    policies = policies.filter((p) => {
+      const audienceRoles = parseAudienceRoles(p.audienceRoles)
+      return audienceRoles.includes(user.role)
+    })
+  }
+
   if (q) {
     policies = policies.filter(
       (p) =>
@@ -82,11 +91,27 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const {
     title, type, category, description, content, url,
-    version, effectiveDate, audience, requiresAck,
+    version, effectiveDate, audience, requiresAck, audienceRoles,
   } = body
 
   if (!title || !type) {
     return NextResponse.json({ error: 'title and type are required' }, { status: 400 })
+  }
+
+  // Validate audienceRoles: must be a non-empty array of allowed roles, no HR_ADMIN.
+  let audienceRolesJson: string | undefined
+  if (audienceRoles !== undefined) {
+    if (!Array.isArray(audienceRoles) || audienceRoles.length === 0) {
+      return NextResponse.json({ error: 'audienceRoles must be a non-empty array' }, { status: 400 })
+    }
+    for (const r of audienceRoles) {
+      if (typeof r !== 'string' || !ALLOWED_AUDIENCE_ROLES.includes(r)) {
+        return NextResponse.json({ error: `Invalid role in audienceRoles: ${r}` }, { status: 400 })
+      }
+    }
+    audienceRolesJson = JSON.stringify(audienceRoles)
+  } else {
+    audienceRolesJson = JSON.stringify(DEFAULT_AUDIENCE_ROLES)
   }
 
   const policy = await prisma.policyDocument.create({
@@ -100,6 +125,7 @@ export async function POST(request: NextRequest) {
       version: version || '1.0',
       effectiveDate: effectiveDate ? new Date(effectiveDate) : null,
       audience: audience ?? 'ALL',
+      audienceRoles: audienceRolesJson,
       requiresAck: !!requiresAck,
       status: 'DRAFT',
       reviewerIds: [],

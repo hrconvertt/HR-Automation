@@ -14,6 +14,28 @@
 type Policy = {
   status: string
   audience: string
+  audienceRoles?: string | null
+}
+
+export const DEFAULT_AUDIENCE_ROLES = ['EMPLOYEE', 'LEAD', 'MANAGER', 'EXECUTIVE', 'FINANCE']
+export const ALLOWED_AUDIENCE_ROLES = ['EMPLOYEE', 'LEAD', 'MANAGER', 'EXECUTIVE', 'FINANCE']
+
+/**
+ * Parse the JSON-encoded audienceRoles column.
+ * Falls back to "everyone (non-HR)" for null / missing / malformed values,
+ * so legacy rows behave like the previous "visible to all" default.
+ */
+export function parseAudienceRoles(s: string | null | undefined): string[] {
+  if (!s) return [...DEFAULT_AUDIENCE_ROLES]
+  try {
+    const parsed = JSON.parse(s)
+    if (Array.isArray(parsed) && parsed.every((x) => typeof x === 'string')) {
+      return parsed
+    }
+    return [...DEFAULT_AUDIENCE_ROLES]
+  } catch {
+    return [...DEFAULT_AUDIENCE_ROLES]
+  }
 }
 
 export function canSeePolicy(
@@ -21,11 +43,15 @@ export function canSeePolicy(
   role: string,
 ): boolean {
   if (role === 'HR_ADMIN') return true
-  if (policy.status !== 'PUBLISHED') return false
-  if (policy.audience === 'ALL') return true
-  if (policy.audience === 'MANAGERS' && role === 'MANAGER') return true
-  if (policy.audience === 'HR_ONLY' && role === 'HR_ADMIN') return true
-  return false
+  if (policy.status !== 'PUBLISHED' && policy.status !== 'ACTIVE') return false
+  // New per-role audience takes precedence.
+  const audienceRoles = parseAudienceRoles(policy.audienceRoles ?? null)
+  if (!audienceRoles.includes(role)) return false
+  // Legacy coarse audience still respected: HR_ONLY hides from non-HR;
+  // MANAGERS-only hides from anyone whose role isn't MANAGER.
+  if (policy.audience === 'HR_ONLY') return false
+  if (policy.audience === 'MANAGERS' && role !== 'MANAGER') return false
+  return true
 }
 
 /** Can this user acknowledge this policy? Stricter than canSee — must be in audience and policy must be PUBLISHED. */

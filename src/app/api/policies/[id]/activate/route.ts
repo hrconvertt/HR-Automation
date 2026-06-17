@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 import { notifyMany } from '@/lib/notifications'
 import { triggerEmail, employeeVars } from '@/lib/email-triggers'
+import { parseAudienceRoles } from '@/lib/policy-access'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -56,24 +57,30 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     },
   })
 
-  // In-app notification to all ACTIVE employees.
-  const employees = await prisma.employee.findMany({
+  // ── Restrict fan-out to employees whose linked user role is in the policy's audienceRoles.
+  // Employees with no User row (or unknown role) get the notification by default — they
+  // appear in the org as standard EMPLOYEE-equivalents.
+  const audienceRoles = parseAudienceRoles(policy.audienceRoles)
+  const allEmps = await prisma.employee.findMany({
     where: { status: 'ACTIVE' },
-    select: { id: true },
+    select: { id: true, fullName: true, user: { select: { role: true } } },
   })
-  await notifyMany(employees.map((e) => e.id), {
+  const inAudience = allEmps.filter((e) => {
+    const role = e.user?.role ?? 'EMPLOYEE'
+    if (role === 'HR_ADMIN') return false // HR sees policies via the HR view, no need to spam them.
+    return audienceRoles.includes(role)
+  })
+
+  await notifyMany(inAudience.map((e) => e.id), {
     type: 'GENERAL',
     title: '📄 New policy activated',
     message: `${policy.title} — please review`,
     link: `/dashboard/policies/${id}`,
   })
 
-  // CUL-05 policy.published — one email per active employee
-  const empWithName = await prisma.employee.findMany({
-    where: { status: 'ACTIVE' },
-    select: { id: true, fullName: true },
-  })
-  for (const e of empWithName) {
+  // CUL-05 policy.published — one email per employee in audience
+  const employees = inAudience
+  for (const e of inAudience) {
     await triggerEmail({
       event: 'policy.published',
       employeeId: e.id,

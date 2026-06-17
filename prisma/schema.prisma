@@ -1396,7 +1396,10 @@ model PolicyDocument {
   url             String?   // optional PDF attachment
   version         String    @default("1.0")
   effectiveDate   DateTime?
-  audience        String    @default("ALL")     // ALL | MANAGERS | HR_ONLY
+  audience        String    @default("ALL")     // ALL | MANAGERS | HR_ONLY (legacy coarse audience — kept for back-compat)
+  // Per-role audience (JSON-encoded array of role strings). HR controls who sees each policy.
+  // Default: visible to every non-HR role. HR_ADMIN always sees every policy regardless.
+  audienceRoles   String    @default("[\"EMPLOYEE\",\"LEAD\",\"MANAGER\",\"EXECUTIVE\",\"FINANCE\"]")
   requiresAck     Boolean   @default(false)
   // Workflow status:
   //   DRAFT     — HR writing it, no one else sees it

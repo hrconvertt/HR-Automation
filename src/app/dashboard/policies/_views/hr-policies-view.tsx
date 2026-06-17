@@ -11,7 +11,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
-import { FileText, Plus, ExternalLink, Search, Send, Archive, Edit3 } from 'lucide-react'
+import { FileText, Plus, ExternalLink, Search, Send, Archive, Edit3, Check, Eye } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
 type Policy = {
@@ -25,11 +25,30 @@ type Policy = {
   version: string
   effectiveDate: string | null
   audience: string
+  audienceRoles: string | null
   requiresAck: boolean
   status: string
   publishedAt: string | null
   createdAt: string
   acknowledgments: { status: string; employeeId: string; signedAt: string | null }[]
+}
+
+const AUDIENCE_OPTIONS: { role: string; label: string }[] = [
+  { role: 'EMPLOYEE',  label: 'Employee' },
+  { role: 'LEAD',      label: 'Lead' },
+  { role: 'MANAGER',   label: 'Manager' },
+  { role: 'EXECUTIVE', label: 'Executive' },
+  { role: 'FINANCE',   label: 'Finance' },
+]
+const ALL_AUDIENCE_ROLES = AUDIENCE_OPTIONS.map((o) => o.role)
+
+function parseAudienceRolesClient(s: string | null | undefined): string[] {
+  if (!s) return [...ALL_AUDIENCE_ROLES]
+  try {
+    const parsed = JSON.parse(s)
+    if (Array.isArray(parsed) && parsed.every((x) => typeof x === 'string')) return parsed
+  } catch { /* fall through */ }
+  return [...ALL_AUDIENCE_ROLES]
 }
 
 const CATEGORIES = ['ALL', 'LEAVE', 'CODE_OF_CONDUCT', 'IT', 'SECURITY', 'COMPENSATION', 'GENERAL']
@@ -57,8 +76,18 @@ export default function HRPoliciesView() {
     description: '', content: '', url: '',
     version: '1.0', effectiveDate: '',
     audience: 'ALL', requiresAck: false,
+    audienceRoles: [...ALL_AUDIENCE_ROLES] as string[],
   }
   const [form, setForm] = useState(blankForm)
+
+  function toggleAudienceRole(role: string) {
+    setForm((f) => ({
+      ...f,
+      audienceRoles: f.audienceRoles.includes(role)
+        ? f.audienceRoles.filter((r) => r !== role)
+        : [...f.audienceRoles, role],
+    }))
+  }
 
   const fetchPolicies = useCallback(async () => {
     setLoading(true)
@@ -92,6 +121,7 @@ export default function HRPoliciesView() {
       effectiveDate: p.effectiveDate ? p.effectiveDate.split('T')[0] : '',
       audience: p.audience,
       requiresAck: p.requiresAck,
+      audienceRoles: parseAudienceRolesClient(p.audienceRoles),
     })
     setEditingId(p.id)
     setError('')
@@ -101,6 +131,7 @@ export default function HRPoliciesView() {
   async function handleSave() {
     setError('')
     if (!form.title.trim()) { setError('Title required'); return }
+    if (form.audienceRoles.length === 0) { setError('At least one role must be selected'); return }
     setSaving(true)
     const url = editingId ? `/api/policies/${editingId}` : '/api/policies'
     const method = editingId ? 'PATCH' : 'POST'
@@ -217,7 +248,9 @@ export default function HRPoliciesView() {
                   <TableCell><Badge variant="secondary">{catLabels[p.category] ?? p.category}</Badge></TableCell>
                   <TableCell><StatusBadge status={p.status} /></TableCell>
                   <TableCell className="text-gray-500 text-sm">v{p.version}</TableCell>
-                  <TableCell className="text-gray-600 text-sm">{p.audience}</TableCell>
+                  <TableCell className="text-gray-600 text-sm">
+                    <AudienceCell rolesJson={p.audienceRoles} />
+                  </TableCell>
                   <TableCell className="text-gray-500 text-sm">{p.effectiveDate ? formatDate(p.effectiveDate) : '—'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center gap-1 justify-end">
@@ -310,22 +343,43 @@ export default function HRPoliciesView() {
               <label className="block text-sm font-medium mb-1">Attachment URL (optional)</label>
               <Input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} placeholder="https://drive.google.com/…" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-sm font-medium mb-1">Effective Date</label>
-                <Input type="date" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} />
+            <div>
+              <label className="block text-sm font-medium mb-1">Effective Date</label>
+              <Input type="date" value={form.effectiveDate} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} />
+            </div>
+
+            {/* ── Per-role audience picker (Workday-style chips) ── */}
+            <div className="space-y-2 rounded-lg border border-slate-200 bg-slate-50/50 p-4">
+              <label className="block text-sm font-semibold text-slate-800">Who can see this policy?</label>
+              <div className="flex flex-wrap gap-2">
+                {AUDIENCE_OPTIONS.map((opt) => {
+                  const selected = form.audienceRoles.includes(opt.role)
+                  return (
+                    <button
+                      key={opt.role}
+                      type="button"
+                      onClick={() => toggleAudienceRole(opt.role)}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition ${
+                        selected
+                          ? 'bg-blue-600 text-white ring-2 ring-blue-200 shadow-sm'
+                          : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:border-slate-300'
+                      }`}
+                      aria-pressed={selected}
+                    >
+                      {selected && <Check className="w-3.5 h-3.5" />}
+                      {opt.label}
+                    </button>
+                  )
+                })}
               </div>
-              <div>
-                <label className="block text-sm font-medium mb-1">Audience</label>
-                <Select value={form.audience} onValueChange={(v) => setForm({ ...form, audience: v })}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ALL">All employees</SelectItem>
-                    <SelectItem value="MANAGERS">Managers only</SelectItem>
-                    <SelectItem value="HR_ONLY">HR only (internal)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <p className="text-xs text-slate-500">
+                HR always sees every policy. Pick which other roles can read it once activated.
+              </p>
+              {form.audienceRoles.length === 0 && (
+                <p className="text-xs text-rose-600 font-medium">
+                  At least one role must be selected.
+                </p>
+              )}
             </div>
             {/* requiresAck checkbox removed — policies are read-only references.
                 Schema field stays and defaults to false. Re-enable here if signing returns. */}
@@ -333,7 +387,7 @@ export default function HRPoliciesView() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave} disabled={saving}>
+            <Button onClick={handleSave} disabled={saving || form.audienceRoles.length === 0}>
               {saving ? 'Saving…' : editingId ? 'Save Changes' : 'Create as Draft'}
             </Button>
           </DialogFooter>
@@ -355,6 +409,32 @@ function StatCard({ label, value, icon: Icon, color }: { label: string; value: n
         </div>
       </CardContent>
     </Card>
+  )
+}
+
+/** Compact audience badges for the table. "Everyone" when all 5 selected; otherwise lists role labels. */
+function AudienceCell({ rolesJson }: { rolesJson: string | null | undefined }) {
+  const roles = parseAudienceRolesClient(rolesJson)
+  const isEveryone = ALL_AUDIENCE_ROLES.every((r) => roles.includes(r)) && roles.length === ALL_AUDIENCE_ROLES.length
+  if (isEveryone) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+        <Eye className="w-3 h-3" /> Everyone
+      </span>
+    )
+  }
+  const labelFor = (r: string) => AUDIENCE_OPTIONS.find((o) => o.role === r)?.label ?? r
+  return (
+    <div className="flex flex-wrap gap-1">
+      {roles.map((r) => (
+        <span
+          key={r}
+          className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-medium border border-blue-100"
+        >
+          {labelFor(r)}
+        </span>
+      ))}
+    </div>
   )
 }
 

@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { parseAudienceRoles } from '@/lib/policy-access'
 import { ArrowLeft, ExternalLink, Calendar, Users, FileText } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { renderMarkdown } from '@/lib/markdown'
@@ -45,6 +46,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
   // Non-HR users only see ACTIVE / PUBLISHED policies in their audience.
   // (Executives assigned as reviewers see IN_REVIEW too — see assignment lookup below.)
   const isReviewer = !!user.employee && policy.reviewerIds.includes(user.employee.id)
+  let unauthorized = false
   if (!isHR) {
     const visibleStatuses = isReviewer
       ? ['ACTIVE', 'PUBLISHED', 'IN_REVIEW', 'APPROVED']
@@ -52,6 +54,30 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
     if (!visibleStatuses.includes(policy.status)) notFound()
     if (policy.audience === 'HR_ONLY' && !isReviewer) notFound()
     if (policy.audience === 'MANAGERS' && user.role !== 'MANAGER' && !isReviewer) notFound()
+    // ── Per-role audience check.
+    const audienceRoles = parseAudienceRoles(policy.audienceRoles)
+    if (!audienceRoles.includes(user.role) && !isReviewer) {
+      unauthorized = true
+    }
+  }
+
+  if (unauthorized) {
+    return (
+      <div className="max-w-xl mx-auto mt-20 text-center px-4">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-50 text-amber-600 mb-4">
+          <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+          </svg>
+        </div>
+        <h1 className="text-xl font-semibold text-slate-900 mb-1">Not authorized for this policy</h1>
+        <p className="text-sm text-slate-500 mb-6">
+          This policy exists but isn&apos;t shared with your role. If you believe this is a mistake, please reach out to HR.
+        </p>
+        <Link href="/dashboard/policies" className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+          <ArrowLeft className="w-4 h-4" /> Back to Policies
+        </Link>
+      </div>
+    )
   }
 
   const audienceLabel: Record<string, string> = {

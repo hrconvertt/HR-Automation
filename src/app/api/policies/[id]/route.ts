@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
-import { canSeePolicy, resolveAudienceEmployeeIds } from '@/lib/policy-access'
+import { canSeePolicy, resolveAudienceEmployeeIds, ALLOWED_AUDIENCE_ROLES } from '@/lib/policy-access'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -53,6 +53,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
   if (body.effectiveDate !== undefined) {
     allowed.effectiveDate = body.effectiveDate ? new Date(body.effectiveDate) : null
+  }
+
+  // Validate + store audienceRoles (JSON-encoded string).
+  if (body.audienceRoles !== undefined) {
+    if (!Array.isArray(body.audienceRoles) || body.audienceRoles.length === 0) {
+      return NextResponse.json({ error: 'audienceRoles must be a non-empty array' }, { status: 400 })
+    }
+    for (const r of body.audienceRoles) {
+      if (typeof r !== 'string' || !ALLOWED_AUDIENCE_ROLES.includes(r)) {
+        return NextResponse.json({ error: `Invalid role in audienceRoles: ${r}` }, { status: 400 })
+      }
+    }
+    allowed.audienceRoles = JSON.stringify(body.audienceRoles)
   }
 
   // ── Detect a meaningful content change on a published policy. If the
