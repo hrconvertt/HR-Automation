@@ -104,8 +104,8 @@ export async function EmployeePayrollView({ employeeId }: { employeeId: string }
                     </>
                   ) : (
                     <div className="flex flex-col items-end gap-1">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-medium">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 text-slate-900 border border-slate-100 text-xs font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse" />
                         Releasing soon
                       </span>
                       <span className="text-[11px] text-slate-300">PDF available once finalized</span>
@@ -163,25 +163,25 @@ export async function EmployeePayrollView({ employeeId }: { employeeId: string }
           label={`${currentYear} Gross (YTD)`}
           value={formatCurrency(ytdGross)}
           Icon={Wallet}
-          color="bg-blue-50 text-blue-600"
+          color="bg-slate-50 text-slate-700"
         />
         <KpiCard
           label={`${currentYear} Net (YTD)`}
           value={formatCurrency(ytdNet)}
           Icon={Banknote}
-          color="bg-emerald-50 text-emerald-600"
+          color="bg-slate-50 text-slate-700"
         />
         <KpiCard
           label={`${currentYear} Tax Paid`}
           value={formatCurrency(ytdTax)}
           Icon={Landmark}
-          color="bg-amber-50 text-amber-600"
+          color="bg-slate-50 text-slate-700"
         />
         <KpiCard
           label={`${currentYear} EOBI Paid`}
           value={formatCurrency(ytdEobi)}
           Icon={ShieldCheck}
-          color="bg-purple-50 text-purple-600"
+          color="bg-slate-50 text-slate-700"
         />
       </div>
 
@@ -222,7 +222,7 @@ export async function EmployeePayrollView({ employeeId }: { employeeId: string }
                       {p.presentDays}/{p.workingDays}
                     </TableCell>
                     <TableCell>{formatCurrency(p.grossSalary)}</TableCell>
-                    <TableCell className="text-red-600">−{formatCurrency(deductions)}</TableCell>
+                    <TableCell className="text-slate-700">−{formatCurrency(deductions)}</TableCell>
                     <TableCell className="font-semibold">
                       {formatCurrency(p.netSalary)}
                     </TableCell>
@@ -238,7 +238,7 @@ export async function EmployeePayrollView({ employeeId }: { employeeId: string }
                     <TableCell>
                       <Link
                         href={`/dashboard/payroll/payslip/${p.id}`}
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                         title="View / print payslip"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -295,7 +295,7 @@ function BreakdownRow({
       <p className="text-xs text-slate-500">{label}</p>
       <p
         className={`text-sm font-semibold mt-0.5 ${
-          negative ? 'text-red-600' : 'text-slate-900'
+          negative ? 'text-slate-700' : 'text-slate-900'
         }`}
       >
         {negative ? '−' : ''}

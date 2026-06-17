@@ -8,12 +8,12 @@ import { Badge } from '@/components/ui/badge'
 import { ShieldCheck, Save, CheckCircle2, Pencil, X } from 'lucide-react'
 
 const ROLE_META: Record<string, { label: string; description: string; color: string }> = {
-  HR_ADMIN:  { label: 'HR',              description: 'Full org access, hire/fire, payroll, settings',          color: 'bg-blue-50 text-blue-700 border-blue-200' },
-  MANAGER:   { label: 'Manager',         description: 'Approve leaves, review team performance',                 color: 'bg-purple-50 text-purple-700 border-purple-200' },
-  LEAD:      { label: 'Lead',            description: 'Informal team lead: read team data, approve team leaves', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  EMPLOYEE:  { label: 'Employee',        description: 'Self-service (own pay, leave, attendance)',               color: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  EXECUTIVE: { label: 'CEO / Executive', description: 'Strategic KPIs, read-only across org',                    color: 'bg-amber-50 text-amber-700 border-amber-200' },
-  FINANCE:   { label: 'Finance',         description: 'Payroll disbursement + finance views',                    color: 'bg-rose-50 text-rose-700 border-rose-200' },
+  HR_ADMIN:  { label: 'HR',              description: 'Full org access, hire/fire, payroll, settings',          color: 'bg-slate-50 text-slate-700 border-slate-100' },
+  MANAGER:   { label: 'Manager',         description: 'Approve leaves, review team performance',                 color: 'bg-slate-50 text-slate-700 border-slate-100' },
+  LEAD:      { label: 'Lead',            description: 'Informal team lead: read team data, approve team leaves', color: 'bg-slate-50 text-slate-700 border-slate-100' },
+  EMPLOYEE:  { label: 'Employee',        description: 'Self-service (own pay, leave, attendance)',               color: 'bg-slate-50 text-slate-700 border-slate-100' },
+  EXECUTIVE: { label: 'CEO / Executive', description: 'Strategic KPIs, read-only across org',                    color: 'bg-slate-50 text-slate-700 border-slate-100' },
+  FINANCE:   { label: 'Finance',         description: 'Payroll disbursement + finance views',                    color: 'bg-slate-50 text-slate-700 border-slate-100' },
 }
 
 const ROLE_ORDER = ['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE']
@@ -97,7 +97,7 @@ export function SystemRolesPanel({ employeeId, employeeName }: Props) {
         <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
           <div className="min-w-0">
             <CardTitle className="flex items-center gap-2 text-base">
-              <ShieldCheck className="w-5 h-5 text-blue-600" />
+              <ShieldCheck className="w-5 h-5 text-slate-700" />
               System Roles
               <Badge variant="secondary" className="text-[10px]">HR only</Badge>
             </CardTitle>
@@ -106,7 +106,7 @@ export function SystemRolesPanel({ employeeId, employeeName }: Props) {
             </p>
           </div>
           {justSaved ? (
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2.5 py-1 flex-shrink-0">
+            <span className="inline-flex items-center gap-1 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-100 rounded-full px-2.5 py-1 flex-shrink-0">
               <CheckCircle2 className="w-3.5 h-3.5" /> Saved
             </span>
           ) : (
@@ -146,10 +146,10 @@ export function SystemRolesPanel({ employeeId, employeeName }: Props) {
 
   // ─── Edit state ───────────────────────────────────────────────────────
   return (
-    <Card className="border-blue-200 ring-1 ring-blue-100">
+    <Card className="border-slate-100 ring-1 ring-slate-100">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <ShieldCheck className="w-5 h-5 text-blue-600" />
+          <ShieldCheck className="w-5 h-5 text-slate-700" />
           System Roles
           <Badge variant="secondary" className="text-[10px]">Editing</Badge>
         </CardTitle>
@@ -174,7 +174,7 @@ export function SystemRolesPanel({ employeeId, employeeName }: Props) {
                   type="checkbox"
                   checked={checked}
                   onChange={() => toggle(role)}
-                  className="mt-0.5 accent-blue-600"
+                  className="mt-0.5 accent-slate-700"
                 />
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
@@ -188,7 +188,7 @@ export function SystemRolesPanel({ employeeId, employeeName }: Props) {
                     <button
                       type="button"
                       onClick={(e) => { e.preventDefault(); setDraftPrimary(role) }}
-                      className="text-[11px] text-blue-600 hover:underline mt-1"
+                      className="text-[11px] text-slate-700 hover:underline mt-1"
                     >
                       Make this the primary view
                     </button>
@@ -207,7 +207,7 @@ export function SystemRolesPanel({ employeeId, employeeName }: Props) {
             </Button>
           </div>
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2 mt-2">{error}</p>
+            <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2 mt-2">{error}</p>
           )}
         </div>
       </CardContent>

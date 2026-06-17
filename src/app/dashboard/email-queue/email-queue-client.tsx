@@ -68,7 +68,7 @@ export default function EmailQueueClient({ smtpConfigured }: { smtpConfigured: b
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-            <Mail className="w-6 h-6 text-blue-600" /> Email Approval Queue
+            <Mail className="w-6 h-6 text-slate-700" /> Email Approval Queue
           </h1>
           <p className="text-sm text-slate-500 mt-0.5">Review, edit and approve outgoing HR emails before they're sent.</p>
         </div>
@@ -79,24 +79,24 @@ export default function EmailQueueClient({ smtpConfigured }: { smtpConfigured: b
 
       {/* SMTP status banner */}
       {!smtpConfigured ? (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 flex items-start gap-2">
+        <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 text-sm text-slate-900 flex items-start gap-2">
           <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
           <div>
             <strong>Gmail SMTP not configured.</strong> Approved emails will be queued for sending but won't go out
-            until you add Gmail credentials to <code className="px-1 py-0.5 bg-amber-100 rounded text-[11px]">.env</code>.
+            until you add Gmail credentials to <code className="px-1 py-0.5 bg-slate-100 rounded text-[11px]">.env</code>.
             <details className="mt-2">
               <summary className="cursor-pointer text-xs underline">How to set this up</summary>
               <ol className="list-decimal list-inside mt-2 space-y-1 text-xs">
                 <li>Go to your Google Account → <strong>Security</strong> → <strong>App passwords</strong></li>
                 <li>Generate an app password for <code>hr@convertt.co</code></li>
-                <li>Add to <code>.env</code>: <code className="px-1 bg-amber-100">SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=hr@convertt.co SMTP_PASS=&lt;app-password&gt; SMTP_FROM="Convertt HR &lt;hr@convertt.co&gt;"</code></li>
+                <li>Add to <code>.env</code>: <code className="px-1 bg-slate-100">SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=hr@convertt.co SMTP_PASS=&lt;app-password&gt; SMTP_FROM="Convertt HR &lt;hr@convertt.co&gt;"</code></li>
                 <li>Restart the dev server</li>
               </ol>
             </details>
           </div>
         </div>
       ) : (
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm text-emerald-900 flex items-center gap-2">
+        <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-2 text-sm text-slate-900 flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4" />
           Gmail SMTP is configured — approved emails will send immediately.
         </div>
@@ -135,9 +135,9 @@ export default function EmailQueueClient({ smtpConfigured }: { smtpConfigured: b
                   <div className="flex items-start gap-3 min-w-0 flex-1">
                     <div className={
                       'w-9 h-9 rounded-full flex items-center justify-center shrink-0 mt-0.5 ' +
-                      (d.status === 'SENT' ? 'bg-emerald-100 text-emerald-700' :
-                       d.status === 'FAILED' ? 'bg-rose-100 text-rose-700' :
-                       'bg-blue-100 text-blue-700')
+                      (d.status === 'SENT' ? 'bg-slate-100 text-slate-700' :
+                       d.status === 'FAILED' ? 'bg-slate-100 text-slate-700' :
+                       'bg-slate-100 text-slate-700')
                     }>
                       <Icon className="w-4 h-4" />
                     </div>
@@ -157,7 +157,7 @@ export default function EmailQueueClient({ smtpConfigured }: { smtpConfigured: b
                         {d.status === 'SENT' && d.sentAt
                           ? <>Sent <Clock className="w-3 h-3 inline -mt-0.5" /> {new Date(d.sentAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</>
                           : <>Created {new Date(d.createdAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</>}
-                        {d.sendError && <span className="text-rose-600 ml-2">· {d.sendError}</span>}
+                        {d.sendError && <span className="text-slate-700 ml-2">· {d.sendError}</span>}
                       </p>
                     </div>
                   </div>
@@ -233,7 +233,7 @@ function ComposeDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
       <DialogContent className="max-w-xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-600" /> Compose Email
+            <Sparkles className="w-4 h-4 text-slate-700" /> Compose Email
           </DialogTitle>
           <p className="text-xs text-slate-500 mt-1">New drafts are queued for your final review before sending.</p>
         </DialogHeader>
@@ -241,13 +241,13 @@ function ComposeDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
         <div className="flex gap-1 mb-3">
           <button
             onClick={() => setMode('template')}
-            className={`flex-1 text-xs py-2 rounded-md ${mode === 'template' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+            className={`flex-1 text-xs py-2 rounded-md ${mode === 'template' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'}`}
           >
             From template
           </button>
           <button
             onClick={() => setMode('custom')}
-            className={`flex-1 text-xs py-2 rounded-md ${mode === 'custom' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700'}`}
+            className={`flex-1 text-xs py-2 rounded-md ${mode === 'custom' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700'}`}
           >
             Custom email
           </button>
@@ -321,7 +321,7 @@ function ComposeDialog({ onClose, onCreated }: { onClose: () => void; onCreated:
         )}
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>
+          <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
         )}
 
         <div className="flex justify-end gap-2">
@@ -349,7 +349,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
       onClick={onClick}
       className={
         'px-3 py-1.5 rounded-full text-xs font-medium ' +
-        (active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
+        (active ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200')
       }
     >
       {label}
@@ -456,13 +456,13 @@ function EmailDraftDialog({ draft, onClose, onChanged }: { draft: Draft; onClose
           </div>
 
           {error && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3 flex items-start gap-2">
+            <div className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded-md p-3 flex items-start gap-2">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" /> {error}
             </div>
           )}
 
           {!canEdit && draft.status === 'SENT' && (
-            <div className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-md p-3 flex items-center gap-2">
+            <div className="text-sm text-slate-900 bg-slate-50 border border-slate-100 rounded-md p-3 flex items-center gap-2">
               <MailCheck className="w-4 h-4" /> Sent {draft.sentAt && `on ${new Date(draft.sentAt).toLocaleString('en-GB')}`}
             </div>
           )}
@@ -477,7 +477,7 @@ function EmailDraftDialog({ draft, onClose, onChanged }: { draft: Draft; onClose
                 variant="outline"
                 onClick={reject}
                 disabled={!!busy}
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-slate-700 border-slate-100 hover:bg-slate-50"
               >
                 <Trash2 className="w-3.5 h-3.5 mr-1" /> Reject
               </Button>
@@ -493,7 +493,7 @@ function EmailDraftDialog({ draft, onClose, onChanged }: { draft: Draft; onClose
               <Button
                 onClick={sendNow}
                 disabled={!!busy}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-slate-700 hover:bg-slate-700 text-white"
               >
                 <Send className="w-3.5 h-3.5 mr-1" /> {busy === 'send' ? 'Sending…' : 'Approve & Send'}
               </Button>

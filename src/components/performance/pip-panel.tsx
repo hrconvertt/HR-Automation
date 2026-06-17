@@ -129,7 +129,7 @@ export function PipPanel({ role, isPreviewMode = false }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <ClipboardList className="w-5 h-5 text-red-500" />
+            <ClipboardList className="w-5 h-5 text-slate-500" />
             Performance Improvement Plans
           </h2>
           <p className="text-sm text-gray-500">{pips.length} {pips.length === 1 ? 'PIP' : 'PIPs'} on record</p>
@@ -220,7 +220,7 @@ export function PipPanel({ role, isPreviewMode = false }: Props) {
                 value={form.objectives}
                 onChange={(e) => setForm({ ...form, objectives: e.target.value })}
                 placeholder="Specific improvement areas — bullet points work well"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-slate-700"
               />
             </div>
             <div>
@@ -230,10 +230,10 @@ export function PipPanel({ role, isPreviewMode = false }: Props) {
                 value={form.metrics}
                 onChange={(e) => setForm({ ...form, metrics: e.target.value })}
                 placeholder="How will success be measured? Use KPIs / targets / dates"
-                className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-slate-700"
               />
             </div>
-            {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+            {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
@@ -260,9 +260,9 @@ export function PipPanel({ role, isPreviewMode = false }: Props) {
                 </div>
               </div>
               {editPip.checkIns && (
-                <div className="bg-blue-50 border border-blue-200 p-3 rounded-lg text-sm">
-                  <p className="text-xs uppercase text-blue-700 font-semibold mb-1">Previous Check-ins</p>
-                  <p className="text-blue-900 whitespace-pre-wrap text-xs">{editPip.checkIns}</p>
+                <div className="bg-slate-50 border border-slate-100 p-3 rounded-lg text-sm">
+                  <p className="text-xs uppercase text-slate-700 font-semibold mb-1">Previous Check-ins</p>
+                  <p className="text-slate-900 whitespace-pre-wrap text-xs">{editPip.checkIns}</p>
                 </div>
               )}
               <div>
@@ -272,7 +272,7 @@ export function PipPanel({ role, isPreviewMode = false }: Props) {
                   value={checkInForm.checkIns}
                   onChange={(e) => setCheckInForm({ ...checkInForm, checkIns: e.target.value })}
                   placeholder="Progress update, observations, action items…"
-                  className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-slate-700"
                 />
               </div>
               {role === 'HR_ADMIN' && (
@@ -288,7 +288,7 @@ export function PipPanel({ role, isPreviewMode = false }: Props) {
                   </Select>
                 </div>
               )}
-              {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+              {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
             </div>
           )}
           <DialogFooter>

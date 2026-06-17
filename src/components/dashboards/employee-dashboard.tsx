@@ -253,7 +253,7 @@ export async function EmployeeDashboard({
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-8">
+      <div className="rounded-2xl bg-gradient-to-r from-slate-50 to-slate-50 border border-slate-100 p-8">
         <h1 className="text-3xl font-bold text-gray-900">Welcome, {firstName}!</h1>
         <p className="text-sm text-gray-600 mt-2">
           {emp?.designation}
@@ -268,9 +268,9 @@ export async function EmployeeDashboard({
         const remaining = Math.ceil((p.endDate.getTime() - Date.now()) / 86400_000)
         const elapsed = total - remaining
         const pct = Math.min(100, Math.max(0, Math.round((elapsed / total) * 100)))
-        const toneText = remaining < 0 ? 'text-rose-700' : remaining <= 14 ? 'text-amber-700' : 'text-emerald-700'
-        const toneBg   = remaining < 0 ? 'bg-rose-500'  : remaining <= 14 ? 'bg-amber-500'  : 'bg-emerald-500'
-        const stepDone = (cond: unknown) => cond ? 'text-emerald-600' : 'text-gray-300'
+        const toneText = remaining < 0 ? 'text-slate-700' : remaining <= 14 ? 'text-slate-700' : 'text-slate-700'
+        const toneBg   = remaining < 0 ? 'bg-slate-500'  : remaining <= 14 ? 'bg-slate-500'  : 'bg-slate-500'
+        const stepDone = (cond: unknown) => cond ? 'text-slate-700' : 'text-gray-300'
         return (
           <Card>
             <CardHeader>
@@ -353,8 +353,8 @@ export async function EmployeeDashboard({
                     className="rounded-xl border border-gray-200 bg-white p-4"
                   >
                     <div className="flex items-center gap-2">
-                      <div className="p-1.5 rounded-lg bg-blue-50">
-                        <CalendarDays className="w-4 h-4 text-blue-600" />
+                      <div className="p-1.5 rounded-lg bg-slate-50">
+                        <CalendarDays className="w-4 h-4 text-slate-700" />
                       </div>
                       <p className="text-xs font-semibold text-gray-700">{b.leaveType}</p>
                     </div>
@@ -366,7 +366,7 @@ export async function EmployeeDashboard({
                     </p>
                     <div className="mt-2 h-1.5 rounded-full bg-gray-100 overflow-hidden">
                       <div
-                        className="h-full bg-blue-500 rounded-full"
+                        className="h-full bg-slate-500 rounded-full"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -410,7 +410,7 @@ export async function EmployeeDashboard({
                   </Badge>
                   <Link
                     href="/dashboard/payroll"
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-slate-700 hover:text-slate-700"
                   >
                     View <ArrowUpRight className="w-3.5 h-3.5" />
                   </Link>
@@ -432,7 +432,7 @@ export async function EmployeeDashboard({
             <CardContent>
               {limitedTasks.length === 0 ? (
                 <div className="text-center py-6">
-                  <CheckCircle2 className="w-8 h-8 text-green-500 mx-auto" />
+                  <CheckCircle2 className="w-8 h-8 text-slate-500 mx-auto" />
                   <p className="text-sm text-gray-500 mt-2">All caught up — no pending tasks.</p>
                 </div>
               ) : (
@@ -452,13 +452,13 @@ export async function EmployeeDashboard({
                         href={t.href}
                         className="flex items-center gap-3 py-2.5 px-3 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors"
                       >
-                        <div className="p-1.5 rounded-lg bg-amber-50">
-                          <Icon className="w-4 h-4 text-amber-600" />
+                        <div className="p-1.5 rounded-lg bg-slate-50">
+                          <Icon className="w-4 h-4 text-slate-700" />
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-medium text-gray-900 truncate">{t.label}</p>
                         </div>
-                        <span className="text-xs font-semibold text-blue-600">{t.action}</span>
+                        <span className="text-xs font-semibold text-slate-700">{t.action}</span>
                       </Link>
                     )
                   })}
@@ -482,7 +482,7 @@ export async function EmployeeDashboard({
               {data.announcements.map((a) => (
                 <div key={a.id} className="border-b border-gray-100 pb-3 last:border-0">
                   <div className="flex items-start gap-2">
-                    {a.isPinned && <span className="text-amber-500 text-xs mt-0.5">★</span>}
+                    {a.isPinned && <span className="text-slate-500 text-xs mt-0.5">★</span>}
                     <div>
                       <p className="text-sm font-medium text-gray-900">{a.title}</p>
                       <p className="text-xs text-gray-500 mt-0.5 line-clamp-2">{a.content}</p>
@@ -499,35 +499,35 @@ export async function EmployeeDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Link
           href="/dashboard/leave"
-          className="relative rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors p-4 border border-blue-100"
+          className="relative rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors p-4 border border-slate-100"
         >
-          <CalendarDays className="w-5 h-5 text-blue-600" />
-          <p className="mt-3 text-sm font-semibold text-blue-900">Request Leave</p>
-          <ArrowUpRight className="w-4 h-4 text-blue-600 absolute top-3 right-3" />
+          <CalendarDays className="w-5 h-5 text-slate-700" />
+          <p className="mt-3 text-sm font-semibold text-slate-900">Request Leave</p>
+          <ArrowUpRight className="w-4 h-4 text-slate-700 absolute top-3 right-3" />
         </Link>
         <Link
           href="/dashboard/payroll"
-          className="relative rounded-xl bg-green-50 hover:bg-green-100 transition-colors p-4 border border-green-100"
+          className="relative rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors p-4 border border-slate-100"
         >
-          <Banknote className="w-5 h-5 text-green-600" />
-          <p className="mt-3 text-sm font-semibold text-green-900">View Payslip</p>
-          <ArrowUpRight className="w-4 h-4 text-green-600 absolute top-3 right-3" />
+          <Banknote className="w-5 h-5 text-slate-700" />
+          <p className="mt-3 text-sm font-semibold text-slate-900">View Payslip</p>
+          <ArrowUpRight className="w-4 h-4 text-slate-700 absolute top-3 right-3" />
         </Link>
         <Link
           href="/dashboard/helpdesk"
-          className="relative rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors p-4 border border-purple-100"
+          className="relative rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors p-4 border border-slate-100"
         >
-          <LifeBuoy className="w-5 h-5 text-purple-600" />
-          <p className="mt-3 text-sm font-semibold text-purple-900">Helpdesk</p>
-          <ArrowUpRight className="w-4 h-4 text-purple-600 absolute top-3 right-3" />
+          <LifeBuoy className="w-5 h-5 text-slate-700" />
+          <p className="mt-3 text-sm font-semibold text-slate-900">Helpdesk</p>
+          <ArrowUpRight className="w-4 h-4 text-slate-700 absolute top-3 right-3" />
         </Link>
         <Link
           href={emp ? `/dashboard/employees/${emp.id}` : '/dashboard/employees'}
-          className="relative rounded-xl bg-amber-50 hover:bg-amber-100 transition-colors p-4 border border-amber-100"
+          className="relative rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors p-4 border border-slate-100"
         >
-          <UserCog className="w-5 h-5 text-amber-600" />
-          <p className="mt-3 text-sm font-semibold text-amber-900">Update Profile</p>
-          <ArrowUpRight className="w-4 h-4 text-amber-600 absolute top-3 right-3" />
+          <UserCog className="w-5 h-5 text-slate-700" />
+          <p className="mt-3 text-sm font-semibold text-slate-900">Update Profile</p>
+          <ArrowUpRight className="w-4 h-4 text-slate-700 absolute top-3 right-3" />
         </Link>
       </div>
 

@@ -36,7 +36,7 @@ export function Toaster() {
           className={cn(
             'fixed bottom-4 right-4 z-50 flex items-start gap-3 rounded-lg border p-4 shadow-lg',
             'bg-white text-gray-900',
-            t.variant === 'destructive' && 'border-red-200 bg-red-50 text-red-900'
+            t.variant === 'destructive' && 'border-slate-100 bg-slate-50 text-slate-900'
           )}
           onOpenChange={(open) => {
             if (!open) setToasts((prev) => prev.filter((x) => x.id !== t.id))

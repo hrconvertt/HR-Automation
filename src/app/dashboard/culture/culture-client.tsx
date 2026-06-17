@@ -44,17 +44,17 @@ const EVENT_CATEGORIES = ['GENERAL', 'DINNER', 'TRIP', 'SPORTS', 'TRAINING', 'TO
 const KUDOS_CATEGORIES = ['APPRECIATION', 'TEAMWORK', 'INNOVATION', 'LEADERSHIP'] as const
 
 const CAT_TONE: Record<string, string> = {
-  DINNER: 'bg-amber-100 text-amber-800',
-  TRIP: 'bg-blue-100 text-blue-800',
-  SPORTS: 'bg-emerald-100 text-emerald-800',
-  TRAINING: 'bg-purple-100 text-purple-800',
+  DINNER: 'bg-slate-100 text-slate-900',
+  TRIP: 'bg-slate-100 text-slate-900',
+  SPORTS: 'bg-slate-100 text-slate-900',
+  TRAINING: 'bg-slate-100 text-slate-900',
   TOWN_HALL: 'bg-slate-100 text-slate-800',
-  EID: 'bg-rose-100 text-rose-800',
+  EID: 'bg-slate-100 text-slate-900',
   GENERAL: 'bg-slate-100 text-slate-700',
-  APPRECIATION: 'bg-pink-100 text-pink-800',
-  TEAMWORK: 'bg-blue-100 text-blue-800',
-  INNOVATION: 'bg-violet-100 text-violet-800',
-  LEADERSHIP: 'bg-amber-100 text-amber-800',
+  APPRECIATION: 'bg-slate-100 text-slate-900',
+  TEAMWORK: 'bg-slate-100 text-slate-900',
+  INNOVATION: 'bg-slate-100 text-slate-900',
+  LEADERSHIP: 'bg-slate-100 text-slate-900',
 }
 
 function fmtDate(iso: string) {
@@ -151,7 +151,7 @@ function EventsView({ isHR, upcomingEvents = [], pastEvents = [] }: Props) {
               <label className="block text-xs font-medium text-slate-700 mb-1">Description</label>
               <textarea className="w-full rounded-md border border-slate-300 p-2 text-sm" rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
-            {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{err}</p>}
+            {err && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{err}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
@@ -166,7 +166,7 @@ function EventsView({ isHR, upcomingEvents = [], pastEvents = [] }: Props) {
 function EventCard({ event, dim }: { event: EventRow; dim?: boolean }) {
   return (
     <div className={`rounded-lg border border-slate-200 bg-white p-4 flex items-start gap-3 ${dim ? 'opacity-75' : ''}`}>
-      <div className="rounded-lg bg-pink-50 text-pink-600 p-2">
+      <div className="rounded-lg bg-slate-50 text-slate-700 p-2">
         <CalendarIcon className="w-5 h-5" />
       </div>
       <div className="flex-1 min-w-0">
@@ -212,7 +212,7 @@ function RecognitionView({ kudos = [], colleagues = [] }: Props) {
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Recognition Feed</h2>
-          <Button size="sm" onClick={() => setOpen(true)} className="bg-pink-600 hover:bg-pink-700 text-white">
+          <Button size="sm" onClick={() => setOpen(true)} className="bg-slate-700 hover:bg-slate-700 text-white">
             <Heart className="w-4 h-4 mr-1.5" /> Give Kudos
           </Button>
         </div>
@@ -221,7 +221,7 @@ function RecognitionView({ kudos = [], colleagues = [] }: Props) {
         ) : (
           <div className="space-y-3">
             {kudos.map((k) => (
-              <div key={k.id} className="rounded-lg border border-slate-200 bg-gradient-to-br from-pink-50/50 to-white p-4">
+              <div key={k.id} className="rounded-lg border border-slate-200 bg-gradient-to-br from-slate-50/50 to-white p-4">
                 <div className="flex items-center gap-2 flex-wrap mb-1">
                   <span className="text-sm font-semibold text-slate-900">{k.from.fullName}</span>
                   <span className="text-xs text-slate-500">→</span>
@@ -264,11 +264,11 @@ function RecognitionView({ kudos = [], colleagues = [] }: Props) {
               <label className="block text-xs font-medium text-slate-700 mb-1">Message</label>
               <textarea className="w-full rounded-md border border-slate-300 p-2 text-sm" rows={3} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} placeholder="What did they do that deserves recognition?" />
             </div>
-            {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{err}</p>}
+            {err && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{err}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
-            <Button onClick={submit} disabled={busy} className="bg-pink-600 hover:bg-pink-700 text-white">{busy ? 'Sending…' : 'Send Kudos'}</Button>
+            <Button onClick={submit} disabled={busy} className="bg-slate-700 hover:bg-slate-700 text-white">{busy ? 'Sending…' : 'Send Kudos'}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

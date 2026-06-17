@@ -37,9 +37,9 @@ export default async function CareersPage() {
       {/* Hero */}
       <header className="border-b border-slate-200 bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12 sm:py-16">
-          <p className="text-xs font-semibold text-blue-600 uppercase tracking-[0.18em] mb-3">Careers at Convertt</p>
+          <p className="text-xs font-semibold text-slate-700 uppercase tracking-[0.18em] mb-3">Careers at Convertt</p>
           <h1 className="text-4xl sm:text-5xl font-bold text-slate-900 leading-tight tracking-tight">
-            Build things that <span className="text-blue-600">sell</span>.
+            Build things that <span className="text-slate-700">sell</span>.
           </h1>
           <p className="text-base sm:text-lg text-slate-600 mt-4 max-w-2xl leading-relaxed">
             We're a CRO and eCommerce design agency that's driven <strong>over $1 billion in client revenue</strong> across
@@ -63,7 +63,7 @@ export default async function CareersPage() {
             <p className="text-sm text-slate-500">No open roles right now.</p>
             <p className="text-xs text-slate-400 mt-1">
               Check back soon, or send us a CV at{' '}
-              <a href="mailto:hr@convertt.co" className="text-blue-600 hover:underline">hr@convertt.co</a>.
+              <a href="mailto:hr@convertt.co" className="text-slate-700 hover:underline">hr@convertt.co</a>.
             </p>
           </div>
         ) : (
@@ -72,10 +72,10 @@ export default async function CareersPage() {
               <li key={j.id}>
                 <Link
                   href={`/careers/${j.id}`}
-                  className="group flex items-center justify-between gap-4 bg-white border border-slate-200 rounded-xl px-5 py-4 hover:border-blue-300 hover:shadow-md transition-all"
+                  className="group flex items-center justify-between gap-4 bg-white border border-slate-200 rounded-xl px-5 py-4 hover:border-slate-200 hover:shadow-md transition-all"
                 >
                   <div className="min-w-0">
-                    <p className="text-base font-semibold text-slate-900 group-hover:text-blue-700">{j.title}</p>
+                    <p className="text-base font-semibold text-slate-900 group-hover:text-slate-700">{j.title}</p>
                     <div className="flex items-center gap-3 mt-1 text-xs text-slate-500">
                       <span className="inline-flex items-center gap-1">
                         <Briefcase className="w-3 h-3" /> {TYPE_LABEL[j.type] ?? j.type}
@@ -93,12 +93,12 @@ export default async function CareersPage() {
                       {j.vacancies > 1 && (
                         <>
                           <span className="text-slate-300">·</span>
-                          <span className="text-emerald-700 font-medium">{j.vacancies} openings</span>
+                          <span className="text-slate-700 font-medium">{j.vacancies} openings</span>
                         </>
                       )}
                     </div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600 flex-shrink-0" />
+                  <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700 flex-shrink-0" />
                 </Link>
               </li>
             ))}

@@ -22,9 +22,9 @@ export default async function HelpIndexPage() {
   // Help Center is HR-only (actual role, not preview)
   if (user.role !== 'HR_ADMIN') {
     return (
-      <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
-        <h2 className="text-lg font-semibold text-amber-900">Help Center is HR-only</h2>
-        <p className="text-sm text-amber-800 mt-2">
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
+        <h2 className="text-lg font-semibold text-slate-900">Help Center is HR-only</h2>
+        <p className="text-sm text-slate-900 mt-2">
           This in-app guide is maintained by HR. For your own questions, please use the AI chat bubble at the bottom-right, or raise a Help Desk ticket.
         </p>
       </div>
@@ -59,17 +59,17 @@ export default async function HelpIndexPage() {
             <Link
               key={g.slug}
               href={`/dashboard/help/${g.slug}`}
-              className="group bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-blue-300 transition-all"
+              className="group bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md hover:border-slate-200 transition-all"
             >
               <div className="flex items-start gap-3">
-                <div className="p-2 rounded-lg bg-blue-50 text-blue-600 group-hover:bg-blue-100 transition">
+                <div className="p-2 rounded-lg bg-slate-50 text-slate-700 group-hover:bg-slate-100 transition">
                   <Icon className="w-5 h-5" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900 text-base group-hover:text-blue-700">{g.title}</h3>
+                  <h3 className="font-semibold text-gray-900 text-base group-hover:text-slate-700">{g.title}</h3>
                   <p className="text-xs text-gray-500 mt-1 line-clamp-2">{g.description}</p>
                 </div>
-                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-blue-600 transition" />
+                <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-slate-700 transition" />
               </div>
             </Link>
           )
@@ -77,8 +77,8 @@ export default async function HelpIndexPage() {
       </div>
 
       {/* AI chatbot tip */}
-      <div className="rounded-xl bg-purple-50 border border-purple-100 p-4 flex items-start gap-3">
-        <div className="w-9 h-9 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">💬</div>
+      <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex items-start gap-3">
+        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">💬</div>
         <div>
           <p className="font-semibold text-gray-900 text-sm">Prefer asking instead of reading?</p>
           <p className="text-sm text-gray-700 mt-0.5">

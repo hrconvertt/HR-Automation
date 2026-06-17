@@ -43,7 +43,7 @@ export function DecideRequestButtons({ requisitionId, title }: Props) {
           size="sm"
           variant="ghost"
           onClick={() => setDecision('APPROVE')}
-          className="text-emerald-700 hover:bg-emerald-50 h-7 px-2"
+          className="text-slate-700 hover:bg-slate-50 h-7 px-2"
           title="Approve request"
         >
           <CheckCircle2 className="w-3.5 h-3.5" />
@@ -52,7 +52,7 @@ export function DecideRequestButtons({ requisitionId, title }: Props) {
           size="sm"
           variant="ghost"
           onClick={() => setDecision('REJECT')}
-          className="text-rose-700 hover:bg-rose-50 h-7 px-2"
+          className="text-slate-700 hover:bg-slate-50 h-7 px-2"
           title="Reject request"
         >
           <XCircle className="w-3.5 h-3.5" />
@@ -81,11 +81,11 @@ export function DecideRequestButtons({ requisitionId, title }: Props) {
                 placeholder={decision === 'APPROVE'
                   ? 'Optional context — budget approved, sourcing starting, etc.'
                   : 'Why is this being rejected? Budget hold, headcount freeze, role overlap…'}
-                className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-100"
               />
             </div>
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
             )}
           </div>
           <DialogFooter>
@@ -93,7 +93,7 @@ export function DecideRequestButtons({ requisitionId, title }: Props) {
             <Button
               onClick={submit}
               disabled={saving || (decision === 'REJECT' && !note.trim())}
-              className={decision === 'APPROVE' ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-rose-600 hover:bg-rose-700'}
+              className={decision === 'APPROVE' ? 'bg-slate-700 hover:bg-slate-700' : 'bg-slate-700 hover:bg-slate-700'}
             >
               {saving ? 'Saving…' : decision === 'APPROVE' ? 'Approve & Open' : 'Reject'}
             </Button>

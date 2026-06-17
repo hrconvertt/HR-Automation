@@ -78,20 +78,20 @@ interface DeviceInfo { sn: string; lastSeen: string | null; lastSync: string | n
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 const STATUS_COLORS: Record<string, string> = {
-  PRESENT:  'bg-green-100 text-green-700',
-  ABSENT:   'bg-red-100 text-red-700',
-  LATE:     'bg-amber-100 text-amber-700',
-  LEAVE:    'bg-blue-100 text-blue-700',
-  HOLIDAY:  'bg-purple-100 text-purple-700',
-  HALF_DAY: 'bg-orange-100 text-orange-700',
+  PRESENT:  'bg-slate-100 text-slate-700',
+  ABSENT:   'bg-slate-100 text-slate-700',
+  LATE:     'bg-slate-100 text-slate-700',
+  LEAVE:    'bg-slate-100 text-slate-700',
+  HOLIDAY:  'bg-slate-100 text-slate-700',
+  HALF_DAY: 'bg-slate-100 text-slate-700',
   NOT_IN:   'bg-gray-100 text-gray-500',
 }
 
 const CALENDAR_CELL: Record<string, string> = {
-  PRESENT: 'bg-green-400',
-  LATE:    'bg-amber-400',
-  ABSENT:  'bg-red-400',
-  LEAVE:   'bg-blue-400',
+  PRESENT: 'bg-slate-300',
+  LATE:    'bg-slate-300',
+  ABSENT:  'bg-slate-300',
+  LEAVE:   'bg-slate-300',
 }
 
 const MONTHS = [
@@ -356,7 +356,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
     return (
       <div className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-xl shadow-sm hover:shadow-md transition-shadow">
         <div className="relative">
-          <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center select-none">
+          <div className="w-10 h-10 rounded-full bg-slate-100 text-slate-700 font-bold text-sm flex items-center justify-center select-none">
             {getInitials(r.fullName)}
           </div>
           <span className={cn('absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-white', dot)} />
@@ -399,11 +399,11 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
       {/* HR shortcuts — only show on Today, since outer shell renders the title there */}
       {mode === 'today' && userRole === 'HR_ADMIN' && (
         <div className="flex items-center gap-3 text-xs">
-          <a href="/dashboard/attendance/security" className="text-blue-600 hover:underline">🛡️ Security Settings</a>
+          <a href="/dashboard/attendance/security" className="text-slate-700 hover:underline">🛡️ Security Settings</a>
           <span className="text-slate-300">·</span>
-          <a href="/dashboard/time/monthly-report" className="text-blue-600 hover:underline">📊 Monthly Report</a>
+          <a href="/dashboard/time/monthly-report" className="text-slate-700 hover:underline">📊 Monthly Report</a>
           <span className="text-slate-300">·</span>
-          <a href="/dashboard/time/devices" className="text-blue-600 hover:underline">🔌 Devices</a>
+          <a href="/dashboard/time/devices" className="text-slate-700 hover:underline">🔌 Devices</a>
           <span className="text-slate-300">·</span>
           <button
             type="button"
@@ -411,7 +411,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
               document.cookie = 'hr_preview_role=EMPLOYEE; path=/; max-age=3600; SameSite=Lax'
               window.location.href = '/dashboard/time'
             }}
-            className="text-blue-600 hover:underline"
+            className="text-slate-700 hover:underline"
           >
             ⏱ Clock myself in
           </button>
@@ -424,14 +424,14 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
           <select
             value={month}
             onChange={(e) => setMonth(Number(e.target.value))}
-            className="h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
           >
             {MONTHS.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
           </select>
           <select
             value={year}
             onChange={(e) => setYear(Number(e.target.value))}
-            className="h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+            className="h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
           >
             {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
           </select>
@@ -453,10 +453,10 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
             <p className="text-sm text-gray-400">Loading today&apos;s attendance…</p>
           ) : todayStats && (
             <div className="flex flex-wrap gap-3">
-              <StatCard icon={UserCheck}   label="Present"  value={todayStats.present}  color="bg-green-100 text-green-600" />
-              <StatCard icon={Home}        label="WFH"      value={todayStats.wfh}      color="bg-blue-100 text-blue-600" />
-              <StatCard icon={AlertCircle} label="On Leave" value={todayStats.leave}    color="bg-purple-100 text-purple-600" />
-              <StatCard icon={UserX}       label="Absent"   value={todayStats.absent}   color="bg-red-100 text-red-600" />
+              <StatCard icon={UserCheck}   label="Present"  value={todayStats.present}  color="bg-slate-100 text-slate-700" />
+              <StatCard icon={Home}        label="WFH"      value={todayStats.wfh}      color="bg-slate-100 text-slate-700" />
+              <StatCard icon={AlertCircle} label="On Leave" value={todayStats.leave}    color="bg-slate-100 text-slate-700" />
+              <StatCard icon={UserX}       label="Absent"   value={todayStats.absent}   color="bg-slate-100 text-slate-700" />
             </div>
           )}
 
@@ -464,12 +464,12 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
           {inOffice.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-green-500 inline-block" />
+                <span className="w-2 h-2 rounded-full bg-slate-500 inline-block" />
                 In Office ({inOffice.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {inOffice.map((r) => (
-                  <EmployeeCard key={r.employeeId} r={r} dot="bg-green-500" />
+                  <EmployeeCard key={r.employeeId} r={r} dot="bg-slate-500" />
                 ))}
               </div>
             </div>
@@ -479,12 +479,12 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
           {wfhList.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-blue-500 inline-block" />
+                <span className="w-2 h-2 rounded-full bg-slate-500 inline-block" />
                 Working From Home ({wfhList.length})
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
                 {wfhList.map((r) => (
-                  <EmployeeCard key={r.employeeId} r={r} dot="bg-blue-500" />
+                  <EmployeeCard key={r.employeeId} r={r} dot="bg-slate-500" />
                 ))}
               </div>
             </div>
@@ -497,18 +497,18 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
           {onLeave.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-purple-500 inline-block" />
+                <span className="w-2 h-2 rounded-full bg-slate-500 inline-block" />
                 On Leave ({onLeave.length})
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                 {onLeave.map((r) => (
-                  <div key={r.employeeId} className="flex items-center gap-2 px-3 py-2 bg-purple-50 border border-purple-100 rounded-lg">
-                    <div className="w-8 h-8 rounded-full bg-purple-200 text-purple-700 text-xs font-bold flex items-center justify-center select-none shrink-0">
+                  <div key={r.employeeId} className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-100 rounded-lg">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center select-none shrink-0">
                       {getInitials(r.fullName)}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-gray-700 truncate">{r.fullName}</p>
-                      <p className="text-xs text-purple-600 truncate">Leave approved</p>
+                      <p className="text-xs text-slate-700 truncate">Leave approved</p>
                     </div>
                   </div>
                 ))}
@@ -520,18 +520,18 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
           {absent.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-red-500 inline-block" />
+                <span className="w-2 h-2 rounded-full bg-slate-500 inline-block" />
                 Absent ({absent.length})
               </h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2">
                 {absent.map((r) => (
-                  <div key={r.employeeId} className="flex items-center gap-2 px-3 py-2 bg-red-50 border border-red-100 rounded-lg">
-                    <div className="w-8 h-8 rounded-full bg-red-200 text-red-700 text-xs font-bold flex items-center justify-center select-none shrink-0">
+                  <div key={r.employeeId} className="flex items-center gap-2 px-3 py-2 bg-slate-50 border border-slate-100 rounded-lg">
+                    <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center select-none shrink-0">
                       {getInitials(r.fullName)}
                     </div>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold text-gray-700 truncate">{r.fullName}</p>
-                      <p className="text-xs text-red-600 truncate">No record</p>
+                      <p className="text-xs text-slate-700 truncate">No record</p>
                     </div>
                   </div>
                 ))}
@@ -623,9 +623,9 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
             {/* Legend */}
             <div className="flex items-center gap-4 px-4 py-3 border-t border-gray-100 bg-gray-50 flex-wrap">
               {[
-                { color: 'bg-green-400', label: 'Present' },
-                { color: 'bg-red-400',   label: 'Absent' },
-                { color: 'bg-blue-400',  label: 'Leave' },
+                { color: 'bg-slate-300', label: 'Present' },
+                { color: 'bg-slate-300',   label: 'Absent' },
+                { color: 'bg-slate-300',  label: 'Leave' },
                 { color: 'bg-gray-100',  label: 'No data' },
                 { color: 'bg-gray-200',  label: 'Weekend' },
               ].map((l) => (
@@ -673,7 +673,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
                 <>
                   {summary.map((s) => {
                     const pct = attendancePct(s.present, s.late, workDays)
-                    const pctColor = pct >= 90 ? 'text-green-600' : pct >= 70 ? 'text-amber-600' : 'text-red-600'
+                    const pctColor = pct >= 90 ? 'text-slate-700' : pct >= 70 ? 'text-slate-700' : 'text-slate-700'
                     return (
                       <TableRow key={s.employeeId}>
                         <TableCell className="font-mono text-xs">{s.employeeCode}</TableCell>
@@ -714,7 +714,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
                     const avgPct     = summary.length > 0
                       ? Math.round(summary.reduce((a, s) => a + attendancePct(s.present, s.late, workDays), 0) / summary.length)
                       : 0
-                    const avgColor   = avgPct >= 90 ? 'text-green-600' : avgPct >= 70 ? 'text-amber-600' : 'text-red-600'
+                    const avgColor   = avgPct >= 90 ? 'text-slate-700' : avgPct >= 70 ? 'text-slate-700' : 'text-slate-700'
                     return (
                       <TableRow className="bg-gray-50 font-semibold border-t-2 border-gray-300">
                         <TableCell className="text-xs text-gray-500" colSpan={2}>Totals / Avg</TableCell>
@@ -769,7 +769,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
                   <TableCell className="text-sm">{fmtTime(log.clockIn)}</TableCell>
                   <TableCell className="text-sm">{fmtTime(log.clockOut)}</TableCell>
                   <TableCell className="text-sm">{log.hoursWorked != null ? `${log.hoursWorked.toFixed(1)}h` : '—'}</TableCell>
-                  <TableCell className="font-semibold text-blue-700">{log.overtimeHours.toFixed(1)}h</TableCell>
+                  <TableCell className="font-semibold text-slate-700">{log.overtimeHours.toFixed(1)}h</TableCell>
                   <TableCell>
                     {log.overtimeApproved
                       ? <Badge variant="success">Approved</Badge>
@@ -800,7 +800,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <Fingerprint className="w-5 h-5 text-blue-600" />
+                <Fingerprint className="w-5 h-5 text-slate-700" />
                 Connected Devices
               </CardTitle>
             </CardHeader>
@@ -815,7 +815,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
                   {devices.map((d) => (
                     <div key={d.sn} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
-                        <Wifi className="w-4 h-4 text-green-500" />
+                        <Wifi className="w-4 h-4 text-slate-500" />
                         <div>
                           <p className="text-sm font-semibold text-gray-900">Device: {d.sn}</p>
                           <p className="text-xs text-gray-400">
@@ -840,7 +840,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
                 <div className="flex items-center gap-2">
                   <Input readOnly value={`${typeof window !== 'undefined' ? window.location.origin : 'http://your-server'}/api/attendance/sync`} className="font-mono text-sm bg-gray-50" />
                   <Button size="sm" variant="outline" onClick={() => copyToClipboard(`${window.location.origin}/api/attendance/sync`, 'url')}>
-                    {copied === 'url' ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                    {copied === 'url' ? <CheckCircle className="w-4 h-4 text-slate-500" /> : <Copy className="w-4 h-4" />}
                   </Button>
                 </div>
               </div>
@@ -850,7 +850,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
                   <Input readOnly value={syncToken || 'No token set — device can sync without authentication'} className="font-mono text-sm bg-gray-50" />
                   {syncToken && (
                     <Button size="sm" variant="outline" onClick={() => copyToClipboard(syncToken, 'token')}>
-                      {copied === 'token' ? <CheckCircle className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
+                      {copied === 'token' ? <CheckCircle className="w-4 h-4 text-slate-500" /> : <Copy className="w-4 h-4" />}
                     </Button>
                   )}
                   <Button size="sm" variant="outline" onClick={handleRegenerateToken} disabled={tokenLoading}>
@@ -871,7 +871,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
 
               <div className="space-y-2">
                 <p className="font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                  <span className="w-6 h-6 bg-slate-700 text-white rounded-full flex items-center justify-center text-xs font-bold">1</span>
                   ZKTeco / ESSL Fingerprint Devices (most common in Pakistan)
                 </p>
                 <div className="ml-8 space-y-1.5 text-gray-600">
@@ -880,13 +880,13 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
                   <p>Set <strong>Server Port</strong> to <code className="bg-gray-100 px-1 rounded">80</code> (or 443 for HTTPS)</p>
                   <p>Enable <strong>ADMS</strong> (Active Data Management Service)</p>
                   <p>Enrol each employee using their <strong>CON-XXX-NNN</strong> code as the badge/user ID</p>
-                  <p className="text-green-600 font-medium">The device will automatically push punches every 10 seconds</p>
+                  <p className="text-slate-700 font-medium">The device will automatically push punches every 10 seconds</p>
                 </div>
               </div>
 
               <div className="border-t pt-4 space-y-2">
                 <p className="font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="w-6 h-6 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                  <span className="w-6 h-6 bg-slate-700 text-white rounded-full flex items-center justify-center text-xs font-bold">2</span>
                   Suprema / HID / Hikvision — JSON Webhook
                 </p>
                 <div className="ml-8 space-y-1.5 text-gray-600">
@@ -907,7 +907,7 @@ Content-Type: application/json
 
               <div className="border-t pt-4 space-y-2">
                 <p className="font-semibold text-gray-800 flex items-center gap-2">
-                  <span className="w-6 h-6 bg-amber-600 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
+                  <span className="w-6 h-6 bg-slate-700 text-white rounded-full flex items-center justify-center text-xs font-bold">3</span>
                   Any device — CSV export / file upload
                 </p>
                 <div className="ml-8 space-y-1.5 text-gray-600">
@@ -918,8 +918,8 @@ CON-WBS-015,2026-05-15 18:15:00,OUT`}</pre>
                 </div>
               </div>
 
-              <div className="border-t pt-4 bg-amber-50 rounded-lg p-3">
-                <p className="text-amber-700 text-xs font-medium">
+              <div className="border-t pt-4 bg-slate-50 rounded-lg p-3">
+                <p className="text-slate-700 text-xs font-medium">
                   <strong>Employee Enrolment tip:</strong> Enrol each employee on the device using their exact code (e.g. <code>CON-WBS-015</code> or short form <code>WBS-015</code>). If your device only accepts numeric IDs, use the number at the end (e.g. <code>015</code>) and map it using the Pin Mapping config below.
                 </p>
               </div>

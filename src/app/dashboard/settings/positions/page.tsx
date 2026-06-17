@@ -13,9 +13,9 @@ export default async function PositionsPage() {
 
   if (payload.role !== 'HR_ADMIN') {
     return (
-      <div className="p-6 bg-rose-50 border border-rose-200 rounded-xl">
-        <h2 className="text-lg font-semibold text-rose-900">Access denied</h2>
-        <p className="text-sm text-rose-800 mt-2">HR only.</p>
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-xl">
+        <h2 className="text-lg font-semibold text-slate-900">Access denied</h2>
+        <p className="text-sm text-slate-900 mt-2">HR only.</p>
       </div>
     )
   }

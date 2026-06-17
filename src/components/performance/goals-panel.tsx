@@ -143,7 +143,7 @@ export function GoalsPanel({ role, employeeId, isPreviewMode = false }: Props) {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-            <Target className="w-5 h-5 text-blue-600" />
+            <Target className="w-5 h-5 text-slate-700" />
             {headerLabel}
           </h2>
           <p className="text-sm text-gray-500">
@@ -261,7 +261,7 @@ export function GoalsPanel({ role, employeeId, isPreviewMode = false }: Props) {
               />
               <p className="text-xs text-gray-400 mt-1">Importance of this goal in overall performance</p>
             </div>
-            {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+            {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
@@ -312,7 +312,7 @@ function GoalsTable({
               {showEmployee && (
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
+                    <div className="w-8 h-8 bg-slate-500 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold">
                       {getInitials(g.employee.fullName)}
                     </div>
                     <div>
@@ -360,7 +360,7 @@ function GoalsTable({
                   )}
                   {canDelete && (
                     <Button size="sm" variant="ghost" onClick={() => onDelete(g.id)}>
-                      <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      <Trash2 className="w-3.5 h-3.5 text-slate-500" />
                     </Button>
                   )}
                 </div>

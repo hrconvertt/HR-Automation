@@ -137,12 +137,12 @@ export function OnboardingWorkspace(props: Props) {
                 || (t.owner === 'IT' && props.viewerRole === 'HR_ADMIN')
                 || (props.viewerRole === 'EMPLOYEE' && t.owner === 'EMPLOYEE')
               return (
-                <div key={t.id} className={`flex items-start gap-3 p-2 rounded ${t.isComplete ? 'bg-emerald-50/50' : 'bg-slate-50/50'}`}>
+                <div key={t.id} className={`flex items-start gap-3 p-2 rounded ${t.isComplete ? 'bg-slate-50/50' : 'bg-slate-50/50'}`}>
                   <button
                     type="button"
                     disabled={!canCheck || pending}
                     onClick={() => toggleTask(t)}
-                    className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 ${t.isComplete ? 'bg-emerald-500 border-emerald-500 text-white' : 'border-slate-300 bg-white'} disabled:opacity-40`}
+                    className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 ${t.isComplete ? 'bg-slate-500 border-slate-500 text-white' : 'border-slate-300 bg-white'} disabled:opacity-40`}
                   >
                     {t.isComplete && <Check className="w-3 h-3" />}
                   </button>
@@ -155,7 +155,7 @@ export function OnboardingWorkspace(props: Props) {
                     <button
                       type="button"
                       onClick={() => deleteTask(t.id)}
-                      className="text-slate-400 hover:text-red-600 p-1"
+                      className="text-slate-400 hover:text-slate-700 p-1"
                       title="Delete task"
                     >
                       <Trash2 className="w-3.5 h-3.5" />

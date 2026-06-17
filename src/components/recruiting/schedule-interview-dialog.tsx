@@ -91,7 +91,7 @@ export function ScheduleInterviewDialog({ candidateId, candidateName, roleTitle,
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CalendarClock className="w-5 h-5 text-blue-600" />
+            <CalendarClock className="w-5 h-5 text-slate-700" />
             Schedule Interview
           </DialogTitle>
         </DialogHeader>
@@ -169,7 +169,7 @@ export function ScheduleInterviewDialog({ candidateId, candidateName, roleTitle,
             />
           </div>
 
-          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+          {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
         </div>
 
         <DialogFooter>

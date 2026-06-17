@@ -97,9 +97,9 @@ export async function ExecutiveDashboard() {
             <p className="text-sm font-semibold text-slate-900">Department Health</p>
           </div>
           <p className="text-[11px] text-slate-500">
-            <span className="inline-flex items-center gap-1 mr-3"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Healthy</span>
-            <span className="inline-flex items-center gap-1 mr-3"><span className="w-2 h-2 rounded-full bg-amber-500" /> Watch</span>
-            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500" /> Red</span>
+            <span className="inline-flex items-center gap-1 mr-3"><span className="w-2 h-2 rounded-full bg-slate-500" /> Healthy</span>
+            <span className="inline-flex items-center gap-1 mr-3"><span className="w-2 h-2 rounded-full bg-slate-500" /> Watch</span>
+            <span className="inline-flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-500" /> Red</span>
           </p>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 p-3 bg-slate-50/50">
@@ -110,16 +110,16 @@ export async function ExecutiveDashboard() {
               <div
                 key={d.dept}
                 className={`rounded-lg border p-3 ${
-                  d.tone === 'red'   ? 'border-rose-200 bg-rose-50/50' :
-                  d.tone === 'watch' ? 'border-amber-200 bg-amber-50/50' :
-                                       'border-emerald-200 bg-emerald-50/50'
+                  d.tone === 'red'   ? 'border-slate-100 bg-slate-50/50' :
+                  d.tone === 'watch' ? 'border-slate-100 bg-slate-50/50' :
+                                       'border-slate-100 bg-slate-50/50'
                 }`}
               >
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-semibold text-slate-900">{d.dept}</p>
                   <span className={`w-2 h-2 rounded-full ${
-                    d.tone === 'red'   ? 'bg-rose-500' :
-                    d.tone === 'watch' ? 'bg-amber-500' : 'bg-emerald-500'
+                    d.tone === 'red'   ? 'bg-slate-500' :
+                    d.tone === 'watch' ? 'bg-slate-500' : 'bg-slate-500'
                   }`} />
                 </div>
                 <div className="flex items-baseline gap-3 mt-1.5 text-xs text-slate-600">
@@ -141,10 +141,10 @@ export async function ExecutiveDashboard() {
       <div className="flex items-center justify-between gap-3 text-xs">
         <p className="text-slate-500">
           Operational details (attendance, individual exits, named hires) live in{' '}
-          <Link href="/dashboard/employees" className="text-blue-600 hover:underline">Workforce</Link>.
+          <Link href="/dashboard/employees" className="text-slate-700 hover:underline">Workforce</Link>.
         </p>
         {(m.monthlyRevenue == null) && (
-          <Link href="/dashboard/admin/health" className="inline-flex items-center gap-1 text-blue-600 hover:underline">
+          <Link href="/dashboard/admin/health" className="inline-flex items-center gap-1 text-slate-700 hover:underline">
             <Settings className="w-3 h-3" /> Configure monthly revenue
           </Link>
         )}
@@ -160,15 +160,15 @@ function HeroCard({ label, value, sub, tone, configMissing }: {
 }) {
   const VALUE_TONE: Record<string, string> = {
     green: 'text-slate-900',
-    amber: 'text-amber-700',
-    red:   'text-rose-700',
+    amber: 'text-slate-700',
+    red:   'text-slate-700',
     muted: 'text-slate-400',
   }
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
       <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">{label}</p>
       <p className={`text-3xl font-bold mt-1.5 tabular-nums ${VALUE_TONE[tone]}`}>{value}</p>
-      <p className={`text-[11px] mt-1.5 ${configMissing ? 'text-amber-700' : 'text-slate-500'}`}>
+      <p className={`text-[11px] mt-1.5 ${configMissing ? 'text-slate-700' : 'text-slate-500'}`}>
         {sub}
       </p>
     </div>
@@ -181,16 +181,16 @@ function SignalCard({ Icon, label, value, sub, tone }: {
   tone: 'green' | 'amber' | 'red' | 'blue'
 }) {
   const VALUE_TONE: Record<string, string> = {
-    green: 'text-emerald-700',
-    amber: 'text-amber-700',
-    red:   'text-rose-700',
-    blue:  'text-blue-700',
+    green: 'text-slate-700',
+    amber: 'text-slate-700',
+    red:   'text-slate-700',
+    blue:  'text-slate-700',
   }
   const ICON_BG: Record<string, string> = {
-    green: 'bg-emerald-50 text-emerald-600',
-    amber: 'bg-amber-50 text-amber-600',
-    red:   'bg-rose-50 text-rose-600',
-    blue:  'bg-blue-50 text-blue-600',
+    green: 'bg-slate-50 text-slate-700',
+    amber: 'bg-slate-50 text-slate-700',
+    red:   'bg-slate-50 text-slate-700',
+    blue:  'bg-slate-50 text-slate-700',
   }
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-4">

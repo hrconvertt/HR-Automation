@@ -1,26 +1,44 @@
 /**
- * StatusBadge — single source of truth for attendance/leave cell colours.
+ * StatusBadge — single source of truth for attendance/leave cell rendering.
  *
- * Statuses mirror the source xlsx cell values:
- *   P   present (yes)         green
- *   WFH work from home        blue
- *   L   full-day leave        red
- *   H   half day              amber
- *   A   absent / blank        gray
- *   WE  weekend               light gray hatch
+ * Statuses mirror the source xlsx cell values. The brand is monochrome —
+ * every status is distinguished by **weight, fill, border, and pattern**
+ * (NOT colour). A reader who is colour-blind, printing in black and white,
+ * or looking at a low-end display still gets the same information.
+ *
+ *   P   present (yes)         solid charcoal block, white label
+ *   WFH work from home        outlined, slate label
+ *   L   full-day leave        solid charcoal with hatched overlay
+ *   H   half day              split fill (left half charcoal, right half white)
+ *   A   absent / blank        muted dash
+ *   WE  weekend               diagonal stripe pattern
  */
 
 import { ReactElement } from 'react'
 
 export type Status = 'P' | 'L' | 'WFH' | 'H' | 'A' | 'WE'
 
-const STATUS_STYLES: Record<Status, { bg: string; text: string; label: string; title: string }> = {
-  P:   { bg: 'bg-emerald-100',  text: 'text-emerald-800', label: 'P',   title: 'Present' },
-  WFH: { bg: 'bg-sky-100',      text: 'text-sky-800',     label: 'WFH', title: 'Work From Home' },
-  L:   { bg: 'bg-rose-100',     text: 'text-rose-800',    label: 'L',   title: 'Leave (Full Day)' },
-  H:   { bg: 'bg-amber-100',    text: 'text-amber-800',   label: 'H',   title: 'Half Day' },
-  A:   { bg: 'bg-slate-100',    text: 'text-slate-500',   label: '—',   title: 'Absent / No Record' },
-  WE:  { bg: 'bg-slate-200/50', text: 'text-slate-400',   label: '',    title: 'Weekend' },
+interface BadgeStyle {
+  bg: string
+  text: string
+  border: string
+  label: string
+  title: string
+  /** Optional pattern overlay class (already includes its own background). */
+  pattern?: string
+  /** Font weight class. */
+  weight?: string
+}
+
+const STATUS_STYLES: Record<Status, BadgeStyle> = {
+  P:   { bg: 'bg-slate-900',    text: 'text-white',       border: 'border border-slate-900', label: 'P',   title: 'Present', weight: 'font-bold' },
+  WFH: { bg: 'bg-white',        text: 'text-slate-900',   border: 'border border-slate-900', label: 'WFH', title: 'Work From Home', weight: 'font-semibold' },
+  L:   { bg: 'bg-slate-900',    text: 'text-white',       border: 'border border-slate-900', label: 'L',   title: 'Leave (Full Day)', weight: 'font-bold',
+         pattern: 'bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.18)_0px,rgba(255,255,255,0.18)_1px,transparent_1px,transparent_4px)]' },
+  H:   { bg: 'bg-white',        text: 'text-slate-900',   border: 'border border-slate-900', label: 'H',   title: 'Half Day', weight: 'font-bold',
+         pattern: 'bg-[linear-gradient(to_right,#0A0A0A_50%,#FFFFFF_50%)]' },
+  A:   { bg: 'bg-slate-100',    text: 'text-slate-400',   border: 'border border-slate-200', label: '—',   title: 'Absent / No Record', weight: 'font-medium' },
+  WE:  { bg: 'bg-white',        text: 'text-slate-400',   border: 'border border-slate-100', label: '',    title: 'Weekend' },
 }
 
 interface StatusBadgeProps {
@@ -35,7 +53,7 @@ export function StatusBadge({ status, future, size = 'sm' }: StatusBadgeProps): 
   if (future) {
     return (
       <span
-        className="inline-flex items-center justify-center rounded text-[10px] font-medium bg-white text-slate-300 w-7 h-6"
+        className="inline-flex items-center justify-center rounded text-[10px] font-medium bg-white text-slate-300 border border-slate-100 w-7 h-6"
         title="Not yet recorded"
       >
         ·
@@ -44,14 +62,23 @@ export function StatusBadge({ status, future, size = 'sm' }: StatusBadgeProps): 
   }
   const s = STATUS_STYLES[status]
   const dims = size === 'md' ? 'w-9 h-7 text-xs' : 'w-7 h-6 text-[10px]'
+  const weight = s.weight ?? 'font-semibold'
+
   // Weekend gets a subtle diagonal stripe pattern via CSS so HR sees the
-  // xlsx-style "weekend gutter" at a glance.
+  // xlsx-style "weekend gutter" at a glance — kept monochrome.
   const weekendPattern = status === 'WE'
-    ? 'bg-[repeating-linear-gradient(45deg,rgba(148,163,184,0.18)_0px,rgba(148,163,184,0.18)_2px,transparent_2px,transparent_5px)]'
+    ? 'bg-[repeating-linear-gradient(45deg,rgba(15,23,42,0.10)_0px,rgba(15,23,42,0.10)_2px,transparent_2px,transparent_5px)]'
     : ''
+
+  // Half-day pattern needs its own foreground label to remain readable on
+  // the split-fill background — drop a contrast outline on the label.
+  const halfTextOutline = status === 'H'
+    ? '[text-shadow:0_0_2px_rgba(255,255,255,0.7),0_0_2px_rgba(255,255,255,0.7)]'
+    : ''
+
   return (
     <span
-      className={`inline-flex items-center justify-center rounded font-semibold ${dims} ${s.bg} ${s.text} ${weekendPattern}`}
+      className={`inline-flex items-center justify-center rounded ${weight} ${dims} ${s.bg} ${s.text} ${s.border} ${s.pattern ?? ''} ${weekendPattern} ${halfTextOutline}`}
       title={s.title}
     >
       {s.label}

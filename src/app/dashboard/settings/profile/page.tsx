@@ -85,7 +85,7 @@ export default function ProfilePage() {
                   </div>
                 )}
                 <div>
-                  <label className="text-sm font-medium text-blue-600 hover:underline cursor-pointer">
+                  <label className="text-sm font-medium text-slate-700 hover:underline cursor-pointer">
                     Upload new photo
                     <input type="file" accept="image/*" onChange={onFile} className="hidden" />
                   </label>

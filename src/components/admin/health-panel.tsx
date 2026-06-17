@@ -23,10 +23,10 @@ interface Report {
 }
 
 const SEVERITY_TONE: Record<string, { tone: string; Icon: React.ComponentType<{ className?: string }> }> = {
-  crit:    { tone: 'border-rose-200 bg-rose-50/60 text-rose-700',         Icon: AlertCircle },
-  warn:    { tone: 'border-amber-200 bg-amber-50/60 text-amber-700',      Icon: AlertTriangle },
+  crit:    { tone: 'border-slate-100 bg-slate-50/60 text-slate-700',         Icon: AlertCircle },
+  warn:    { tone: 'border-slate-100 bg-slate-50/60 text-slate-700',      Icon: AlertTriangle },
   info:    { tone: 'border-slate-200 bg-slate-50/60 text-slate-700',      Icon: Info },
-  healthy: { tone: 'border-emerald-200 bg-emerald-50/60 text-emerald-700', Icon: CheckCircle2 },
+  healthy: { tone: 'border-slate-100 bg-slate-50/60 text-slate-700', Icon: CheckCircle2 },
 }
 
 export function HealthPanel({ initial }: { initial: Report }) {
@@ -65,10 +65,10 @@ export function HealthPanel({ initial }: { initial: Report }) {
     <div className="space-y-5">
       {/* KPI strip */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <HealthKpi label="Critical"  value={t.critical} tone="bg-rose-50 text-rose-700"       Icon={AlertCircle} />
-        <HealthKpi label="Warnings"  value={t.warning}  tone="bg-amber-50 text-amber-700"     Icon={AlertTriangle} />
+        <HealthKpi label="Critical"  value={t.critical} tone="bg-slate-50 text-slate-700"       Icon={AlertCircle} />
+        <HealthKpi label="Warnings"  value={t.warning}  tone="bg-slate-50 text-slate-700"     Icon={AlertTriangle} />
         <HealthKpi label="Info"      value={t.info}     tone="bg-slate-50 text-slate-700"     Icon={Info} />
-        <HealthKpi label="Healthy"   value={t.healthy}  tone="bg-emerald-50 text-emerald-700" Icon={Heart} />
+        <HealthKpi label="Healthy"   value={t.healthy}  tone="bg-slate-50 text-slate-700" Icon={Heart} />
       </div>
 
       <div className="flex items-center justify-between gap-3">
@@ -82,7 +82,7 @@ export function HealthPanel({ initial }: { initial: Report }) {
       </div>
 
       {toast && (
-        <div className="rounded-md border border-emerald-200 bg-emerald-50 text-emerald-800 text-sm px-3 py-2">
+        <div className="rounded-md border border-slate-100 bg-slate-50 text-slate-900 text-sm px-3 py-2">
           {toast}
         </div>
       )}
@@ -102,7 +102,7 @@ export function HealthPanel({ initial }: { initial: Report }) {
                   <div className="flex items-baseline justify-between gap-3 flex-wrap">
                     <p className="text-sm font-semibold text-slate-900">{c.label}</p>
                     <span className="text-xs tabular-nums text-slate-500">
-                      {healthy ? <span className="text-emerald-600 font-medium">Clean</span> : `${c.found} found`}
+                      {healthy ? <span className="text-slate-700 font-medium">Clean</span> : `${c.found} found`}
                     </span>
                   </div>
                   {!healthy && (

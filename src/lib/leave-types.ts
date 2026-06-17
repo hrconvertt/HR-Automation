@@ -77,14 +77,15 @@ export function formatDays(n: number): string {
   return `${whole} ${whole === 1 ? 'day' : 'days'}`
 }
 
-/** Tone/colour classes per type — used by badges & cards. */
+/** Tone classes per type — monochrome (slate scale only). Each tier
+ *  is distinguished by fill weight + border, never by hue. */
 export const LEAVE_TYPE_TONES: Record<string, { tone: string; label: string }> = {
-  ANNUAL:    { tone: 'bg-blue-50 text-blue-700 border-blue-200',       label: 'Annual' },
-  CASUAL:    { tone: 'bg-purple-50 text-purple-700 border-purple-200', label: 'Casual' },
-  SICK:      { tone: 'bg-rose-50 text-rose-700 border-rose-200',       label: 'Sick' },
-  MATERNITY: { tone: 'bg-pink-50 text-pink-700 border-pink-200',       label: 'Maternity' },
-  PATERNITY: { tone: 'bg-indigo-50 text-indigo-700 border-indigo-200', label: 'Paternity' },
-  UNPAID:    { tone: 'bg-slate-50 text-slate-700 border-slate-200',    label: 'Unpaid' },
-  EMERGENCY: { tone: 'bg-amber-50 text-amber-700 border-amber-200',    label: 'Emergency' },
-  EARNED:    { tone: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Earned' },
+  ANNUAL:    { tone: 'bg-slate-100 text-slate-900 border-slate-300',  label: 'Annual' },
+  CASUAL:    { tone: 'bg-slate-100 text-slate-900 border-slate-300',  label: 'Casual' },
+  SICK:      { tone: 'bg-white     text-slate-900 border-slate-900',  label: 'Sick' },
+  MATERNITY: { tone: 'bg-slate-200 text-slate-900 border-slate-400',  label: 'Maternity' },
+  PATERNITY: { tone: 'bg-slate-200 text-slate-900 border-slate-400',  label: 'Paternity' },
+  UNPAID:    { tone: 'bg-slate-50  text-slate-700 border-slate-200',  label: 'Unpaid' },
+  EMERGENCY: { tone: 'bg-white     text-slate-900 border-slate-900 border-2', label: 'Emergency' },
+  EARNED:    { tone: 'bg-slate-900 text-white     border-slate-900',  label: 'Earned' },
 }

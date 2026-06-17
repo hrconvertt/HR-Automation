@@ -53,7 +53,7 @@ export function CreateOfferDialog({ candidateId, candidateName, roleTitle, open,
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Briefcase className="w-5 h-5 text-blue-600" />
+            <Briefcase className="w-5 h-5 text-slate-700" />
             Create Offer
           </DialogTitle>
         </DialogHeader>
@@ -99,17 +99,17 @@ export function CreateOfferDialog({ candidateId, candidateName, roleTitle, open,
               onChange={(e) => setNote(e.target.value)}
               rows={2}
               placeholder="e.g. Reporting line, key first deliverable, sign-on bonus details…"
-              className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+              className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-100"
             />
           </div>
 
-          <div className="rounded-md bg-blue-50 border border-blue-100 text-xs text-blue-900 px-3 py-2 flex items-start gap-2">
+          <div className="rounded-md bg-slate-50 border border-slate-100 text-xs text-slate-900 px-3 py-2 flex items-start gap-2">
             <Mail className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" />
             <span>On save: candidate moves to <strong>OFFER</strong> stage, a JobOffer record is created, and an offer letter email is drafted in the Email Queue for you to review before sending.</span>
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>
+            <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
           )}
         </div>
 

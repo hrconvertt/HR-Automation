@@ -17,9 +17,9 @@ export default async function AttendanceSecurityPage() {
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
   if (!user || user.role !== 'HR_ADMIN') {
     return (
-      <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
-        <h2 className="text-lg font-semibold text-amber-900">HR-only area</h2>
-        <p className="text-sm text-amber-800 mt-2">Only HR can manage clock-in security.</p>
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
+        <h2 className="text-lg font-semibold text-slate-900">HR-only area</h2>
+        <p className="text-sm text-slate-900 mt-2">Only HR can manage clock-in security.</p>
       </div>
     )
   }
@@ -38,12 +38,12 @@ export default async function AttendanceSecurityPage() {
         <div>
           <Link
             href="/dashboard/attendance"
-            className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline mb-2"
+            className="inline-flex items-center gap-1 text-sm text-slate-700 hover:underline mb-2"
           >
             <ArrowLeft className="w-4 h-4" /> Back to Attendance
           </Link>
           <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Shield className="w-6 h-6 text-blue-600" />
+            <Shield className="w-6 h-6 text-slate-700" />
             Clock-in Security
           </h1>
           <p className="text-sm text-slate-500 mt-1">
@@ -52,7 +52,7 @@ export default async function AttendanceSecurityPage() {
         </div>
       </div>
 
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-blue-900">
+      <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-sm text-slate-900">
         <p className="font-semibold mb-1">How clock-in security works</p>
         <p>
           Each employee's laptop/phone is registered as a <strong>Trusted Device</strong> the first

@@ -8,10 +8,10 @@ import Link from 'next/link'
 import { Users, Calendar, AlertCircle, CheckCircle2 } from 'lucide-react'
 
 const AVATAR_PALETTE = [
-  'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700',
-  'bg-purple-100 text-purple-700', 'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700', 'bg-sky-100 text-sky-700',
-  'bg-indigo-100 text-indigo-700', 'bg-teal-100 text-teal-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
 ]
 function avatarTone(name: string): string {
   let h = 0
@@ -75,10 +75,10 @@ export default async function OnboardingPage() {
     <div className="space-y-5">
       {/* KPI row */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi label="Onboarding in Progress" value={inProgress}      Icon={Users}        tone="bg-blue-50 text-blue-600" />
-        <Kpi label="Fully Onboarded"        value={completedCount}  Icon={CheckCircle2} tone="bg-emerald-50 text-emerald-600" />
-        <Kpi label="Active Probation"       value={activeProbation} Icon={Calendar}     tone="bg-purple-50 text-purple-600" />
-        <Kpi label="Probation Ending ≤14d"  value={endingSoon}      Icon={AlertCircle}  tone="bg-amber-50 text-amber-600" />
+        <Kpi label="Onboarding in Progress" value={inProgress}      Icon={Users}        tone="bg-slate-50 text-slate-700" />
+        <Kpi label="Fully Onboarded"        value={completedCount}  Icon={CheckCircle2} tone="bg-slate-50 text-slate-700" />
+        <Kpi label="Active Probation"       value={activeProbation} Icon={Calendar}     tone="bg-slate-50 text-slate-700" />
+        <Kpi label="Probation Ending ≤14d"  value={endingSoon}      Icon={AlertCircle}  tone="bg-slate-50 text-slate-700" />
       </div>
 
       <Tabs defaultValue="checklists">
@@ -107,7 +107,7 @@ export default async function OnboardingPage() {
                       <Link
                         key={c.id}
                         href={`/dashboard/onboarding/${c.employee.id}`}
-                        className="group bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all"
+                        className="group bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-200 hover:shadow-md transition-all"
                       >
                         <div className="flex items-start gap-3">
                           <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${avatarTone(c.employee.fullName)}`}>
@@ -115,18 +115,18 @@ export default async function OnboardingPage() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-2">
-                              <p className="font-semibold text-slate-900 text-sm leading-tight truncate group-hover:text-blue-700">{c.employee.fullName}</p>
+                              <p className="font-semibold text-slate-900 text-sm leading-tight truncate group-hover:text-slate-700">{c.employee.fullName}</p>
                               {isDone ? (
-                                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-100 flex-shrink-0">Complete</span>
+                                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-50 text-slate-700 border border-slate-100 flex-shrink-0">Complete</span>
                               ) : (
-                                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-100 flex-shrink-0 tabular-nums">{pct}%</span>
+                                <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-50 text-slate-700 border border-slate-100 flex-shrink-0 tabular-nums">{pct}%</span>
                               )}
                             </div>
                             <p className="text-xs text-slate-600 mt-0.5 truncate">{c.employee.designation}</p>
                             <p className="text-[10px] text-slate-400 mt-1">Joined {formatDate(c.employee.joiningDate)}</p>
                             <div className="mt-2">
                               <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full ${isDone ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+                                <div className={`h-full rounded-full ${isDone ? 'bg-slate-500' : 'bg-slate-500'}`} style={{ width: `${pct}%` }} />
                               </div>
                               <p className="text-[10px] text-slate-500 mt-1 tabular-nums">{done} of {total} steps done</p>
                             </div>
@@ -172,7 +172,7 @@ export default async function OnboardingPage() {
                     return (
                       <TableRow key={p.id}>
                         <TableCell>
-                          <Link href={`/dashboard/employees/${p.employee.id}`} className="font-medium text-slate-900 hover:text-blue-700">
+                          <Link href={`/dashboard/employees/${p.employee.id}`} className="font-medium text-slate-900 hover:text-slate-700">
                             {p.employee.fullName}
                           </Link>
                           <p className="text-xs text-slate-400">{p.employee.employeeCode}</p>
@@ -181,7 +181,7 @@ export default async function OnboardingPage() {
                         <TableCell className="text-slate-500">{formatDate(p.startDate)}</TableCell>
                         <TableCell className="text-slate-500">{formatDate(p.endDate)}</TableCell>
                         <TableCell>
-                          <span className={`text-sm tabular-nums ${isAlert ? 'text-amber-700 font-semibold' : dl < 0 && !p.outcome ? 'text-rose-700 font-semibold' : 'text-slate-700'}`}>
+                          <span className={`text-sm tabular-nums ${isAlert ? 'text-slate-700 font-semibold' : dl < 0 && !p.outcome ? 'text-slate-700 font-semibold' : 'text-slate-700'}`}>
                             {p.outcome ? '—' : dl < 0 ? `Overdue ${Math.abs(dl)}d` : `${dl} days`}
                           </span>
                         </TableCell>

@@ -112,11 +112,11 @@ export default async function PerformancePage() {
               )
               if (!myPending) return null
               return (
-                <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 p-5">
+                <Card className="bg-gradient-to-r from-slate-50 to-slate-50 border-slate-100 p-5">
                   <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div className="flex items-start gap-3">
-                      <div className="rounded-full bg-blue-600/10 p-2.5">
-                        <ClipboardCheck className="w-5 h-5 text-blue-700" />
+                      <div className="rounded-full bg-slate-700/10 p-2.5">
+                        <ClipboardCheck className="w-5 h-5 text-slate-700" />
                       </div>
                       <div>
                         <h3 className="text-base font-semibold text-gray-900">Complete Your Self-Review</h3>

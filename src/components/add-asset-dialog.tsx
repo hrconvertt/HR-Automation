@@ -109,7 +109,7 @@ export default function AddAssetDialog({ employeeId }: Props) {
             <div className="p-6 space-y-4">
               <div>
                 <label className="text-xs font-semibold text-slate-700 mb-1.5 block uppercase tracking-wider">
-                  Asset Type <span className="text-rose-500">*</span>
+                  Asset Type <span className="text-slate-500">*</span>
                 </label>
                 <Select value={assetType} onValueChange={setAssetType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -123,7 +123,7 @@ export default function AddAssetDialog({ employeeId }: Props) {
 
               <div>
                 <label className="text-xs font-semibold text-slate-700 mb-1.5 block uppercase tracking-wider">
-                  Asset Name <span className="text-rose-500">*</span>
+                  Asset Name <span className="text-slate-500">*</span>
                 </label>
                 <Input
                   value={name}
@@ -166,9 +166,9 @@ export default function AddAssetDialog({ employeeId }: Props) {
               </div>
 
               {err && (
-                <div className="flex items-start gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2.5">
-                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-rose-700 leading-relaxed">{err}</p>
+                <div className="flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5">
+                  <AlertCircle className="w-4 h-4 text-slate-700 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-slate-700 leading-relaxed">{err}</p>
                 </div>
               )}
             </div>

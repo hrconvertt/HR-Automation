@@ -99,7 +99,7 @@ export function renderMarkdown(md: string): string {
         buf.push(lines[i].replace(/^>\s?/, ''))
         i++
       }
-      out.push(`<blockquote class="my-3 pl-4 border-l-4 border-amber-400 bg-amber-50/60 py-2 pr-3 text-slate-700 italic rounded-r-md">${inline(buf.join(' '))}</blockquote>`)
+      out.push(`<blockquote class="my-3 pl-4 border-l-4 border-slate-300 bg-slate-50/60 py-2 pr-3 text-slate-700 italic rounded-r-md">${inline(buf.join(' '))}</blockquote>`)
       continue
     }
 

@@ -14,9 +14,9 @@ export default async function EmailQueuePage() {
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
   if (!user || user.role !== 'HR_ADMIN') {
     return (
-      <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
-        <h2 className="text-lg font-semibold text-amber-900">HR-only area</h2>
-        <p className="text-sm text-amber-800 mt-2">Only HR can manage outgoing emails.</p>
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
+        <h2 className="text-lg font-semibold text-slate-900">HR-only area</h2>
+        <p className="text-sm text-slate-900 mt-2">Only HR can manage outgoing emails.</p>
       </div>
     )
   }

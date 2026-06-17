@@ -254,10 +254,10 @@ export async function HRDashboard({ userName }: Props) {
           Layered card with a soft gradient. Greeting on the left,
           three headline stats on the right that the rest of the page
           drills into. */}
-      <div className="rounded-2xl bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 border border-blue-100 p-6 sm:p-8">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-50 via-slate-50 to-slate-50 border border-slate-100 p-6 sm:p-8">
         <div className="flex items-start justify-between gap-6 flex-wrap">
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold text-blue-700 uppercase tracking-[0.18em]">
+            <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-[0.18em]">
               {new Date().toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}
             </p>
             <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight leading-tight mt-1">
@@ -284,7 +284,7 @@ export async function HRDashboard({ userName }: Props) {
       <Card className="rounded-2xl border-slate-200 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center">
               <Inbox className="w-4 h-4" />
             </div>
             <div>
@@ -293,14 +293,14 @@ export async function HRDashboard({ userName }: Props) {
             </div>
           </div>
           {totalActions > 0 && (
-            <span className="text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 rounded-full px-2.5 py-1">
+            <span className="text-xs font-semibold bg-slate-50 text-slate-700 border border-slate-100 rounded-full px-2.5 py-1">
               {totalActions} {totalActions === 1 ? 'item' : 'items'}
             </span>
           )}
         </div>
         {totalActions === 0 ? (
           <div className="px-4 py-10 text-center">
-            <div className="w-12 h-12 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-3">
+            <div className="w-12 h-12 rounded-full bg-slate-50 text-slate-700 flex items-center justify-center mx-auto mb-3">
               <CheckCircle2 className="w-6 h-6" />
             </div>
             <p className="text-sm font-semibold text-slate-900">Inbox zero</p>
@@ -348,7 +348,7 @@ export async function HRDashboard({ userName }: Props) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Card className="rounded-2xl border-slate-200 overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center">
               <Users className="w-4 h-4" />
             </div>
             <div>
@@ -357,19 +357,19 @@ export async function HRDashboard({ userName }: Props) {
             </div>
           </div>
           <div className="p-4 space-y-1">
-            <PulseRow icon={<Calendar className="w-4 h-4 text-blue-600" />} tone="blue"
+            <PulseRow icon={<Calendar className="w-4 h-4 text-slate-700" />} tone="blue"
               label="On leave" value={d.onLeaveToday.length}
               names={d.onLeaveToday.map((l) => l.employee.fullName)}
               emptyText="Everyone in today" />
-            <PulseRow icon={<PartyPopper className="w-4 h-4 text-emerald-600" />} tone="emerald"
+            <PulseRow icon={<PartyPopper className="w-4 h-4 text-slate-700" />} tone="emerald"
               label="Joining today" value={d.joiningToday.length}
               names={d.joiningToday.map((e) => e.fullName)}
               emptyText="No new hires today" />
-            <PulseRow icon={<Cake className="w-4 h-4 text-amber-600" />} tone="amber"
+            <PulseRow icon={<Cake className="w-4 h-4 text-slate-700" />} tone="amber"
               label="Birthdays" value={d.birthdaysToday.length}
               names={d.birthdaysToday.map((e) => e.fullName)}
               emptyText="No birthdays today" />
-            <PulseRow icon={<PartyPopper className="w-4 h-4 text-purple-600" />} tone="purple"
+            <PulseRow icon={<PartyPopper className="w-4 h-4 text-slate-700" />} tone="purple"
               label="Work anniversaries" value={d.anniversariesToday.length}
               names={d.anniversariesToday.map((e) => e.fullName)}
               emptyText="No anniversaries today" />
@@ -378,7 +378,7 @@ export async function HRDashboard({ userName }: Props) {
 
         <Card className="rounded-2xl border-slate-200 overflow-hidden shadow-sm">
           <div className="px-5 py-4 border-b border-slate-100 flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center">
               <Calendar className="w-4 h-4" />
             </div>
             <div>
@@ -405,7 +405,7 @@ export async function HRDashboard({ userName }: Props) {
       <Card className="rounded-2xl border-slate-200 overflow-hidden shadow-sm">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center">
               <TrendingUp className="w-4 h-4" />
             </div>
             <div>
@@ -413,7 +413,7 @@ export async function HRDashboard({ userName }: Props) {
               <p className="text-[11px] text-slate-500">Where everyone is in their journey</p>
             </div>
           </div>
-          <Link href="/dashboard/lifecycle" className="text-xs text-blue-600 hover:underline">Open lifecycle →</Link>
+          <Link href="/dashboard/lifecycle" className="text-xs text-slate-700 hover:underline">Open lifecycle →</Link>
         </div>
         <div className="p-4 grid grid-cols-2 md:grid-cols-6 gap-3 text-center">
           <FunnelTile label="Onboarding" value={d.lifecycleFunnel.onboarding} tone="blue" />
@@ -427,22 +427,22 @@ export async function HRDashboard({ userName }: Props) {
 
       {/* ─── ABSCONDING ──────────────────────────────────────────── */}
       {d.absconding.length > 0 && (
-        <Card className="rounded-2xl border-rose-200 bg-rose-50/40 overflow-hidden shadow-sm">
-          <div className="px-5 py-4 border-b border-rose-100 flex items-center justify-between">
+        <Card className="rounded-2xl border-slate-100 bg-slate-50/40 overflow-hidden shadow-sm">
+          <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-rose-100 text-rose-600 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
                 <AlertTriangle className="w-4 h-4" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-rose-900">Possible Absconding</p>
-                <p className="text-[11px] text-rose-700">No attendance in 9+ days, no covering leave</p>
+                <p className="text-sm font-semibold text-slate-900">Possible Absconding</p>
+                <p className="text-[11px] text-slate-700">No attendance in 9+ days, no covering leave</p>
               </div>
             </div>
-            <span className="text-xs font-semibold bg-white text-rose-700 border border-rose-200 rounded-full px-2.5 py-1">
+            <span className="text-xs font-semibold bg-white text-slate-700 border border-slate-100 rounded-full px-2.5 py-1">
               {d.absconding.length}
             </span>
           </div>
-          <ul className="divide-y divide-rose-100">
+          <ul className="divide-y divide-slate-100">
             {d.absconding.map((a) => (
               <li key={a.id} className="flex items-center justify-between gap-3 px-5 py-3">
                 <div className="min-w-0">
@@ -450,7 +450,7 @@ export async function HRDashboard({ userName }: Props) {
                   <p className="text-[11px] text-slate-500">{a.code} · {a.daysSince}d since last log{a.manager ? ` · Manager: ${a.manager}` : ''}</p>
                 </div>
                 <form action={`/api/employees/${a.id}/mark-absconded`} method="post">
-                  <button className="text-xs font-medium text-rose-700 border border-rose-300 rounded-full bg-white px-3 py-1 hover:bg-rose-100">
+                  <button className="text-xs font-medium text-slate-700 border border-slate-200 rounded-full bg-white px-3 py-1 hover:bg-slate-100">
                     Mark as ABSCONDED
                   </button>
                 </form>
@@ -505,10 +505,10 @@ function HeroStat({ label, value, tone, tooltip, subLabel }: {
   tooltip?: string; subLabel?: string;
 }) {
   const TONE: Record<string, string> = {
-    blue:   'bg-white/70 text-blue-700 ring-blue-200',
-    amber:  'bg-amber-50 text-amber-800 ring-amber-200',
-    green:  'bg-emerald-50 text-emerald-700 ring-emerald-200',
-    purple: 'bg-white/70 text-purple-700 ring-purple-200',
+    blue:   'bg-white/70 text-slate-700 ring-slate-100',
+    amber:  'bg-slate-50 text-slate-900 ring-slate-100',
+    green:  'bg-slate-50 text-slate-700 ring-slate-100',
+    purple: 'bg-white/70 text-slate-700 ring-slate-100',
   }
   return (
     <div title={tooltip} className={`rounded-xl ring-1 ${TONE[tone]} backdrop-blur-sm px-4 py-3 text-center min-w-[88px] cursor-help`}>
@@ -526,11 +526,11 @@ function ActionRow({ show, priority, icon, tone, count, label, sub, href }: {
 }) {
   if (!show) return null
   const ICON_BG: Record<string, string> = {
-    amber:   'bg-amber-50 text-amber-600',
-    blue:    'bg-blue-50 text-blue-600',
-    purple:  'bg-purple-50 text-purple-600',
-    rose:    'bg-rose-50 text-rose-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
+    amber:   'bg-slate-50 text-slate-700',
+    blue:    'bg-slate-50 text-slate-700',
+    purple:  'bg-slate-50 text-slate-700',
+    rose:    'bg-slate-50 text-slate-700',
+    emerald: 'bg-slate-50 text-slate-700',
     slate:   'bg-slate-100 text-slate-600',
   }
   return (
@@ -542,7 +542,7 @@ function ActionRow({ show, priority, icon, tone, count, label, sub, href }: {
             <span className="text-base font-bold text-slate-900 tabular-nums">{count}</span>
             <span className="text-sm text-slate-700 truncate">{label}</span>
             {priority === 'high' && (
-              <span className="text-[9px] font-semibold uppercase tracking-wider text-rose-700 bg-rose-50 border border-rose-200 rounded px-1.5 py-0.5 flex-shrink-0">Urgent</span>
+              <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-700 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 flex-shrink-0">Urgent</span>
             )}
           </div>
           <p className="text-[11px] text-slate-500 mt-0.5 truncate">{sub}</p>
@@ -580,11 +580,11 @@ function OpsTile({ Icon, label, value, sub, tone, href }: {
   tone: 'green' | 'amber' | 'blue' | 'slate' | 'purple' | 'emerald'; href: string
 }) {
   const ICON_BG: Record<string, string> = {
-    green:   'bg-emerald-50 text-emerald-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    amber:   'bg-amber-50 text-amber-600',
-    blue:    'bg-blue-50 text-blue-600',
-    purple:  'bg-purple-50 text-purple-600',
+    green:   'bg-slate-50 text-slate-700',
+    emerald: 'bg-slate-50 text-slate-700',
+    amber:   'bg-slate-50 text-slate-700',
+    blue:    'bg-slate-50 text-slate-700',
+    purple:  'bg-slate-50 text-slate-700',
     slate:   'bg-slate-100 text-slate-500',
   }
   return (
@@ -610,11 +610,11 @@ function WeekItemRow({ item }: { item: {
   tone: 'red' | 'amber' | 'blue' | 'emerald' | 'purple' | 'slate';
 } }) {
   const TONE: Record<string, string> = {
-    red:     'bg-rose-50 text-rose-600',
-    amber:   'bg-amber-50 text-amber-600',
-    blue:    'bg-blue-50 text-blue-600',
-    emerald: 'bg-emerald-50 text-emerald-600',
-    purple:  'bg-purple-50 text-purple-600',
+    red:     'bg-slate-50 text-slate-700',
+    amber:   'bg-slate-50 text-slate-700',
+    blue:    'bg-slate-50 text-slate-700',
+    emerald: 'bg-slate-50 text-slate-700',
+    purple:  'bg-slate-50 text-slate-700',
     slate:   'bg-slate-100 text-slate-500',
   }
   const ICONS: Record<string, React.ReactNode> = {
@@ -642,10 +642,10 @@ function WeekItemRow({ item }: { item: {
 
 function FunnelTile({ label, value, tone }: { label: string; value: number | string; tone: 'blue' | 'amber' | 'emerald' | 'rose' | 'slate' }) {
   const TONE: Record<string, string> = {
-    blue: 'bg-blue-50 text-blue-700 border-blue-200',
-    amber: 'bg-amber-50 text-amber-800 border-amber-200',
-    emerald: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-    rose: 'bg-rose-50 text-rose-700 border-rose-200',
+    blue: 'bg-slate-50 text-slate-700 border-slate-100',
+    amber: 'bg-slate-50 text-slate-900 border-slate-100',
+    emerald: 'bg-slate-50 text-slate-700 border-slate-100',
+    rose: 'bg-slate-50 text-slate-700 border-slate-100',
     slate: 'bg-slate-50 text-slate-700 border-slate-200',
   }
   return (

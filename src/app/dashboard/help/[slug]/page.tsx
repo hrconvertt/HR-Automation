@@ -30,9 +30,9 @@ export default async function GuidePage({ params }: PageProps) {
   // Help Center is HR-only (actual role, not preview)
   if (user.role !== 'HR_ADMIN') {
     return (
-      <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
-        <h2 className="text-lg font-semibold text-amber-900">Help Center is HR-only</h2>
-        <p className="text-sm text-amber-800 mt-2">
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
+        <h2 className="text-lg font-semibold text-slate-900">Help Center is HR-only</h2>
+        <p className="text-sm text-slate-900 mt-2">
           This in-app guide is maintained by HR. For your own questions, please use the AI chat bubble at the bottom-right, or raise a Help Desk ticket.
         </p>
       </div>
@@ -48,7 +48,7 @@ export default async function GuidePage({ params }: PageProps) {
 
   return (
     <div className="space-y-4">
-      <Link href="/dashboard/help" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
+      <Link href="/dashboard/help" className="inline-flex items-center gap-1 text-sm text-slate-700 hover:underline">
         <ArrowLeft className="w-4 h-4" /> Back to Help Center
       </Link>
 
@@ -68,7 +68,7 @@ export default async function GuidePage({ params }: PageProps) {
                     className={`
                       flex items-center gap-2 px-2.5 py-2 rounded-lg text-sm transition
                       ${active
-                        ? 'bg-blue-50 text-blue-700 font-medium'
+                        ? 'bg-slate-50 text-slate-700 font-medium'
                         : 'text-gray-700 hover:bg-gray-50'}
                     `}
                   >
@@ -85,7 +85,7 @@ export default async function GuidePage({ params }: PageProps) {
         {/* Content */}
         <article className="bg-white border border-gray-200 rounded-xl p-6 lg:p-8 max-w-3xl">
           <div className="flex items-center gap-3 pb-4 border-b border-gray-100 mb-2">
-            <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
+            <div className="p-2 rounded-lg bg-slate-50 text-slate-700">
               <Icon className="w-5 h-5" />
             </div>
             <div>

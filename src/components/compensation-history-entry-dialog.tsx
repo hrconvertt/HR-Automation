@@ -180,7 +180,7 @@ export default function CompensationHistoryEntryDialog({ open, onClose, entry }:
           </div>
 
           {error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
+            <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded-md p-2">
               {error}
             </p>
           )}

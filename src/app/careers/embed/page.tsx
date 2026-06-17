@@ -45,7 +45,7 @@ export default async function CareersEmbedPage() {
           <p className="text-sm">No open roles right now.</p>
           <p className="text-xs text-slate-400 mt-1">
             Send a CV to{' '}
-            <a href="mailto:hr@convertt.co" className="text-blue-600 hover:underline">hr@convertt.co</a>.
+            <a href="mailto:hr@convertt.co" className="text-slate-700 hover:underline">hr@convertt.co</a>.
           </p>
         </div>
       ) : (
@@ -57,10 +57,10 @@ export default async function CareersEmbedPage() {
               <Link
                 href={`/careers/${j.id}`}
                 target="_top"
-                className="group flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-lg px-4 py-3 hover:border-blue-300 hover:shadow-sm transition-all"
+                className="group flex items-center justify-between gap-3 bg-white border border-slate-200 rounded-lg px-4 py-3 hover:border-slate-200 hover:shadow-sm transition-all"
               >
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-900 group-hover:text-blue-700">{j.title}</p>
+                  <p className="text-sm font-semibold text-slate-900 group-hover:text-slate-700">{j.title}</p>
                   <div className="flex items-center gap-2 mt-0.5 text-[11px] text-slate-500">
                     <span className="inline-flex items-center gap-1">
                       <Briefcase className="w-3 h-3" /> {TYPE_LABEL[j.type] ?? j.type}
@@ -77,7 +77,7 @@ export default async function CareersEmbedPage() {
                     </span>
                   </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-blue-600" />
+                <ArrowRight className="w-4 h-4 text-slate-400 group-hover:text-slate-700" />
               </Link>
             </li>
           ))}

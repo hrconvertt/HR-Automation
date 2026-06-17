@@ -86,13 +86,13 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Briefcase className="w-5 h-5 text-blue-600" />
+              <Briefcase className="w-5 h-5 text-slate-700" />
               {isManager ? 'Request to Hire' : 'New Job Requisition'}
             </DialogTitle>
           </DialogHeader>
 
           {isManager && (
-            <div className="rounded-md bg-blue-50 border border-blue-100 text-xs text-blue-900 px-3 py-2">
+            <div className="rounded-md bg-slate-50 border border-slate-100 text-xs text-slate-900 px-3 py-2">
               Your request will be sent to HR for approval. You&apos;ll be notified once HR decides.
             </div>
           )}
@@ -190,13 +190,13 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
                 value={form.requestNote}
                 onChange={(e) => setForm({ ...form, requestNote: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+                className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-100"
                 placeholder="Why is this hire needed? Any context HR should know?"
               />
             </div>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
             )}
           </div>
 

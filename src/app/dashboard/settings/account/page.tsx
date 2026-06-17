@@ -43,13 +43,13 @@ export default function AccountPage() {
       </div>
 
       {user?.mustChangePass && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
-          <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+        <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 flex items-start gap-3">
+          <ShieldAlert className="w-5 h-5 text-slate-700 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-900">Please set a new password before continuing</p>
-            <p className="text-xs text-amber-800 mt-0.5">You are using a temporary password. For security, choose your own.</p>
+            <p className="text-sm font-semibold text-slate-900">Please set a new password before continuing</p>
+            <p className="text-xs text-slate-900 mt-0.5">You are using a temporary password. For security, choose your own.</p>
           </div>
-          <Link href="/dashboard/settings/password" className="text-sm font-semibold text-amber-900 hover:underline">
+          <Link href="/dashboard/settings/password" className="text-sm font-semibold text-slate-900 hover:underline">
             Change now →
           </Link>
         </div>
@@ -100,15 +100,15 @@ function Row({ label, value }: { label: string; value: React.ReactNode }) {
 
 function QuickLink({ href, icon: Icon, title, sub }: { href: string; icon: React.ComponentType<{ className?: string }>; title: string; sub: string }) {
   return (
-    <Link href={href} className="rounded-xl border border-slate-200 bg-white p-4 hover:border-blue-300 hover:shadow-sm transition group flex items-start gap-3">
-      <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-700 flex items-center justify-center flex-shrink-0">
+    <Link href={href} className="rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-200 hover:shadow-sm transition group flex items-start gap-3">
+      <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center flex-shrink-0">
         <Icon className="w-5 h-5" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-900">{title}</p>
         <p className="text-xs text-slate-500 mt-0.5">{sub}</p>
       </div>
-      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-blue-600 flex-shrink-0 mt-1" />
+      <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-700 flex-shrink-0 mt-1" />
     </Link>
   )
 }

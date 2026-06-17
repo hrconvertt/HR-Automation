@@ -18,7 +18,7 @@ function SelectTrigger({
     <RadixSelect.Trigger
       className={cn(
         'flex h-9 w-full items-center justify-between rounded-lg border border-gray-300 bg-white px-3 py-1 text-sm text-gray-900',
-        'focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent',
+        'focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent',
         'disabled:cursor-not-allowed disabled:opacity-50',
         className
       )}
@@ -66,7 +66,7 @@ function SelectItem({
     <RadixSelect.Item
       className={cn(
         'relative flex w-full cursor-default select-none items-center rounded-md py-1.5 pl-8 pr-2 text-sm text-gray-700',
-        'focus:bg-blue-50 focus:text-blue-700 focus:outline-none',
+        'focus:bg-slate-50 focus:text-slate-700 focus:outline-none',
         'data-[disabled]:pointer-events-none data-[disabled]:opacity-50',
         className
       )}

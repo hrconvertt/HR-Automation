@@ -89,7 +89,7 @@ export default async function CompensationPage() {
                     <TableCell>{formatCurrency(h.oldSalary)}</TableCell>
                     <TableCell>{formatCurrency(h.newSalary)}</TableCell>
                     <TableCell>
-                      <span className={h.newSalary >= h.oldSalary ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                      <span className={h.newSalary >= h.oldSalary ? 'text-slate-700 font-medium' : 'text-slate-700 font-medium'}>
                         +{pct}%
                       </span>
                     </TableCell>

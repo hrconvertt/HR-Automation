@@ -109,12 +109,12 @@ export async function ExecutiveWorkforceView() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <KPI label="Headcount" value={totalHeadcount} icon={Users} color="text-blue-600 bg-blue-50" />
-        <KPI label="New Hires (30d)" value={newHires30d} icon={UserPlus} color="text-emerald-600 bg-emerald-50" />
-        <KPI label="Exits (90d)" value={exits90d} icon={UserMinus} color="text-red-600 bg-red-50" />
-        <KPI label="Permanent" value={permanent} icon={Briefcase} color="text-purple-600 bg-purple-50" />
-        <KPI label="Probation" value={probation} icon={Clock} color="text-amber-600 bg-amber-50" />
-        <KPI label="Avg Tenure" value={`${avgTenure.toFixed(1)} yr`} icon={TrendingUp} color="text-indigo-600 bg-indigo-50" />
+        <KPI label="Headcount" value={totalHeadcount} icon={Users} color="text-slate-700 bg-slate-50" />
+        <KPI label="New Hires (30d)" value={newHires30d} icon={UserPlus} color="text-slate-700 bg-slate-50" />
+        <KPI label="Exits (90d)" value={exits90d} icon={UserMinus} color="text-slate-700 bg-slate-50" />
+        <KPI label="Permanent" value={permanent} icon={Briefcase} color="text-slate-700 bg-slate-50" />
+        <KPI label="Probation" value={probation} icon={Clock} color="text-slate-700 bg-slate-50" />
+        <KPI label="Avg Tenure" value={`${avgTenure.toFixed(1)} yr`} icon={TrendingUp} color="text-slate-700 bg-slate-50" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -131,7 +131,7 @@ export async function ExecutiveWorkforceView() {
                     <span className="text-sm text-gray-700 w-44 truncate">{d.name}</span>
                     <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                       <div
-                        className="bg-indigo-500 h-2 rounded-full"
+                        className="bg-slate-500 h-2 rounded-full"
                         style={{ width: `${(d._count.employees / maxDeptCount) * 100}%` }}
                       />
                     </div>
@@ -152,7 +152,7 @@ export async function ExecutiveWorkforceView() {
                   <span className="text-sm text-gray-700 w-32">{type}</span>
                   <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                     <div
-                      className="bg-emerald-500 h-2 rounded-full"
+                      className="bg-slate-500 h-2 rounded-full"
                       style={{ width: `${(count / maxTypeCount) * 100}%` }}
                     />
                   </div>
@@ -173,7 +173,7 @@ export async function ExecutiveWorkforceView() {
                   <span className="text-sm text-gray-700 w-24">{bucket}</span>
                   <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                     <div
-                      className="bg-purple-500 h-2 rounded-full"
+                      className="bg-slate-500 h-2 rounded-full"
                       style={{ width: `${(count / maxTenureCount) * 100}%` }}
                     />
                   </div>

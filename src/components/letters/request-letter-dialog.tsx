@@ -152,7 +152,7 @@ export function RequestLetterDialog() {
             )}
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
             )}
           </div>
 

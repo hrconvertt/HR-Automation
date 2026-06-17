@@ -45,9 +45,9 @@ export default async function DashboardPage() {
 
   if (!dashboard) {
     dashboard = (
-      <div className="p-6 bg-amber-50 border border-amber-200 rounded-xl">
-        <h2 className="text-lg font-semibold text-amber-900">Profile setup needed</h2>
-        <p className="text-sm text-amber-800 mt-2">
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-xl">
+        <h2 className="text-lg font-semibold text-slate-900">Profile setup needed</h2>
+        <p className="text-sm text-slate-900 mt-2">
           Your user account isn&apos;t linked to an employee record yet. Please contact HR.
         </p>
       </div>

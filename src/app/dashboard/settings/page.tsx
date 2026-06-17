@@ -170,18 +170,18 @@ export default function SettingsPage() {
                 className={`
                   w-full text-left rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors
                   ${active
-                    ? 'bg-blue-50 text-blue-900 ring-1 ring-blue-200'
+                    ? 'bg-slate-50 text-slate-900 ring-1 ring-slate-100'
                     : 'text-slate-700 hover:bg-slate-100'}
                 `}
               >
-                <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+                <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-500'}`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium truncate">{item.label}</p>
                   <p className="text-[11px] text-slate-500 truncate">{item.sub}</p>
                 </div>
-                <ChevronRight className={`w-4 h-4 flex-shrink-0 ${active ? 'text-blue-600' : 'text-slate-300'}`} />
+                <ChevronRight className={`w-4 h-4 flex-shrink-0 ${active ? 'text-slate-700' : 'text-slate-300'}`} />
               </button>
             )
           })}
@@ -228,7 +228,7 @@ export default function SettingsPage() {
                     <button key={day} onClick={() => toggleDay(day)}
                       className={`px-4 py-2 rounded-full border text-sm font-medium transition-colors ${
                         workingDays.includes(day)
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          ? 'bg-slate-700 text-white border-slate-700 shadow-sm'
                           : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
                       }`}>{day}</button>
                   ))}
@@ -238,7 +238,7 @@ export default function SettingsPage() {
                     {workingDaysOk ? '✓ Saved' : 'Save Changes'}
                   </Button>
                   {workingDaysOk && (
-                    <span className="text-sm text-emerald-600 font-medium">✓ Saved</span>
+                    <span className="text-sm text-slate-700 font-medium">✓ Saved</span>
                   )}
                 </div>
               </CardContent>
@@ -270,7 +270,7 @@ export default function SettingsPage() {
                   </div>
                 </Field>
 
-                <div className={`rounded-lg border p-4 ${eobiEnabled ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200'}`}>
+                <div className={`rounded-lg border p-4 ${eobiEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
                   <Toggle label="EOBI (Employee Old-Age Benefits)"
                     sub={eobiEnabled ? 'Active — deducted from each payslip' : 'Disabled — no deduction'}
                     checked={eobiEnabled} onChange={setEobiEnabled} />
@@ -286,7 +286,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
 
-                <div className={`rounded-lg border p-4 ${taxEnabled ? 'border-blue-200 bg-blue-50/30' : 'border-slate-200'}`}>
+                <div className={`rounded-lg border p-4 ${taxEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
                   <Toggle label="Income Tax Withholding (FBR)"
                     sub={taxEnabled ? 'Active — FBR 2025-26 slabs applied' : 'Disabled'}
                     checked={taxEnabled} onChange={setTaxEnabled} />
@@ -388,7 +388,7 @@ export default function SettingsPage() {
                 </Field>
                 <div className="text-xs text-slate-400">Channels: Email · In-app inbox · Future: SMS</div>
                 <div className="pt-3 border-t border-slate-100">
-                  <a href="/dashboard/settings/email-templates" className="inline-flex items-center gap-2 text-sm font-medium text-blue-600 hover:underline">
+                  <a href="/dashboard/settings/email-templates" className="inline-flex items-center gap-2 text-sm font-medium text-slate-700 hover:underline">
                     Edit Email Templates <ChevronRight className="w-4 h-4" />
                   </a>
                   <p className="text-xs text-slate-500 mt-1">Subject + body templates with {'{{var}}'} substitution for interview invites, offers, rejections, confirmations.</p>
@@ -458,7 +458,7 @@ function Toggle({ label, sub, checked, onChange }: { label: string; sub: string;
       </div>
       <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="sr-only peer" />
-        <div className="w-11 h-6 bg-slate-200 peer-checked:bg-blue-600 rounded-full peer transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+        <div className="w-11 h-6 bg-slate-200 peer-checked:bg-slate-700 rounded-full peer transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
       </label>
     </div>
   )
@@ -466,8 +466,8 @@ function Toggle({ label, sub, checked, onChange }: { label: string; sub: string;
 
 function tick(v: 'full' | 'self' | 'team' | 'no') {
   if (v === 'no') return <span className="text-slate-300">—</span>
-  if (v === 'full') return <span className="text-emerald-600 font-bold">✓</span>
-  return <span className="text-blue-600 text-xs">{v === 'self' ? 'own' : 'team'}</span>
+  if (v === 'full') return <span className="text-slate-700 font-bold">✓</span>
+  return <span className="text-slate-700 text-xs">{v === 'self' ? 'own' : 'team'}</span>
 }
 
 const ROLE_MATRIX = [

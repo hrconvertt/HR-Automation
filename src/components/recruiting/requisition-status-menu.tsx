@@ -46,15 +46,15 @@ export function RequisitionStatusMenu({ requisitionId, status, title }: Props) {
   const actions: { label: string; target: string; icon: React.ReactNode; tone?: string; confirmCopy?: string }[] = []
   if (status === 'OPEN') {
     actions.push({ label: 'Pause hiring',     target: 'PAUSED', icon: <Pause     className="w-3.5 h-3.5" /> })
-    actions.push({ label: 'Mark as Filled',   target: 'FILLED', icon: <CheckCheck className="w-3.5 h-3.5" />, tone: 'text-emerald-700', confirmCopy: `Mark "${title}" as Filled? It will leave the active hiring board.` })
-    actions.push({ label: 'Close (abandon)',  target: 'CLOSED', icon: <X         className="w-3.5 h-3.5" />, tone: 'text-rose-700',  confirmCopy: `Close "${title}" without hiring? It can be reopened later.` })
+    actions.push({ label: 'Mark as Filled',   target: 'FILLED', icon: <CheckCheck className="w-3.5 h-3.5" />, tone: 'text-slate-700', confirmCopy: `Mark "${title}" as Filled? It will leave the active hiring board.` })
+    actions.push({ label: 'Close (abandon)',  target: 'CLOSED', icon: <X         className="w-3.5 h-3.5" />, tone: 'text-slate-700',  confirmCopy: `Close "${title}" without hiring? It can be reopened later.` })
   }
   if (status === 'PAUSED') {
-    actions.push({ label: 'Resume',           target: 'OPEN',   icon: <Play  className="w-3.5 h-3.5" />, tone: 'text-blue-700' })
-    actions.push({ label: 'Close (abandon)',  target: 'CLOSED', icon: <X     className="w-3.5 h-3.5" />, tone: 'text-rose-700' })
+    actions.push({ label: 'Resume',           target: 'OPEN',   icon: <Play  className="w-3.5 h-3.5" />, tone: 'text-slate-700' })
+    actions.push({ label: 'Close (abandon)',  target: 'CLOSED', icon: <X     className="w-3.5 h-3.5" />, tone: 'text-slate-700' })
   }
   if (status === 'CLOSED' || status === 'FILLED') {
-    actions.push({ label: 'Reopen',           target: 'OPEN',   icon: <RotateCcw className="w-3.5 h-3.5" />, tone: 'text-blue-700' })
+    actions.push({ label: 'Reopen',           target: 'OPEN',   icon: <RotateCcw className="w-3.5 h-3.5" />, tone: 'text-slate-700' })
   }
 
   if (actions.length === 0) return null

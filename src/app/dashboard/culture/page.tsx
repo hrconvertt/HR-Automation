@@ -155,7 +155,7 @@ export default async function CulturePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {birthdays.map((e) => (
                   <div key={e.id} className="rounded-lg border border-slate-200 bg-white p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-rose-500 flex items-center justify-center text-white">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-300 to-slate-500 flex items-center justify-center text-white">
                       <Cake className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -181,14 +181,14 @@ export default async function CulturePage() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {anniversaries.map((e) => (
                   <div key={e.id} className="rounded-lg border border-slate-200 bg-white p-4 flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-300 to-slate-500 flex items-center justify-center text-white">
                       <Trophy className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-900 truncate">{e.fullName}</p>
                       <p className="text-xs text-slate-500 truncate">{e.designation} · {e.department?.name ?? '—'}</p>
                     </div>
-                    <Badge className="bg-amber-100 text-amber-800">
+                    <Badge className="bg-slate-100 text-slate-900">
                       {e.years} year{e.years === 1 ? '' : 's'} · {new Date(thisYear, e.joinMonth, e.joinDay).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                     </Badge>
                   </div>

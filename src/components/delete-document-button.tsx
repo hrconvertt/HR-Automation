@@ -60,15 +60,15 @@ export default function DeleteDocumentButton({ documentId, documentName }: Props
         className={`
           inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded transition-colors
           ${confirming
-            ? 'bg-rose-100 text-rose-700 hover:bg-rose-200'
-            : 'text-rose-600 hover:bg-rose-50'}
+            ? 'bg-slate-100 text-slate-700 hover:bg-slate-100'
+            : 'text-slate-700 hover:bg-slate-50'}
           ${busy ? 'opacity-50 cursor-not-allowed' : ''}
         `}
       >
         <Trash2 className="w-3.5 h-3.5" />
         {busy ? 'Deleting…' : confirming ? 'Sure?' : 'Delete'}
       </button>
-      {err && <span className="text-xs text-rose-700">{err}</span>}
+      {err && <span className="text-xs text-slate-700">{err}</span>}
     </span>
   )
 }

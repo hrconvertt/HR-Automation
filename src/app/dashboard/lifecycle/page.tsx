@@ -116,7 +116,7 @@ function OnboardingTab() {
     <Card>
       <CardHeader className="border-b border-slate-100 flex items-center justify-between flex-row">
         <CardTitle>Onboarding Checklists</CardTitle>
-        <Link href="/dashboard/onboarding" className="text-xs text-blue-600 hover:underline">Full view →</Link>
+        <Link href="/dashboard/onboarding" className="text-xs text-slate-700 hover:underline">Full view →</Link>
       </CardHeader>
       {loading ? (
         <CardContent className="py-10 text-center text-slate-400">Loading…</CardContent>
@@ -136,7 +136,7 @@ function OnboardingTab() {
                 key={i.id}
                 href={`/dashboard/employees/${i.employee.id}`}
                 prefetch
-                className="rounded-xl border border-slate-200 p-4 hover:border-blue-300 hover:shadow-sm transition-all"
+                className="rounded-xl border border-slate-200 p-4 hover:border-slate-200 hover:shadow-sm transition-all"
               >
                 <div className="flex items-center justify-between">
                   <div className="min-w-0 flex-1">
@@ -146,7 +146,7 @@ function OnboardingTab() {
                   <Badge variant="secondary">{i.progress}%</Badge>
                 </div>
                 <div className="mt-3 h-1.5 rounded-full bg-slate-100 overflow-hidden">
-                  <div className="h-full bg-blue-500 transition-all" style={{ width: `${i.progress}%` }} />
+                  <div className="h-full bg-slate-500 transition-all" style={{ width: `${i.progress}%` }} />
                 </div>
               </Link>
             ))}
@@ -213,7 +213,7 @@ function ActiveEmployeesTab() {
               <ul className="space-y-1">
                 {data.birthdays.map((b) => (
                   <li key={b.id} className="text-sm">
-                    <Link href={`/dashboard/employees/${b.id}`} className="text-blue-600 hover:underline">{b.fullName}</Link>
+                    <Link href={`/dashboard/employees/${b.id}`} className="text-slate-700 hover:underline">{b.fullName}</Link>
                     <span className="text-xs text-slate-500"> · {formatDate(b.date)}{b.manager ? ` · ${b.manager}` : ''}</span>
                   </li>
                 ))}
@@ -226,7 +226,7 @@ function ActiveEmployeesTab() {
               <ul className="space-y-1">
                 {data.anniversaries.map((a) => (
                   <li key={a.id} className="text-sm">
-                    <Link href={`/dashboard/employees/${a.id}`} className={a.milestone ? 'text-purple-700 font-semibold hover:underline' : 'text-blue-600 hover:underline'}>
+                    <Link href={`/dashboard/employees/${a.id}`} className={a.milestone ? 'text-slate-700 font-semibold hover:underline' : 'text-slate-700 hover:underline'}>
                       {a.fullName} · {a.years}y{a.milestone ? ' ⭐' : ''}
                     </Link>
                     <span className="text-xs text-slate-500"> · {formatDate(a.date)}</span>
@@ -241,7 +241,7 @@ function ActiveEmployeesTab() {
               <ul className="space-y-1">
                 {data.probationEnding.map((p) => (
                   <li key={p.id} className="text-sm">
-                    <Link href={`/dashboard/employees/${p.id}`} className="text-blue-600 hover:underline">{p.fullName}</Link>
+                    <Link href={`/dashboard/employees/${p.id}`} className="text-slate-700 hover:underline">{p.fullName}</Link>
                     <span className="text-xs text-slate-500"> · ends in {p.daysLeft}d</span>
                   </li>
                 ))}
@@ -260,7 +260,7 @@ function ActiveEmployeesTab() {
               <ul className="space-y-1">
                 {data.promotions.map((p, i) => (
                   <li key={i} className="text-sm">
-                    <Link href={`/dashboard/employees/${p.employeeId}`} className="text-blue-600 hover:underline">{p.employee}</Link>
+                    <Link href={`/dashboard/employees/${p.employeeId}`} className="text-slate-700 hover:underline">{p.employee}</Link>
                     <span className="text-xs text-slate-500"> → {p.newDesignation} ({formatDate(p.effectiveDate)})</span>
                   </li>
                 ))}
@@ -273,7 +273,7 @@ function ActiveEmployeesTab() {
               <ul className="space-y-1">
                 {data.managerChanges.map((m, i) => (
                   <li key={i} className="text-sm">
-                    <Link href={`/dashboard/employees/${m.employeeId}`} className="text-blue-600 hover:underline">{m.employee}</Link>
+                    <Link href={`/dashboard/employees/${m.employeeId}`} className="text-slate-700 hover:underline">{m.employee}</Link>
                     <span className="text-xs text-slate-500"> · {m.oldManager ?? '—'} → {m.newManager ?? '—'}</span>
                   </li>
                 ))}
@@ -286,7 +286,7 @@ function ActiveEmployeesTab() {
               <ul className="space-y-1">
                 {data.deptTransfers.map((d, i) => (
                   <li key={i} className="text-sm">
-                    <Link href={`/dashboard/employees/${d.employeeId}`} className="text-blue-600 hover:underline">{d.employee}</Link>
+                    <Link href={`/dashboard/employees/${d.employeeId}`} className="text-slate-700 hover:underline">{d.employee}</Link>
                     <span className="text-xs text-slate-500"> · {d.from ?? '—'} → {d.to ?? '—'}</span>
                   </li>
                 ))}
@@ -300,10 +300,10 @@ function ActiveEmployeesTab() {
         <CardHeader className="border-b border-slate-100"><CardTitle>Tenure Distribution</CardTitle></CardHeader>
         <CardContent className="p-4 space-y-2">
           {([
-            ['< 6 months', data.tenure.lt6, 'bg-blue-400'],
-            ['6mo - 2yr', data.tenure.m6to2y, 'bg-emerald-400'],
-            ['2-5 yr', data.tenure.y2to5, 'bg-violet-400'],
-            ['5+ yr', data.tenure.y5plus, 'bg-amber-400'],
+            ['< 6 months', data.tenure.lt6, 'bg-slate-300'],
+            ['6mo - 2yr', data.tenure.m6to2y, 'bg-slate-300'],
+            ['2-5 yr', data.tenure.y2to5, 'bg-slate-300'],
+            ['5+ yr', data.tenure.y5plus, 'bg-slate-300'],
           ] as [string, number, string][]).map(([label, count, color]) => {
             const max = Math.max(1, data.tenure.lt6, data.tenure.m6to2y, data.tenure.y2to5, data.tenure.y5plus)
             const pct = (count / max) * 100
@@ -347,7 +347,7 @@ function ExitClearanceTab() {
     <Card>
       <CardHeader className="border-b border-slate-100">
         <CardTitle>Exit Clearance</CardTitle>
-        <div className="flex items-start gap-2 mt-2 rounded-md bg-blue-50 border border-blue-100 px-3 py-2 text-xs text-blue-900">
+        <div className="flex items-start gap-2 mt-2 rounded-md bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-slate-900">
           <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
           <p>
             Employees appear here automatically when their status changes to{' '}
@@ -390,7 +390,7 @@ function ExitClearanceTab() {
                     <Badge variant={c.status === 'COMPLETED' ? 'success' : 'default'}>{c.status}</Badge>
                   </TableCell>
                   <TableCell>
-                    <button onClick={() => setActiveId(c.id)} className="text-blue-600 hover:underline text-sm font-medium">
+                    <button onClick={() => setActiveId(c.id)} className="text-slate-700 hover:underline text-sm font-medium">
                       Open →
                     </button>
                   </TableCell>
@@ -472,7 +472,7 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
               <button
                 onClick={cancelClearance}
                 disabled={busy}
-                className="text-xs px-2.5 py-1 rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                className="text-xs px-2.5 py-1 rounded-md border border-slate-100 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
               >
                 Cancel Clearance
               </button>
@@ -505,7 +505,7 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
                 ['ADMIN', c.adminCleared, c.adminClearedAt],
                 ['HR', c.hrCleared, c.hrClearedAt],
               ].map(([dept, cleared, at]) => (
-                <div key={String(dept)} className={`rounded-lg border p-3 flex items-center justify-between ${cleared ? 'border-emerald-200 bg-emerald-50' : 'border-slate-200'}`}>
+                <div key={String(dept)} className={`rounded-lg border p-3 flex items-center justify-between ${cleared ? 'border-slate-100 bg-slate-50' : 'border-slate-200'}`}>
                   <div>
                     <p className="text-sm font-medium">{String(dept)}</p>
                     <p className="text-[11px] text-slate-500">{cleared ? `Cleared ${formatDate(String(at))}` : 'Pending'}</p>
@@ -523,11 +523,11 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
                 <p>Leave encashment: PKR {(c.leaveEncashment ?? 0).toLocaleString()}</p>
                 <p>Outstanding deductions: PKR {(c.outstandingDeductions ?? 0).toLocaleString()}</p>
                 <p className="font-semibold text-slate-800">Computed total: PKR {((c.prorataSalary ?? 0) + (c.leaveEncashment ?? 0) - (c.outstandingDeductions ?? 0)).toLocaleString()}</p>
-                <button onClick={() => act({ action: 'RECOMPUTE_SETTLEMENT' })} className="text-xs text-blue-600 hover:underline" disabled={busy}>Recompute</button>
+                <button onClick={() => act({ action: 'RECOMPUTE_SETTLEMENT' })} className="text-xs text-slate-700 hover:underline" disabled={busy}>Recompute</button>
               </div>
             )}
             {c.duesCleared ? (
-              <p className="text-sm text-emerald-700">Cleared. Amount: PKR {c.finalSettlementAmount?.toLocaleString() ?? '0'}</p>
+              <p className="text-sm text-slate-700">Cleared. Amount: PKR {c.finalSettlementAmount?.toLocaleString() ?? '0'}</p>
             ) : (
               <div className="space-y-2">
                 <Input type="number" placeholder="Final settlement amount (PKR)" value={settleAmt || (c.finalSettlementAmount?.toString() ?? '')} onChange={(e) => setSettleAmt(e.target.value)} />
@@ -543,7 +543,7 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
               and reaffirm my NDA obligations under PECA 2016 and Defamation Ordinance 2002.
             </p>
             {c.employeeAcknowledged ? (
-              <p className="text-sm text-emerald-700 mt-2">Acknowledged on {formatDate(c.employeeSignedAt)}</p>
+              <p className="text-sm text-slate-700 mt-2">Acknowledged on {formatDate(c.employeeSignedAt)}</p>
             ) : (
               <Button size="sm" disabled={busy} className="mt-2" onClick={() => act({ action: 'ACKNOWLEDGE' })}>Sign Acknowledgment</Button>
             )}
@@ -551,7 +551,7 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
 
           <Section title="5. HR Certification">
             {c.hrCertifiedAt ? (
-              <p className="text-sm text-emerald-700">Certified on {formatDate(c.hrCertifiedAt)}</p>
+              <p className="text-sm text-slate-700">Certified on {formatDate(c.hrCertifiedAt)}</p>
             ) : (
               <Button size="sm" disabled={busy} onClick={() => act({ action: 'CERTIFY' })}>HR Certify</Button>
             )}
@@ -559,7 +559,7 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
 
           <Section title="6. Exit Interview">
             {c.interviewCompletedAt ? (
-              <p className="text-sm text-emerald-700">Completed on {formatDate(c.interviewCompletedAt)} — eNPS: {c.interviewRecommendScore ?? '—'}/10</p>
+              <p className="text-sm text-slate-700">Completed on {formatDate(c.interviewCompletedAt)} — eNPS: {c.interviewRecommendScore ?? '—'}/10</p>
             ) : (
               <ExitInterviewForm busy={busy} onSubmit={(payload) => act({ action: 'INTERVIEW', ...payload })} />
             )}
@@ -567,7 +567,7 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
 
           <Section title="7. Handover Document">
             {c.handoverSignedAt && c.handoverSignedByMgr ? (
-              <p className="text-sm text-emerald-700">Handover signed by employee on {formatDate(c.handoverSignedAt)} — manager confirmed.</p>
+              <p className="text-sm text-slate-700">Handover signed by employee on {formatDate(c.handoverSignedAt)} — manager confirmed.</p>
             ) : (
               <HandoverForm
                 busy={busy}
@@ -588,7 +588,7 @@ function ClearanceDetailDialog({ id, onClose, onChanged }: { id: string; onClose
 
           <div className="border-t border-slate-100 pt-4">
             {c.status === 'COMPLETED' ? (
-              <p className="text-sm font-semibold text-emerald-700">
+              <p className="text-sm font-semibold text-slate-700">
                 Clearance complete — employee deactivated on {formatDate(c.completedAt)}.
               </p>
             ) : (
@@ -752,7 +752,7 @@ function ClearanceCompleteButton({ clearance, busy, onComplete }: { clearance: C
     <div className="space-y-2">
       <div className="grid grid-cols-2 gap-1 text-xs">
         {checks.map((c) => (
-          <div key={c.label} className={c.ok ? 'text-emerald-700' : 'text-slate-400'}>
+          <div key={c.label} className={c.ok ? 'text-slate-700' : 'text-slate-400'}>
             {c.ok ? '✓' : '○'} {c.label}
           </div>
         ))}

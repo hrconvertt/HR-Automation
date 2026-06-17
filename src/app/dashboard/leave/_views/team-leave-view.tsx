@@ -161,7 +161,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
         const myPending = myRequests.filter((r) => r.status === 'PENDING' || r.status === 'PENDING_HR')
         return (
           <Card>
-            <CardContent className="p-4 border-l-4 border-blue-500 space-y-2">
+            <CardContent className="p-4 border-l-4 border-slate-500 space-y-2">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
                   <p className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">My own leave</p>
@@ -201,7 +201,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
       {pendingApprovals.length > 0 && (
         <Link
           href="/dashboard/time?tab=approvals"
-          className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 w-fit"
+          className="inline-flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-full bg-slate-50 text-slate-900 border border-slate-100 hover:bg-slate-100 w-fit"
         >
           <Inbox className="w-3.5 h-3.5" />
           {pendingApprovals.length} leave request{pendingApprovals.length === 1 ? '' : 's'} waiting on you · review in Approvals →
@@ -212,19 +212,19 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
       {awaitingHrAfterMe.length > 0 && (
         <Card>
           <CardContent className="p-0">
-            <div className="px-5 py-3 border-b border-slate-100 bg-blue-50/40 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-700" />
-              <p className="text-[11px] uppercase tracking-[0.2em] text-blue-900 font-semibold">
+            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/40 flex items-center gap-2">
+              <Clock className="w-4 h-4 text-slate-700" />
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-900 font-semibold">
                 Approved by me · Awaiting HR
               </p>
-              <span className="text-xs font-bold text-blue-700 bg-blue-100 rounded-full px-2 py-0.5">
+              <span className="text-xs font-bold text-slate-700 bg-slate-100 rounded-full px-2 py-0.5">
                 {awaitingHrAfterMe.length}
               </span>
             </div>
             <ul>
               {awaitingHrAfterMe.map((r) => (
                 <li key={r.id} className="flex items-center gap-3 px-5 py-2.5 border-b border-slate-50 last:border-b-0">
-                  <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0">
                     {getInitials(r.employee.fullName)}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -233,7 +233,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
                       {LEAVE_LABEL[r.leaveType] ?? r.leaveType} · {fmtDate(r.fromDate)} → {fmtDate(r.toDate)} · {formatDays(r.days)}
                     </p>
                   </div>
-                  <span className="text-[11px] text-blue-700 font-medium shrink-0">
+                  <span className="text-[11px] text-slate-700 font-medium shrink-0">
                     {LEAVE_STATUS_LABELS['PENDING_HR']}
                   </span>
                 </li>
@@ -247,10 +247,10 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
       {onLeaveToday.length > 0 && (
         <Card>
           <CardContent className="p-0">
-            <div className="px-5 py-3 border-b border-slate-100 bg-purple-50/50 flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-purple-700" />
-              <p className="text-[11px] uppercase tracking-[0.2em] text-purple-900 font-semibold">On Leave Today</p>
-              <span className="text-xs font-bold text-purple-700 bg-purple-100 rounded-full px-2 py-0.5">
+            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-slate-700" />
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-900 font-semibold">On Leave Today</p>
+              <span className="text-xs font-bold text-slate-700 bg-slate-100 rounded-full px-2 py-0.5">
                 {onLeaveToday.length}
               </span>
             </div>
@@ -260,7 +260,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
                 returnDate.setDate(returnDate.getDate() + 1)
                 return (
                   <li key={r.id} className="flex items-center gap-3 px-5 py-3 border-b border-slate-50 last:border-b-0">
-                    <div className="w-9 h-9 rounded-full bg-purple-100 text-purple-700 text-xs font-bold flex items-center justify-center shrink-0">
+                    <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center shrink-0">
                       {getInitials(r.employee.fullName)}
                     </div>
                     <div className="flex-1 min-w-0">
@@ -269,7 +269,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
                         {LEAVE_LABEL[r.leaveType] ?? r.leaveType} · {fmtDate(r.fromDate)} → {fmtDate(r.toDate)}
                       </p>
                     </div>
-                    <span className="text-xs text-purple-700 font-medium shrink-0">
+                    <span className="text-xs text-slate-700 font-medium shrink-0">
                       Back {returnDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                     </span>
                   </li>
@@ -292,7 +292,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
             <ul>
               {teamUpcoming.map((r) => (
                 <li key={r.id} className="flex items-center gap-3 px-5 py-3 border-b border-slate-50 last:border-b-0">
-                  <Calendar className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <Calendar className="w-4 h-4 text-slate-700 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-slate-900">{r.employee.fullName}</p>
                     <p className="text-[11px] text-slate-500">
@@ -348,7 +348,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
                 placeholder="Brief reason — helps HR approve faster."
               />
             </div>
-            {applyError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{applyError}</p>}
+            {applyError && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{applyError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApplyOpen(false)}>Cancel</Button>

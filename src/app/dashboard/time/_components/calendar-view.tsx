@@ -39,17 +39,17 @@ export function CalendarView({ role: _role }: { role?: string } = {}) {
 
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center">
-      <CalendarDays className="w-10 h-10 text-blue-500 mx-auto mb-3" />
+      <CalendarDays className="w-10 h-10 text-slate-500 mx-auto mb-3" />
       <h2 className="text-lg font-semibold text-slate-900">Opening your calendar…</h2>
       {error ? (
         <>
-          <p className="mt-2 text-sm text-rose-600">{error}</p>
+          <p className="mt-2 text-sm text-slate-700">{error}</p>
           <p className="mt-1 text-xs text-slate-500">Contact HR to link your employee record.</p>
         </>
       ) : employeeId ? (
         <Link
           href={`/dashboard/attendance/${employeeId}`}
-          className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-800"
+          className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-900"
         >
           Open my calendar <ArrowRight className="w-4 h-4" />
         </Link>

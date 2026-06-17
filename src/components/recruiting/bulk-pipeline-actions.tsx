@@ -94,7 +94,7 @@ export function BulkPipelineActions({ openRequisitions }: Props) {
         variant="outline"
         onClick={rejectRemaining}
         disabled={busy !== null}
-        className="text-xs text-rose-700 border-rose-200 hover:bg-rose-50"
+        className="text-xs text-slate-700 border-slate-100 hover:bg-slate-50"
       >
         <X className="w-3 h-3 mr-1" />
         {busy === 'reject' ? 'Rejecting…' : 'Reject remaining'}

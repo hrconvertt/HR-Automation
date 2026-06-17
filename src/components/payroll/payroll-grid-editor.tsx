@@ -199,7 +199,7 @@ export function PayrollGridEditor({
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-2 flex-wrap">
         <div className="flex items-center gap-2">
-          <FileSpreadsheet className="w-4 h-4 text-blue-600" />
+          <FileSpreadsheet className="w-4 h-4 text-slate-700" />
           <h3 className="text-sm font-semibold text-slate-900">
             Spreadsheet Editor — {monthsShort[month - 1]} {year}
           </h3>
@@ -228,7 +228,7 @@ export function PayrollGridEditor({
             <Button
               onClick={save}
               disabled={!dirty || busy}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-slate-700 hover:bg-slate-700 text-white"
               size="sm"
             >
               <Save className="w-3.5 h-3.5 mr-1.5" /> {busy ? 'Saving…' : 'Save Changes'}
@@ -240,7 +240,7 @@ export function PayrollGridEditor({
               disabled={busy}
               variant="outline"
               size="sm"
-              className="text-amber-700 border-amber-300 hover:bg-amber-50"
+              className="text-slate-700 border-slate-200 hover:bg-slate-50"
             >
               <Undo2 className="w-3.5 h-3.5 mr-1.5" /> Send Back
             </Button>
@@ -249,7 +249,7 @@ export function PayrollGridEditor({
             <Button
               onClick={() => setShowSendDialog(true)}
               disabled={busy || dirty}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              className="bg-slate-700 hover:bg-slate-700 text-white"
               size="sm"
               title={dirty ? 'Save changes first' : ''}
             >
@@ -304,7 +304,7 @@ export function PayrollGridEditor({
                         <p className="text-[10px] text-slate-400 font-mono">{r.p.employee.employeeCode}</p>
                       </div>
                       {r.p.isAdjusted && (
-                        <span title={r.p.adjustmentNote ?? 'Adjusted'} className="text-[9px] text-blue-700 bg-blue-50 px-1 rounded">ADJ</span>
+                        <span title={r.p.adjustmentNote ?? 'Adjusted'} className="text-[9px] text-slate-700 bg-slate-50 px-1 rounded">ADJ</span>
                       )}
                     </div>
                   </td>
@@ -370,7 +370,7 @@ export function PayrollGridEditor({
                         value={r.status}
                         onChange={(e) => setCell(r.p.id, 'status', e.target.value, r.p.status)}
                         className={`text-[11px] px-1.5 py-0.5 rounded border ${
-                          r.editedFields.has('status') ? 'bg-yellow-50 border-yellow-300' : 'border-slate-200'
+                          r.editedFields.has('status') ? 'bg-slate-50 border-slate-200' : 'border-slate-200'
                         }`}
                       >
                         {STATUS_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
@@ -386,7 +386,7 @@ export function PayrollGridEditor({
                       <button
                         onClick={() => onEditDetails(r.p.id)}
                         title="Open full salary breakdown"
-                        className="text-slate-400 hover:text-blue-600"
+                        className="text-slate-400 hover:text-slate-700"
                       >
                         <Pencil className="w-3 h-3" />
                       </button>
@@ -427,7 +427,7 @@ export function PayrollGridEditor({
               <Button
                 onClick={() => { setShowSendDialog(false); advance(action) }}
                 disabled={busy}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-slate-700 hover:bg-slate-700 text-white"
               >
                 <Send className="w-4 h-4 mr-1.5" /> Continue
               </Button>
@@ -446,7 +446,7 @@ export function PayrollGridEditor({
               value={sendBackReason}
               onChange={(e) => setSendBackReason(e.target.value)}
               placeholder="Why are you sending this back?"
-              className="w-full min-h-[100px] px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full min-h-[100px] px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => { setShowSendBack(false); setSendBackReason('') }}>Cancel</Button>
@@ -457,7 +457,7 @@ export function PayrollGridEditor({
                   setShowSendBack(false); setSendBackReason('')
                   advance('SEND_BACK', t)
                 }}
-                className="bg-amber-600 hover:bg-amber-700 text-white"
+                className="bg-slate-700 hover:bg-slate-700 text-white"
               >
                 <Undo2 className="w-4 h-4 mr-1.5" /> Send Back
               </Button>
@@ -492,7 +492,7 @@ function EditableCell({
   const display = value === null || value === undefined ? ''
     : numeric ? formatCurrency(Number(value)) : String(value)
 
-  const tdClass = `px-2 py-1.5 ${right ? 'text-right' : ''} ${bold ? 'font-semibold' : ''} ${edited ? 'bg-yellow-50' : ''}`
+  const tdClass = `px-2 py-1.5 ${right ? 'text-right' : ''} ${bold ? 'font-semibold' : ''} ${edited ? 'bg-slate-50' : ''}`
 
   if (!editable) {
     return <td className={`${tdClass} text-slate-700 ${mono ? 'font-mono text-[11px]' : ''}`}>{display || '—'}</td>
@@ -505,7 +505,7 @@ function EditableCell({
         defaultValue={value === null || value === undefined ? '' : String(value)}
         key={`${value}`}
         onBlur={(e) => onChange(numeric ? Number(e.target.value) : e.target.value)}
-        className={`w-full bg-transparent border-0 focus:bg-white focus:ring-1 focus:ring-blue-400 rounded px-1 py-0.5 ${
+        className={`w-full bg-transparent border-0 focus:bg-white focus:ring-1 focus:ring-slate-300 rounded px-1 py-0.5 ${
           right ? 'text-right' : ''
         } ${bold ? 'font-semibold' : ''} ${mono ? 'font-mono text-[11px]' : ''}`}
       />

@@ -47,7 +47,7 @@ export default function DocumentVisibilityToggle({
       title={visible ? 'Visible to employee — click to hide' : 'Hidden from employee — click to show'}
       className={`p-1 rounded-md transition-colors ${
         visible
-          ? 'text-emerald-600 hover:bg-emerald-50'
+          ? 'text-slate-700 hover:bg-slate-50'
           : 'text-slate-400 hover:bg-slate-100'
       } disabled:opacity-50`}
     >

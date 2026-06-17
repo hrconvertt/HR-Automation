@@ -8,10 +8,10 @@ import { CreateOfferDialog } from './create-offer-dialog'
 import { ScheduleInterviewDialog } from './schedule-interview-dialog'
 
 const AVATAR_PALETTE = [
-  'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700',
-  'bg-purple-100 text-purple-700', 'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700', 'bg-sky-100 text-sky-700',
-  'bg-indigo-100 text-indigo-700', 'bg-teal-100 text-teal-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
 ]
 function avatarTone(name: string): string {
   let h = 0
@@ -43,10 +43,10 @@ interface Props {
 
 function scoreBucket(score: number | null): { label: string; tone: string } {
   if (score == null) return { label: '—',           tone: 'bg-slate-100 text-slate-500 border-slate-200' }
-  if (score >= 80)   return { label: 'Strong',      tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
-  if (score >= 60)   return { label: 'Worth a call',tone: 'bg-blue-50 text-blue-700 border-blue-200' }
-  if (score >= 40)   return { label: 'Maybe',       tone: 'bg-amber-50 text-amber-700 border-amber-200' }
-  return              { label: 'Low fit',           tone: 'bg-rose-50 text-rose-700 border-rose-200' }
+  if (score >= 80)   return { label: 'Strong',      tone: 'bg-slate-50 text-slate-700 border-slate-100' }
+  if (score >= 60)   return { label: 'Worth a call',tone: 'bg-slate-50 text-slate-700 border-slate-100' }
+  if (score >= 40)   return { label: 'Maybe',       tone: 'bg-slate-50 text-slate-700 border-slate-100' }
+  return              { label: 'Low fit',           tone: 'bg-slate-50 text-slate-700 border-slate-100' }
 }
 
 export function CandidateCard({ candidate, canMove }: Props) {
@@ -94,7 +94,7 @@ export function CandidateCard({ candidate, canMove }: Props) {
 
   const bucket = scoreBucket(candidate.matchScore)
   return (
-    <div className={`bg-white border border-slate-200 rounded-lg p-2.5 hover:border-blue-300 hover:shadow-sm transition-all relative ${saving ? 'opacity-60' : ''}`}>
+    <div className={`bg-white border border-slate-200 rounded-lg p-2.5 hover:border-slate-200 hover:shadow-sm transition-all relative ${saving ? 'opacity-60' : ''}`}>
       <div className="flex items-start gap-2.5">
         <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-semibold flex-shrink-0 ${avatarTone(candidate.fullName)}`}>
           {getInitials(candidate.fullName)}
@@ -103,7 +103,7 @@ export function CandidateCard({ candidate, canMove }: Props) {
           <div className="flex items-center gap-1.5">
             <p className="text-xs font-semibold text-slate-900 truncate">{candidate.fullName}</p>
             {candidate.inTalentPool && (
-              <Star className="w-2.5 h-2.5 text-purple-500 fill-purple-500 flex-shrink-0" />
+              <Star className="w-2.5 h-2.5 text-slate-500 fill-slate-500 flex-shrink-0" />
             )}
           </div>
           <p className="text-[10px] text-slate-500 truncate">{candidate.requisition?.title ?? 'No role'}</p>
@@ -142,7 +142,7 @@ export function CandidateCard({ candidate, canMove }: Props) {
           ))}
           <div className="border-t border-slate-100 my-1" />
           <button onClick={togglePool}
-            className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 flex items-center gap-1.5 text-purple-700">
+            className="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-50 flex items-center gap-1.5 text-slate-700">
             <Star className="w-3 h-3" />
             {candidate.inTalentPool ? 'Remove from pool' : 'Add to talent pool'}
           </button>
@@ -155,7 +155,7 @@ export function CandidateCard({ candidate, canMove }: Props) {
         <button
           type="button"
           onClick={() => setInterviewOpen(true)}
-          className="mt-2 w-full text-[10px] font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded px-2 py-1 flex items-center justify-center gap-1"
+          className="mt-2 w-full text-[10px] font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-100 rounded px-2 py-1 flex items-center justify-center gap-1"
           title="Schedule an interview for this candidate"
         >
           <CalendarClock className="w-3 h-3" />

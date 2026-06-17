@@ -101,7 +101,7 @@ export default async function OffersPage() {
                   <TableCell>
                     <Badge variant={STATUS_TONE[o.status] ?? 'secondary'}>{o.status}</Badge>
                     {o.status === 'REJECTED' && o.rejectionReason && (
-                      <p className="text-[11px] text-rose-700 mt-0.5 max-w-[200px] line-clamp-2">
+                      <p className="text-[11px] text-slate-700 mt-0.5 max-w-[200px] line-clamp-2">
                         “{o.rejectionReason}”
                       </p>
                     )}
@@ -117,7 +117,7 @@ export default async function OffersPage() {
                     ) : o.status === 'ACCEPTED' && o.employee ? (
                       <Link
                         href={`/dashboard/employees/${o.employee.id}`}
-                        className="text-xs text-blue-600 hover:underline"
+                        className="text-xs text-slate-700 hover:underline"
                       >
                         {o.employee.employeeCode}
                       </Link>

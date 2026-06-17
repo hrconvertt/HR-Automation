@@ -30,7 +30,7 @@ function TabsTrigger({
         'inline-flex items-center justify-center px-3 py-1.5 text-sm font-medium rounded-md transition-colors',
         'text-gray-600 hover:text-gray-900',
         'data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-700',
         'disabled:pointer-events-none disabled:opacity-50',
         className
       )}

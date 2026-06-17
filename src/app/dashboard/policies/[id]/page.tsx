@@ -64,7 +64,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
   if (unauthorized) {
     return (
       <div className="max-w-xl mx-auto mt-20 text-center px-4">
-        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-amber-50 text-amber-600 mb-4">
+        <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-slate-50 text-slate-700 mb-4">
           <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
           </svg>
@@ -73,7 +73,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
         <p className="text-sm text-slate-500 mb-6">
           This policy exists but isn&apos;t shared with your role. If you believe this is a mistake, please reach out to HR.
         </p>
-        <Link href="/dashboard/policies" className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+        <Link href="/dashboard/policies" className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-700">
           <ArrowLeft className="w-4 h-4" /> Back to Policies
         </Link>
       </div>
@@ -116,7 +116,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
           {policy.status !== 'PUBLISHED' && (
             <>
               <span className="text-slate-300">·</span>
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${policy.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-600' : 'bg-amber-100 text-amber-800'}`}>
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${policy.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-900'}`}>
                 {policy.status}
               </span>
             </>
@@ -151,7 +151,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
           {policy.url && (
             <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center flex-shrink-0">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -163,7 +163,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
                 href={policy.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 flex-shrink-0"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-700 flex-shrink-0"
               >
                 Open <ExternalLink className="w-3.5 h-3.5" />
               </a>
@@ -199,8 +199,8 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
                   <li key={r.id} className="flex items-start gap-2 text-xs">
                     <span
                       className={`mt-0.5 inline-block w-2 h-2 rounded-full flex-shrink-0 ${
-                        r.status === 'APPROVED' ? 'bg-emerald-500' :
-                        r.status === 'REJECTED' ? 'bg-rose-500' : 'bg-amber-400'
+                        r.status === 'APPROVED' ? 'bg-slate-500' :
+                        r.status === 'REJECTED' ? 'bg-slate-500' : 'bg-slate-300'
                       }`}
                     />
                     <div className="min-w-0">
@@ -280,11 +280,11 @@ function MetaRow({ Icon, label, value }: {
 
 function PolicyStatusPill({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string; dot: string }> = {
-    ACTIVE:    { label: 'Active',                 cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-500' },
-    PUBLISHED: { label: 'Active',                 cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', dot: 'bg-emerald-500' },
+    ACTIVE:    { label: 'Active',                 cls: 'bg-slate-50 text-slate-700 border-slate-100', dot: 'bg-slate-500' },
+    PUBLISHED: { label: 'Active',                 cls: 'bg-slate-50 text-slate-700 border-slate-100', dot: 'bg-slate-500' },
     DRAFT:     { label: 'Draft',                  cls: 'bg-slate-100 text-slate-700 border-slate-200',     dot: 'bg-slate-400' },
-    IN_REVIEW: { label: 'In Review',              cls: 'bg-amber-50 text-amber-700 border-amber-100',      dot: 'bg-amber-500' },
-    APPROVED:  { label: 'Approved · Awaiting HR', cls: 'bg-blue-50 text-blue-700 border-blue-100',         dot: 'bg-blue-500' },
+    IN_REVIEW: { label: 'In Review',              cls: 'bg-slate-50 text-slate-700 border-slate-100',      dot: 'bg-slate-500' },
+    APPROVED:  { label: 'Approved · Awaiting HR', cls: 'bg-slate-50 text-slate-700 border-slate-100',         dot: 'bg-slate-500' },
     ARCHIVED:  { label: 'Archived',               cls: 'bg-slate-100 text-slate-600 border-slate-200',     dot: 'bg-slate-400' },
   }
   const s = map[status] ?? map.DRAFT

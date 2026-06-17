@@ -388,7 +388,7 @@ export default function DashboardChrome({
         `}
       >
         <div className="flex items-center gap-2.5 px-4 h-14 border-b border-slate-700/60 flex-shrink-0">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
+          <div className="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
             <span className="text-white font-bold text-sm">C</span>
           </div>
           <span className="text-white font-semibold text-[15px] tracking-tight">Convertt</span>
@@ -401,9 +401,9 @@ export default function DashboardChrome({
         </div>
 
         {FOCUS_MODE && (
-          <div className="mx-2 mt-3 mb-1 px-3 py-2 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] leading-snug">
+          <div className="mx-2 mt-3 mb-1 px-3 py-2 rounded-md bg-slate-500/10 border border-slate-500/30 text-slate-200 text-[10px] leading-snug">
             <p className="font-semibold uppercase tracking-wider">Focus Mode</p>
-            <p className="mt-0.5 text-amber-200/80">
+            <p className="mt-0.5 text-slate-100/80">
               Polishing Attendance, Leave, Policies, People &amp; Payroll. Other modules hidden.
             </p>
           </div>
@@ -427,7 +427,7 @@ export default function DashboardChrome({
                       flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium mb-0.5 transition-colors
                       ${
                         active
-                          ? 'bg-blue-600/15 text-blue-100 border-l-2 border-blue-500 pl-[10px]'
+                          ? 'bg-slate-700/15 text-slate-100 border-l-2 border-slate-500 pl-[10px]'
                           : 'text-slate-400 hover:text-white hover:bg-slate-700/40'
                       }
                     `}
@@ -443,7 +443,7 @@ export default function DashboardChrome({
 
         <div className="border-t border-slate-700/60 px-3 py-3 flex-shrink-0">
           <div className="flex items-center gap-3 px-2 py-1.5">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold ring-2 ring-slate-700/40">
+            <div className="w-8 h-8 bg-slate-500 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold ring-2 ring-slate-700/40">
               {getInitials(displayName)}
             </div>
             <div className="flex-1 min-w-0">
@@ -452,7 +452,7 @@ export default function DashboardChrome({
             </div>
             <button
               onClick={handleLogout}
-              className="text-slate-400 hover:text-red-400 transition-colors p-1 rounded-md hover:bg-slate-700/50"
+              className="text-slate-400 hover:text-slate-300 transition-colors p-1 rounded-md hover:bg-slate-700/50"
               title="Logout"
             >
               <LogOut className="w-4 h-4" />
@@ -476,7 +476,7 @@ export default function DashboardChrome({
             href="/dashboard"
             className={`flex items-center gap-2 ${sidebarHidden ? 'lg:flex' : 'lg:hidden'}`}
           >
-            <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
+            <div className="w-7 h-7 bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0">
               <span className="text-white font-bold text-xs">C</span>
             </div>
             <span className="text-gray-900 font-semibold text-[15px] tracking-tight">Convertt</span>
@@ -493,7 +493,7 @@ export default function DashboardChrome({
             >
               <Inbox className="w-5 h-5" />
               {inboxCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-slate-500 ring-2 ring-white" />
               )}
             </Link>
 
@@ -506,7 +506,7 @@ export default function DashboardChrome({
                   className="flex items-center gap-2 ml-1 pl-1 pr-2 py-1 rounded-full hover:bg-gray-100 transition-colors"
                   aria-label="Account menu"
                 >
-                  <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                  <div className="w-8 h-8 bg-slate-700 rounded-full flex items-center justify-center text-white text-xs font-bold">
                     {getInitials(displayName)}
                   </div>
                   <ChevronDown className="w-3.5 h-3.5 text-gray-500 hidden sm:block" />
@@ -544,7 +544,7 @@ export default function DashboardChrome({
                   <DropdownMenu.Separator className="h-px bg-gray-100 my-1" />
                   <DropdownMenu.Item
                     onSelect={handleLogout}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-red-600 hover:bg-red-50 outline-none cursor-pointer data-[highlighted]:bg-red-50"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-700 hover:bg-slate-50 outline-none cursor-pointer data-[highlighted]:bg-slate-50"
                   >
                     <LogOut className="w-4 h-4" />
                     Sign out

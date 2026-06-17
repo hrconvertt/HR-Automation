@@ -70,7 +70,7 @@ export function ProbationTrackerTabs({ records }: { records: ProbationListItem[]
                   <TableBody>
                     {filtered.map((r) => {
                       const dl = daysLeft(r.endDate)
-                      const tone = dl < 14 ? 'text-rose-700 font-semibold' : dl < 30 ? 'text-amber-700 font-semibold' : 'text-slate-700'
+                      const tone = dl < 14 ? 'text-slate-700 font-semibold' : dl < 30 ? 'text-slate-700 font-semibold' : 'text-slate-700'
                       return (
                         <TableRow key={r.id} className="hover:bg-slate-50 transition-colors">
                           <TableCell>
@@ -83,7 +83,7 @@ export function ProbationTrackerTabs({ records }: { records: ProbationListItem[]
                           <TableCell className={`text-sm ${tone}`}>{dl} days</TableCell>
                           <TableCell>
                             {r.warningCount > 0 ? (
-                              <span className="inline-flex items-center gap-1 text-orange-700 text-xs font-semibold">
+                              <span className="inline-flex items-center gap-1 text-slate-700 text-xs font-semibold">
                                 <AlertTriangle className="w-3 h-3" />{r.warningCount}
                               </span>
                             ) : <span className="text-slate-400 text-xs">—</span>}
@@ -92,7 +92,7 @@ export function ProbationTrackerTabs({ records }: { records: ProbationListItem[]
                             <Link
                               href={`/dashboard/probation/${r.id}`}
                               prefetch
-                              className="inline-block text-blue-600 hover:underline text-sm font-medium hover:translate-x-0.5 transition-transform"
+                              className="inline-block text-slate-700 hover:underline text-sm font-medium hover:translate-x-0.5 transition-transform"
                             >
                               View →
                             </Link>

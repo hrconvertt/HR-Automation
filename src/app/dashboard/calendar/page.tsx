@@ -84,11 +84,20 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
     }),
   ])
 
-  // Scope leaves: HR sees all, Manager sees team, Employee sees own
+  // Scope leaves:
+  //   HR / Executive  — see everyone's approved leaves
+  //   Manager / Lead  — see team's leaves + their own
+  //   Employee        — see own only
+  // Bug fix: the previous filter omitted the manager's own leave (they only
+  //   matched direct reports) and excluded EXECUTIVE/LEAD entirely. Aqib's
+  //   own approved leave wasn't surfacing because he viewed his own calendar
+  //   under a non-HR role and the filter only checked id-equality.
   const myEmpId = me.employee?.id ?? null
   const visibleLeaves = leaveRequests.filter((l) => {
-    if (isHR) return true
-    if (isManager) return l.employee.reportingManagerId === myEmpId
+    if (isHR || isExec) return true
+    if (isManager || isLead) {
+      return l.employee.reportingManagerId === myEmpId || l.employee.id === myEmpId
+    }
     return l.employee.id === myEmpId
   })
 

@@ -87,7 +87,7 @@ export default function EmployeeLifecycleTab({
         <CardHeader><CardTitle>Role History</CardTitle></CardHeader>
         <CardContent>
           <ul className="space-y-2 text-sm">
-            <li className="flex justify-between gap-3 border-l-2 border-blue-300 pl-3">
+            <li className="flex justify-between gap-3 border-l-2 border-slate-200 pl-3">
               <div>
                 <p className="font-medium text-gray-900">{designation}</p>
                 <p className="text-xs text-gray-500">{managerName ? `Manager: ${managerName}` : 'No manager'}</p>
@@ -117,7 +117,7 @@ export default function EmployeeLifecycleTab({
             ) : (
               <ul className="space-y-2 text-sm">
                 {compensationHistory.map((c) => (
-                  <li key={c.id} className="flex justify-between gap-3 border-l-2 border-emerald-300 pl-3">
+                  <li key={c.id} className="flex justify-between gap-3 border-l-2 border-slate-200 pl-3">
                     <div>
                       <p className="font-medium text-gray-900">
                         {formatCurrency(c.oldSalary)} → {formatCurrency(c.newSalary)}
@@ -143,7 +143,7 @@ export default function EmployeeLifecycleTab({
           <CardContent>
             <ul className="space-y-2 text-sm">
               {reviews.map((r) => (
-                <li key={r.id} className="flex justify-between gap-3 border-l-2 border-purple-300 pl-3">
+                <li key={r.id} className="flex justify-between gap-3 border-l-2 border-slate-200 pl-3">
                   <div>
                     <p className="font-medium text-gray-900">{r.reviewPeriod}</p>
                     <p className="text-xs text-gray-500">{r.reviewType} · {r.finalCategory ?? '—'}</p>

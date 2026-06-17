@@ -40,7 +40,7 @@ export default function SeedClient() {
     <div className="space-y-5 max-w-3xl">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-          <Sprout className="w-6 h-6 text-emerald-600" /> Demo Data
+          <Sprout className="w-6 h-6 text-slate-700" /> Demo Data
         </h1>
         <p className="text-sm text-slate-500 mt-0.5">
           Populate Attendance, Leave &amp; Policies with realistic sample data so the system is
@@ -60,21 +60,21 @@ export default function SeedClient() {
               </p>
             </div>
             <div className="flex gap-2 shrink-0">
-              <Button onClick={seed} disabled={busy !== null} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+              <Button onClick={seed} disabled={busy !== null} className="bg-slate-700 hover:bg-slate-700 text-white">
                 <Sprout className="w-4 h-4 mr-1.5" /> {busy === 'seed' ? 'Seeding…' : 'Seed Demo Data'}
               </Button>
               <Button
                 onClick={wipe}
                 disabled={busy !== null}
                 variant="outline"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-slate-700 border-slate-100 hover:bg-slate-50"
               >
                 <Trash2 className="w-4 h-4 mr-1.5" /> {busy === 'wipe' ? 'Wiping…' : 'Wipe Demo Data'}
               </Button>
             </div>
           </div>
 
-          <div className="rounded-md border border-blue-100 bg-blue-50/60 px-3 py-2 text-[11px] text-blue-900">
+          <div className="rounded-md border border-slate-100 bg-slate-50/60 px-3 py-2 text-[11px] text-slate-900">
             <strong>Idempotent.</strong> Re-running won&apos;t create duplicates — existing rows are updated
             in place. Wipe only removes rows tagged <code>[DEMO]</code>; your real data is untouched.
           </div>
@@ -84,9 +84,9 @@ export default function SeedClient() {
       {/* Error */}
       {error && (
         <Card>
-          <CardContent className="p-4 flex items-start gap-2 bg-red-50 border-red-200">
-            <AlertTriangle className="w-4 h-4 text-red-700 mt-0.5" />
-            <p className="text-sm text-red-900">{error}</p>
+          <CardContent className="p-4 flex items-start gap-2 bg-slate-50 border-slate-100">
+            <AlertTriangle className="w-4 h-4 text-slate-700 mt-0.5" />
+            <p className="text-sm text-slate-900">{error}</p>
           </CardContent>
         </Card>
       )}
@@ -95,7 +95,7 @@ export default function SeedClient() {
       {wipeDeleted !== null && (
         <Card>
           <CardContent className="p-4 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <CheckCircle2 className="w-4 h-4 text-slate-700" />
             <p className="text-sm text-slate-700">
               <strong>{wipeDeleted}</strong> demo rows removed.
             </p>
@@ -106,7 +106,7 @@ export default function SeedClient() {
       {/* Seed report */}
       {report && (
         <div className="space-y-3">
-          <p className="text-sm font-semibold text-emerald-700 flex items-center gap-1">
+          <p className="text-sm font-semibold text-slate-700 flex items-center gap-1">
             <CheckCircle2 className="w-4 h-4" /> Demo data seeded successfully.
           </p>
 
@@ -119,7 +119,7 @@ export default function SeedClient() {
                 <li>• {report.attendance.logs} attendance logs (last 14 days)</li>
               </ul>
               {report.attendance.errors.length > 0 && (
-                <p className="text-xs text-amber-700 mt-2">⚠ {report.attendance.errors.join(' · ')}</p>
+                <p className="text-xs text-slate-700 mt-2">⚠ {report.attendance.errors.join(' · ')}</p>
               )}
             </CardContent>
           </Card>
@@ -133,7 +133,7 @@ export default function SeedClient() {
                 <li>• {report.leave.requests} sample leave requests (pending / approved / rejected / cancelled)</li>
               </ul>
               {report.leave.errors.length > 0 && (
-                <p className="text-xs text-amber-700 mt-2">⚠ {report.leave.errors.join(' · ')}</p>
+                <p className="text-xs text-slate-700 mt-2">⚠ {report.leave.errors.join(' · ')}</p>
               )}
             </CardContent>
           </Card>
@@ -147,7 +147,7 @@ export default function SeedClient() {
                 <li>• {report.policies.acks} acknowledgment records (~70% signed)</li>
               </ul>
               {report.policies.errors.length > 0 && (
-                <p className="text-xs text-amber-700 mt-2">⚠ {report.policies.errors.join(' · ')}</p>
+                <p className="text-xs text-slate-700 mt-2">⚠ {report.policies.errors.join(' · ')}</p>
               )}
             </CardContent>
           </Card>

@@ -220,9 +220,9 @@ function dayShort(d: Date) {
 }
 
 function dayPulseClass(rate: number) {
-  if (rate >= 0.9) return 'bg-emerald-500'
-  if (rate >= 0.7) return 'bg-amber-400'
-  return 'bg-rose-500'
+  if (rate >= 0.9) return 'bg-slate-500'
+  if (rate >= 0.7) return 'bg-slate-300'
+  return 'bg-slate-500'
 }
 
 export async function ManagerAnalytics({ managerEmployeeId }: { managerEmployeeId: string }) {
@@ -258,9 +258,9 @@ export async function ManagerAnalytics({ managerEmployeeId }: { managerEmployeeI
             })}
           </div>
           <div className="flex gap-4 mt-3 text-[10px] text-gray-500">
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500" /> ≥90%</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-400" /> 70–90%</span>
-            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-rose-500" /> &lt;70%</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-500" /> ≥90%</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-300" /> 70–90%</span>
+            <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-slate-500" /> &lt;70%</span>
           </div>
         </CardContent>
       </Card>
@@ -273,21 +273,21 @@ export async function ManagerAnalytics({ managerEmployeeId }: { managerEmployeeI
         <CardContent>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             <Metric
-              icon={<Clock className="w-4 h-4 text-blue-600" />}
+              icon={<Clock className="w-4 h-4 text-slate-700" />}
               label="Avg Punctuality"
               value={`${data.health.punctualityPct}%`}
               sub="clocked in on time"
             />
             <Metric
-              icon={<Clock className="w-4 h-4 text-indigo-600" />}
+              icon={<Clock className="w-4 h-4 text-slate-700" />}
               label="Avg Hours / Day"
               value={data.health.avgHoursPerDay.toFixed(1)}
               sub="worked per day"
             />
             <Metric
               icon={
-                data.health.trend === 'up' ? <TrendingUp className="w-4 h-4 text-emerald-600" /> :
-                data.health.trend === 'down' ? <TrendingDown className="w-4 h-4 text-rose-600" /> :
+                data.health.trend === 'up' ? <TrendingUp className="w-4 h-4 text-slate-700" /> :
+                data.health.trend === 'down' ? <TrendingDown className="w-4 h-4 text-slate-700" /> :
                 <Minus className="w-4 h-4 text-gray-500" />
               }
               label="Attendance Trend"
@@ -298,7 +298,7 @@ export async function ManagerAnalytics({ managerEmployeeId }: { managerEmployeeI
               sub={`${(data.health.trendDelta * 100 >= 0 ? '+' : '')}${(data.health.trendDelta * 100).toFixed(1)} pp vs prior 30d`}
             />
             <Metric
-              icon={<Calendar className="w-4 h-4 text-purple-600" />}
+              icon={<Calendar className="w-4 h-4 text-slate-700" />}
               label="Attendance Rate"
               value={`${Math.round(data.health.attendanceRate * 100)}%`}
               sub="last 30 days"
@@ -328,10 +328,10 @@ export async function ManagerAnalytics({ managerEmployeeId }: { managerEmployeeI
                 return (
                   <div
                     key={p.id}
-                    className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-amber-50"
+                    className="flex items-center justify-between text-xs px-2 py-1.5 rounded bg-slate-50"
                   >
                     <span className="text-gray-700 truncate">{p.employee.fullName}</span>
-                    <span className="text-amber-700 font-medium flex-shrink-0">
+                    <span className="text-slate-700 font-medium flex-shrink-0">
                       {daysLeft > 0 ? `${daysLeft}d left` : 'Overdue'}
                     </span>
                   </div>
@@ -345,7 +345,7 @@ export async function ManagerAnalytics({ managerEmployeeId }: { managerEmployeeI
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-gray-600 flex items-center gap-1.5">
-                  <Award className="w-3.5 h-3.5 text-amber-500" /> Avg team rating
+                  <Award className="w-3.5 h-3.5 text-slate-500" /> Avg team rating
                 </span>
                 <span className="text-sm font-semibold text-gray-900">
                   {data.performance.avgRating > 0
@@ -386,7 +386,7 @@ export async function ManagerAnalytics({ managerEmployeeId }: { managerEmployeeI
                     <span className="text-xs text-gray-700 w-28 truncate">{m.fullName}</span>
                     <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-blue-500 transition-all"
+                        className="h-full bg-slate-500 transition-all"
                         style={{ width: `${pct}%` }}
                       />
                     </div>
@@ -410,19 +410,19 @@ export async function ManagerAnalytics({ managerEmployeeId }: { managerEmployeeI
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
             <Metric
-              icon={<CheckSquare className="w-4 h-4 text-emerald-600" />}
+              icon={<CheckSquare className="w-4 h-4 text-slate-700" />}
               label="Promotions this quarter"
               value={data.compensation.promotionsThisQuarter}
               sub="Probation → permanent + promotions"
             />
             <Metric
-              icon={<Clock className="w-4 h-4 text-amber-600" />}
+              icon={<Clock className="w-4 h-4 text-slate-700" />}
               label="Pending promotion requests"
               value={data.compensation.pendingPromotions}
               sub="awaiting HR / CEO approval"
             />
             <Metric
-              icon={<Award className="w-4 h-4 text-blue-600" />}
+              icon={<Award className="w-4 h-4 text-slate-700" />}
               label="Team members"
               value={data.team.length}
               sub="active reports"
@@ -486,8 +486,8 @@ function MiniStat({
   tone: 'emerald' | 'rose' | 'slate'
 }) {
   const cls =
-    tone === 'emerald' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' :
-    tone === 'rose' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+    tone === 'emerald' ? 'bg-slate-50 text-slate-700 border-slate-100' :
+    tone === 'rose' ? 'bg-slate-50 text-slate-700 border-slate-100' :
     'bg-slate-50 text-slate-700 border-slate-100'
   return (
     <div className={`rounded-lg border px-2.5 py-2 ${cls}`}>

@@ -5,21 +5,21 @@ import { Users, UserCheck, Plane, CalendarDays } from 'lucide-react'
 import { formatDate, getInitials } from '@/lib/utils'
 
 const statusTone: Record<string, string> = {
-  ACTIVE: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+  ACTIVE: 'bg-slate-50 text-slate-700 border border-slate-100',
   RESIGNED: 'bg-slate-100 text-slate-600 border border-slate-200',
-  TERMINATED: 'bg-rose-50 text-rose-700 border border-rose-100',
-  ON_LEAVE: 'bg-amber-50 text-amber-700 border border-amber-100',
+  TERMINATED: 'bg-slate-50 text-slate-700 border border-slate-100',
+  ON_LEAVE: 'bg-slate-50 text-slate-700 border border-slate-100',
 }
 
 const AVATAR_PALETTE = [
-  'bg-blue-100 text-blue-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-purple-100 text-purple-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-  'bg-sky-100 text-sky-700',
-  'bg-indigo-100 text-indigo-700',
-  'bg-teal-100 text-teal-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
 ]
 function avatarTone(name: string): string {
   let h = 0
@@ -93,10 +93,10 @@ export async function ManagerTeamView({
       {/* KPI Cards — concise summary, no decorative banner above (page title
           comes from the module header in employees/layout.tsx) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <KpiCard label="Team Size" value={String(teamSize)} Icon={Users} color="bg-purple-50 text-purple-600" />
-        <KpiCard label="On Probation" value={String(onProbation)} Icon={UserCheck} color="bg-amber-50 text-amber-600" />
-        <KpiCard label="On Leave Today" value={String(onLeaveToday)} Icon={Plane} color="bg-blue-50 text-blue-600" />
-        <KpiCard label="Avg Tenure" value={`${avgTenure.toFixed(1)} yrs`} Icon={CalendarDays} color="bg-emerald-50 text-emerald-600" />
+        <KpiCard label="Team Size" value={String(teamSize)} Icon={Users} color="bg-slate-50 text-slate-700" />
+        <KpiCard label="On Probation" value={String(onProbation)} Icon={UserCheck} color="bg-slate-50 text-slate-700" />
+        <KpiCard label="On Leave Today" value={String(onLeaveToday)} Icon={Plane} color="bg-slate-50 text-slate-700" />
+        <KpiCard label="Avg Tenure" value={`${avgTenure.toFixed(1)} yrs`} Icon={CalendarDays} color="bg-slate-50 text-slate-700" />
       </div>
 
       {/* Team card grid — same layout language as the HR People view */}
@@ -119,7 +119,7 @@ export async function ManagerTeamView({
                 <Link
                   key={emp.id}
                   href={`/dashboard/employees/${emp.id}`}
-                  className="group bg-white border border-slate-200 rounded-xl p-4 hover:border-purple-300 hover:shadow-md transition-all"
+                  className="group bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-200 hover:shadow-md transition-all"
                 >
                   <div className="flex items-start gap-3">
                     <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${avatarTone(emp.fullName)}`}>
@@ -127,7 +127,7 @@ export async function ManagerTeamView({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-slate-900 text-sm leading-tight truncate group-hover:text-purple-700">
+                        <p className="font-semibold text-slate-900 text-sm leading-tight truncate group-hover:text-slate-700">
                           {emp.fullName}
                         </p>
                         <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${statusTone[emp.status] ?? 'bg-slate-100 text-slate-600'}`}>

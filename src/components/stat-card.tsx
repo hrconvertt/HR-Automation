@@ -16,8 +16,8 @@ export function StatCard({
   icon: Icon,
   change,
   changeType = 'neutral',
-  iconColor = 'text-blue-600',
-  iconBg = 'bg-blue-50',
+  iconColor = 'text-slate-700',
+  iconBg = 'bg-slate-50',
 }: StatCardProps) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
@@ -29,8 +29,8 @@ export function StatCard({
             <p
               className={cn(
                 'text-xs mt-1 font-medium',
-                changeType === 'positive' && 'text-green-600',
-                changeType === 'negative' && 'text-red-500',
+                changeType === 'positive' && 'text-slate-700',
+                changeType === 'negative' && 'text-slate-500',
                 changeType === 'neutral' && 'text-gray-500'
               )}
             >

@@ -23,8 +23,8 @@ interface PolicyDoc {
 
 const STATUS_CHIP: Record<string, string> = {
   DRAFT: 'bg-slate-100 text-slate-700 border-slate-200',
-  IN_REVIEW: 'bg-amber-50 text-amber-800 border-amber-200',
-  ACTIVE: 'bg-emerald-50 text-emerald-800 border-emerald-200',
+  IN_REVIEW: 'bg-slate-50 text-slate-900 border-slate-100',
+  ACTIVE: 'bg-slate-50 text-slate-900 border-slate-100',
   ARCHIVED: 'bg-slate-100 text-slate-500 border-slate-200',
   RETIRED: 'bg-slate-100 text-slate-500 border-slate-200',
 }
@@ -48,7 +48,7 @@ export default function DocumentCenterPage() {
       </div>
 
       {/* Pointer to Letters workflow (moved out) */}
-      <Card className="border-blue-100 bg-blue-50/40">
+      <Card className="border-slate-100 bg-slate-50/40">
         <div className="p-4 flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-medium text-slate-900">Letter requests</p>
@@ -58,7 +58,7 @@ export default function DocumentCenterPage() {
           </div>
           <Link
             href="/dashboard/letters"
-            className="group inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 hover:text-blue-900 whitespace-nowrap"
+            className="group inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-900 whitespace-nowrap"
           >
             Open Letters
             <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
@@ -92,7 +92,7 @@ function PoliciesTab() {
         </CardTitle>
         <Link
           href="/dashboard/policies"
-          className="group inline-flex items-center gap-1 text-xs text-blue-600 hover:underline"
+          className="group inline-flex items-center gap-1 text-xs text-slate-700 hover:underline"
         >
           Manage policies
           <ArrowRight className="w-3 h-3 transition-transform group-hover:translate-x-0.5" />
@@ -147,7 +147,7 @@ function PoliciesTab() {
                       <div className="flex items-center gap-2 min-w-[140px]">
                         <div className="flex-1 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                           <div
-                            className="h-full bg-emerald-500 transition-all"
+                            className="h-full bg-slate-500 transition-all"
                             style={{ width: `${pct}%` }}
                           />
                         </div>

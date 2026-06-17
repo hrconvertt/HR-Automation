@@ -153,8 +153,8 @@ export default async function ExecutiveTimeView() {
               <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Workforce Today</p>
               <p className={
                 'text-sm mt-1 font-medium ' +
-                (verdict.tone === 'good' ? 'text-emerald-700' :
-                 verdict.tone === 'okay' ? 'text-amber-700' : 'text-rose-700')
+                (verdict.tone === 'good' ? 'text-slate-700' :
+                 verdict.tone === 'okay' ? 'text-slate-700' : 'text-slate-700')
               }>
                 {verdict.text}
               </p>
@@ -169,16 +169,16 @@ export default async function ExecutiveTimeView() {
 
           {/* Composition bar */}
           <div className="flex h-3 rounded-full overflow-hidden bg-slate-100 mb-2">
-            {tdOnsite > 0 && <div className="bg-blue-500"    style={{ width: `${(tdOnsite / total) * 100}%` }} title={`Onsite ${tdOnsite}`} />}
-            {tdWfh > 0    && <div className="bg-purple-500"  style={{ width: `${(tdWfh / total) * 100}%` }}    title={`WFH ${tdWfh}`} />}
-            {tdLeave > 0  && <div className="bg-amber-400"   style={{ width: `${(tdLeave / total) * 100}%` }}  title={`Leave ${tdLeave}`} />}
-            {tdAbsent > 0 && <div className="bg-rose-500"    style={{ width: `${(tdAbsent / total) * 100}%` }} title={`Absent ${tdAbsent}`} />}
+            {tdOnsite > 0 && <div className="bg-slate-500"    style={{ width: `${(tdOnsite / total) * 100}%` }} title={`Onsite ${tdOnsite}`} />}
+            {tdWfh > 0    && <div className="bg-slate-500"  style={{ width: `${(tdWfh / total) * 100}%` }}    title={`WFH ${tdWfh}`} />}
+            {tdLeave > 0  && <div className="bg-slate-300"   style={{ width: `${(tdLeave / total) * 100}%` }}  title={`Leave ${tdLeave}`} />}
+            {tdAbsent > 0 && <div className="bg-slate-500"    style={{ width: `${(tdAbsent / total) * 100}%` }} title={`Absent ${tdAbsent}`} />}
           </div>
           <div className="flex items-center flex-wrap gap-x-5 gap-y-1 text-xs">
-            <LegendChip color="bg-blue-500"   label="Onsite" value={tdOnsite} />
-            <LegendChip color="bg-purple-500" label="WFH"    value={tdWfh} />
-            <LegendChip color="bg-amber-400"  label="On leave" value={tdLeave} />
-            <LegendChip color="bg-rose-500"   label="Absent" value={tdAbsent} />
+            <LegendChip color="bg-slate-500"   label="Onsite" value={tdOnsite} />
+            <LegendChip color="bg-slate-500" label="WFH"    value={tdWfh} />
+            <LegendChip color="bg-slate-300"  label="On leave" value={tdLeave} />
+            <LegendChip color="bg-slate-500"   label="Absent" value={tdAbsent} />
             <LegendChip color="bg-slate-300"  label="Not in yet" value={tdNotIn} muted />
           </div>
         </CardContent>
@@ -193,8 +193,8 @@ export default async function ExecutiveTimeView() {
               <p className="text-xs text-slate-500 mt-0.5">Daily % of headcount present</p>
             </div>
             <div className="flex items-center gap-1.5">
-              {trendDelta > 1 && <><TrendingUp className="w-4 h-4 text-emerald-600" /><span className="text-sm font-semibold text-emerald-700">+{trendDelta}%</span></>}
-              {trendDelta < -1 && <><TrendingDown className="w-4 h-4 text-rose-600" /><span className="text-sm font-semibold text-rose-700">{trendDelta}%</span></>}
+              {trendDelta > 1 && <><TrendingUp className="w-4 h-4 text-slate-700" /><span className="text-sm font-semibold text-slate-700">+{trendDelta}%</span></>}
+              {trendDelta < -1 && <><TrendingDown className="w-4 h-4 text-slate-700" /><span className="text-sm font-semibold text-slate-700">{trendDelta}%</span></>}
               {Math.abs(trendDelta) <= 1 && <><Minus className="w-4 h-4 text-slate-400" /><span className="text-sm font-semibold text-slate-500">flat</span></>}
               <span className="text-[11px] text-slate-400 ml-1">3-day vs prior</span>
             </div>
@@ -207,9 +207,9 @@ export default async function ExecutiveTimeView() {
                 <div key={i} className="flex-1 flex flex-col items-center justify-end group relative">
                   <div className={
                     'w-full rounded-t transition-colors ' +
-                    (d.pct >= 90 ? 'bg-emerald-400 group-hover:bg-emerald-500' :
-                     d.pct >= 75 ? 'bg-amber-400 group-hover:bg-amber-500' :
-                                   'bg-rose-400 group-hover:bg-rose-500') +
+                    (d.pct >= 90 ? 'bg-slate-300 group-hover:bg-slate-500' :
+                     d.pct >= 75 ? 'bg-slate-300 group-hover:bg-slate-500' :
+                                   'bg-slate-300 group-hover:bg-slate-500') +
                     (isToday ? ' ring-2 ring-slate-900' : '')
                   } style={{ height: `${h}px` }} />
                   <span className="absolute -top-5 text-[10px] font-semibold text-slate-700 opacity-0 group-hover:opacity-100 tabular-nums">{d.pct}%</span>
@@ -228,9 +228,9 @@ export default async function ExecutiveTimeView() {
       {(topAbsentees.length > 0 || (weakestDept && weakestDept.pct < 80) || pendingOT > 0) && (
         <Card>
           <CardContent className="p-0">
-            <div className="px-5 py-3 border-b border-slate-100 bg-amber-50/40 flex items-center gap-2">
-              <AlertTriangle className="w-4 h-4 text-amber-700" />
-              <p className="text-[11px] uppercase tracking-[0.2em] text-amber-900 font-semibold">Needs Attention</p>
+            <div className="px-5 py-3 border-b border-slate-100 bg-slate-50/40 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-slate-700" />
+              <p className="text-[11px] uppercase tracking-[0.2em] text-slate-900 font-semibold">Needs Attention</p>
             </div>
             <div className="divide-y divide-slate-100">
               {topAbsentees.length > 0 && (
@@ -243,7 +243,7 @@ export default async function ExecutiveTimeView() {
                           <span className="font-medium text-slate-900">{a.name}</span>
                           <span className="text-slate-400 text-xs ml-2">{a.dept}</span>
                         </div>
-                        <span className="font-semibold text-rose-700 tabular-nums">{a.count} day{a.count > 1 ? 's' : ''}</span>
+                        <span className="font-semibold text-slate-700 tabular-nums">{a.count} day{a.count > 1 ? 's' : ''}</span>
                       </li>
                     ))}
                   </ul>
@@ -257,7 +257,7 @@ export default async function ExecutiveTimeView() {
                       <span className="font-medium text-slate-900">{weakestDept.name}</span>
                       <span className="text-slate-400 text-xs ml-2">{weakestDept.headcount} active</span>
                     </div>
-                    <span className="font-semibold text-rose-700 tabular-nums">{weakestDept.pct}% presence</span>
+                    <span className="font-semibold text-slate-700 tabular-nums">{weakestDept.pct}% presence</span>
                   </div>
                 </div>
               )}
@@ -266,7 +266,7 @@ export default async function ExecutiveTimeView() {
                   <p className="text-xs text-slate-500 uppercase tracking-wider font-semibold mb-2">Overtime awaiting approval</p>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-700">{pendingOT.toFixed(1)} hours pending sign-off by managers</span>
-                    <span className="font-semibold text-amber-700 tabular-nums">{pendingOT.toFixed(1)}h</span>
+                    <span className="font-semibold text-slate-700 tabular-nums">{pendingOT.toFixed(1)}h</span>
                   </div>
                 </div>
               )}
@@ -295,9 +295,9 @@ export default async function ExecutiveTimeView() {
                   <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div
                       className={
-                        d.pct >= 90 ? 'h-full bg-emerald-500' :
-                        d.pct >= 75 ? 'h-full bg-amber-400' :
-                                      'h-full bg-rose-500'
+                        d.pct >= 90 ? 'h-full bg-slate-500' :
+                        d.pct >= 75 ? 'h-full bg-slate-300' :
+                                      'h-full bg-slate-500'
                       }
                       style={{ width: `${Math.min(d.pct, 100)}%` }}
                     />

@@ -40,11 +40,11 @@ export function SeedLeaveBalancesButton({ employeeId }: { employeeId: string }) 
         type="button"
         onClick={handleClick}
         disabled={busy}
-        className="inline-flex items-center gap-1 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:opacity-60"
+        className="inline-flex items-center gap-1 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-60"
       >
         {busy ? 'Seeding…' : 'Seed default balances →'}
       </button>
-      {error && <p className="text-xs text-rose-600">{error}</p>}
+      {error && <p className="text-xs text-slate-700">{error}</p>}
     </div>
   )
 }

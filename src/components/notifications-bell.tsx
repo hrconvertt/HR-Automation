@@ -80,7 +80,7 @@ export default function NotificationsBell() {
         >
           <Bell className="w-5 h-5" />
           {unreadCount > 0 && (
-            <span className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
+            <span className="absolute top-0 right-0 min-w-[18px] h-[18px] px-1 rounded-full bg-slate-500 text-white text-[10px] font-bold flex items-center justify-center ring-2 ring-white">
               {unreadCount > 9 ? '9+' : unreadCount}
             </span>
           )}
@@ -103,7 +103,7 @@ export default function NotificationsBell() {
             {unreadCount > 0 && (
               <button
                 onClick={markAllRead}
-                className="text-xs font-medium text-blue-600 hover:text-blue-700 inline-flex items-center gap-1"
+                className="text-xs font-medium text-slate-700 hover:text-slate-700 inline-flex items-center gap-1"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
                 Mark all read
@@ -125,7 +125,7 @@ export default function NotificationsBell() {
                       href={n.link}
                       onClick={() => markOneRead(n.id)}
                       className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 border-l-2 cursor-pointer outline-none ${
-                        n.isRead ? 'border-transparent' : 'border-blue-500 bg-blue-50/40'
+                        n.isRead ? 'border-transparent' : 'border-slate-500 bg-slate-50/40'
                       }`}
                     >
                       <NotificationContent n={n} />
@@ -134,7 +134,7 @@ export default function NotificationsBell() {
                     <div
                       onClick={() => markOneRead(n.id)}
                       className={`flex items-start gap-3 px-4 py-3 hover:bg-gray-50 border-l-2 cursor-pointer outline-none ${
-                        n.isRead ? 'border-transparent' : 'border-blue-500 bg-blue-50/40'
+                        n.isRead ? 'border-transparent' : 'border-slate-500 bg-slate-50/40'
                       }`}
                     >
                       <NotificationContent n={n} />
@@ -163,7 +163,7 @@ function NotificationContent({ n }: { n: Notification }) {
         <p className="text-[11px] text-gray-400 mt-1">{timeAgo(n.createdAt)}</p>
       </div>
       {!n.isRead && (
-        <span className="w-2 h-2 rounded-full bg-blue-500 flex-shrink-0 mt-2" />
+        <span className="w-2 h-2 rounded-full bg-slate-500 flex-shrink-0 mt-2" />
       )}
     </>
   )

@@ -170,8 +170,8 @@ export function scoreBucket(score: number | null | undefined): {
   tone: string  // tailwind classes
 } {
   if (score == null) return { label: 'Not scored', tone: 'bg-slate-100 text-slate-500 border-slate-200' }
-  if (score >= 80) return { label: 'Strong',       tone: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
-  if (score >= 60) return { label: 'Worth a call', tone: 'bg-blue-50 text-blue-700 border-blue-200' }
-  if (score >= 40) return { label: 'Maybe',        tone: 'bg-amber-50 text-amber-700 border-amber-200' }
-  return            { label: 'Low fit',            tone: 'bg-rose-50 text-rose-700 border-rose-200' }
+  if (score >= 80) return { label: 'Strong',       tone: 'bg-slate-50 text-slate-700 border-slate-100' }
+  if (score >= 60) return { label: 'Worth a call', tone: 'bg-slate-50 text-slate-700 border-slate-100' }
+  if (score >= 40) return { label: 'Maybe',        tone: 'bg-slate-50 text-slate-700 border-slate-100' }
+  return            { label: 'Low fit',            tone: 'bg-slate-50 text-slate-700 border-slate-100' }
 }

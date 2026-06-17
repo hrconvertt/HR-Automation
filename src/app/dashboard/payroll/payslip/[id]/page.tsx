@@ -48,9 +48,9 @@ export default async function PayslipPage({ params }: PageProps) {
   const isMyTeamMember = slip.employee.reportingManagerId === user.employee?.id
   if (!isHR && !isOwn && !isMyTeamMember && effectiveRole !== 'EXECUTIVE') {
     return (
-      <div className="p-6 bg-amber-50 border border-amber-200 rounded-2xl">
-        <h2 className="text-lg font-semibold text-amber-900">Access denied</h2>
-        <p className="text-sm text-amber-800 mt-2">You can only view your own payslip.</p>
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
+        <h2 className="text-lg font-semibold text-slate-900">Access denied</h2>
+        <p className="text-sm text-slate-900 mt-2">You can only view your own payslip.</p>
       </div>
     )
   }
@@ -98,20 +98,20 @@ export default async function PayslipPage({ params }: PageProps) {
       <div className="space-y-4">
         {/* Toolbar — hidden in print */}
         <div className="no-print flex items-center justify-between">
-          <Link href="/dashboard/payroll" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
+          <Link href="/dashboard/payroll" className="inline-flex items-center gap-1 text-sm text-slate-700 hover:underline">
             <ArrowLeft className="w-4 h-4" /> Back to Payroll
           </Link>
           <PrintButton />
         </div>
 
         {/* ─── PAYSLIP — document-style layout ─── */}
-        <div className="payslip-card bg-white max-w-[800px] mx-auto shadow-md print:shadow-none border-t-4 border-blue-700 print:border-t-4">
+        <div className="payslip-card bg-white max-w-[800px] mx-auto shadow-md print:shadow-none border-t-4 border-slate-700 print:border-t-4">
           <div className="px-12 py-10 print:px-10 print:py-8">
 
             {/* ─── Header ─────────────────────────────────────── */}
             <header className="flex items-start justify-between gap-8 pb-6 border-b border-slate-200">
               <div className="flex items-start gap-4">
-                <div className="w-14 h-14 bg-blue-700 rounded flex items-center justify-center text-white text-2xl font-bold">C</div>
+                <div className="w-14 h-14 bg-slate-700 rounded flex items-center justify-center text-white text-2xl font-bold">C</div>
                 <div>
                   <h1 className="text-2xl font-bold text-slate-900 leading-tight">Convertt Ltd</h1>
                   <p className="text-xs text-slate-600 mt-1 leading-relaxed">
@@ -224,7 +224,7 @@ export default async function PayslipPage({ params }: PageProps) {
                 <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Net Pay</p>
                 <p className="text-[11px] text-slate-500 mt-0.5">Amount payable for {MONTHS[slip.month]} {slip.year}</p>
               </div>
-              <p className="text-3xl font-bold text-blue-700 tabular-nums tracking-tight">{formatCurrency(slip.netSalary)}</p>
+              <p className="text-3xl font-bold text-slate-700 tabular-nums tracking-tight">{formatCurrency(slip.netSalary)}</p>
             </section>
 
             {/* ─── Footer ─────────────────────────────────────── */}
@@ -234,9 +234,9 @@ export default async function PayslipPage({ params }: PageProps) {
                   <p className="font-semibold text-slate-700 uppercase tracking-wider mb-1">Status</p>
                   <span className={
                     'inline-block px-2 py-0.5 rounded text-[10px] font-bold tracking-wide ' +
-                    (slip.status === 'PAID' ? 'bg-emerald-100 text-emerald-800' :
-                     slip.status === 'APPROVED' ? 'bg-blue-100 text-blue-800' :
-                     'bg-amber-100 text-amber-800')
+                    (slip.status === 'PAID' ? 'bg-slate-100 text-slate-900' :
+                     slip.status === 'APPROVED' ? 'bg-slate-100 text-slate-900' :
+                     'bg-slate-100 text-slate-900')
                   }>{slip.status}</span>
                 </div>
                 <p className="text-right max-w-[260px] italic leading-relaxed">
@@ -278,7 +278,7 @@ function PrintButton() {
     <form action="javascript:window.print()">
       <button
         type="submit"
-        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+        className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-700 text-white text-sm font-medium hover:bg-slate-700"
       >
         <Printer className="w-4 h-4" />
         Print / Save as PDF

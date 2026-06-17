@@ -67,9 +67,9 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
             <p className="text-3xl font-bold tabular-nums text-slate-900">{pct}%</p>
             <p className="text-xs text-slate-500">{done} of {total} tasks done</p>
             <div className="w-40 h-2 mt-2 bg-slate-100 rounded-full overflow-hidden">
-              <div className={`h-full ${pct === 100 ? 'bg-emerald-500' : 'bg-blue-500'}`} style={{ width: `${pct}%` }} />
+              <div className={`h-full ${pct === 100 ? 'bg-slate-500' : 'bg-slate-500'}`} style={{ width: `${pct}%` }} />
             </div>
-            <Link href="/dashboard/onboarding" className="text-xs text-blue-600 hover:underline mt-2 inline-block">
+            <Link href="/dashboard/onboarding" className="text-xs text-slate-700 hover:underline mt-2 inline-block">
               ← Back to Onboarding
             </Link>
           </div>

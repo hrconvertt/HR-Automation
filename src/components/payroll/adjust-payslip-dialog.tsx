@@ -114,20 +114,20 @@ export function AdjustPayslipDialog({ payslip, open, onOpenChange, onSaved }: Pr
         </DialogHeader>
 
         {/* Hero: live Net Pay */}
-        <div className="bg-gradient-to-br from-slate-50 to-blue-50/60 rounded-xl p-5 border border-slate-200">
+        <div className="bg-gradient-to-br from-slate-50 to-slate-50/60 rounded-xl p-5 border border-slate-200">
           <div className="flex items-end justify-between gap-4 flex-wrap">
             <div>
               <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Net Pay</p>
               <p className="text-3xl font-bold text-slate-900 tabular-nums mt-1">{formatCurrency(previewNet)}</p>
               {Math.round(netDelta) !== 0 && (
-                <p className={`text-xs mt-1 tabular-nums ${netDelta > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                <p className={`text-xs mt-1 tabular-nums ${netDelta > 0 ? 'text-slate-700' : 'text-slate-700'}`}>
                   {netDelta > 0 ? '+' : '−'}{formatCurrency(Math.abs(netDelta))} vs AutoPilot
                 </p>
               )}
             </div>
             <div className="text-right text-xs text-slate-500 space-y-0.5">
               <p>Earnings · <span className="font-semibold text-slate-900 tabular-nums">{formatCurrency(totalEarnings)}</span></p>
-              <p>Deductions · <span className="font-semibold text-rose-600 tabular-nums">−{formatCurrency(totalDeductions)}</span></p>
+              <p>Deductions · <span className="font-semibold text-slate-700 tabular-nums">−{formatCurrency(totalDeductions)}</span></p>
             </div>
           </div>
         </div>
@@ -136,7 +136,7 @@ export function AdjustPayslipDialog({ payslip, open, onOpenChange, onSaved }: Pr
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-4">
           <section>
             <div className="flex items-baseline justify-between mb-3">
-              <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Earnings (+)</p>
+              <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider">Earnings (+)</p>
               <p className="text-[11px] text-slate-400">AutoPilot: {formatCurrency(autoEarnings)}</p>
             </div>
             <div className="space-y-2.5">
@@ -149,7 +149,7 @@ export function AdjustPayslipDialog({ payslip, open, onOpenChange, onSaved }: Pr
 
           <section>
             <div className="flex items-baseline justify-between mb-3">
-              <p className="text-[11px] font-semibold text-rose-700 uppercase tracking-wider">Deductions (−)</p>
+              <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider">Deductions (−)</p>
               <p className="text-[11px] text-slate-400">AutoPilot: {formatCurrency(autoDeductions)}</p>
             </div>
             <div className="space-y-2.5">
@@ -172,7 +172,7 @@ export function AdjustPayslipDialog({ payslip, open, onOpenChange, onSaved }: Pr
             onChange={(e) => setNote(e.target.value)}
             rows={2}
             placeholder="e.g. Q1 performance bonus, 10 days leave encashed, loan instalment #4 of 12"
-            className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-100"
           />
         </div>
 
@@ -188,7 +188,7 @@ export function AdjustPayslipDialog({ payslip, open, onOpenChange, onSaved }: Pr
               target="_blank"
               rel="noreferrer"
               onClick={(e) => e.stopPropagation()}
-              className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium"
+              className="inline-flex items-center gap-1 text-slate-700 hover:text-slate-700 font-medium"
             >
               Edit base salary <ExternalLink className="w-3 h-3" />
             </a>
@@ -221,12 +221,12 @@ export function AdjustPayslipDialog({ payslip, open, onOpenChange, onSaved }: Pr
         </details>
 
         {error && (
-          <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2 mt-3">{error}</p>
+          <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2 mt-3">{error}</p>
         )}
 
         <DialogFooter className="gap-2 mt-2">
           {payslip.isAdjusted && (
-            <Button variant="outline" onClick={clearAdjustment} disabled={saving} className="mr-auto text-rose-600 hover:text-rose-700">
+            <Button variant="outline" onClick={clearAdjustment} disabled={saving} className="mr-auto text-slate-700 hover:text-slate-700">
               <RotateCcw className="w-3.5 h-3.5 mr-1.5" />
               Reset to AutoPilot
             </Button>
@@ -265,7 +265,7 @@ function Row({ label, value, negative }: { label: string; value: number; negativ
   return (
     <div className="flex items-center justify-between gap-2">
       <span className="text-slate-500">{label}</span>
-      <span className={`font-medium tabular-nums ${negative ? 'text-rose-600' : 'text-slate-900'}`}>
+      <span className={`font-medium tabular-nums ${negative ? 'text-slate-700' : 'text-slate-900'}`}>
         {negative && value > 0 ? '−' : ''}{formatCurrency(value)}
       </span>
     </div>

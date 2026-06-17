@@ -12,15 +12,15 @@ export function ResignationBanner({ submittedAt, intendedLastDay, managerAckedAt
   const last = new Date(intendedLastDay)
   const daysLeft = Math.max(0, Math.ceil((last.getTime() - Date.now()) / 86_400_000))
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+    <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <p className="text-sm font-semibold text-amber-900">Resignation submitted on {formatDate(submittedAt)}</p>
-          <p className="text-xs text-amber-800 mt-1">
+          <p className="text-sm font-semibold text-slate-900">Resignation submitted on {formatDate(submittedAt)}</p>
+          <p className="text-xs text-slate-900 mt-1">
             Last working day: <strong>{formatDate(intendedLastDay)}</strong> — {daysLeft} day{daysLeft === 1 ? '' : 's'} remaining
           </p>
         </div>
-        <div className="text-xs space-y-1 text-amber-800">
+        <div className="text-xs space-y-1 text-slate-900">
           <p>{managerAckedAt
             ? <>Manager acknowledged on <strong>{formatDate(managerAckedAt)}</strong></>
             : <>Awaiting manager acknowledgment</>}</p>

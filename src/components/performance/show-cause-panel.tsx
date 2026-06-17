@@ -194,7 +194,7 @@ function NoticeCard({ notice, onClick }: {
               <p className="font-semibold text-slate-900">{notice.employee.fullName}</p>
               <Badge variant="secondary">{notice.issueType.replace('_', ' ')}</Badge>
               <Badge variant={meta.tone}><Icon className="w-3 h-3 mr-1 inline" />{meta.label}</Badge>
-              {notice.occurrenceNo > 1 && <span className="text-[10px] text-amber-700 font-semibold">Occurrence #{notice.occurrenceNo}</span>}
+              {notice.occurrenceNo > 1 && <span className="text-[10px] text-slate-700 font-semibold">Occurrence #{notice.occurrenceNo}</span>}
             </div>
             <p className="text-xs text-slate-500 mt-1 line-clamp-2">
               {notice.meetingConcerns || notice.description || notice.escalationReason || 'No description'}
@@ -212,7 +212,7 @@ function NoticeCard({ notice, onClick }: {
               <div
                 key={s}
                 className={`h-1 flex-1 rounded-full ${
-                  i < stageIdx ? 'bg-emerald-400' : i === stageIdx ? 'bg-blue-500' : 'bg-slate-200'
+                  i < stageIdx ? 'bg-slate-300' : i === stageIdx ? 'bg-slate-500' : 'bg-slate-200'
                 }`}
                 title={STATUS_META[s]?.label ?? s}
               />
@@ -324,7 +324,7 @@ function FlagConcernDialog({ isHR, onClose, onCreated }: {
             <p className="text-[11px] text-slate-500 mt-1">Workday convention: hold the meeting within a few days.</p>
           </div>
 
-          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+          {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
         </div>
 
         <DialogFooter>
@@ -396,7 +396,7 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
       <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <FileWarning className="w-4 h-4 text-amber-600" />
+            <FileWarning className="w-4 h-4 text-slate-700" />
             Show Cause — {notice.employee.fullName}
           </DialogTitle>
           <p className="text-xs text-slate-500 mt-1">
@@ -506,7 +506,7 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
                   placeholder="e.g. Despite weekly check-ins agreed on 12 May, missed 2 more deadlines on 19 May and 22 May. No improvement in quality. Requesting formal Show Cause."
                 />
                 <div className="flex gap-2">
-                  <Button onClick={() => performAction('ESCALATE_TO_HR', { escalationReason: form.escalationReason })} disabled={busy} className="bg-amber-600 hover:bg-amber-700 text-white">
+                  <Button onClick={() => performAction('ESCALATE_TO_HR', { escalationReason: form.escalationReason })} disabled={busy} className="bg-slate-700 hover:bg-slate-700 text-white">
                     {busy ? 'Escalating…' : 'Send to HR for Show Cause'}
                   </Button>
                   <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
@@ -531,7 +531,7 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
                       deadline: form.deadline,
                     })}
                     disabled={busy}
-                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                    className="bg-slate-700 hover:bg-slate-700 text-white"
                   >
                     {busy ? 'Issuing…' : 'Issue Show Cause Notice'}
                   </Button>
@@ -576,7 +576,7 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
                   placeholder="Any ongoing support / coaching to continue."
                 />
                 <div className="flex gap-2">
-                  <Button onClick={() => performAction('RESOLVE', { outcome: form.outcome, actionPlan: form.actionPlan })} disabled={busy} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                  <Button onClick={() => performAction('RESOLVE', { outcome: form.outcome, actionPlan: form.actionPlan })} disabled={busy} className="bg-slate-700 hover:bg-slate-700 text-white">
                     {busy ? 'Resolving…' : 'Resolve'}
                   </Button>
                   <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
@@ -594,14 +594,14 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
                   placeholder="Outline the PIP scope — measurable goals, timeline, support, consequences."
                 />
                 <div className="flex gap-2">
-                  <Button onClick={() => performAction('ESCALATE_TO_PIP', { actionPlan: form.actionPlan })} disabled={busy} className="bg-red-600 hover:bg-red-700 text-white">
+                  <Button onClick={() => performAction('ESCALATE_TO_PIP', { actionPlan: form.actionPlan })} disabled={busy} className="bg-slate-700 hover:bg-slate-700 text-white">
                     {busy ? 'Escalating…' : 'Escalate to PIP'}
                   </Button>
                   <Button variant="outline" onClick={() => setActiveAction(null)}>Cancel</Button>
                 </div>
               </>
             )}
-            {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+            {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
           </div>
         )}
 
@@ -614,8 +614,8 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
                 onClick={() => setActiveAction(a.id)}
                 variant={a.tone === 'primary' ? 'default' : 'outline'}
                 className={
-                  a.tone === 'success'    ? 'border-emerald-200 text-emerald-700 hover:bg-emerald-50' :
-                  a.tone === 'destructive'? 'border-red-200 text-red-700 hover:bg-red-50' :
+                  a.tone === 'success'    ? 'border-slate-100 text-slate-700 hover:bg-slate-50' :
+                  a.tone === 'destructive'? 'border-slate-100 text-slate-700 hover:bg-slate-50' :
                   ''
                 }
               >
@@ -639,9 +639,9 @@ function TimelineEntry({ icon: Icon, tone, title, by, at, body, extra }: {
   body: string | null; extra?: React.ReactNode;
 }) {
   const tones = {
-    blue:    'bg-blue-50 border-blue-200 text-blue-900',
-    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-    amber:   'bg-amber-50 border-amber-200 text-amber-900',
+    blue:    'bg-slate-50 border-slate-100 text-slate-900',
+    emerald: 'bg-slate-50 border-slate-100 text-slate-900',
+    amber:   'bg-slate-50 border-slate-100 text-slate-900',
   }
   return (
     <div className={`border-l-4 rounded-r-md p-3 ${tones[tone]}`}>

@@ -81,7 +81,7 @@ export default function DeleteEmployeeButton({ employeeId, employeeName }: Props
         variant="outline"
         size="sm"
         onClick={() => { reset(); setOpen(true) }}
-        className="text-rose-700 border-rose-200 hover:bg-rose-50 hover:text-rose-800"
+        className="text-slate-700 border-slate-100 hover:bg-slate-50 hover:text-slate-900"
       >
         <Trash2 className="w-3.5 h-3.5 mr-1.5" />
         Delete Employee
@@ -103,18 +103,18 @@ export default function DeleteEmployeeButton({ employeeId, employeeName }: Props
               onClick={() => setMode('archive')}
               className={`w-full text-left rounded-lg border p-3 transition-colors ${
                 mode === 'archive'
-                  ? 'border-blue-300 bg-blue-50/50 ring-2 ring-blue-200'
+                  ? 'border-slate-200 bg-slate-50/50 ring-2 ring-slate-100'
                   : 'border-slate-200 hover:bg-slate-50'
               }`}
             >
               <div className="flex items-start gap-3">
                 <div className="mt-0.5">
-                  <Archive className="w-4 h-4 text-blue-600" />
+                  <Archive className="w-4 h-4 text-slate-700" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-900">
                     Archive Employee
-                    <span className="ml-2 text-[10px] uppercase tracking-wider text-blue-700 bg-blue-100 rounded px-1.5 py-0.5 font-semibold">
+                    <span className="ml-2 text-[10px] uppercase tracking-wider text-slate-700 bg-slate-100 rounded px-1.5 py-0.5 font-semibold">
                       Recommended
                     </span>
                   </p>
@@ -133,20 +133,20 @@ export default function DeleteEmployeeButton({ employeeId, employeeName }: Props
               onClick={() => setMode('hard')}
               className={`w-full text-left rounded-lg border p-3 transition-colors ${
                 mode === 'hard'
-                  ? 'border-rose-300 bg-rose-50/50 ring-2 ring-rose-200'
+                  ? 'border-slate-200 bg-slate-50/50 ring-2 ring-slate-100'
                   : 'border-slate-200 hover:bg-slate-50'
               }`}
             >
               <div className="flex items-start gap-3">
                 <div className="mt-0.5">
-                  <AlertTriangle className="w-4 h-4 text-rose-600" />
+                  <AlertTriangle className="w-4 h-4 text-slate-700" />
                 </div>
                 <div className="flex-1">
                   <p className="text-sm font-semibold text-slate-900">
                     Permanently Delete
                   </p>
                   <p className="text-xs text-slate-600 mt-1">
-                    <strong className="text-rose-700">Destructive.</strong>{' '}
+                    <strong className="text-slate-700">Destructive.</strong>{' '}
                     Cascade-deletes the user account, all payslips,
                     compensation history, performance reviews, leave
                     requests, and attendance logs. Use only for demo data
@@ -159,10 +159,10 @@ export default function DeleteEmployeeButton({ employeeId, employeeName }: Props
 
           {/* Hard-delete confirmation: type full name */}
           {mode === 'hard' && (
-            <div className="rounded-lg border border-rose-200 bg-rose-50/40 p-3 space-y-2">
-              <p className="text-xs text-rose-900">
+            <div className="rounded-lg border border-slate-100 bg-slate-50/40 p-3 space-y-2">
+              <p className="text-xs text-slate-900">
                 To confirm permanent deletion, type{' '}
-                <strong className="font-mono bg-white px-1.5 py-0.5 rounded border border-rose-200">
+                <strong className="font-mono bg-white px-1.5 py-0.5 rounded border border-slate-100">
                   {employeeName}
                 </strong>{' '}
                 below:
@@ -177,7 +177,7 @@ export default function DeleteEmployeeButton({ employeeId, employeeName }: Props
           )}
 
           {error && (
-            <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
+            <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded-md p-2">
               {error}
             </p>
           )}
@@ -191,8 +191,8 @@ export default function DeleteEmployeeButton({ employeeId, employeeName }: Props
               disabled={busy || (mode === 'hard' && !hardNameMatches)}
               className={
                 mode === 'hard'
-                  ? 'bg-rose-600 hover:bg-rose-700 text-white'
-                  : 'bg-blue-600 hover:bg-blue-700 text-white'
+                  ? 'bg-slate-700 hover:bg-slate-700 text-white'
+                  : 'bg-slate-700 hover:bg-slate-700 text-white'
               }
             >
               {busy

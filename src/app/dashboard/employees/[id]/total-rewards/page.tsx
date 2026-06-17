@@ -55,9 +55,9 @@ export default async function TotalRewardsPage({ params }: PageProps) {
   const isOwn = emp.id === myEmpId
   if (!isHR && !isOwn) {
     return (
-      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-6">
-        <h2 className="text-lg font-semibold text-amber-900">Access denied</h2>
-        <p className="text-sm text-amber-800 mt-2">
+      <div className="rounded-2xl bg-slate-50 border border-slate-100 p-6">
+        <h2 className="text-lg font-semibold text-slate-900">Access denied</h2>
+        <p className="text-sm text-slate-900 mt-2">
           Total Rewards statements are confidential. Only HR and the employee can view them.
         </p>
       </div>

@@ -66,7 +66,7 @@ export function MonthlyRevenueCard() {
     <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
       <div className="px-4 py-3 border-b border-slate-100">
         <div className="flex items-center gap-2">
-          <TrendingUp className="w-4 h-4 text-emerald-600" />
+          <TrendingUp className="w-4 h-4 text-slate-700" />
           <p className="text-sm font-semibold text-slate-900">Monthly Revenue</p>
         </div>
         <p className="text-xs text-slate-500 mt-0.5">
@@ -113,8 +113,8 @@ export function MonthlyRevenueCard() {
             </label>
             <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. seasonal peak, client X paid bonus" />
           </div>
-          {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
-          {success && <p className="text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded p-2">{success}</p>}
+          {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
+          {success && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{success}</p>}
           <Button onClick={save} disabled={saving || !revenue} size="sm">
             {saving ? 'Saving…' : 'Record revenue'}
           </Button>

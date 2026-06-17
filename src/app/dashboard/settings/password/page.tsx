@@ -68,11 +68,11 @@ export default function PasswordPage() {
       </div>
 
       {mustChange && (
-        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
-          <ShieldAlert className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+        <div className="rounded-lg border border-slate-100 bg-slate-50 px-4 py-3 flex items-start gap-3">
+          <ShieldAlert className="w-5 h-5 text-slate-700 flex-shrink-0 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm font-semibold text-amber-900">Please set a new password before continuing</p>
-            <p className="text-xs text-amber-800 mt-0.5">You are using the temporary password. Pick one only you know.</p>
+            <p className="text-sm font-semibold text-slate-900">Please set a new password before continuing</p>
+            <p className="text-xs text-slate-900 mt-0.5">You are using the temporary password. Pick one only you know.</p>
           </div>
         </div>
       )}
@@ -98,10 +98,10 @@ export default function PasswordPage() {
                     value={confirm} onChange={(e) => setConfirm(e.target.value)} />
                 </Field>
                 {error && (
-                  <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-md px-3 py-2">{error}</div>
+                  <div className="bg-slate-50 border border-slate-100 text-slate-700 text-sm rounded-md px-3 py-2">{error}</div>
                 )}
                 {ok && (
-                  <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-md px-3 py-2">
+                  <div className="bg-slate-50 border border-slate-100 text-slate-700 text-sm rounded-md px-3 py-2">
                     Password updated. Redirecting…
                   </div>
                 )}
@@ -124,7 +124,7 @@ export default function PasswordPage() {
                 You are currently signed in on this device. Use the button below to invalidate every other browser
                 where you might be logged in (lost laptop, shared computer, etc.). You will also be signed out here.
               </p>
-              <Button variant="outline" onClick={signOutEverywhere} className="text-red-600 border-red-200 hover:bg-red-50">
+              <Button variant="outline" onClick={signOutEverywhere} className="text-slate-700 border-slate-100 hover:bg-slate-50">
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign out everywhere
               </Button>
@@ -158,7 +158,7 @@ function Toggle({ label, sub, checked, onChange, disabled }: {
       <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
         <input type="checkbox" disabled={disabled} checked={!!checked}
           onChange={(e) => onChange?.(e.target.checked)} className="sr-only peer" />
-        <div className="w-11 h-6 bg-slate-200 peer-checked:bg-blue-600 rounded-full peer transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+        <div className="w-11 h-6 bg-slate-200 peer-checked:bg-slate-700 rounded-full peer transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
       </label>
     </div>
   )

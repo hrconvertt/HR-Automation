@@ -361,7 +361,7 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
   }
   if (error) {
     return (
-      <div className="p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm flex items-center gap-2">
+      <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 text-slate-900 text-sm flex items-center gap-2">
         <AlertTriangle className="w-4 h-4" /> {error}
       </div>
     )
@@ -383,13 +383,13 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search name, role, code…"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-slate-300"
             />
           </div>
           <select
             value={deptFilter}
             onChange={(e) => setDeptFilter(e.target.value)}
-            className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-blue-400"
+            className="px-3 py-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-slate-300"
           >
             <option value="">All departments</option>
             {data.departments.map((d) => (
@@ -403,13 +403,13 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
           <div className="inline-flex border border-gray-200 rounded-full p-0.5 text-xs">
             <button
               onClick={() => setMode('compact')}
-              className={`px-3 py-1 rounded-full ${mode === 'compact' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+              className={`px-3 py-1 rounded-full ${mode === 'compact' ? 'bg-slate-700 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
             >
               Compact
             </button>
             <button
               onClick={() => setMode('detailed')}
-              className={`px-3 py-1 rounded-full ${mode === 'detailed' ? 'bg-blue-600 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
+              className={`px-3 py-1 rounded-full ${mode === 'detailed' ? 'bg-slate-700 text-white' : 'text-slate-700 hover:bg-slate-50'}`}
             >
               Detailed
             </button>
@@ -463,7 +463,7 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
           {canEdit ? (
             <>
               <span>·</span>
-              <span className="text-blue-600">HR can drag to reparent</span>
+              <span className="text-slate-700">HR can drag to reparent</span>
             </>
           ) : (
             <>
@@ -672,7 +672,7 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
           <button
             onClick={handleUndo}
             disabled={undoBusy}
-            className="font-semibold text-blue-300 hover:text-blue-200 disabled:opacity-60"
+            className="font-semibold text-slate-200 hover:text-slate-100 disabled:opacity-60"
           >
             {undoBusy ? 'Undoing…' : 'Undo'}
           </button>

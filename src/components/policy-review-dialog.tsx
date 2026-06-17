@@ -106,7 +106,7 @@ export function PolicyReviewDialog({
               <label
                 key={r.id}
                 className={`flex items-start gap-2 px-2 py-1.5 rounded-md cursor-pointer text-sm ${
-                  picked.has(r.id) ? 'bg-blue-50' : 'hover:bg-slate-50'
+                  picked.has(r.id) ? 'bg-slate-50' : 'hover:bg-slate-50'
                 }`}
               >
                 <input
@@ -126,7 +126,7 @@ export function PolicyReviewDialog({
           )}
         </div>
         {error && (
-          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded p-2">{error}</p>
+          <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
         )}
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>

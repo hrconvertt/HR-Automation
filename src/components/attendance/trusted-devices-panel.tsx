@@ -61,7 +61,7 @@ export default function TrustedDevicesPanel({ initial }: { initial: Device[] }) 
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Smartphone className="w-5 h-5 text-blue-600" />
+          <Smartphone className="w-5 h-5 text-slate-700" />
           Trusted Devices
         </CardTitle>
         <div className="flex gap-2 pt-2 flex-wrap">
@@ -101,7 +101,7 @@ export default function TrustedDevicesPanel({ initial }: { initial: Device[] }) 
                     </Button>
                   )}
                   {dev.status !== 'REVOKED' && (
-                    <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleAction(dev.id, 'REVOKE')}>
+                    <Button size="sm" variant="outline" className="text-slate-700" onClick={() => handleAction(dev.id, 'REVOKE')}>
                       <ShieldOff className="w-3.5 h-3.5 mr-1" /> Revoke
                     </Button>
                   )}
@@ -120,7 +120,7 @@ function FilterChip({ label, active, onClick }: { label: string; active: boolean
     <button
       onClick={onClick}
       className={`px-3 py-1 rounded-full text-xs font-medium ${
-        active ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+        active ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
       }`}
     >
       {label}

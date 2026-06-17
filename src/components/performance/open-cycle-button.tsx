@@ -169,9 +169,9 @@ export function OpenCycleButton() {
 
             {/* Duplicate warning */}
             {isDuplicate && (
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                <div className="text-sm text-amber-900">
+              <div className="bg-slate-50 border border-slate-100 rounded-lg p-3 flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-slate-700 flex-shrink-0 mt-0.5" />
+                <div className="text-sm text-slate-900">
                   A <strong>{typeMeta?.label}</strong> for <strong>{computedPeriod}</strong> already exists.
                   Pick a different period to avoid duplication.
                 </div>
@@ -193,10 +193,10 @@ export function OpenCycleButton() {
             )}
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
             )}
             {success && (
-              <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded p-2">{success}</p>
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{success}</p>
             )}
           </div>
           <DialogFooter>

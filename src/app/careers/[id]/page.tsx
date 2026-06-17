@@ -39,7 +39,7 @@ export default async function CareersDetailPage({ params }: { params: Promise<{ 
           <Link href="/careers" className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-900">
             <ArrowLeft className="w-4 h-4" /> All Open Roles
           </Link>
-          <Link href="/careers" className="text-xs font-semibold text-blue-600 uppercase tracking-[0.18em]">
+          <Link href="/careers" className="text-xs font-semibold text-slate-700 uppercase tracking-[0.18em]">
             Careers · Convertt
           </Link>
         </div>
@@ -58,7 +58,7 @@ export default async function CareersDetailPage({ params }: { params: Promise<{ 
             <MapPin className="w-3 h-3" /> Lahore (On-Site)
           </span>
           {job.vacancies > 1 && (
-            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-50 text-slate-700 border border-slate-100">
               {job.vacancies} openings
             </span>
           )}

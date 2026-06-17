@@ -129,25 +129,25 @@ export async function ExecutivePayrollView() {
           label="Current Month Cost"
           value={formatCurrency(data.currentMonthCost)}
           Icon={Wallet}
-          color="bg-blue-50 text-blue-600"
+          color="bg-slate-50 text-slate-700"
         />
         <KpiCard
           label="YTD Total Cost"
           value={formatCurrency(data.ytdNet)}
           Icon={TrendingUp}
-          color="bg-emerald-50 text-emerald-600"
+          color="bg-slate-50 text-slate-700"
         />
         <KpiCard
           label="Avg Cost / Employee"
           value={formatCurrency(Math.round(data.avgPerEmployee))}
           Icon={Banknote}
-          color="bg-purple-50 text-purple-600"
+          color="bg-slate-50 text-slate-700"
         />
         <KpiCard
           label="Headcount Paid"
           value={String(data.headcount)}
           Icon={Users}
-          color="bg-amber-50 text-amber-600"
+          color="bg-slate-50 text-slate-700"
         />
       </div>
 
@@ -221,7 +221,7 @@ export async function ExecutivePayrollView() {
                       </div>
                       <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
                         <div
-                          className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 rounded-full"
+                          className="h-full bg-gradient-to-r from-slate-500 to-slate-700 rounded-full"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
@@ -241,26 +241,26 @@ export async function ExecutivePayrollView() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-purple-100 bg-purple-50 p-5">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-lg bg-white">
-                  <ShieldCheck className="w-5 h-5 text-purple-600" />
+                  <ShieldCheck className="w-5 h-5 text-slate-700" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-purple-700">Total EOBI Paid (YTD)</p>
+                  <p className="text-xs font-medium text-slate-700">Total EOBI Paid (YTD)</p>
                   <p className="text-2xl font-bold text-slate-900 mt-1">
                     {formatCurrency(data.ytdEobi)}
                   </p>
                 </div>
               </div>
             </div>
-            <div className="rounded-2xl border border-amber-100 bg-amber-50 p-5">
+            <div className="rounded-2xl border border-slate-100 bg-slate-50 p-5">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-lg bg-white">
-                  <Landmark className="w-5 h-5 text-amber-600" />
+                  <Landmark className="w-5 h-5 text-slate-700" />
                 </div>
                 <div>
-                  <p className="text-xs font-medium text-amber-700">
+                  <p className="text-xs font-medium text-slate-700">
                     Total Income Tax Withheld (YTD)
                   </p>
                   <p className="text-2xl font-bold text-slate-900 mt-1">

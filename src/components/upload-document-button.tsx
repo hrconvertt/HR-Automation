@@ -127,7 +127,7 @@ export default function UploadDocumentButton({ employeeId, compact }: Props) {
               {/* Document type */}
               <div>
                 <label className="text-xs font-semibold text-slate-700 mb-1.5 block uppercase tracking-wider">
-                  Document type <span className="text-rose-500">*</span>
+                  Document type <span className="text-slate-500">*</span>
                 </label>
                 <Select value={type} onValueChange={setType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
@@ -142,22 +142,22 @@ export default function UploadDocumentButton({ employeeId, compact }: Props) {
               {/* File picker — drag-and-drop zone */}
               <div>
                 <label className="text-xs font-semibold text-slate-700 mb-1.5 block uppercase tracking-wider">
-                  File <span className="text-rose-500">*</span>
+                  File <span className="text-slate-500">*</span>
                 </label>
 
                 {file ? (
                   // Preview card when file chosen
-                  <div className="border-2 border-emerald-200 bg-emerald-50/60 rounded-xl p-4 flex items-center gap-3">
+                  <div className="border-2 border-slate-100 bg-slate-50/60 rounded-xl p-4 flex items-center gap-3">
                     <div className="text-3xl">{fileIcon(file.name)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-slate-900 truncate">{file.name}</p>
                       <p className="text-xs text-slate-500 mt-0.5">{formatSize(file.size)}</p>
                     </div>
-                    <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                    <CheckCircle2 className="w-5 h-5 text-slate-700 flex-shrink-0" />
                     <button
                       onClick={() => validateAndSet(null)}
                       disabled={busy}
-                      className="text-slate-400 hover:text-rose-600 transition-colors p-1"
+                      className="text-slate-400 hover:text-slate-700 transition-colors p-1"
                       aria-label="Remove file"
                     >
                       <X className="w-4 h-4" />
@@ -173,12 +173,12 @@ export default function UploadDocumentButton({ employeeId, compact }: Props) {
                     className={`
                       border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all
                       ${dragOver
-                        ? 'border-blue-400 bg-blue-50/60'
-                        : 'border-slate-300 bg-slate-50/40 hover:border-blue-300 hover:bg-blue-50/30'}
+                        ? 'border-slate-300 bg-slate-50/60'
+                        : 'border-slate-300 bg-slate-50/40 hover:border-slate-200 hover:bg-slate-50/30'}
                     `}
                   >
-                    <div className="mx-auto w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center mb-3">
-                      <Upload className="w-6 h-6 text-blue-600" />
+                    <div className="mx-auto w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+                      <Upload className="w-6 h-6 text-slate-700" />
                     </div>
                     <p className="text-sm font-medium text-slate-900 mb-1">
                       Click to browse or drag a file here
@@ -199,9 +199,9 @@ export default function UploadDocumentButton({ employeeId, compact }: Props) {
 
               {/* Error banner */}
               {err && (
-                <div className="flex items-start gap-2 rounded-lg bg-rose-50 border border-rose-200 px-3 py-2.5">
-                  <AlertCircle className="w-4 h-4 text-rose-600 flex-shrink-0 mt-0.5" />
-                  <p className="text-xs text-rose-700 leading-relaxed">{err}</p>
+                <div className="flex items-start gap-2 rounded-lg bg-slate-50 border border-slate-100 px-3 py-2.5">
+                  <AlertCircle className="w-4 h-4 text-slate-700 flex-shrink-0 mt-0.5" />
+                  <p className="text-xs text-slate-700 leading-relaxed">{err}</p>
                 </div>
               )}
             </div>

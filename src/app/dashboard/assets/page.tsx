@@ -261,7 +261,7 @@ function AddAssetDialog({
               className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm" />
           </Field>
           <p className="text-xs text-slate-500">Custodian dept: <strong>{meta?.dept ?? 'Admin'}</strong> (auto-assigned by type)</p>
-          {error && <p className="text-sm text-rose-600">{error}</p>}
+          {error && <p className="text-sm text-slate-700">{error}</p>}
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
             <Button type="submit" disabled={busy}>{busy ? 'Saving…' : 'Add Asset'}</Button>

@@ -141,7 +141,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
                 {rec.status}
               </Badge>
               {rec.warningCount > 0 && (
-                <span className="inline-flex items-center gap-1.5 bg-orange-500/30 px-3 py-1 rounded-full text-white">
+                <span className="inline-flex items-center gap-1.5 bg-slate-500/30 px-3 py-1 rounded-full text-white">
                   <AlertTriangle className="w-3.5 h-3.5" /> {rec.warningCount} warning{rec.warningCount > 1 ? 's' : ''}
                 </span>
               )}
@@ -151,12 +151,12 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
             <div className="flex flex-col gap-2">
               <Button onClick={() => setAdjustOpen(true)} variant="outline" className="bg-white/10 text-white border-white/30 hover:bg-white/20">Adjust Duration</Button>
               {rec.status === 'ACTIVE' && (
-                <Button onClick={() => setEarlyOpen(true)} className="bg-amber-500 hover:bg-amber-600 text-white">
+                <Button onClick={() => setEarlyOpen(true)} className="bg-slate-500 hover:bg-slate-700 text-white">
                   <Zap className="w-4 h-4 mr-1" /> Early Decision
                 </Button>
               )}
               {rec.status === 'UNDER_REVIEW' && rec.hrDecision == null && daysLeft < -30 && (
-                <Button onClick={() => setForceOpen(true)} className="bg-rose-600 hover:bg-rose-700 text-white">
+                <Button onClick={() => setForceOpen(true)} className="bg-slate-700 hover:bg-slate-700 text-white">
                   <AlertTriangle className="w-4 h-4 mr-1" /> HR Override: Force Enact
                 </Button>
               )}
@@ -165,7 +165,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </div>
 
-      {err && <div className="rounded-md bg-red-50 border border-red-200 p-3 text-sm text-red-800">{err}</div>}
+      {err && <div className="rounded-md bg-slate-50 border border-slate-100 p-3 text-sm text-slate-900">{err}</div>}
 
       {/* Timeline */}
       <Card className="p-5">
@@ -178,7 +178,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
             { label: 'Outcome', done: !!rec.outcomeEnactedAt, sub: rec.outcomeEnactedAt ? `${rec.hrDecision} · ${fmt(rec.outcomeEnactedAt)}` : 'Pending' },
           ].map((s, i) => (
             <div key={i} className="flex-1 text-center">
-              <div className={`mx-auto w-9 h-9 rounded-full flex items-center justify-center ${s.done ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
+              <div className={`mx-auto w-9 h-9 rounded-full flex items-center justify-center ${s.done ? 'bg-slate-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
                 {s.done ? <CheckCircle className="w-5 h-5" /> : i + 1}
               </div>
               <p className="text-xs font-semibold text-slate-700 mt-2">{s.label}</p>
@@ -195,9 +195,9 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           <div className="space-y-2">
             <div className="flex items-center gap-2">
               <Badge className={
-                rec.settlingFlag === 'GREEN' ? 'bg-emerald-100 text-emerald-800' :
-                rec.settlingFlag === 'AMBER' ? 'bg-amber-100 text-amber-800' :
-                'bg-rose-100 text-rose-800'
+                rec.settlingFlag === 'GREEN' ? 'bg-slate-100 text-slate-900' :
+                rec.settlingFlag === 'AMBER' ? 'bg-slate-100 text-slate-900' :
+                'bg-slate-100 text-slate-900'
               }>{rec.settlingFlag}</Badge>
               <span className="text-xs text-slate-500">Submitted {fmt(rec.settlingCheckInAt)}</span>
             </div>
@@ -229,9 +229,9 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
               <Metric label="Goal Score" value={rec.packetGoalScore?.toFixed(1) ?? '—'} suffix={rec.packetGoalScore != null ? '/ 5' : ''} />
             </div>
             {rec.packetSuggestedRec && (
-              <div className="rounded-lg bg-violet-50 border border-violet-200 p-3 text-sm">
-                <span className="text-violet-900 font-semibold">Heuristic suggestion: </span>
-                <Badge className="bg-violet-600 text-white">{rec.packetSuggestedRec}</Badge>
+              <div className="rounded-lg bg-slate-50 border border-slate-100 p-3 text-sm">
+                <span className="text-slate-900 font-semibold">Heuristic suggestion: </span>
+                <Badge className="bg-slate-700 text-white">{rec.packetSuggestedRec}</Badge>
               </div>
             )}
           </div>
@@ -246,7 +246,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         {rec.managerSubmittedAt ? (
           <div className="space-y-2">
             <div className="flex items-center gap-2">
-              <Badge className="bg-blue-100 text-blue-800">{rec.managerRecommendation}</Badge>
+              <Badge className="bg-slate-100 text-slate-900">{rec.managerRecommendation}</Badge>
               <span className="text-xs text-slate-500">Submitted {fmt(rec.managerSubmittedAt)}</span>
             </div>
             {rec.managerReviewNotes && <p className="text-sm text-slate-700 bg-slate-50 rounded p-3">{rec.managerReviewNotes}</p>}
@@ -262,14 +262,14 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">HR Decision</h2>
-          {rec.overrodeManager && <Badge className="bg-orange-100 text-orange-800">OVERRIDE</Badge>}
+          {rec.overrodeManager && <Badge className="bg-slate-100 text-slate-900">OVERRIDE</Badge>}
         </div>
         {rec.hrDecidedAt ? (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge className="bg-violet-100 text-violet-800">{rec.hrDecision}</Badge>
+              <Badge className="bg-slate-100 text-slate-900">{rec.hrDecision}</Badge>
               {rec.extensionMonths && <span className="text-xs text-slate-600">+{rec.extensionMonths} month(s)</span>}
-              {rec.salaryBumpAmount && <span className="text-xs text-emerald-700 font-semibold">+PKR {rec.salaryBumpAmount.toLocaleString('en-PK')} bump</span>}
+              {rec.salaryBumpAmount && <span className="text-xs text-slate-700 font-semibold">+PKR {rec.salaryBumpAmount.toLocaleString('en-PK')} bump</span>}
               <span className="text-xs text-slate-500">Decided {fmt(rec.hrDecidedAt)}</span>
             </div>
             {rec.meetingScheduledFor && !rec.outcomeEnactedAt && (
@@ -289,19 +289,19 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
 
       {/* Outcome */}
       {rec.outcomeEnactedAt && (
-        <Card className="p-5 bg-emerald-50/40 border-emerald-200">
-          <h2 className="text-sm font-semibold text-emerald-900 uppercase tracking-wider mb-2">Outcome Enacted</h2>
-          <p className="text-sm text-emerald-900">
+        <Card className="p-5 bg-slate-50/40 border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-900 uppercase tracking-wider mb-2">Outcome Enacted</h2>
+          <p className="text-sm text-slate-900">
             <strong>{rec.hrDecision}</strong> enacted on {fmt(rec.outcomeEnactedAt)}
-            {rec.isEarlyDecision && <span className="ml-2 inline-block bg-amber-200 text-amber-900 text-xs px-2 py-0.5 rounded">EARLY DECISION</span>}
+            {rec.isEarlyDecision && <span className="ml-2 inline-block bg-slate-100 text-slate-900 text-xs px-2 py-0.5 rounded">EARLY DECISION</span>}
           </p>
-          {rec.earlyDecisionReason && <p className="text-xs text-emerald-800 mt-1">Reason: {rec.earlyDecisionReason}</p>}
+          {rec.earlyDecisionReason && <p className="text-xs text-slate-900 mt-1">Reason: {rec.earlyDecisionReason}</p>}
           {rec.confirmationLetterId && (
             <a
               href={`/letters/${rec.confirmationLetterId}/print`}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline mt-2"
+              className="inline-flex items-center gap-1 text-sm text-slate-700 hover:underline mt-2"
             >
               <FileText className="w-4 h-4" /> View confirmation letter
             </a>
@@ -314,7 +314,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         <Card className="p-5">
           <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3">Warnings ({rec.warningCount})</h2>
           {rec.warningIssuedAt && (
-            <div className="border-l-2 border-orange-400 pl-3">
+            <div className="border-l-2 border-slate-300 pl-3">
               <p className="text-xs text-slate-500">{fmt(rec.warningIssuedAt)}</p>
               {rec.warningNotes && <p className="text-sm text-slate-700 mt-1">{rec.warningNotes}</p>}
             </div>
@@ -463,12 +463,12 @@ function ConfirmBumpInput({ value, onChange }: { value: string; onChange: (v: st
   return (
     <div>
       <label className="block text-xs font-medium text-slate-700 mb-1">
-        Salary bump (PKR) <span className="text-rose-600">*</span>
+        Salary bump (PKR) <span className="text-slate-700">*</span>
       </label>
       <Input type="number" min={0} value={value} onChange={(e) => onChange(e.target.value)} placeholder="Enter 0 if no change" />
       <p className="text-[11px] text-slate-500 mt-1">Required. Enter 0 if no change. Typical confirmation bump is 10-15%.</p>
       {monthly != null && bumpNum > 0 && (
-        <p className="text-[11px] text-emerald-700 mt-1">
+        <p className="text-[11px] text-slate-700 mt-1">
           Current monthly: PKR {monthly.toLocaleString()} · After bump: PKR {newMonthly!.toLocaleString()} (+{pct ?? 0}%)
         </p>
       )}
@@ -626,11 +626,11 @@ function ActivityTimeline({ rec, canSeeManagerNotes }: { rec: ProbationRec; canS
   }
 
   const toneClass: Record<TimelineEvent['tone'], string> = {
-    blue: 'bg-blue-500',
-    emerald: 'bg-emerald-500',
-    amber: 'bg-amber-500',
-    rose: 'bg-rose-500',
-    violet: 'bg-violet-500',
+    blue: 'bg-slate-500',
+    emerald: 'bg-slate-500',
+    amber: 'bg-slate-500',
+    rose: 'bg-slate-500',
+    violet: 'bg-slate-500',
     slate: 'bg-slate-400',
   }
 
@@ -659,7 +659,7 @@ function ForceEnactDialog({ onSubmit, busy }: { onSubmit: (outcome: string, reas
   const [reason, setReason] = useState('')
   return (
     <div className="space-y-3">
-      <p className="text-sm text-rose-800 bg-rose-50 border border-rose-200 rounded p-2">
+      <p className="text-sm text-slate-900 bg-slate-50 border border-slate-100 rounded p-2">
         Use only when the probation is stuck past its end date with no manager or HR decision. The override reason is logged for audit.
       </p>
       <div>
@@ -679,7 +679,7 @@ function ForceEnactDialog({ onSubmit, busy }: { onSubmit: (outcome: string, reas
         <textarea className="w-full rounded-md border border-slate-300 p-2 text-sm" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Why is HR forcing this enactment?" />
       </div>
       <DialogFooter>
-        <Button onClick={() => onSubmit(outcome, reason)} disabled={busy || !reason.trim()} className="bg-rose-600 hover:bg-rose-700 text-white">Force Enact</Button>
+        <Button onClick={() => onSubmit(outcome, reason)} disabled={busy || !reason.trim()} className="bg-slate-700 hover:bg-slate-700 text-white">Force Enact</Button>
       </DialogFooter>
     </div>
   )
@@ -692,7 +692,7 @@ function EarlyDecisionDialog({ onSubmit, busy }: { onSubmit: (p: Record<string, 
   const [bumpAmount, setBumpAmount] = useState('')
   return (
     <div className="space-y-3">
-      <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded p-2">
+      <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">
         Early decisions skip remaining lifecycle stages and enact immediately.
       </p>
       <div>

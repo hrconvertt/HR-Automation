@@ -34,11 +34,11 @@ export default function AcknowledgeButton({ policyId }: { policyId: string }) {
         />
         I have read and understood this policy, and I agree to comply with it.
       </label>
-      <Button onClick={handleAck} disabled={!confirmed || busy} className="bg-blue-600 hover:bg-blue-700 text-white">
+      <Button onClick={handleAck} disabled={!confirmed || busy} className="bg-slate-700 hover:bg-slate-700 text-white">
         <CheckCircle className="w-4 h-4 mr-2" />
         {busy ? 'Recording…' : 'Acknowledge Policy'}
       </Button>
-      {error && <p className="text-xs text-red-600">{error}</p>}
+      {error && <p className="text-xs text-slate-700">{error}</p>}
     </div>
   )
 }

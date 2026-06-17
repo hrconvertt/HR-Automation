@@ -118,7 +118,7 @@ export default function EditSalaryButton({ employeeId, employeeName, current }: 
                 <span className="text-slate-900 tabular-nums">{formatCurrency(newGross)}</span>
               </div>
               {oldGross > 0 && diff !== 0 && (
-                <div className={`flex justify-between text-sm font-semibold ${diff > 0 ? 'text-emerald-700' : 'text-rose-700'}`}>
+                <div className={`flex justify-between text-sm font-semibold ${diff > 0 ? 'text-slate-700' : 'text-slate-700'}`}>
                   <span className="flex items-center gap-1">
                     {diff > 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                     Change
@@ -177,7 +177,7 @@ export default function EditSalaryButton({ employeeId, employeeName, current }: 
             </label>
 
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
             )}
           </div>
 

@@ -162,7 +162,7 @@ export default function GenerateDocumentDialog({
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-blue-600" />
+            <Sparkles className="w-4 h-4 text-slate-700" />
             {DOC_TITLES[type] ?? 'Generate Document'}
           </DialogTitle>
           <p className="text-xs text-slate-500 mt-1">for <strong>{employeeName}</strong></p>
@@ -260,10 +260,10 @@ export default function GenerateDocumentDialog({
           )}
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>
+            <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
           )}
 
-          <div className="bg-blue-50/50 border border-blue-100 rounded p-3 text-[11px] text-blue-900">
+          <div className="bg-slate-50/50 border border-slate-100 rounded p-3 text-[11px] text-slate-900">
             <strong>Two options:</strong>
             <ul className="list-disc list-inside mt-1 space-y-0.5">
               <li><strong>Preview only</strong> — opens the document for review, doesn&apos;t save a copy.</li>
@@ -277,7 +277,7 @@ export default function GenerateDocumentDialog({
           <Button variant="outline" onClick={handlePreview} disabled={busy}>
             <ExternalLink className="w-3.5 h-3.5 mr-1" /> Preview only
           </Button>
-          <Button onClick={handleSaveAndOpen} disabled={busy} className="bg-blue-600 hover:bg-blue-700 text-white">
+          <Button onClick={handleSaveAndOpen} disabled={busy} className="bg-slate-700 hover:bg-slate-700 text-white">
             <FileCheck2 className="w-3.5 h-3.5 mr-1" /> {busy ? 'Saving…' : 'Save & open'}
           </Button>
         </DialogFooter>
@@ -289,7 +289,7 @@ export default function GenerateDocumentDialog({
 function Label({ children, required }: { children: React.ReactNode; required?: boolean }) {
   return (
     <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">
-      {children}{required && <span className="text-red-500"> *</span>}
+      {children}{required && <span className="text-slate-500"> *</span>}
     </label>
   )
 }

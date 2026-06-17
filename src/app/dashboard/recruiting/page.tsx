@@ -22,10 +22,10 @@ import { KnockoutOverrideButton } from '@/components/recruiting/knockout-overrid
 import { BulkPipelineActions } from '@/components/recruiting/bulk-pipeline-actions'
 
 const AVATAR_PALETTE = [
-  'bg-blue-100 text-blue-700', 'bg-emerald-100 text-emerald-700',
-  'bg-purple-100 text-purple-700', 'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700', 'bg-sky-100 text-sky-700',
-  'bg-indigo-100 text-indigo-700', 'bg-teal-100 text-teal-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
 ]
 function avatarTone(name: string): string {
   let h = 0
@@ -35,11 +35,11 @@ function avatarTone(name: string): string {
 
 const PIPELINE_STAGES = [
   { key: 'APPLIED',    label: 'Applied',    tone: 'bg-slate-50  border-slate-200' },
-  { key: 'SCREENING',  label: 'Screening',  tone: 'bg-blue-50/40 border-blue-200' },
-  { key: 'INTERVIEW',  label: 'Interview',  tone: 'bg-purple-50/40 border-purple-200' },
-  { key: 'OFFER',      label: 'Offer',      tone: 'bg-amber-50/40 border-amber-200' },
-  { key: 'HIRED',      label: 'Hired',      tone: 'bg-emerald-50/40 border-emerald-200' },
-  { key: 'REJECTED',   label: 'Rejected',   tone: 'bg-rose-50/40 border-rose-200' },
+  { key: 'SCREENING',  label: 'Screening',  tone: 'bg-slate-50/40 border-slate-100' },
+  { key: 'INTERVIEW',  label: 'Interview',  tone: 'bg-slate-50/40 border-slate-100' },
+  { key: 'OFFER',      label: 'Offer',      tone: 'bg-slate-50/40 border-slate-100' },
+  { key: 'HIRED',      label: 'Hired',      tone: 'bg-slate-50/40 border-slate-100' },
+  { key: 'REJECTED',   label: 'Rejected',   tone: 'bg-slate-50/40 border-slate-100' },
 ]
 
 /**
@@ -282,28 +282,28 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             value={kpis.avgTtfDays != null ? `${kpis.avgTtfDays.toFixed(0)}d` : '—'}
             sub={kpis.ttfLabel}
             Icon={Timer}
-            tone="bg-blue-50 text-blue-600"
+            tone="bg-slate-50 text-slate-700"
           />
           <Kpi
             label="Offer Acceptance"
             value={kpis.offerAcceptPct != null ? `${kpis.offerAcceptPct.toFixed(0)}%` : '—'}
             sub={kpis.offerLabel}
             Icon={FileText}
-            tone="bg-emerald-50 text-emerald-600"
+            tone="bg-slate-50 text-slate-700"
           />
           <Kpi
             label="Pipeline Velocity"
             value={kpis.worstStage ? kpis.worstStage : '—'}
             sub={kpis.velocityLabel}
             Icon={Activity}
-            tone="bg-purple-50 text-purple-600"
+            tone="bg-slate-50 text-slate-700"
           />
           <Kpi
             label="Source Quality"
             value={kpis.topSource ?? '—'}
             sub={kpis.sourceLabel}
             Icon={TrendingUp}
-            tone="bg-amber-50 text-amber-600"
+            tone="bg-slate-50 text-slate-700"
           />
         </div>
         {(isHR || isManager) && (
@@ -327,7 +327,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             <div className="rounded-lg border border-slate-200 bg-white p-3">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Stuck Candidates</p>
-                <AlertTriangle className={`w-4 h-4 ${health.stuck > 0 ? 'text-amber-500' : 'text-slate-300'}`} />
+                <AlertTriangle className={`w-4 h-4 ${health.stuck > 0 ? 'text-slate-500' : 'text-slate-300'}`} />
               </div>
               <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">{health.stuck}</p>
               <p className="text-[11px] text-slate-500 mt-0.5">No movement &gt;7 days</p>
@@ -335,7 +335,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             <div className="rounded-lg border border-slate-200 bg-white p-3">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Avg Screening</p>
-                <Timer className="w-4 h-4 text-blue-500" />
+                <Timer className="w-4 h-4 text-slate-500" />
               </div>
               <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
                 {health.avgScreenDays != null ? `${health.avgScreenDays.toFixed(1)}d` : '—'}
@@ -345,7 +345,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             <div className="rounded-lg border border-slate-200 bg-white p-3">
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-slate-500 uppercase tracking-wider font-semibold">Avg Time to Hire</p>
-                <TrendingUp className="w-4 h-4 text-emerald-500" />
+                <TrendingUp className="w-4 h-4 text-slate-500" />
               </div>
               <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
                 {health.avgTimeToHireDays != null ? `${health.avgTimeToHireDays.toFixed(1)}d` : '—'}
@@ -372,7 +372,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           <TabsTrigger value="requests">
             Requests
             {pendingRequests.length > 0 && (
-              <span className="ml-1.5 text-[10px] font-bold bg-amber-100 text-amber-800 rounded-full px-1.5 py-0.5 tabular-nums">{pendingRequests.length}</span>
+              <span className="ml-1.5 text-[10px] font-bold bg-slate-100 text-slate-900 rounded-full px-1.5 py-0.5 tabular-nums">{pendingRequests.length}</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="requisitions">Job Requisitions</TabsTrigger>
@@ -381,14 +381,14 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             <TabsTrigger value="knockouts">
               Knockouts
               {knockedOut.length > 0 && (
-                <span className="ml-1.5 text-[10px] font-bold bg-rose-100 text-rose-700 rounded-full px-1.5 py-0.5 tabular-nums">{knockedOut.length}</span>
+                <span className="ml-1.5 text-[10px] font-bold bg-slate-100 text-slate-700 rounded-full px-1.5 py-0.5 tabular-nums">{knockedOut.length}</span>
               )}
             </TabsTrigger>
           )}
           <TabsTrigger value="pool">
             Talent Pool
             {poolCandidates.length > 0 && (
-              <span className="ml-1.5 text-[10px] font-bold bg-purple-100 text-purple-700 rounded-full px-1.5 py-0.5 tabular-nums">{poolCandidates.length}</span>
+              <span className="ml-1.5 text-[10px] font-bold bg-slate-100 text-slate-700 rounded-full px-1.5 py-0.5 tabular-nums">{poolCandidates.length}</span>
             )}
           </TabsTrigger>
           <TabsTrigger value="schedule">My Schedule</TabsTrigger>
@@ -402,7 +402,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
               <p className="text-xs text-slate-500">
                 <span className="font-semibold text-slate-900">{shortlist.length}</span> shortlisted candidates across {requisitions.filter((r) => r.status === 'OPEN').length} open {requisitions.filter((r) => r.status === 'OPEN').length === 1 ? 'role' : 'roles'}
                 {knockedOut.length > 0 && (
-                  <span className="text-rose-600 ml-2">· {knockedOut.length} filtered out</span>
+                  <span className="text-slate-700 ml-2">· {knockedOut.length} filtered out</span>
                 )}
               </p>
               <div className="flex items-center gap-2 flex-wrap">
@@ -483,7 +483,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                       } catch { /* ignore */ }
                     }
                     return (
-                      <div key={c.id} className="rounded-lg border border-rose-200 bg-white p-3">
+                      <div key={c.id} className="rounded-lg border border-slate-100 bg-white p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="font-medium text-slate-900 text-sm">{c.fullName}</p>
@@ -491,7 +491,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                             {reasons.length > 0 && (
                               <ul className="mt-1.5 space-y-0.5">
                                 {reasons.map((r, i) => (
-                                  <li key={i} className="text-[11px] text-rose-700">· {r.reason}</li>
+                                  <li key={i} className="text-[11px] text-slate-700">· {r.reason}</li>
                                 ))}
                               </ul>
                             )}
@@ -623,7 +623,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                             <Badge variant="destructive">Rejected</Badge>
                           )}
                           {r.status === 'REJECTED' && r.decisionNote && (
-                            <p className="text-[11px] text-rose-700 mt-0.5 line-clamp-2">“{r.decisionNote}”</p>
+                            <p className="text-[11px] text-slate-700 mt-0.5 line-clamp-2">“{r.decisionNote}”</p>
                           )}
                         </TableCell>
                         {isHR && (

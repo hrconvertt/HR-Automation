@@ -60,7 +60,7 @@ export default function EmployeeSelfUploadCard({ employeeId, documents }: Props)
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <ShieldCheck className="w-5 h-5 text-blue-600" />
+          <ShieldCheck className="w-5 h-5 text-slate-700" />
           Upload your documents
         </CardTitle>
         <p className="text-xs text-slate-500 mt-1">
@@ -132,15 +132,15 @@ function UploadRow({
         <p className="text-sm font-medium text-slate-900">{label}</p>
         {uploaded ? (
           <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+            <CheckCircle2 className="w-3.5 h-3.5 text-slate-700" />
             Uploaded on {fmt(existing!.createdAt)}
-            {isVerified && <span className="ml-2 text-emerald-700 font-medium">· Verified by HR</span>}
+            {isVerified && <span className="ml-2 text-slate-700 font-medium">· Verified by HR</span>}
           </p>
         ) : (
           <p className="text-xs text-slate-400 mt-0.5">Not uploaded</p>
         )}
         {err && (
-          <p className="text-xs text-rose-600 mt-1 flex items-center gap-1">
+          <p className="text-xs text-slate-700 mt-1 flex items-center gap-1">
             <AlertCircle className="w-3 h-3" /> {err}
           </p>
         )}

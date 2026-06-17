@@ -74,7 +74,7 @@ export default function LocationsManager({ initial }: { initial: Loc[] }) {
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle className="flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-blue-600" />
+          <MapPin className="w-5 h-5 text-slate-700" />
           Allowed Locations
         </CardTitle>
         <Button size="sm" onClick={() => setAdding(!adding)}>
@@ -83,7 +83,7 @@ export default function LocationsManager({ initial }: { initial: Loc[] }) {
       </CardHeader>
       <CardContent>
         {adding && (
-          <div className="border border-dashed border-blue-300 bg-blue-50/40 rounded-lg p-4 mb-4 space-y-3">
+          <div className="border border-dashed border-slate-200 bg-slate-50/40 rounded-lg p-4 mb-4 space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs font-medium text-slate-700">Name *</label>
@@ -132,7 +132,7 @@ export default function LocationsManager({ initial }: { initial: Loc[] }) {
                     className="w-full flex items-center justify-between p-3 hover:bg-slate-50"
                   >
                     <div className="flex items-center gap-3">
-                      <span className={`w-2 h-2 rounded-full ${loc.active ? 'bg-green-500' : 'bg-slate-300'}`} />
+                      <span className={`w-2 h-2 rounded-full ${loc.active ? 'bg-slate-500' : 'bg-slate-300'}`} />
                       <div className="text-left">
                         <p className="font-medium text-sm">{loc.name}</p>
                         <p className="text-xs text-slate-500">
@@ -152,7 +152,7 @@ export default function LocationsManager({ initial }: { initial: Loc[] }) {
                         <Button size="sm" variant="outline" onClick={() => handleToggleActive(loc)}>
                           {loc.active ? 'Deactivate' : 'Activate'}
                         </Button>
-                        <Button size="sm" variant="outline" className="text-red-600" onClick={() => handleDelete(loc.id)}>
+                        <Button size="sm" variant="outline" className="text-slate-700" onClick={() => handleDelete(loc.id)}>
                           <Trash2 className="w-3.5 h-3.5 mr-1" /> Delete
                         </Button>
                       </div>

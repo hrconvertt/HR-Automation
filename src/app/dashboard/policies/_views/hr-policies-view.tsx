@@ -176,9 +176,9 @@ export default function HRPoliciesView() {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total" value={stats.total} icon={FileText} color="bg-blue-50 text-blue-600" />
-        <StatCard label="Published" value={stats.published} icon={Send} color="bg-emerald-50 text-emerald-600" />
-        <StatCard label="Drafts" value={stats.drafts} icon={Edit3} color="bg-amber-50 text-amber-600" />
+        <StatCard label="Total" value={stats.total} icon={FileText} color="bg-slate-50 text-slate-700" />
+        <StatCard label="Published" value={stats.published} icon={Send} color="bg-slate-50 text-slate-700" />
+        <StatCard label="Drafts" value={stats.drafts} icon={Edit3} color="bg-slate-50 text-slate-700" />
         <StatCard label="Archived" value={stats.archived} icon={Archive} color="bg-slate-100 text-slate-600" />
       </div>
 
@@ -198,7 +198,7 @@ export default function HRPoliciesView() {
               key={c}
               onClick={() => setCategory(c)}
               className={`px-3 py-1 rounded-full text-xs font-medium ${
-                category === c ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                category === c ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               {catLabels[c]}
@@ -240,7 +240,7 @@ export default function HRPoliciesView() {
               return (
                 <TableRow key={p.id}>
                   <TableCell>
-                    <Link href={`/dashboard/policies/${p.id}`} className="font-medium text-gray-900 hover:text-blue-600">
+                    <Link href={`/dashboard/policies/${p.id}`} className="font-medium text-gray-900 hover:text-slate-700">
                       {p.title}
                     </Link>
                     {p.description && <p className="text-xs text-slate-500 mt-0.5">{p.description}</p>}
@@ -261,7 +261,7 @@ export default function HRPoliciesView() {
                       )}
                       {p.status === 'APPROVED' && (
                         <Link href={`/dashboard/policies/${p.id}`} title="Activate">
-                          <Button size="sm" className="bg-blue-600 hover:bg-blue-700">Activate</Button>
+                          <Button size="sm" className="bg-slate-700 hover:bg-slate-700">Activate</Button>
                         </Link>
                       )}
                       <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title="Edit">
@@ -361,7 +361,7 @@ export default function HRPoliciesView() {
                       onClick={() => toggleAudienceRole(opt.role)}
                       className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition ${
                         selected
-                          ? 'bg-blue-600 text-white ring-2 ring-blue-200 shadow-sm'
+                          ? 'bg-slate-700 text-white ring-2 ring-slate-100 shadow-sm'
                           : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 hover:border-slate-300'
                       }`}
                       aria-pressed={selected}
@@ -376,14 +376,14 @@ export default function HRPoliciesView() {
                 HR always sees every policy. Pick which other roles can read it once activated.
               </p>
               {form.audienceRoles.length === 0 && (
-                <p className="text-xs text-rose-600 font-medium">
+                <p className="text-xs text-slate-700 font-medium">
                   At least one role must be selected.
                 </p>
               )}
             </div>
             {/* requiresAck checkbox removed — policies are read-only references.
                 Schema field stays and defaults to false. Re-enable here if signing returns. */}
-            {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+            {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
@@ -429,7 +429,7 @@ function AudienceCell({ rolesJson }: { rolesJson: string | null | undefined }) {
       {roles.map((r) => (
         <span
           key={r}
-          className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[11px] font-medium border border-blue-100"
+          className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-50 text-slate-700 text-[11px] font-medium border border-slate-100"
         >
           {labelFor(r)}
         </span>

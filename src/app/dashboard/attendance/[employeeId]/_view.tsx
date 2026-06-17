@@ -34,7 +34,7 @@ function FilterableLegend({
             className={
               'inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-medium transition ' +
               (isActive
-                ? 'bg-blue-50 ring-1 ring-blue-400 text-blue-900'
+                ? 'bg-slate-50 ring-1 ring-slate-300 text-slate-900'
                 : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50')
             }
             title={isActive ? 'Clear filter' : `Show only ${opt.label}`}
@@ -113,10 +113,10 @@ const STATUS_LABEL: Record<string, string> = {
 }
 
 const STATUS_COLOR: Record<string, string> = {
-  PENDING: 'text-amber-700 bg-amber-50',
-  PENDING_HR: 'text-amber-700 bg-amber-50',
-  APPROVED: 'text-emerald-700 bg-emerald-50',
-  REJECTED: 'text-rose-700 bg-rose-50',
+  PENDING: 'text-slate-700 bg-slate-50',
+  PENDING_HR: 'text-slate-700 bg-slate-50',
+  APPROVED: 'text-slate-700 bg-slate-50',
+  REJECTED: 'text-slate-700 bg-slate-50',
   CANCELLED: 'text-slate-600 bg-slate-100',
 }
 
@@ -145,7 +145,7 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
         <div className="flex items-center gap-2">
           <Link
             href="/dashboard/time?tab=leave"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-md transition"
           >
             <CalendarPlus className="w-3.5 h-3.5" /> Apply for leave
           </Link>
@@ -159,7 +159,7 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
       </div>
 
       <div className="bg-white border border-slate-200 rounded-lg p-5 flex items-center gap-4">
-        <div className="w-14 h-14 rounded-full bg-blue-100 text-blue-700 font-bold text-lg flex items-center justify-center flex-shrink-0">
+        <div className="w-14 h-14 rounded-full bg-slate-100 text-slate-700 font-bold text-lg flex items-center justify-center flex-shrink-0">
           {getInitials(employee.fullName)}
         </div>
         <div className="min-w-0">
@@ -188,10 +188,10 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
               Year-to-Date
             </h2>
             <dl className="grid grid-cols-2 gap-3 text-sm">
-              <Stat label="Present" value={ytd.present} accent="text-emerald-700" />
-              <Stat label="Leaves" value={ytd.leave} accent="text-rose-700" />
-              <Stat label="WFH" value={ytd.wfh} accent="text-sky-700" />
-              <Stat label="Half Days" value={ytd.hd} accent="text-amber-700" />
+              <Stat label="Present" value={ytd.present} accent="text-slate-700" />
+              <Stat label="Leaves" value={ytd.leave} accent="text-slate-700" />
+              <Stat label="WFH" value={ytd.wfh} accent="text-slate-700" />
+              <Stat label="Half Days" value={ytd.hd} accent="text-slate-700" />
               <Stat label="Absent" value={ytd.absent} accent="text-slate-700" />
             </dl>
           </div>

@@ -232,7 +232,7 @@ export default function EditSalaryDialog({
                 {selectedType && <p className="text-[11px] text-slate-500 mt-1">{selectedType.hint}</p>}
               </div>
               <div>
-                <Label>Effective From {isAddHistory && <span className="text-red-500">*</span>}</Label>
+                <Label>Effective From {isAddHistory && <span className="text-slate-500">*</span>}</Label>
                 <Input
                   type="date"
                   value={form.effectiveFrom}
@@ -265,7 +265,7 @@ export default function EditSalaryDialog({
               </p>
             </div>
             <div className="mt-3">
-              <Label>Reason / Justification {current && <span className="text-red-500">*</span>}</Label>
+              <Label>Reason / Justification {current && <span className="text-slate-500">*</span>}</Label>
               <textarea
                 value={form.reason}
                 onChange={(e) => f('reason', e.target.value)}
@@ -385,7 +385,7 @@ export default function EditSalaryDialog({
           </section>
 
           {error && (
-            <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-3">
+            <div className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded-md p-3">
               {error}
             </div>
           )}
@@ -396,7 +396,7 @@ export default function EditSalaryDialog({
           <Button
             onClick={handleSave}
             disabled={saving}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
+            className="bg-slate-700 hover:bg-slate-700 text-white"
           >
             {saving
               ? 'Saving…'
@@ -415,7 +415,7 @@ export default function EditSalaryDialog({
 function SectionHead({ step, title, inline }: { step: number; title: string; inline?: boolean }) {
   const body = (
     <div className="flex items-center gap-2">
-      <span className="w-6 h-6 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
+      <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-700 text-xs font-bold flex items-center justify-center">
         {step}
       </span>
       <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
@@ -439,7 +439,7 @@ function MoneyField({
 }) {
   return (
     <div>
-      <Label>{label}{required && <span className="text-red-500"> *</span>}</Label>
+      <Label>{label}{required && <span className="text-slate-500"> *</span>}</Label>
       <div className="relative">
         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[11px] text-slate-400 font-semibold pointer-events-none">PKR</span>
         <Input
@@ -461,9 +461,9 @@ function SummaryCard({ label, value, tone, icon: Icon }: {
 }) {
   const tones = {
     neutral:  'bg-slate-50 border-slate-200 text-slate-900',
-    primary:  'bg-blue-50 border-blue-200 text-blue-900',
-    positive: 'bg-emerald-50 border-emerald-200 text-emerald-900',
-    negative: 'bg-rose-50 border-rose-200 text-rose-900',
+    primary:  'bg-slate-50 border-slate-100 text-slate-900',
+    positive: 'bg-slate-50 border-slate-100 text-slate-900',
+    negative: 'bg-slate-50 border-slate-100 text-slate-900',
   }
   return (
     <div className={`border rounded-lg p-3 ${tones[tone]}`}>

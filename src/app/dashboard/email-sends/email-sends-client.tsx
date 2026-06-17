@@ -106,7 +106,7 @@ export default function EmailSendsClient({ counts }: { counts: Record<Status, nu
                   <button
                     type="button"
                     onClick={() => setSelected(r)}
-                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${selected?.id === r.id ? 'bg-blue-50 text-blue-900' : 'hover:bg-slate-50 text-slate-700'}`}
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${selected?.id === r.id ? 'bg-slate-50 text-slate-900' : 'hover:bg-slate-50 text-slate-700'}`}
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-medium truncate">{r.subject}</span>
@@ -117,7 +117,7 @@ export default function EmailSendsClient({ counts }: { counts: Record<Status, nu
                       event: {r.eventName} · {new Date(r.createdAt).toLocaleString('en-GB')}
                       {r.scheduledFor && ` · scheduled ${new Date(r.scheduledFor).toLocaleString('en-GB')}`}
                     </p>
-                    {r.failedReason && <p className="text-[10px] text-red-600 mt-0.5 truncate">⚠ {r.failedReason}</p>}
+                    {r.failedReason && <p className="text-[10px] text-slate-700 mt-0.5 truncate">⚠ {r.failedReason}</p>}
                   </button>
                 </li>
               ))}
@@ -160,7 +160,7 @@ export default function EmailSendsClient({ counts }: { counts: Record<Status, nu
               <pre className="text-sm whitespace-pre-wrap font-sans">{selected.body}</pre>
             </div>
             {selected.failedReason && (
-              <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2 mt-3">{selected.failedReason}</p>
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2 mt-3">{selected.failedReason}</p>
             )}
           </Card>
         ) : (

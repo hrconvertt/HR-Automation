@@ -23,7 +23,7 @@ export default async function DevicesPage() {
 
   return (
     <div className="space-y-3">
-      <Link href="/dashboard/time" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
+      <Link href="/dashboard/time" className="inline-flex items-center gap-1 text-sm text-slate-700 hover:underline">
         <ArrowLeft className="w-3.5 h-3.5" /> Back to Time & Attendance
       </Link>
       <AdminTimeView mode="devices" />

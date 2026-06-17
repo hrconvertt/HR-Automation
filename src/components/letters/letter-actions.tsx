@@ -98,7 +98,7 @@ export function LetterActions({ letterId, status, role, canDelete, isPreviewMode
       {/* Delete */}
       {canDelete && (
         <Button size="sm" variant="ghost" onClick={handleDelete} disabled={saving} title="Delete">
-          <Trash2 className="w-3.5 h-3.5 text-red-500" />
+          <Trash2 className="w-3.5 h-3.5 text-slate-500" />
         </Button>
       )}
 
@@ -129,7 +129,7 @@ export function LetterActions({ letterId, status, role, canDelete, isPreviewMode
                 onChange={(e) => setSignedByTitle(e.target.value)}
               />
             </div>
-            {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+            {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApproveOpen(false)} disabled={saving}>Cancel</Button>
@@ -159,7 +159,7 @@ export function LetterActions({ letterId, status, role, canDelete, isPreviewMode
                 onChange={(e) => setRejectionReason(e.target.value)}
               />
             </div>
-            {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+            {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setRejectOpen(false)} disabled={saving}>Cancel</Button>

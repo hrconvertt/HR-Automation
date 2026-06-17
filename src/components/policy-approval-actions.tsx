@@ -117,7 +117,7 @@ export function PolicyApprovalActions({
         <p className="text-[11px] text-slate-500">
           Goes live to its audience + creates an announcement + notifies everyone.
         </p>
-        {err && <p className="text-xs text-rose-600">{err}</p>}
+        {err && <p className="text-xs text-slate-700">{err}</p>}
       </div>
     )
   }
@@ -143,13 +143,13 @@ export function PolicyApprovalActions({
               onChange={(e) => setRejectReason(e.target.value)}
               placeholder="Why are you rejecting? HR will see this."
               rows={3}
-              className="w-full text-xs border border-slate-200 rounded-md p-2 focus:outline-none focus:border-rose-400"
+              className="w-full text-xs border border-slate-200 rounded-md p-2 focus:outline-none focus:border-slate-300"
             />
             <div className="flex gap-2">
               <Button
                 onClick={() => submitReview('REJECT')}
                 size="sm"
-                className="flex-1 bg-rose-600 hover:bg-rose-700 text-white"
+                className="flex-1 bg-slate-700 hover:bg-slate-700 text-white"
                 disabled={submitting || !rejectReason.trim()}
               >
                 {submitting ? 'Sending…' : 'Confirm Reject'}
@@ -160,7 +160,7 @@ export function PolicyApprovalActions({
             </div>
           </div>
         )}
-        {err && <p className="text-xs text-rose-600">{err}</p>}
+        {err && <p className="text-xs text-slate-700">{err}</p>}
       </div>
     )
   }

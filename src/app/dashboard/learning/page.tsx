@@ -129,7 +129,7 @@ export default async function LearningPage() {
                       <TableCell>{formatDate(c.issuedDate)}</TableCell>
                       <TableCell>
                         {c.expiryDate ? (
-                          <span className={new Date(c.expiryDate) < new Date() ? 'text-red-600 font-medium' : ''}>
+                          <span className={new Date(c.expiryDate) < new Date() ? 'text-slate-700 font-medium' : ''}>
                             {formatDate(c.expiryDate)}
                           </span>
                         ) : '—'}

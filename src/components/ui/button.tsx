@@ -3,16 +3,19 @@ import { cn } from '@/lib/utils'
 import { forwardRef } from 'react'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 rounded-lg text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900 focus-visible:ring-offset-1 disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
+      // Monochrome — brand black is the only accent. Destructive uses a
+      // bold outline (not red) so it still reads as "careful, this is heavy"
+      // without breaking the palette.
       variant: {
-        default: 'bg-blue-600 text-white hover:bg-blue-700',
-        outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
-        ghost: 'text-gray-700 hover:bg-gray-100',
-        destructive: 'bg-red-600 text-white hover:bg-red-700',
-        secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-        success: 'bg-green-600 text-white hover:bg-green-700',
+        default:     'bg-slate-900 text-white hover:bg-black border border-slate-900',
+        outline:     'border border-slate-300 bg-white text-slate-900 hover:bg-slate-50',
+        ghost:       'text-slate-700 hover:bg-slate-100',
+        destructive: 'bg-white text-slate-900 border-2 border-slate-900 font-semibold hover:bg-slate-100',
+        secondary:   'bg-slate-100 text-slate-900 border border-slate-200 hover:bg-slate-200',
+        success:     'bg-slate-900 text-white hover:bg-black border border-slate-900',
       },
       size: {
         default: 'h-9 px-4 py-2',

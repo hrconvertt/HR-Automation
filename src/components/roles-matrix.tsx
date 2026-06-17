@@ -20,12 +20,12 @@ interface ApiResponse {
 
 const ROLES = ['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'] as const
 const ROLE_COLORS: Record<string, string> = {
-  HR_ADMIN: 'bg-purple-500',
-  MANAGER: 'bg-blue-500',
-  LEAD: 'bg-indigo-500',
-  EMPLOYEE: 'bg-emerald-500',
-  EXECUTIVE: 'bg-amber-500',
-  FINANCE: 'bg-rose-500',
+  HR_ADMIN: 'bg-slate-500',
+  MANAGER: 'bg-slate-500',
+  LEAD: 'bg-slate-500',
+  EMPLOYEE: 'bg-slate-500',
+  EXECUTIVE: 'bg-slate-500',
+  FINANCE: 'bg-slate-500',
 }
 const ROLE_LABELS: Record<string, string> = {
   HR_ADMIN: 'HR',
@@ -109,7 +109,7 @@ export default function RolesMatrix() {
   }
   if (error) {
     return (
-      <div className="p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-sm">
+      <div className="p-4 rounded-lg bg-slate-50 border border-slate-100 text-slate-900 text-sm">
         {error}
       </div>
     )
@@ -137,7 +137,7 @@ export default function RolesMatrix() {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Filter by name, email, role…"
-          className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+          className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-slate-300"
         />
       </div>
 
@@ -201,8 +201,8 @@ export default function RolesMatrix() {
                             title={isPrimary ? 'Primary view' : 'Set as primary'}
                             className={`p-0.5 rounded ${
                               isPrimary
-                                ? 'text-amber-500'
-                                : 'text-gray-300 hover:text-amber-400'
+                                ? 'text-slate-500'
+                                : 'text-gray-300 hover:text-slate-300'
                             }`}
                           >
                             <Star

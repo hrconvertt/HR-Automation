@@ -95,25 +95,25 @@ export async function PerformanceAnalytics({ role, employeeId }: Props) {
           label={role === 'EMPLOYEE' ? 'My Reviews' : 'Total Reviews'}
           value={totalReviews}
           icon={TrendingUp}
-          color="text-blue-600 bg-blue-50"
+          color="text-slate-700 bg-slate-50"
         />
         <KPI
           label="Completion %"
           value={`${completionPct}%`}
           icon={CheckCircle2}
-          color="text-emerald-600 bg-emerald-50"
+          color="text-slate-700 bg-slate-50"
         />
         <KPI
           label="Active PIPs"
           value={activePips}
           icon={Clock}
-          color="text-red-600 bg-red-50"
+          color="text-slate-700 bg-slate-50"
         />
         <KPI
           label="Open Notices"
           value={openCauses}
           icon={AlertTriangle}
-          color="text-amber-600 bg-amber-50"
+          color="text-slate-700 bg-slate-50"
         />
       </div>
 
@@ -124,10 +124,10 @@ export async function PerformanceAnalytics({ role, employeeId }: Props) {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <StatusBar label="Pending Self-Appraisal"   count={pendingSelf} total={totalReviews} color="bg-amber-400" />
-              <StatusBar label="Pending Manager Review"   count={pendingMgr}  total={totalReviews} color="bg-blue-400" />
-              <StatusBar label="Pending HR Finalization"  count={pendingHR}   total={totalReviews} color="bg-purple-400" />
-              <StatusBar label="Finalized"                count={finalized}   total={totalReviews} color="bg-emerald-400" />
+              <StatusBar label="Pending Self-Appraisal"   count={pendingSelf} total={totalReviews} color="bg-slate-300" />
+              <StatusBar label="Pending Manager Review"   count={pendingMgr}  total={totalReviews} color="bg-slate-300" />
+              <StatusBar label="Pending HR Finalization"  count={pendingHR}   total={totalReviews} color="bg-slate-300" />
+              <StatusBar label="Finalized"                count={finalized}   total={totalReviews} color="bg-slate-300" />
             </div>
             <p className="text-xs text-gray-400 mt-3">{activeEmployees} active employees in the org</p>
           </CardContent>
@@ -148,9 +148,9 @@ export async function PerformanceAnalytics({ role, employeeId }: Props) {
                     <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-2 rounded-full ${
-                          cat === 'EXCEEDS' ? 'bg-emerald-500' :
-                          cat === 'MEETS' ? 'bg-blue-500' :
-                          cat === 'BELOW' ? 'bg-amber-500' : 'bg-red-500'
+                          cat === 'EXCEEDS' ? 'bg-slate-500' :
+                          cat === 'MEETS' ? 'bg-slate-500' :
+                          cat === 'BELOW' ? 'bg-slate-500' : 'bg-slate-500'
                         }`}
                         style={{ width: `${(count / maxBucket) * 100}%` }}
                       />
@@ -176,9 +176,9 @@ export async function PerformanceAnalytics({ role, employeeId }: Props) {
                     <div className="flex-1 bg-gray-100 rounded-full h-2 overflow-hidden">
                       <div
                         className={`h-2 rounded-full ${
-                          s === 'COMPLETED' ? 'bg-emerald-500' :
-                          s === 'ON_TRACK' ? 'bg-blue-500' :
-                          s === 'AT_RISK' ? 'bg-red-500' : 'bg-gray-400'
+                          s === 'COMPLETED' ? 'bg-slate-500' :
+                          s === 'ON_TRACK' ? 'bg-slate-500' :
+                          s === 'AT_RISK' ? 'bg-slate-500' : 'bg-gray-400'
                         }`}
                         style={{ width: `${((goalStats[s] || 0) / totalGoals) * 100}%` }}
                       />
@@ -196,7 +196,7 @@ export async function PerformanceAnalytics({ role, employeeId }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Award className="w-4 h-4 text-amber-500" /> Top Performers
+              <Award className="w-4 h-4 text-slate-500" /> Top Performers
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -204,7 +204,7 @@ export async function PerformanceAnalytics({ role, employeeId }: Props) {
               {topPerformers.map((r) => (
                 <div key={r.id} className="flex items-center justify-between border-b border-gray-100 pb-2 last:border-0">
                   <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 bg-gradient-to-br from-amber-400 to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                    <div className="w-9 h-9 bg-gradient-to-br from-slate-300 to-slate-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                       {getInitials(r.employee.fullName)}
                     </div>
                     <div>
@@ -213,7 +213,7 @@ export async function PerformanceAnalytics({ role, employeeId }: Props) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold text-amber-600">{r.overallRating}/5</span>
+                    <span className="text-lg font-bold text-slate-700">{r.overallRating}/5</span>
                     <Badge variant="success">{r.finalCategory}</Badge>
                   </div>
                 </div>

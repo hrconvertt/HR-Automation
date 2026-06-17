@@ -54,9 +54,9 @@ export default async function ReviewDetailPage({ params }: PageProps) {
 
   if (!isOwn && !isMyTeamMember && !isHR && !isExec) {
     return (
-      <div className="p-6 bg-red-50 border border-red-200 rounded-xl">
-        <p className="font-semibold text-red-700">Access denied</p>
-        <p className="text-sm text-red-600 mt-1">You don&apos;t have permission to view this review.</p>
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-xl">
+        <p className="font-semibold text-slate-700">Access denied</p>
+        <p className="text-sm text-slate-700 mt-1">You don&apos;t have permission to view this review.</p>
       </div>
     )
   }
@@ -70,7 +70,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
 
   return (
     <div className="space-y-5">
-      <Link href="/dashboard/performance" className="inline-flex items-center gap-1 text-sm text-blue-600 hover:underline">
+      <Link href="/dashboard/performance" className="inline-flex items-center gap-1 text-sm text-slate-700 hover:underline">
         <ArrowLeft className="w-4 h-4" /> Back to Performance
       </Link>
 
@@ -117,13 +117,13 @@ export default async function ReviewDetailPage({ params }: PageProps) {
             return (
               <div key={s} className="flex items-center gap-2">
                 <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                  isPast ? 'bg-green-500 text-white' :
-                  isCurrent ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'
+                  isPast ? 'bg-slate-500 text-white' :
+                  isCurrent ? 'bg-slate-700 text-white' : 'bg-gray-200 text-gray-500'
                 }`}>
                   {isPast ? '✓' : i + 1}
                 </div>
                 <span className={isPast || isCurrent ? 'text-gray-900 font-medium' : 'text-gray-400'}>{stageNames[i]}</span>
-                {i < 3 && <div className={`w-8 h-px ${isPast ? 'bg-green-400' : 'bg-gray-200'}`} />}
+                {i < 3 && <div className={`w-8 h-px ${isPast ? 'bg-slate-300' : 'bg-gray-200'}`} />}
               </div>
             )
           })}
@@ -193,7 +193,7 @@ export default async function ReviewDetailPage({ params }: PageProps) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <ClipboardCheck className="w-4 h-4 text-blue-600" />
+              <ClipboardCheck className="w-4 h-4 text-slate-700" />
               Goals Linked to This Review
             </CardTitle>
           </CardHeader>

@@ -18,6 +18,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify, notifyMany } from '@/lib/notifications'
 import { triggerEmail, employeeVars } from '@/lib/email-triggers'
+import { dayKey } from '@/lib/date-utils'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -124,6 +125,56 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           },
         })
       }
+
+      // ── Auto-write AttendanceLog rows so the approved leave appears in
+      //    the attendance grid + calendar + manager views as L / HD.
+      //    Skip weekends + PUBLIC holidays (those aren't chargeable and
+      //    shouldn't carry a LEAVE status).
+      const holidays = await tx.holiday.findMany({
+        where: {
+          type: 'PUBLIC',
+          date: { gte: leaveRequest.fromDate, lte: leaveRequest.toDate },
+        },
+        select: { date: true },
+      })
+      const holidayKeys = new Set(holidays.map((h) => dayKey(h.date)))
+
+      const start = new Date(leaveRequest.fromDate); start.setHours(0, 0, 0, 0)
+      const end = new Date(leaveRequest.toDate); end.setHours(0, 0, 0, 0)
+      const cursor = new Date(start)
+      while (cursor <= end) {
+        const dow = cursor.getDay()
+        const k = dayKey(cursor)
+        const isWeekend = dow === 0 || dow === 6
+        const isHoliday = holidayKeys.has(k)
+        if (!isWeekend && !isHoliday) {
+          const isFirst = cursor.getTime() === start.getTime()
+          const isLast = cursor.getTime() === end.getTime()
+          const isHalf =
+            (isFirst && leaveRequest.firstDayHalf) ||
+            (isLast && leaveRequest.lastDayHalf)
+          const status = isHalf ? 'HALF_DAY' : 'LEAVE'
+          const hoursWorked = isHalf ? 4 : 0
+          const dayDate = new Date(cursor)
+          await tx.attendanceLog.upsert({
+            where: { employeeId_date: { employeeId: leaveRequest.employeeId, date: dayDate } },
+            create: {
+              employeeId: leaveRequest.employeeId,
+              date: dayDate,
+              workType: 'ONSITE',
+              status,
+              hoursWorked,
+              notes: `Auto-written from approved leave (${leaveRequest.leaveType})`,
+            },
+            update: {
+              status,
+              hoursWorked,
+              notes: `Auto-written from approved leave (${leaveRequest.leaveType})`,
+            },
+          })
+        }
+        cursor.setDate(cursor.getDate() + 1)
+      }
     }
   })
 
@@ -171,6 +222,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       message: `Your ${leaveRequest.leaveType} request (${dateRange}) has been approved.`,
       link: '/dashboard/leave',
     })
+    // Also ping the reporting manager so they're aware HR finalised it
+    if (leaveRequest.employee.reportingManagerId) {
+      await notify({
+        employeeId: leaveRequest.employee.reportingManagerId,
+        type: 'LEAVE_APPROVED',
+        title: '✓ Leave Approved (HR)',
+        message: `${leaveRequest.employee.fullName}'s ${leaveRequest.leaveType} (${dateRange}) was approved by HR.`,
+        link: '/dashboard/leave',
+      })
+    }
   }
 
   // LIF-08 leave.request_decided

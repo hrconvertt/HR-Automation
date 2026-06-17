@@ -94,7 +94,7 @@ export default function PayrollApprovalStepper({
       <CardContent className="p-5 space-y-4">
         {/* ── Stepper bar ────────────────────────────────────────────────── */}
         {isRejected ? (
-          <div className="flex items-center gap-2 text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2 text-slate-700 bg-slate-50 border border-slate-100 rounded-lg px-3 py-2">
             <AlertTriangle className="w-4 h-4" />
             <span className="text-sm font-medium">Rejected — sent back to draft for re-calculation.</span>
           </div>
@@ -108,9 +108,9 @@ export default function PayrollApprovalStepper({
                   <div
                     className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border ${
                       done
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        ? 'bg-slate-50 text-slate-700 border-slate-100'
                         : here
-                        ? 'bg-blue-600 text-white border-blue-600'
+                        ? 'bg-slate-700 text-white border-slate-700'
                         : 'bg-slate-50 text-slate-500 border-slate-200'
                     }`}
                   >
@@ -163,7 +163,7 @@ export default function PayrollApprovalStepper({
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-600 border-red-200 hover:bg-red-50"
+                className="text-slate-700 border-slate-100 hover:bg-slate-50"
                 onClick={() => setConfirmingReject(true)}
                 disabled={busy !== null}
               >
@@ -174,13 +174,13 @@ export default function PayrollApprovalStepper({
         )}
 
         {confirmingReject && (
-          <div className="border border-red-200 bg-red-50 rounded-lg p-3 space-y-2">
-            <p className="text-sm text-red-900 font-medium">Reject this payroll run</p>
+          <div className="border border-slate-100 bg-slate-50 rounded-lg p-3 space-y-2">
+            <p className="text-sm text-slate-900 font-medium">Reject this payroll run</p>
             <textarea
               value={rejectComment}
               onChange={(e) => setRejectComment(e.target.value)}
               placeholder="Reason for rejection (required)…"
-              className="w-full text-sm rounded border border-red-200 px-2 py-1"
+              className="w-full text-sm rounded border border-slate-100 px-2 py-1"
               rows={2}
             />
             <div className="flex gap-2">
@@ -188,7 +188,7 @@ export default function PayrollApprovalStepper({
                 size="sm"
                 onClick={() => performAction('REJECT', rejectComment)}
                 disabled={busy !== null || !rejectComment.trim()}
-                className="bg-red-600 hover:bg-red-700 text-white"
+                className="bg-slate-700 hover:bg-slate-700 text-white"
               >
                 Confirm Reject
               </Button>
@@ -200,7 +200,7 @@ export default function PayrollApprovalStepper({
         )}
 
         {error && (
-          <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded px-2 py-1">
+          <p className="text-xs text-slate-700 bg-slate-50 border border-slate-100 rounded px-2 py-1">
             {error}
           </p>
         )}

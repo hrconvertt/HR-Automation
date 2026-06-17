@@ -68,17 +68,17 @@ const MONTH_LABELS = [
 ]
 
 function payslipStatusTone(status: string): string {
-  if (status === 'PAID') return 'bg-emerald-100 text-emerald-800'
-  if (status === 'RELEASED') return 'bg-blue-100 text-blue-800'
-  if (status === 'APPROVED') return 'bg-amber-100 text-amber-800'
+  if (status === 'PAID') return 'bg-slate-100 text-slate-900'
+  if (status === 'RELEASED') return 'bg-slate-100 text-slate-900'
+  if (status === 'APPROVED') return 'bg-slate-100 text-slate-900'
   return 'bg-slate-100 text-slate-700'
 }
 
 const TYPE_LABELS: Record<string, { label: string; tone: string }> = {
-  INCREMENT:   { label: 'Annual Increment', tone: 'bg-emerald-100 text-emerald-800' },
-  PROMOTION:   { label: 'Promotion',         tone: 'bg-blue-100 text-blue-800' },
-  BONUS:       { label: 'Bonus',             tone: 'bg-purple-100 text-purple-800' },
-  ADJUSTMENT:  { label: 'Adjustment',        tone: 'bg-amber-100 text-amber-800' },
+  INCREMENT:   { label: 'Annual Increment', tone: 'bg-slate-100 text-slate-900' },
+  PROMOTION:   { label: 'Promotion',         tone: 'bg-slate-100 text-slate-900' },
+  BONUS:       { label: 'Bonus',             tone: 'bg-slate-100 text-slate-900' },
+  ADJUSTMENT:  { label: 'Adjustment',        tone: 'bg-slate-100 text-slate-900' },
   INITIAL:     { label: 'Initial Setup',     tone: 'bg-slate-100 text-slate-700' },
 }
 
@@ -212,28 +212,28 @@ export default function CompensationPanel({
           value={currentSalary ? formatCurrency(grossMonthly) : '—'}
           sub="All earnings before tax"
           Icon={Wallet}
-          tone="text-blue-600 bg-blue-50"
+          tone="text-slate-700 bg-slate-50"
         />
         <KpiTile
           label="Annual Gross"
           value={currentSalary ? formatCurrency(annualGross) : '—'}
           sub="Monthly × 12"
           Icon={TrendingUp}
-          tone="text-emerald-600 bg-emerald-50"
+          tone="text-slate-700 bg-slate-50"
         />
         <KpiTile
           label="Last Change"
           value={latestChange ? fmtDate(latestChange.effectiveDate) : 'Never'}
           sub={latestChange ? (TYPE_LABELS[latestChange.type]?.label ?? latestChange.type) : 'No history'}
           Icon={Calendar}
-          tone="text-purple-600 bg-purple-50"
+          tone="text-slate-700 bg-slate-50"
         />
         <KpiTile
           label="Changes This Year"
           value={String(ytdChanges)}
           sub="Comp events in current FY"
           Icon={Lock}
-          tone="text-amber-600 bg-amber-50"
+          tone="text-slate-700 bg-slate-50"
         />
       </div>
 
@@ -269,7 +269,7 @@ export default function CompensationPanel({
               <tfoot>
                 <tr className="border-t-2 border-slate-300">
                   <td className="pt-3 pb-1 font-bold text-slate-900">Gross Monthly Pay</td>
-                  <td className="pt-3 pb-1 text-right font-bold text-blue-700 tabular-nums">
+                  <td className="pt-3 pb-1 text-right font-bold text-slate-700 tabular-nums">
                     {formatCurrency(grossMonthly)}
                   </td>
                 </tr>
@@ -321,7 +321,7 @@ export default function CompensationPanel({
                         <li key={c.id} className="pl-6 relative group">
                           <span
                             className={`absolute -left-[9px] top-1 w-4 h-4 rounded-full ring-4 ring-white ${
-                              positive ? 'bg-emerald-500' : 'bg-rose-500'
+                              positive ? 'bg-slate-500' : 'bg-slate-500'
                             }`}
                           />
                           {/* Hover-revealed per-entry actions (HR only) */}
@@ -339,7 +339,7 @@ export default function CompensationPanel({
                                 type="button"
                                 onClick={() => { setDeleteError(''); setDeletingEntry(c) }}
                                 title="Delete this entry"
-                                className="p-1.5 rounded-md text-slate-500 hover:text-rose-700 hover:bg-rose-50"
+                                className="p-1.5 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
                               </button>
@@ -364,7 +364,7 @@ export default function CompensationPanel({
                               <span className="font-semibold tabular-nums">{formatCurrency(c.newSalary)}</span>
                             )}
                             {pct != null && c.oldSalary > 0 && (
-                              <span className={`ml-2 text-xs font-medium ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>
+                              <span className={`ml-2 text-xs font-medium ${positive ? 'text-slate-700' : 'text-slate-700'}`}>
                                 ({pct > 0 ? '+' : ''}{pct.toFixed(1)}%)
                               </span>
                             )}
@@ -401,7 +401,7 @@ export default function CompensationPanel({
                 return (
                   <div className="mt-6 rounded-lg bg-slate-50 border border-slate-200 px-4 py-3 flex items-center justify-between">
                     <span className="text-xs text-slate-600">Total growth since joining</span>
-                    <span className={`text-sm font-semibold ${growth >= 0 ? 'text-emerald-700' : 'text-rose-700'} tabular-nums`}>
+                    <span className={`text-sm font-semibold ${growth >= 0 ? 'text-slate-700' : 'text-slate-700'} tabular-nums`}>
                       {growth >= 0 ? '+' : ''}{growth.toFixed(1)}% in {months} {months === 1 ? 'month' : 'months'}
                     </span>
                   </div>
@@ -460,7 +460,7 @@ export default function CompensationPanel({
                           href={`/payslip/${p.id}/print`}
                           target="_blank"
                           rel="noreferrer"
-                          className="text-blue-600 text-xs hover:underline inline-flex items-center gap-1"
+                          className="text-slate-700 text-xs hover:underline inline-flex items-center gap-1"
                         >
                           View <ExternalLink className="w-3 h-3" />
                         </a>
@@ -474,7 +474,7 @@ export default function CompensationPanel({
                   <button
                     type="button"
                     onClick={() => setShowAllPayslips((v) => !v)}
-                    className="text-xs font-medium text-blue-600 hover:underline"
+                    className="text-xs font-medium text-slate-700 hover:underline"
                   >
                     {showAllPayslips ? 'Show fewer' : `Show all (${payslips.length})`}
                   </button>
@@ -562,7 +562,7 @@ function DeleteEntryConfirm({
           </p>
         </DialogHeader>
         {error && (
-          <p className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-md p-2">
+          <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded-md p-2">
             {error}
           </p>
         )}
@@ -571,7 +571,7 @@ function DeleteEntryConfirm({
           <Button
             onClick={onConfirm}
             disabled={busy}
-            className="bg-rose-600 hover:bg-rose-700 text-white"
+            className="bg-slate-700 hover:bg-slate-700 text-white"
           >
             {busy ? 'Deleting…' : 'Delete Entry'}
           </Button>

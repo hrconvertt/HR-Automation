@@ -60,17 +60,17 @@ function Row({ item, active }: { item: { href: string; label: string; icon: Reac
       href={item.href}
       className={`
         w-full text-left rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors
-        ${active ? 'bg-blue-50 text-blue-900 ring-1 ring-blue-200' : 'text-slate-700 hover:bg-slate-100'}
+        ${active ? 'bg-slate-50 text-slate-900 ring-1 ring-slate-100' : 'text-slate-700 hover:bg-slate-100'}
       `}
     >
-      <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'}`}>
+      <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-500'}`}>
         <Icon className="w-4 h-4" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium truncate">{item.label}</p>
         <p className="text-[11px] text-slate-500 truncate">{item.sub}</p>
       </div>
-      <ChevronRight className={`w-4 h-4 flex-shrink-0 ${active ? 'text-blue-600' : 'text-slate-300'}`} />
+      <ChevronRight className={`w-4 h-4 flex-shrink-0 ${active ? 'text-slate-700' : 'text-slate-300'}`} />
     </Link>
   )
 }

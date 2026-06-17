@@ -93,17 +93,17 @@ export function CeoReviewPanel({ runId, month, year, totalNet, totalGross }: Pro
   }))
 
   return (
-    <Card className="rounded-2xl border-amber-200 bg-amber-50">
+    <Card className="rounded-2xl border-slate-100 bg-slate-50">
       <div className="p-5">
         <div className="flex items-center justify-between flex-wrap gap-4 mb-4">
           <div>
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-amber-700" />
-              <h3 className="text-base font-bold text-amber-900">
+              <FileText className="w-5 h-5 text-slate-700" />
+              <h3 className="text-base font-bold text-slate-900">
                 Payroll awaiting your review — {MONTHS[month - 1]} {year}
               </h3>
             </div>
-            <p className="text-sm text-amber-800 mt-1">
+            <p className="text-sm text-slate-900 mt-1">
               Total Net: <span className="font-semibold">{formatCurrency(totalNet)}</span>
               {' · '}Gross: <span className="font-semibold">{formatCurrency(totalGross)}</span>
             </p>
@@ -111,7 +111,7 @@ export function CeoReviewPanel({ runId, month, year, totalNet, totalGross }: Pro
         </div>
 
         {loading ? (
-          <p className="text-sm text-amber-800">Loading payroll grid…</p>
+          <p className="text-sm text-slate-900">Loading payroll grid…</p>
         ) : (
           <div className="bg-white rounded-xl p-3">
             <PayrollGridEditor

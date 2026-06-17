@@ -151,10 +151,10 @@ function ThemeCard<T extends string>({ value, current, onPick, icon: Icon, label
   return (
     <button onClick={() => onPick(value)}
       className={`rounded-lg border p-4 flex flex-col items-center gap-2 transition ${
-        active ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 bg-white hover:border-slate-300'
+        active ? 'border-slate-500 bg-slate-50 ring-2 ring-slate-100' : 'border-slate-200 bg-white hover:border-slate-300'
       }`}>
-      <Icon className={`w-6 h-6 ${active ? 'text-blue-600' : 'text-slate-500'}`} />
-      <span className={`text-sm font-medium ${active ? 'text-blue-900' : 'text-slate-700'}`}>{label}</span>
+      <Icon className={`w-6 h-6 ${active ? 'text-slate-700' : 'text-slate-500'}`} />
+      <span className={`text-sm font-medium ${active ? 'text-slate-900' : 'text-slate-700'}`}>{label}</span>
     </button>
   )
 }
@@ -168,7 +168,7 @@ function Toggle({ label, sub, checked, onChange }: { label: string; sub: string;
       </div>
       <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="sr-only peer" />
-        <div className="w-11 h-6 bg-slate-200 peer-checked:bg-blue-600 rounded-full peer transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
+        <div className="w-11 h-6 bg-slate-200 peer-checked:bg-slate-700 rounded-full peer transition-colors after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-5"></div>
       </label>
     </div>
   )

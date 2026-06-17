@@ -232,7 +232,7 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                     </SelectContent>
                   </Select>
                   {['RESIGNED', 'TERMINATED', 'LAYOFF'].includes(form.status) && (
-                    <p className="text-[11px] text-amber-700 mt-1">
+                    <p className="text-[11px] text-slate-700 mt-1">
                       Exit clearance will be auto-created when you save.
                     </p>
                   )}
@@ -278,7 +278,7 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
                 Bank Details
-                <span className="ml-2 normal-case font-normal text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">HR only · employee sees their own</span>
+                <span className="ml-2 normal-case font-normal text-[10px] text-slate-700 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">HR only · employee sees their own</span>
               </p>
               <p className="text-[11px] text-gray-500 mb-3">Used for salary disbursement. Managers do not see these fields.</p>
               <div className="grid grid-cols-2 gap-3">
@@ -302,7 +302,7 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
             <div>
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
                 Statutory & Tax IDs
-                <span className="ml-2 normal-case font-normal text-[10px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-1.5 py-0.5">HR only · employee sees their own</span>
+                <span className="ml-2 normal-case font-normal text-[10px] text-slate-700 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5">HR only · employee sees their own</span>
               </p>
               <p className="text-[11px] text-gray-500 mb-3">For EOBI / FBR / provincial filings. Managers do not see these.</p>
               <div className="grid grid-cols-2 gap-3">
@@ -333,7 +333,7 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                   type="checkbox"
                   checked={form.hideFromDirectory ?? false}
                   onChange={(e) => f('hideFromDirectory', e.target.checked)}
-                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-slate-700 focus:ring-2 focus:ring-slate-100"
                 />
                 <span className="text-sm text-slate-700">
                   <span className="font-medium text-slate-900">Hide from Company Directory</span>
@@ -348,7 +348,7 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2 mt-2">{error}</p>
+            <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2 mt-2">{error}</p>
           )}
 
           <DialogFooter>

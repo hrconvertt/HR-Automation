@@ -76,7 +76,7 @@ export default function PositionsClient({ departments }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search by title..."
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-slate-300"
           />
         </div>
         <select
@@ -109,7 +109,7 @@ export default function PositionsClient({ departments }: Props) {
         </label>
         <button
           onClick={() => { setCreating(true); setError('') }}
-          className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700"
+          className="ml-auto inline-flex items-center gap-1.5 px-3 py-2 bg-slate-700 text-white text-sm font-medium rounded-lg hover:bg-slate-700"
         >
           <Plus className="w-4 h-4" /> Add Position
         </button>
@@ -139,7 +139,7 @@ export default function PositionsClient({ departments }: Props) {
               <tr key={p.id} className="border-b border-gray-100 hover:bg-gray-50/50">
                 <td className="px-4 py-2.5 font-medium text-gray-900">{p.title}</td>
                 <td className="px-4 py-2.5">
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-50 text-slate-700 border border-slate-100">
                     {positionLevelLabel(p.level)}
                   </span>
                 </td>
@@ -147,7 +147,7 @@ export default function PositionsClient({ departments }: Props) {
                 <td className="px-4 py-2.5 text-center text-gray-600">{p.employeeCount}</td>
                 <td className="px-4 py-2.5 text-center">
                   {p.active
-                    ? <span className="text-xs text-emerald-700">Active</span>
+                    ? <span className="text-xs text-slate-700">Active</span>
                     : <span className="text-xs text-gray-400">Inactive</span>}
                 </td>
                 <td className="px-4 py-2.5 text-right">
@@ -242,7 +242,7 @@ function PositionDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Senior UI/UX Designer"
-              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-blue-400"
+              className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-slate-300"
             />
           </Field>
           <Field label="Level">
@@ -277,7 +277,7 @@ function PositionDialog({
             />
           </Field>
           {error && (
-            <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2">{error}</p>
+            <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>
           )}
         </div>
         <div className="flex justify-end gap-2 px-5 py-3 border-t border-gray-100">
@@ -287,7 +287,7 @@ function PositionDialog({
           <button
             onClick={save}
             disabled={saving || !title.trim()}
-            className="px-3 py-2 text-sm font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            className="px-3 py-2 text-sm font-medium bg-slate-700 text-white rounded-lg hover:bg-slate-700 disabled:opacity-50"
           >
             {saving ? 'Saving...' : position ? 'Save changes' : 'Create position'}
           </button>

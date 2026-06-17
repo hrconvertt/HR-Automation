@@ -30,13 +30,15 @@ interface Props {
   pkHolidays: { date: string; name: string; type: 'PUBLIC' | 'OPTIONAL' }[]
 }
 
+// Monochrome chip tones — distinguished by weight + border style + icon,
+// never by colour. Holidays get the strongest fill so they pop on the wall.
 const CHIP_TONE: Record<ChipKind, string> = {
-  holiday: 'bg-rose-100 text-rose-800 border-rose-200',
-  birthday: 'bg-pink-100 text-pink-800 border-pink-200',
-  anniversary: 'bg-amber-100 text-amber-800 border-amber-200',
-  event: 'bg-blue-100 text-blue-800 border-blue-200',
-  probation: 'bg-violet-100 text-violet-800 border-violet-200',
-  leave: 'bg-slate-100 text-slate-700 border-slate-200',
+  holiday: 'bg-slate-900 text-white border border-slate-900 font-semibold',
+  birthday: 'bg-white text-slate-900 border border-slate-900',
+  anniversary: 'bg-slate-100 text-slate-900 border border-slate-300',
+  event: 'bg-slate-700 text-white border border-slate-700',
+  probation: 'bg-white text-slate-900 border-2 border-dashed border-slate-700',
+  leave: 'bg-slate-200 text-slate-900 border border-slate-400',
 }
 
 const FILTER_LABELS: Record<ChipKind, string> = {
@@ -216,9 +218,9 @@ export function CalendarGrid({
                 key={cell.key}
                 type="button"
                 onClick={() => setSelectedDate(cell.key)}
-                className={`text-left rounded border bg-white p-1.5 min-h-[88px] hover:border-blue-300 transition-colors ${isToday ? 'border-blue-500 ring-1 ring-blue-200' : 'border-slate-200'} ${isSelected ? 'bg-blue-50/50' : ''}`}
+                className={`text-left rounded border bg-white p-1.5 min-h-[88px] hover:border-slate-200 transition-colors ${isToday ? 'border-slate-500 ring-1 ring-slate-100' : 'border-slate-200'} ${isSelected ? 'bg-slate-50/50' : ''}`}
               >
-                <p className={`text-xs font-semibold ${isToday ? 'text-blue-600' : 'text-slate-700'}`}>{cell.day}</p>
+                <p className={`text-xs font-semibold ${isToday ? 'text-slate-700' : 'text-slate-700'}`}>{cell.day}</p>
                 <div className="mt-1 space-y-0.5 overflow-hidden">
                   {chips.slice(0, 3).map((c, idx) => (
                     <div key={idx} className={`truncate text-[9px] px-1 py-0.5 rounded border ${CHIP_TONE[c.kind]}`}>{c.label}</div>

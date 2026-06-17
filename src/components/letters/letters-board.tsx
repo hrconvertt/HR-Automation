@@ -137,7 +137,7 @@ export function LettersBoard({ letters, role, employeeId, isPreviewMode }: Props
                   <TableCell className="py-3">
                     <Badge variant={STATUS_VARIANT[l.status] ?? 'default'}>{l.status}</Badge>
                     {l.status === 'REJECTED' && l.rejectionReason && (
-                      <p className="text-[11px] text-red-600 mt-1 max-w-[200px]">{l.rejectionReason}</p>
+                      <p className="text-[11px] text-slate-700 mt-1 max-w-[200px]">{l.rejectionReason}</p>
                     )}
                   </TableCell>
                   <TableCell className="py-3 text-sm text-gray-600">{formatDate(l.requestedAt)}</TableCell>

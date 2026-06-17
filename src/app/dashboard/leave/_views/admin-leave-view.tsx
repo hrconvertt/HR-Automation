@@ -268,12 +268,12 @@ export default function AdminLeaveView() {
                               const lowOnRemaining = b.allocated > 0 && b.remaining / b.allocated < 0.25
                               return (
                                 <TableCell key={t} className="text-right tabular-nums">
-                                  <span className={lowOnRemaining ? 'text-rose-700 font-semibold' : 'text-gray-900 font-semibold'}>{b.remaining}</span>
+                                  <span className={lowOnRemaining ? 'text-slate-700 font-semibold' : 'text-gray-900 font-semibold'}>{b.remaining}</span>
                                   <span className="text-xs text-gray-400"> /{b.allocated}</span>
                                 </TableCell>
                               )
                             })}
-                            <TableCell className="text-right font-bold tabular-nums text-blue-700">
+                            <TableCell className="text-right font-bold tabular-nums text-slate-700">
                               {g.totalRemaining}
                             </TableCell>
                           </TableRow>
@@ -328,11 +328,11 @@ export default function AdminLeaveView() {
                 value={form.reason}
                 onChange={(e) => setForm({ ...form, reason: e.target.value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
                 placeholder="Brief reason for leave…"
               />
             </div>
-            {formError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{formError}</p>}
+            {formError && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{formError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApplyOpen(false)}>Cancel</Button>
@@ -354,7 +354,7 @@ export default function AdminLeaveView() {
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
               placeholder="Explain why this request is being rejected. The employee will see this."
             />
             <p className="text-[11px] text-gray-400">Required — the employee receives this in their notification.</p>
@@ -428,7 +428,7 @@ function HolidaysPanel() {
         <select
           value={year}
           onChange={(e) => setYear(Number(e.target.value))}
-          className="h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+          className="h-9 px-3 rounded-lg border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
         >
           {[2025, 2026, 2027].map((y) => <option key={y} value={y}>{y}</option>)}
         </select>
@@ -450,7 +450,7 @@ function HolidaysPanel() {
             </Select>
             <Button onClick={add} disabled={busy}>{busy ? 'Saving…' : 'Add'}</Button>
           </div>
-          {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded p-2">{error}</p>}
+          {error && <p className="text-xs text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
         </CardContent>
       </Card>
 

@@ -42,13 +42,13 @@ type LeaveBalance = {
 }
 
 const LEAVE_COLORS: Record<string, { tone: string; label: string }> = {
-  ANNUAL:    { tone: 'bg-blue-50 text-blue-700 border-blue-200',       label: 'Annual' },
-  CASUAL:    { tone: 'bg-purple-50 text-purple-700 border-purple-200', label: 'Casual' },
-  SICK:      { tone: 'bg-rose-50 text-rose-700 border-rose-200',       label: 'Sick' },
-  EMERGENCY: { tone: 'bg-amber-50 text-amber-700 border-amber-200',    label: 'Emergency' },
+  ANNUAL:    { tone: 'bg-slate-50 text-slate-700 border-slate-100',       label: 'Annual' },
+  CASUAL:    { tone: 'bg-slate-50 text-slate-700 border-slate-100', label: 'Casual' },
+  SICK:      { tone: 'bg-slate-50 text-slate-700 border-slate-100',       label: 'Sick' },
+  EMERGENCY: { tone: 'bg-slate-50 text-slate-700 border-slate-100',    label: 'Emergency' },
   UNPAID:    { tone: 'bg-slate-50 text-slate-700 border-slate-200',    label: 'Unpaid' },
-  MATERNITY: { tone: 'bg-pink-50 text-pink-700 border-pink-200',       label: 'Maternity' },
-  PATERNITY: { tone: 'bg-indigo-50 text-indigo-700 border-indigo-200', label: 'Paternity' },
+  MATERNITY: { tone: 'bg-slate-50 text-slate-700 border-slate-100',       label: 'Maternity' },
+  PATERNITY: { tone: 'bg-slate-50 text-slate-700 border-slate-100', label: 'Paternity' },
 }
 
 // Use shared two-stage status helpers (PENDING vs PENDING_HR vs APPROVED/REJECTED/CANCELLED)
@@ -164,24 +164,24 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
         const remaining = annual.reduce((s, b) => s + b.balance, 0)
         const usedPct = allocated > 0 ? Math.min(100, Math.round((used / allocated) * 100)) : 0
         return (
-          <Card className="border border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100/50">
+          <Card className="border border-slate-100 bg-gradient-to-br from-slate-50 to-slate-100/50">
             <CardContent className="p-5">
               <div className="flex items-center justify-between flex-wrap gap-3">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.2em] text-blue-900 font-semibold">Annual Entitlement</p>
-                  <p className="text-3xl font-bold text-blue-900 tabular-nums mt-1">
-                    {remaining}<span className="text-base text-blue-700/70 font-normal"> / {allocated} days remaining</span>
+                  <p className="text-[11px] uppercase tracking-[0.2em] text-slate-900 font-semibold">Annual Entitlement</p>
+                  <p className="text-3xl font-bold text-slate-900 tabular-nums mt-1">
+                    {remaining}<span className="text-base text-slate-700/70 font-normal"> / {allocated} days remaining</span>
                   </p>
-                  <p className="text-xs text-blue-800 mt-1">
+                  <p className="text-xs text-slate-900 mt-1">
                     {used} day{used === 1 ? '' : 's'} used so far this year
                     {' · '}{annual.map((b) => `${b.balance} ${b.leavePolicy.leaveType.charAt(0) + b.leavePolicy.leaveType.slice(1).toLowerCase()}`).join(' + ')} left
                   </p>
                 </div>
                 <div className="w-full sm:w-64">
                   <div className="h-2 bg-white/70 rounded-full overflow-hidden">
-                    <div className="h-full bg-blue-600" style={{ width: `${usedPct}%` }} />
+                    <div className="h-full bg-slate-700" style={{ width: `${usedPct}%` }} />
                   </div>
-                  <p className="text-[10px] text-blue-800/70 mt-1 text-right">{usedPct}% used</p>
+                  <p className="text-[10px] text-slate-900/70 mt-1 text-right">{usedPct}% used</p>
                 </div>
               </div>
             </CardContent>
@@ -233,13 +233,13 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
             <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-semibold mb-3">Upcoming leave</p>
             <div className="space-y-2">
               {upcoming.slice(0, 3).map((r) => (
-                <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-md bg-emerald-50/50 border border-emerald-100">
-                  <Calendar className="w-4 h-4 text-emerald-600" />
+                <div key={r.id} className="flex items-center gap-3 p-2.5 rounded-md bg-slate-50/50 border border-slate-100">
+                  <Calendar className="w-4 h-4 text-slate-700" />
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-emerald-900">
+                    <p className="text-sm font-medium text-slate-900">
                       {LEAVE_COLORS[r.leaveType]?.label ?? r.leaveType} · {formatDays(r.days)}
                     </p>
-                    <p className="text-[11px] text-emerald-700">
+                    <p className="text-[11px] text-slate-700">
                       {fmtDate(r.fromDate)} → {fmtDate(r.toDate)}
                     </p>
                   </div>
@@ -265,10 +265,10 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
               {requests.map((r) => (
                 <li key={r.id} className="flex items-center gap-4 px-5 py-3 border-b border-slate-50 last:border-b-0">
                   <div className={`w-1 self-stretch rounded-full ${
-                    r.status === 'APPROVED'    ? 'bg-emerald-400' :
-                    r.status === 'PENDING'     ? 'bg-amber-400' :
-                    r.status === 'PENDING_HR'  ? 'bg-blue-400' :
-                    r.status === 'REJECTED'    ? 'bg-rose-400' :
+                    r.status === 'APPROVED'    ? 'bg-slate-300' :
+                    r.status === 'PENDING'     ? 'bg-slate-300' :
+                    r.status === 'PENDING_HR'  ? 'bg-slate-300' :
+                    r.status === 'REJECTED'    ? 'bg-slate-300' :
                     'bg-slate-300'
                   }`} />
                   <div className="flex-1 min-w-0">
@@ -282,7 +282,7 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
                     </div>
                     {r.reason && <p className="text-xs text-slate-500 mt-0.5 truncate">{r.reason}</p>}
                     {r.status === 'REJECTED' && r.rejectionReason && (
-                      <p className="text-xs text-rose-700 mt-0.5">
+                      <p className="text-xs text-slate-700 mt-0.5">
                         <AlertCircle className="w-3 h-3 inline mr-1" />
                         Rejected: {r.rejectionReason}
                       </p>
@@ -292,7 +292,7 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
                   {(r.status === 'PENDING' || r.status === 'PENDING_HR') && (
                     <button
                       onClick={() => handleCancel(r.id)}
-                      className="text-xs text-slate-400 hover:text-rose-600"
+                      className="text-xs text-slate-400 hover:text-slate-700"
                       title="Cancel request"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -346,7 +346,7 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
                 placeholder="Brief reason — helps your manager approve faster."
               />
             </div>
-            {formError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{formError}</p>}
+            {formError && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{formError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApplyOpen(false)}>Cancel</Button>
@@ -365,8 +365,8 @@ function StatusChip({ icon: Icon, label, count, tone }: {
   label: string; count: number; tone: 'amber' | 'emerald';
 }) {
   const tones = {
-    amber:   'bg-amber-50 border-amber-200 text-amber-800',
-    emerald: 'bg-emerald-50 border-emerald-200 text-emerald-800',
+    amber:   'bg-slate-50 border-slate-100 text-slate-900',
+    emerald: 'bg-slate-50 border-slate-100 text-slate-900',
   }
   return (
     <span className={`inline-flex items-center gap-1.5 border rounded-full px-3 py-1 text-xs font-medium ${tones[tone]}`}>

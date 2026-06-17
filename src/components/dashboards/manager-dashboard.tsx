@@ -152,7 +152,7 @@ export async function ManagerDashboard({
   return (
     <div className="space-y-6">
       {/* Welcome Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 p-8">
+      <div className="rounded-2xl bg-gradient-to-r from-slate-50 to-slate-50 border border-slate-100 p-8">
         <h1 className="text-3xl font-bold text-gray-900">Hi, {firstName}!</h1>
         <p className="text-sm text-gray-600 mt-2">
           Manager view · {data.teamSize} direct{' '}
@@ -172,29 +172,29 @@ export async function ManagerDashboard({
           label="My Team Size"
           value={data.teamSize}
           icon={Users}
-          iconColor="text-blue-600"
-          iconBg="bg-blue-50"
+          iconColor="text-slate-700"
+          iconBg="bg-slate-50"
         />
         <StatCard
           label="Team On Leave Today"
           value={data.teamOnLeaveToday}
           icon={CalendarDays}
-          iconColor="text-amber-600"
-          iconBg="bg-amber-50"
+          iconColor="text-slate-700"
+          iconBg="bg-slate-50"
         />
         <StatCard
           label="Pending My Approvals"
           value={data.pendingApprovals}
           icon={Clock}
-          iconColor="text-purple-600"
-          iconBg="bg-purple-50"
+          iconColor="text-slate-700"
+          iconBg="bg-slate-50"
         />
         <StatCard
           label="Team OT This Month"
           value={`${data.totalOT.toFixed(1)} hrs`}
           icon={Timer}
-          iconColor="text-green-600"
-          iconBg="bg-green-50"
+          iconColor="text-slate-700"
+          iconBg="bg-slate-50"
         />
       </div>
 
@@ -220,17 +220,17 @@ export async function ManagerDashboard({
                     let dotColor = 'bg-gray-400'
                     let pillLabel = 'Not Yet In'
                     if (onLeave) {
-                      pillBg = 'bg-blue-100 text-blue-700'
-                      dotColor = 'bg-blue-500'
+                      pillBg = 'bg-slate-100 text-slate-700'
+                      dotColor = 'bg-slate-500'
                       pillLabel = 'On Leave'
                     } else if (att?.clockIn) {
                       if (att.workType === 'WFH') {
-                        pillBg = 'bg-blue-100 text-blue-700'
-                        dotColor = 'bg-blue-500'
+                        pillBg = 'bg-slate-100 text-slate-700'
+                        dotColor = 'bg-slate-500'
                         pillLabel = 'WFH'
                       } else {
-                        pillBg = 'bg-green-100 text-green-700'
-                        dotColor = 'bg-green-500'
+                        pillBg = 'bg-slate-100 text-slate-700'
+                        dotColor = 'bg-slate-500'
                         pillLabel = 'In Office'
                       }
                     }
@@ -239,7 +239,7 @@ export async function ManagerDashboard({
                         key={m.id}
                         className="flex items-center gap-3 py-2 border-b border-gray-100 last:border-0"
                       >
-                        <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center text-xs font-semibold">
+                        <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-semibold">
                           {getInitials(m.fullName)}
                         </div>
                         <div className="flex-1 min-w-0">
@@ -317,13 +317,13 @@ export async function ManagerDashboard({
                   <Link
                     key={p.id}
                     href={`/dashboard/probation/${p.id}`}
-                    className="flex items-center justify-between gap-3 py-2 px-3 -mx-2 rounded-lg hover:bg-amber-50 transition border border-amber-100 bg-amber-50/40"
+                    className="flex items-center justify-between gap-3 py-2 px-3 -mx-2 rounded-lg hover:bg-slate-50 transition border border-slate-100 bg-slate-50/40"
                   >
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{p.employee.fullName}</p>
-                      <p className="text-xs text-amber-700">{label}</p>
+                      <p className="text-xs text-slate-700">{label}</p>
                     </div>
-                    <span className="text-xs font-semibold text-amber-700 flex-shrink-0">Submit →</span>
+                    <span className="text-xs font-semibold text-slate-700 flex-shrink-0">Submit →</span>
                   </Link>
                 )
               })}
@@ -361,7 +361,7 @@ export async function ManagerDashboard({
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Cake className="w-4 h-4 text-pink-500" />
+              <Cake className="w-4 h-4 text-slate-500" />
               <CardTitle>Team Birthdays This Month</CardTitle>
             </div>
           </CardHeader>
@@ -394,27 +394,27 @@ export async function ManagerDashboard({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Link
           href="/dashboard/leave"
-          className="relative rounded-xl bg-purple-50 hover:bg-purple-100 transition-colors p-4 border border-purple-100"
+          className="relative rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors p-4 border border-slate-100"
         >
-          <Clock className="w-5 h-5 text-purple-600" />
-          <p className="mt-3 text-sm font-semibold text-purple-900">Approve Leaves</p>
-          <ArrowUpRight className="w-4 h-4 text-purple-600 absolute top-3 right-3" />
+          <Clock className="w-5 h-5 text-slate-700" />
+          <p className="mt-3 text-sm font-semibold text-slate-900">Approve Leaves</p>
+          <ArrowUpRight className="w-4 h-4 text-slate-700 absolute top-3 right-3" />
         </Link>
         <Link
           href="/dashboard/performance"
-          className="relative rounded-xl bg-blue-50 hover:bg-blue-100 transition-colors p-4 border border-blue-100"
+          className="relative rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors p-4 border border-slate-100"
         >
-          <Users className="w-5 h-5 text-blue-600" />
-          <p className="mt-3 text-sm font-semibold text-blue-900">Team Performance</p>
-          <ArrowUpRight className="w-4 h-4 text-blue-600 absolute top-3 right-3" />
+          <Users className="w-5 h-5 text-slate-700" />
+          <p className="mt-3 text-sm font-semibold text-slate-900">Team Performance</p>
+          <ArrowUpRight className="w-4 h-4 text-slate-700 absolute top-3 right-3" />
         </Link>
         <Link
           href="/dashboard/attendance"
-          className="relative rounded-xl bg-green-50 hover:bg-green-100 transition-colors p-4 border border-green-100"
+          className="relative rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors p-4 border border-slate-100"
         >
-          <CalendarDays className="w-5 h-5 text-green-600" />
-          <p className="mt-3 text-sm font-semibold text-green-900">Team Schedule</p>
-          <ArrowUpRight className="w-4 h-4 text-green-600 absolute top-3 right-3" />
+          <CalendarDays className="w-5 h-5 text-slate-700" />
+          <p className="mt-3 text-sm font-semibold text-slate-900">Team Schedule</p>
+          <ArrowUpRight className="w-4 h-4 text-slate-700 absolute top-3 right-3" />
         </Link>
       </div>
     </div>

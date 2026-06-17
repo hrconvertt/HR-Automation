@@ -49,23 +49,23 @@ interface Employee {
 }
 
 const statusTone: Record<string, string> = {
-  ACTIVE: 'bg-emerald-50 text-emerald-700 border border-emerald-100',
+  ACTIVE: 'bg-slate-50 text-slate-700 border border-slate-100',
   RESIGNED: 'bg-slate-100 text-slate-600 border border-slate-200',
-  TERMINATED: 'bg-rose-50 text-rose-700 border border-rose-100',
-  ON_LEAVE: 'bg-amber-50 text-amber-700 border border-amber-100',
+  TERMINATED: 'bg-slate-50 text-slate-700 border border-slate-100',
+  ON_LEAVE: 'bg-slate-50 text-slate-700 border border-slate-100',
 }
 
 // Stable, friendly avatar palette derived from the name — gives each
 // employee a consistent color across reloads without storing it.
 const AVATAR_PALETTE = [
-  'bg-blue-100 text-blue-700',
-  'bg-emerald-100 text-emerald-700',
-  'bg-purple-100 text-purple-700',
-  'bg-amber-100 text-amber-700',
-  'bg-rose-100 text-rose-700',
-  'bg-sky-100 text-sky-700',
-  'bg-indigo-100 text-indigo-700',
-  'bg-teal-100 text-teal-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
+  'bg-slate-100 text-slate-700',
 ]
 function avatarTone(name: string): string {
   let h = 0
@@ -312,7 +312,7 @@ export function HRPeopleView() {
                 <Link
                   key={emp.id}
                   href={`/dashboard/employees/${emp.id}`}
-                  className="group bg-white border border-slate-200 rounded-xl p-4 hover:border-blue-300 hover:shadow-md transition-all"
+                  className="group bg-white border border-slate-200 rounded-xl p-4 hover:border-slate-200 hover:shadow-md transition-all"
                 >
                   <div className="flex items-start gap-3">
                     {/* Avatar */}
@@ -322,7 +322,7 @@ export function HRPeopleView() {
                     {/* Body */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="font-semibold text-slate-900 text-sm leading-tight truncate group-hover:text-blue-700">
+                        <p className="font-semibold text-slate-900 text-sm leading-tight truncate group-hover:text-slate-700">
                           {emp.fullName}
                         </p>
                         <span className={`text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded ${statusTone[emp.status] ?? 'bg-slate-100 text-slate-600'}`}>
@@ -465,7 +465,7 @@ export function HRPeopleView() {
                       type="checkbox"
                       checked={overrideCode}
                       onChange={(e) => setOverrideCode(e.target.checked)}
-                      className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+                      className="w-3.5 h-3.5 rounded border-slate-300 text-slate-700 focus:ring-2 focus:ring-slate-100"
                     />
                     Override
                   </label>
@@ -523,7 +523,7 @@ export function HRPeopleView() {
                   type="checkbox"
                   checked={salary.enabled}
                   onChange={(e) => setSalary({ ...salary, enabled: e.target.checked })}
-                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-200"
+                  className="mt-0.5 w-4 h-4 rounded border-slate-300 text-slate-700 focus:ring-2 focus:ring-slate-100"
                 />
                 <span>
                   <span className="text-sm font-semibold text-slate-900">Set initial compensation now</span>
@@ -534,7 +534,7 @@ export function HRPeopleView() {
               </label>
 
               {salary.enabled && (
-                <div className="mt-3 space-y-3 rounded-lg border border-blue-100 bg-blue-50/40 p-3">
+                <div className="mt-3 space-y-3 rounded-lg border border-slate-100 bg-slate-50/40 p-3">
                   <div>
                     <label className="block text-xs font-medium text-slate-700 mb-1">Total Monthly Gross (PKR)</label>
                     <div className="relative">
@@ -563,14 +563,14 @@ export function HRPeopleView() {
                     </div>
                   )}
                   {salary.basicPct + salary.housePct + salary.otherPct !== 100 && (
-                    <p className="text-xs text-amber-700">Split must total 100% (currently {salary.basicPct + salary.housePct + salary.otherPct}%).</p>
+                    <p className="text-xs text-slate-700">Split must total 100% (currently {salary.basicPct + salary.housePct + salary.otherPct}%).</p>
                   )}
                 </div>
               )}
             </div>
 
             {formError && (
-              <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">
+              <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">
                 {formError}
               </p>
             )}
@@ -594,9 +594,9 @@ export function HRPeopleView() {
           </DialogHeader>
           {credentials && (
             <div className="space-y-4">
-              <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3">
-                <p className="text-sm text-emerald-900 font-medium">Account ready</p>
-                <p className="text-xs text-emerald-800 mt-1">{credentials.message}</p>
+              <div className="rounded-lg bg-slate-50 border border-slate-100 p-3">
+                <p className="text-sm text-slate-900 font-medium">Account ready</p>
+                <p className="text-xs text-slate-900 mt-1">{credentials.message}</p>
               </div>
 
               <div className="space-y-2">
@@ -610,7 +610,7 @@ export function HRPeopleView() {
                   <div>
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Temporary Password</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <p className="flex-1 text-sm font-mono bg-amber-50 border border-amber-200 rounded px-3 py-2 select-all">
+                      <p className="flex-1 text-sm font-mono bg-slate-50 border border-slate-100 rounded px-3 py-2 select-all">
                         {credentials.tempPassword}
                       </p>
                       <Button
@@ -635,8 +635,8 @@ export function HRPeopleView() {
                     </p>
                   </div>
                 ) : (
-                  <div className="rounded-lg bg-blue-50 border border-blue-200 p-3">
-                    <p className="text-xs text-blue-900">
+                  <div className="rounded-lg bg-slate-50 border border-slate-100 p-3">
+                    <p className="text-xs text-slate-900">
                       This email already had an account. It has been linked — they use their existing password.
                     </p>
                   </div>

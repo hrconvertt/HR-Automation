@@ -228,9 +228,9 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
   }
 
   const bannerStyles: Record<string, string> = {
-    amber: 'bg-amber-50 border-amber-200 text-amber-900',
-    blue:  'bg-blue-50 border-blue-200 text-blue-900',
-    green: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+    amber: 'bg-slate-50 border-slate-100 text-slate-900',
+    blue:  'bg-slate-50 border-slate-100 text-slate-900',
+    green: 'bg-slate-50 border-slate-100 text-slate-900',
   }
 
   return (
@@ -247,7 +247,7 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <span className="w-6 h-6 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center text-xs font-bold">1</span>
+              <span className="w-6 h-6 bg-slate-100 text-slate-700 rounded-full flex items-center justify-center text-xs font-bold">1</span>
               Self-Appraisal
               {review.selfRating != null && <Badge variant="default">{review.selfRating}/5</Badge>}
             </CardTitle>
@@ -257,8 +257,8 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
               <>
                 {/* Goals — employee rates each linked goal */}
                 {goalsForm.length > 0 && (
-                  <div className="bg-blue-50/40 border border-blue-100 rounded-lg p-3 space-y-3">
-                    <p className="text-sm font-semibold text-blue-900">📌 Your goals this cycle ({goalsForm.length})</p>
+                  <div className="bg-slate-50/40 border border-slate-100 rounded-lg p-3 space-y-3">
+                    <p className="text-sm font-semibold text-slate-900">📌 Your goals this cycle ({goalsForm.length})</p>
                     {goalsForm.map((g) => (
                       <GoalEditor
                         key={g.id}
@@ -267,7 +267,7 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
                         onChange={(field, value) => updateGoal(g.id, field, value)}
                       />
                     ))}
-                    <p className="text-xs text-blue-700">
+                    <p className="text-xs text-slate-700">
                       Tip — give each goal an honest <strong>achievement %</strong>. Your manager will review.
                     </p>
                   </div>
@@ -306,7 +306,7 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
                       <Send className="w-4 h-4" /> Submit to Manager
                     </Button>
                   )}
-                  {message && <span className="text-sm text-green-600 font-medium ml-2">{message}</span>}
+                  {message && <span className="text-sm text-slate-700 font-medium ml-2">{message}</span>}
                 </div>
               </>
             ) : (
@@ -335,7 +335,7 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <span className="w-6 h-6 bg-purple-100 text-purple-700 rounded-full flex items-center justify-center text-xs font-bold">2</span>
+              <span className="w-6 h-6 bg-slate-100 text-slate-700 rounded-full flex items-center justify-center text-xs font-bold">2</span>
               Manager Review
               {review.managerRating != null && <Badge variant="default">{review.managerRating}/5</Badge>}
               {review.behavioralAvg != null && <Badge variant="secondary">Behavioral: {review.behavioralAvg}/5</Badge>}
@@ -346,8 +346,8 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
               <>
                 {/* Goals — manager reviews employee's self-rated achievements */}
                 {goalsForm.length > 0 && (
-                  <div className="bg-purple-50/40 border border-purple-100 rounded-lg p-3 space-y-3">
-                    <p className="text-sm font-semibold text-purple-900">📌 Review each goal</p>
+                  <div className="bg-slate-50/40 border border-slate-100 rounded-lg p-3 space-y-3">
+                    <p className="text-sm font-semibold text-slate-900">📌 Review each goal</p>
                     {goalsForm.map((g) => (
                       <GoalEditor
                         key={g.id}
@@ -356,7 +356,7 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
                         onChange={(field, value) => updateGoal(g.id, field, value)}
                       />
                     ))}
-                    <p className="text-xs text-purple-700">
+                    <p className="text-xs text-slate-700">
                       The <strong>Individual Score</strong> below auto-calculates from the weighted average of achievement % across goals.
                     </p>
                   </div>
@@ -406,7 +406,7 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
                       <Send className="w-4 h-4" /> Submit to HR
                     </Button>
                   )}
-                  {message && <span className="text-sm text-green-600 font-medium ml-2">{message}</span>}
+                  {message && <span className="text-sm text-slate-700 font-medium ml-2">{message}</span>}
                 </div>
               </>
             ) : (
@@ -435,7 +435,7 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
-              <span className="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center text-xs font-bold">3</span>
+              <span className="w-6 h-6 bg-slate-100 text-slate-700 rounded-full flex items-center justify-center text-xs font-bold">3</span>
               HR Finalization
               {review.overallRating != null && <Badge variant="success">Overall: {review.overallRating}/5</Badge>}
               {review.finalCategory && (
@@ -449,14 +449,14 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
             {showHRForm ? (
               <>
                 {suggestedOverall != null && (
-                  <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 flex items-start gap-3">
-                    <Sparkles className="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" />
+                  <div className="rounded-lg border border-slate-100 bg-slate-50 p-3 flex items-start gap-3">
+                    <Sparkles className="w-4 h-4 text-slate-700 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm text-emerald-900">
+                      <p className="text-sm text-slate-900">
                         Suggested Overall (based on 60% work + 20% time + 20% behavioral):{' '}
                         <strong>{suggestedOverall.toFixed(1)}/5</strong>
                       </p>
-                      <p className="text-xs text-emerald-700 mt-0.5">
+                      <p className="text-xs text-slate-700 mt-0.5">
                         HR can override — this is a starting point computed from the data above.
                       </p>
                     </div>
@@ -490,7 +490,7 @@ export function ReviewForm({ review, permissions, suggestedOverall }: Props) {
                   <Button onClick={() => submit('FINALIZE')} disabled={saving}>
                     <CheckCircle2 className="w-4 h-4" /> Finalize Review
                   </Button>
-                  {message && <span className="text-sm text-green-600 font-medium ml-2">{message}</span>}
+                  {message && <span className="text-sm text-slate-700 font-medium ml-2">{message}</span>}
                 </div>
               </>
             ) : (
@@ -550,7 +550,7 @@ function FormTextarea({
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
         rows={3}
-        className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-blue-600"
+        className="w-full text-sm border border-gray-300 rounded-lg p-2 focus:outline-none focus:ring-2 focus:ring-slate-700"
       />
     </div>
   )
@@ -588,7 +588,7 @@ function GoalEditor({
               min={0} max={100} step={5}
               value={goal.achievement ?? 0}
               onChange={(e) => onChange('achievement', Number(e.target.value))}
-              className="flex-1 accent-blue-600"
+              className="flex-1 accent-slate-700"
             />
             <span className="text-sm font-semibold text-gray-900 w-12 text-right">{goal.achievement ?? 0}%</span>
           </>
@@ -604,7 +604,7 @@ function GoalEditor({
             value={goal.selfComment ?? ''}
             onChange={(e) => onChange('selfComment', e.target.value)}
             placeholder="How did this goal go? Evidence, blockers, learnings…"
-            className="w-full text-sm border border-gray-200 rounded p-2 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            className="w-full text-sm border border-gray-200 rounded p-2 focus:outline-none focus:ring-2 focus:ring-slate-100"
           />
         </div>
       )}
@@ -613,9 +613,9 @@ function GoalEditor({
       {mode === 'manager' && (
         <>
           {goal.selfComment && (
-            <div className="bg-blue-50 border border-blue-200 rounded p-2 text-xs">
-              <span className="font-semibold text-blue-700">Employee said:</span>{' '}
-              <span className="text-blue-900">{goal.selfComment}</span>
+            <div className="bg-slate-50 border border-slate-100 rounded p-2 text-xs">
+              <span className="font-semibold text-slate-700">Employee said:</span>{' '}
+              <span className="text-slate-900">{goal.selfComment}</span>
             </div>
           )}
           <div>
@@ -625,7 +625,7 @@ function GoalEditor({
               value={goal.managerComment ?? ''}
               onChange={(e) => onChange('managerComment', e.target.value)}
               placeholder="Feedback on this goal…"
-              className="w-full text-sm border border-gray-200 rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-100"
+              className="w-full text-sm border border-gray-200 rounded p-2 focus:outline-none focus:ring-2 focus:ring-slate-100"
             />
           </div>
         </>
@@ -642,7 +642,7 @@ function GoalEditor({
           )}
           {goal.managerComment && (
             <div className="text-xs">
-              <span className="font-semibold text-purple-600">Manager:</span>{' '}
+              <span className="font-semibold text-slate-700">Manager:</span>{' '}
               <span className="text-gray-800">{goal.managerComment}</span>
             </div>
           )}
@@ -685,7 +685,7 @@ function TimeWorkCard({ review }: { review: Review }) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <Clock className="w-4 h-4 text-amber-600" />
+          <Clock className="w-4 h-4 text-slate-700" />
           Time &amp; Work
           {ts != null && (
             <Badge variant={scoreColor}>Score: {ts.toFixed(1)}/5</Badge>
@@ -779,10 +779,10 @@ function TimeWorkCard({ review }: { review: Review }) {
                 <div
                   className={`px-4 py-2 rounded-lg text-lg font-bold ${
                     ts >= 4
-                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                      ? 'bg-slate-50 text-slate-700 border border-slate-100'
                       : ts >= 3
                         ? 'bg-gray-50 text-gray-800 border border-gray-200'
-                        : 'bg-amber-50 text-amber-800 border border-amber-200'
+                        : 'bg-slate-50 text-slate-900 border border-slate-100'
                   }`}
                 >
                   {ts.toFixed(1)} / 5
@@ -807,9 +807,9 @@ function StatTile({
 }) {
   const valueColor =
     tone === 'red'
-      ? 'text-red-700'
+      ? 'text-slate-700'
       : tone === 'amber'
-        ? 'text-amber-700'
+        ? 'text-slate-700'
         : 'text-gray-900'
   return (
     <div className="flex items-center justify-between bg-gray-50 rounded-md px-3 py-2">

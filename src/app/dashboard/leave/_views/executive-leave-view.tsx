@@ -170,7 +170,7 @@ export default async function ExecutiveLeaveView() {
                   <span className="w-28 text-sm text-slate-700">{LEAVE_TYPE_LABELS[type] ?? type}</span>
                   <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-blue-500"
+                      className="h-full bg-slate-500"
                       style={{ width: `${(n / typeMax) * 100}%` }}
                     />
                   </div>
@@ -202,7 +202,7 @@ export default async function ExecutiveLeaveView() {
                       <p className="text-[11px] text-slate-400">{d.headcount} active</p>
                     </div>
                     <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-purple-500" style={{ width: `${(d.avg / max) * 100}%` }} />
+                      <div className="h-full bg-slate-500" style={{ width: `${(d.avg / max) * 100}%` }} />
                     </div>
                     <span className="w-20 text-right text-sm font-semibold tabular-nums text-slate-900">{d.avg.toFixed(1)} d/emp</span>
                     <span className="w-20 text-right text-xs text-slate-500 tabular-nums">{d.days} d total</span>
@@ -222,11 +222,11 @@ export default async function ExecutiveLeaveView() {
 }
 
 const TONE_CLASSES: Record<'green' | 'amber' | 'red' | 'blue' | 'purple', string> = {
-  green:  'text-emerald-700 bg-emerald-50',
-  amber:  'text-amber-700 bg-amber-50',
-  red:    'text-rose-700 bg-rose-50',
-  blue:   'text-blue-700 bg-blue-50',
-  purple: 'text-purple-700 bg-purple-50',
+  green:  'text-slate-700 bg-slate-50',
+  amber:  'text-slate-700 bg-slate-50',
+  red:    'text-slate-700 bg-slate-50',
+  blue:   'text-slate-700 bg-slate-50',
+  purple: 'text-slate-700 bg-slate-50',
 }
 
 function KpiTile({ label, value, sub, Icon, tone }: {

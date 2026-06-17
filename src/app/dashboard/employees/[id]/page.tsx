@@ -127,9 +127,9 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
   const hasAccess = isHR || isExec || isViewingOwn || (isManager && isMyTeamMember)
   if (!hasAccess) {
     return (
-      <div className="rounded-2xl bg-amber-50 border border-amber-200 p-6">
-        <h2 className="text-lg font-semibold text-amber-900">Access denied</h2>
-        <p className="text-sm text-amber-800 mt-2">
+      <div className="rounded-2xl bg-slate-50 border border-slate-100 p-6">
+        <h2 className="text-lg font-semibold text-slate-900">Access denied</h2>
+        <p className="text-sm text-slate-900 mt-2">
           You can only view your own profile{isManager ? ' or your direct reports' : ''}.
         </p>
       </div>
@@ -615,7 +615,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
               <div className="flex items-center gap-2">
                 <Link
                   href={`/dashboard/documents?employee=${employee.id}`}
-                  className="text-xs text-blue-600 hover:underline inline-flex items-center gap-1"
+                  className="text-xs text-slate-700 hover:underline inline-flex items-center gap-1"
                 >
                   View in Document Center <ExternalLink className="w-3 h-3" />
                 </Link>
@@ -653,7 +653,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                                 href={viewHref}
                                 target="_blank"
                                 rel="noreferrer"
-                                className="text-blue-600 text-xs hover:underline"
+                                className="text-slate-700 text-xs hover:underline"
                               >View</a>
                               {/* HR-only visibility toggle */}
                               {canEditFull && (

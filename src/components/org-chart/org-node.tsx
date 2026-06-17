@@ -25,14 +25,14 @@ function colourFor(id: string): string {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
   const palette = [
-    'bg-blue-500',
-    'bg-indigo-500',
-    'bg-emerald-500',
-    'bg-purple-500',
-    'bg-rose-500',
-    'bg-amber-500',
-    'bg-teal-500',
-    'bg-fuchsia-500',
+    'bg-slate-500',
+    'bg-slate-500',
+    'bg-slate-500',
+    'bg-slate-500',
+    'bg-slate-500',
+    'bg-slate-500',
+    'bg-slate-500',
+    'bg-slate-500',
   ]
   return palette[h % palette.length]
 }
@@ -54,11 +54,11 @@ export default function OrgNodeCard({
   if (node.isVirtual) {
     // Special "Unassigned" / other synthetic buckets.
     return (
-      <div className="w-full h-full bg-amber-50 border border-amber-200 text-amber-900 rounded-xl flex items-center gap-2 px-3 shadow-sm">
-        <UserX className="w-4 h-4 text-amber-600 flex-shrink-0" />
+      <div className="w-full h-full bg-slate-50 border border-slate-100 text-slate-900 rounded-xl flex items-center gap-2 px-3 shadow-sm">
+        <UserX className="w-4 h-4 text-slate-700 flex-shrink-0" />
         <div className="min-w-0">
           <p className="text-sm font-semibold leading-tight">{node.fullName}</p>
-          <p className="text-[10px] text-amber-700 truncate">
+          <p className="text-[10px] text-slate-700 truncate">
             {node.directReports} employee{node.directReports === 1 ? '' : 's'} need a manager
           </p>
         </div>
@@ -98,9 +98,9 @@ export default function OrgNodeCard({
       className={`
         group w-full h-full bg-white rounded-xl border shadow-sm transition-all relative
         ${isDragging ? 'opacity-40 scale-95' : ''}
-        ${isDropTarget ? 'border-blue-500 ring-2 ring-blue-200 shadow-md' : isPeer ? 'border-slate-300 border-dashed' : 'border-gray-200'}
+        ${isDropTarget ? 'border-slate-500 ring-2 ring-slate-100 shadow-md' : isPeer ? 'border-slate-300 border-dashed' : 'border-gray-200'}
         ${dimmed ? 'opacity-30' : ''}
-        ${canEdit ? 'cursor-move hover:shadow-md hover:border-blue-300' : 'hover:shadow-md'}
+        ${canEdit ? 'cursor-move hover:shadow-md hover:border-slate-200' : 'hover:shadow-md'}
       `}
     >
       {isPeer && (
@@ -140,7 +140,7 @@ export default function OrgNodeCard({
             </div>
             <div className="mt-2 flex items-center justify-between gap-2">
               {node.department ? (
-                <span className="inline-block px-2 py-0.5 text-[10px] font-medium bg-blue-50 text-blue-700 rounded">
+                <span className="inline-block px-2 py-0.5 text-[10px] font-medium bg-slate-50 text-slate-700 rounded">
                   {node.department}
                 </span>
               ) : (
@@ -163,7 +163,7 @@ export default function OrgNodeCard({
         )}
         {node.warning && (
           <div
-            className="absolute -top-2 -right-2 bg-amber-500 text-white rounded-full p-1 shadow"
+            className="absolute -top-2 -right-2 bg-slate-500 text-white rounded-full p-1 shadow"
             title={node.warning}
           >
             <AlertTriangle className="w-3 h-3" />

@@ -63,13 +63,13 @@ export function ApplyForm({ requisitionId, jobTitle }: Props) {
 
   if (success) {
     return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-6">
+      <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-6">
         <div className="flex items-start gap-3">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+          <CheckCircle2 className="w-5 h-5 text-slate-700 flex-shrink-0 mt-0.5" />
           <div>
-            <p className="font-semibold text-emerald-900">Application received</p>
-            <p className="text-sm text-emerald-800 mt-1">{success}</p>
-            <p className="text-xs text-emerald-700 mt-3">
+            <p className="font-semibold text-slate-900">Application received</p>
+            <p className="text-sm text-slate-900 mt-1">{success}</p>
+            <p className="text-xs text-slate-700 mt-3">
               Role: <span className="font-medium">{jobTitle}</span>
             </p>
           </div>
@@ -141,7 +141,7 @@ export function ApplyForm({ requisitionId, jobTitle }: Props) {
           <select
             value={form.educationLevel}
             onChange={(e) => setForm({ ...form, educationLevel: e.target.value })}
-            className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-100"
           >
             <option value="">Select…</option>
             <option value="HIGH_SCHOOL">High School</option>
@@ -156,7 +156,7 @@ export function ApplyForm({ requisitionId, jobTitle }: Props) {
           <select
             value={form.workAuthorization}
             onChange={(e) => setForm({ ...form, workAuthorization: e.target.value })}
-            className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-200"
+            className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-slate-100"
           >
             <option value="">Select…</option>
             <option value="PK">Pakistan</option>
@@ -218,13 +218,13 @@ export function ApplyForm({ requisitionId, jobTitle }: Props) {
           onChange={(e) => setForm({ ...form, notes: e.target.value })}
           rows={3}
           maxLength={1000}
-          className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
+          className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-100"
           placeholder="Tell us why you'd be a strong fit. We read every line — generic copy-paste won't make it past the first filter."
         />
       </div>
 
       {error && (
-        <div className="flex items-start gap-2 text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded p-2.5">
+        <div className="flex items-start gap-2 text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2.5">
           <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
           <span>{error}</span>
         </div>

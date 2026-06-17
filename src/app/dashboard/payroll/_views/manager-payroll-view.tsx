@@ -106,14 +106,14 @@ export async function ManagerPayrollView({
                           <Badge variant="success">Paid</Badge>
                           <Link
                             href={`/dashboard/payroll/payslip/${myPayslip.id}`}
-                            className="text-xs px-3 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700"
+                            className="text-xs px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-700"
                           >
                             View / Print PDF
                           </Link>
                         </>
                       ) : (
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-medium">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-50 text-slate-900 border border-slate-100 text-xs font-medium">
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-500 animate-pulse" />
                           Releasing soon
                         </span>
                       )}
@@ -145,10 +145,10 @@ export async function ManagerPayrollView({
 
       {/* Team Attendance Summary — NO salary numbers */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Team Size" value={String(teamSize)} Icon={Users} color="bg-purple-50 text-purple-600" />
-        <KpiCard label="Total Days Present" value={String(totalPresent)} Icon={Calendar} color="bg-emerald-50 text-emerald-600" />
-        <KpiCard label="Total Leave Days" value={String(totalLeave)} Icon={Clock} color="bg-blue-50 text-blue-600" />
-        <KpiCard label="Total Absences" value={String(totalAbsent)} Icon={Calendar} color="bg-rose-50 text-rose-600" />
+        <KpiCard label="Team Size" value={String(teamSize)} Icon={Users} color="bg-slate-50 text-slate-700" />
+        <KpiCard label="Total Days Present" value={String(totalPresent)} Icon={Calendar} color="bg-slate-50 text-slate-700" />
+        <KpiCard label="Total Leave Days" value={String(totalLeave)} Icon={Clock} color="bg-slate-50 text-slate-700" />
+        <KpiCard label="Total Absences" value={String(totalAbsent)} Icon={Calendar} color="bg-slate-50 text-slate-700" />
       </div>
 
       <Card className="rounded-2xl">
@@ -178,7 +178,7 @@ export async function ManagerPayrollView({
                 <TableRow key={p.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs font-bold">
+                      <div className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold">
                         {getInitials(p.employee.fullName)}
                       </div>
                       <div>
@@ -226,7 +226,7 @@ function BreakdownRow({ label, value, negative }: { label: string; value: number
   return (
     <div className="rounded-xl bg-slate-50 px-3 py-2">
       <p className="text-xs text-slate-500">{label}</p>
-      <p className={`text-sm font-semibold mt-0.5 ${negative ? 'text-red-600' : 'text-slate-900'}`}>
+      <p className={`text-sm font-semibold mt-0.5 ${negative ? 'text-slate-700' : 'text-slate-900'}`}>
         {negative ? '−' : ''}{formatCurrency(value)}
       </p>
     </div>

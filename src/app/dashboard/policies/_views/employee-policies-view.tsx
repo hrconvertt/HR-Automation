@@ -33,11 +33,11 @@ const catLabels: Record<string, string> = {
   IT: 'IT', SECURITY: 'Security', COMPENSATION: 'Compensation', GENERAL: 'General',
 }
 const CAT_STRIPE: Record<string, string> = {
-  LEAVE:           'border-blue-500',
-  CODE_OF_CONDUCT: 'border-purple-500',
-  IT:              'border-cyan-500',
-  SECURITY:        'border-rose-500',
-  COMPENSATION:    'border-emerald-500',
+  LEAVE:           'border-slate-500',
+  CODE_OF_CONDUCT: 'border-slate-500',
+  IT:              'border-slate-500',
+  SECURITY:        'border-slate-500',
+  COMPENSATION:    'border-slate-500',
   GENERAL:         'border-slate-400',
 }
 
@@ -85,7 +85,7 @@ export default function EmployeePoliciesView() {
               key={c}
               onClick={() => setCategory(c)}
               className={`px-3 py-1 rounded-full text-xs font-medium ${
-                category === c ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                category === c ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
               }`}
             >
               {catLabels[c]}
@@ -112,7 +112,7 @@ export default function EmployeePoliciesView() {
                 <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full border-l-4 ${catStripe}`}>
                   <CardContent className="p-4 space-y-2">
                     <div className="flex-1 min-w-0">
-                      <p className="font-semibold text-slate-900 group-hover:text-blue-600 truncate">{p.title}</p>
+                      <p className="font-semibold text-slate-900 group-hover:text-slate-700 truncate">{p.title}</p>
                       <p className="text-[11px] text-slate-500 mt-0.5 uppercase tracking-wider font-medium">
                         {catLabels[p.category] ?? p.category} · v{p.version}
                       </p>

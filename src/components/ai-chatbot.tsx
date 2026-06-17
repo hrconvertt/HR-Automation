@@ -74,7 +74,7 @@ export default function AIChatbot() {
       {/* Floating button */}
       <button
         onClick={() => setOpen((o) => !o)}
-        className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105"
+        className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-slate-700 hover:bg-slate-700 text-white rounded-full shadow-lg flex items-center justify-center transition-all hover:scale-105"
         title="HR Assistant"
       >
         {open ? <X className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
@@ -84,13 +84,13 @@ export default function AIChatbot() {
       {open && (
         <div className="fixed bottom-20 right-6 z-50 w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-gray-200 flex flex-col overflow-hidden" style={{ maxHeight: '70vh' }}>
           {/* Header */}
-          <div className="bg-blue-600 text-white px-4 py-3 flex items-center gap-3">
+          <div className="bg-slate-700 text-white px-4 py-3 flex items-center gap-3">
             <div className="w-8 h-8 bg-white/20 rounded-full flex items-center justify-center">
               <Bot className="w-4 h-4" />
             </div>
             <div>
               <p className="font-semibold text-sm">HR Assistant</p>
-              <p className="text-xs text-blue-100">Powered by AI</p>
+              <p className="text-xs text-slate-100">Powered by AI</p>
             </div>
           </div>
 
@@ -101,7 +101,7 @@ export default function AIChatbot() {
                 <div
                   className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
                     msg.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-br-sm'
+                      ? 'bg-slate-700 text-white rounded-br-sm'
                       : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm shadow-sm'
                   }`}
                 >
@@ -125,7 +125,7 @@ export default function AIChatbot() {
                   <button
                     key={s}
                     onClick={() => handleSend(s)}
-                    className="text-xs bg-white border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors"
+                    className="text-xs bg-white border border-gray-200 rounded-full px-3 py-1.5 text-gray-600 hover:bg-slate-50 hover:border-slate-200 hover:text-slate-700 transition-colors"
                   >
                     {s}
                   </button>
@@ -146,13 +146,13 @@ export default function AIChatbot() {
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={(e) => { if (e.key === 'Enter') handleSend() }}
                 placeholder="Ask about leave, payroll, policies…"
-                className="flex-1 text-sm border border-gray-200 rounded-full px-4 py-2 outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+                className="flex-1 text-sm border border-gray-200 rounded-full px-4 py-2 outline-none focus:border-slate-300 focus:ring-2 focus:ring-slate-100"
                 disabled={loading}
               />
               <button
                 onClick={() => handleSend()}
                 disabled={!input.trim() || loading}
-                className="w-8 h-8 bg-blue-600 hover:bg-blue-700 disabled:opacity-40 text-white rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                className="w-8 h-8 bg-slate-700 hover:bg-slate-700 disabled:opacity-40 text-white rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
               >
                 <Send className="w-3.5 h-3.5" />
               </button>

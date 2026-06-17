@@ -154,7 +154,7 @@ export function AttendanceGridShell({ role, departments }: ShellProps) {
         <div className="flex items-center gap-2">
           <Link
             href="/dashboard/time?tab=leave"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 rounded-md transition"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 hover:bg-slate-100 rounded-md transition"
           >
             Apply for leave <ArrowRight className="w-3.5 h-3.5" />
           </Link>
@@ -224,7 +224,7 @@ export function AttendanceGridShell({ role, departments }: ShellProps) {
       </div>
 
       {error && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 text-sm rounded-md px-3 py-2">
+        <div className="bg-slate-50 border border-slate-100 text-slate-900 text-sm rounded-md px-3 py-2">
           {error}
         </div>
       )}
@@ -235,8 +235,8 @@ export function AttendanceGridShell({ role, departments }: ShellProps) {
 
       {/* HR-only edit hint */}
       {view === 'grid' && role === 'HR_ADMIN' && (
-        <div className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800 flex items-center gap-2">
-          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-blue-600 text-white font-semibold text-[10px]">HR</span>
+        <div className="rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-900 flex items-center gap-2">
+          <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-slate-700 text-white font-semibold text-[10px]">HR</span>
           Click any cell to edit attendance. Only HR can edit. All edits are logged.
         </div>
       )}
@@ -325,7 +325,7 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                   key={d.day}
                   className={`border-b border-slate-200 px-1 py-1 text-center font-medium text-slate-600 ${
                     d.isWeekend ? 'bg-slate-100/70 text-slate-400' : ''
-                  } ${d.isToday ? 'bg-blue-50 text-blue-700' : ''}`}
+                  } ${d.isToday ? 'bg-slate-50 text-slate-700' : ''}`}
                 >
                   <div className="leading-tight">
                     <div className="text-[10px] uppercase">{d.dowLabel}</div>
@@ -333,10 +333,10 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                   </div>
                 </th>
               ))}
-              <th className="border-b border-l border-slate-200 px-2 py-1 text-center font-semibold text-emerald-700 bg-emerald-50/40">P</th>
-              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-rose-700 bg-rose-50/40">L</th>
-              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-sky-700 bg-sky-50/40">WFH</th>
-              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-amber-700 bg-amber-50/40">HD</th>
+              <th className="border-b border-l border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-50/40">P</th>
+              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-50/40">L</th>
+              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-50/40">WFH</th>
+              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-50/40">HD</th>
             </tr>
           </thead>
           <tbody>
@@ -350,14 +350,14 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
             {data.employees.map((emp) => (
               <tr
                 key={emp.id}
-                className="hover:bg-blue-50/40 transition group"
+                className="hover:bg-slate-50/40 transition group"
               >
                 <td
                   onClick={() => onRowClick(emp.id)}
-                  className="sticky left-0 z-10 bg-white group-hover:bg-blue-50/40 border-b border-r border-slate-200 px-3 py-1.5 cursor-pointer"
+                  className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/40 border-b border-r border-slate-200 px-3 py-1.5 cursor-pointer"
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                       {getInitials(emp.fullName)}
                     </div>
                     <div className="min-w-0">
@@ -384,8 +384,8 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                         : undefined}
                       className={`border-b border-slate-100 p-0.5 text-center ${
                         d.isWeekend ? 'bg-slate-50/40' : ''
-                      } ${isEditable ? 'cursor-pointer hover:ring-1 hover:ring-blue-300 hover:bg-blue-50/60' : ''} ${
-                        flashing ? 'bg-amber-100 transition-colors' : ''
+                      } ${isEditable ? 'cursor-pointer hover:ring-1 hover:ring-slate-200 hover:bg-slate-50/60' : ''} ${
+                        flashing ? 'bg-slate-100 transition-colors' : ''
                       }`}
                       title={isEditable ? 'Click to edit (HR only)' : undefined}
                     >
@@ -393,10 +393,10 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                     </td>
                   )
                 })}
-                <td className="border-b border-l border-slate-200 px-2 py-1.5 text-center font-semibold text-emerald-700">{emp.totals.present}</td>
-                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-rose-700">{emp.totals.leave}</td>
-                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-sky-700">{emp.totals.wfh}</td>
-                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-amber-700">{emp.totals.hd}</td>
+                <td className="border-b border-l border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">{emp.totals.present}</td>
+                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">{emp.totals.leave}</td>
+                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">{emp.totals.wfh}</td>
+                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">{emp.totals.hd}</td>
               </tr>
             ))}
           </tbody>
@@ -532,7 +532,7 @@ function CellEditPopover({
         />
 
         {err && (
-          <div className="mt-3 bg-rose-50 border border-rose-200 text-rose-800 text-xs rounded-md px-2 py-1.5">
+          <div className="mt-3 bg-slate-50 border border-slate-100 text-slate-900 text-xs rounded-md px-2 py-1.5">
             {err}
           </div>
         )}
@@ -547,7 +547,7 @@ function CellEditPopover({
           <button
             onClick={save}
             disabled={saving}
-            className="px-3 py-1.5 text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 disabled:opacity-50 rounded-md"
+            className="px-3 py-1.5 text-xs font-medium text-white bg-slate-700 hover:bg-slate-700 disabled:opacity-50 rounded-md"
           >
             {saving ? 'Saving…' : 'Save'}
           </button>
@@ -580,10 +580,10 @@ function SummaryTable({ data, onRowClick }: { data: SummaryResponse; onRowClick:
               </tr>
             )}
             {data.employees.map((emp) => (
-              <tr key={emp.id} onClick={() => onRowClick(emp.id)} className="hover:bg-blue-50/40 cursor-pointer border-b border-slate-100">
+              <tr key={emp.id} onClick={() => onRowClick(emp.id)} className="hover:bg-slate-50/40 cursor-pointer border-b border-slate-100">
                 <td className="px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                    <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
                       {getInitials(emp.fullName)}
                     </div>
                     <div className="min-w-0">
@@ -596,12 +596,12 @@ function SummaryTable({ data, onRowClick }: { data: SummaryResponse; onRowClick:
                   <td key={m.key} className="px-2 py-2 text-center">
                     <div className="inline-flex flex-col items-center text-[10px] leading-tight">
                       <span>
-                        <span className="text-emerald-700 font-semibold">P:{m.present}</span>{' '}
-                        <span className="text-rose-700">L:{m.leave}</span>
+                        <span className="text-slate-700 font-semibold">P:{m.present}</span>{' '}
+                        <span className="text-slate-700">L:{m.leave}</span>
                       </span>
                       <span className="text-slate-500">
-                        <span className="text-sky-700">WFH:{m.wfh}</span>{' '}
-                        <span className="text-amber-700">HD:{m.hd}</span>
+                        <span className="text-slate-700">WFH:{m.wfh}</span>{' '}
+                        <span className="text-slate-700">HD:{m.hd}</span>
                       </span>
                     </div>
                   </td>
@@ -609,12 +609,12 @@ function SummaryTable({ data, onRowClick }: { data: SummaryResponse; onRowClick:
                 <td className="px-3 py-2 text-center bg-slate-50/50 font-semibold">
                   <div className="text-[10px] leading-tight">
                     <div>
-                      <span className="text-emerald-700">P:{emp.ytd.present}</span>{' '}
-                      <span className="text-rose-700">L:{emp.ytd.leave}</span>
+                      <span className="text-slate-700">P:{emp.ytd.present}</span>{' '}
+                      <span className="text-slate-700">L:{emp.ytd.leave}</span>
                     </div>
                     <div>
-                      <span className="text-sky-700">WFH:{emp.ytd.wfh}</span>{' '}
-                      <span className="text-amber-700">HD:{emp.ytd.hd}</span>
+                      <span className="text-slate-700">WFH:{emp.ytd.wfh}</span>{' '}
+                      <span className="text-slate-700">HD:{emp.ytd.hd}</span>
                     </div>
                   </div>
                 </td>

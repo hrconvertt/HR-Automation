@@ -21,8 +21,8 @@ export default async function EmailTemplatesPage() {
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })
   if (!me || me.role !== 'HR_ADMIN') {
     return (
-      <div className="p-6 bg-red-50 border border-red-200 rounded-xl">
-        <p className="font-semibold text-red-700">HR only</p>
+      <div className="p-6 bg-slate-50 border border-slate-100 rounded-xl">
+        <p className="font-semibold text-slate-700">HR only</p>
       </div>
     )
   }

@@ -21,7 +21,7 @@ function Avatar({ src, name, className, size = 'md' }: AvatarProps) {
   return (
     <RadixAvatar.Root
       className={cn(
-        'relative flex flex-shrink-0 overflow-hidden rounded-full bg-blue-600',
+        'relative flex flex-shrink-0 overflow-hidden rounded-full bg-slate-700',
         sizeClasses[size],
         className
       )}

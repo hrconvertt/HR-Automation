@@ -41,10 +41,10 @@ export async function PoliciesPendingReview() {
   if (pending.length === 0) return null
 
   return (
-    <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
+    <div className="rounded-xl border border-slate-100 bg-slate-50/60 p-4">
       <div className="flex items-center gap-2 mb-3">
-        <ClipboardCheck className="w-4 h-4 text-amber-700" />
-        <p className="text-sm font-semibold text-amber-900">
+        <ClipboardCheck className="w-4 h-4 text-slate-700" />
+        <p className="text-sm font-semibold text-slate-900">
           Policies awaiting your review · {pending.length}
         </p>
       </div>
@@ -53,7 +53,7 @@ export async function PoliciesPendingReview() {
           <li key={r.id}>
             <Link
               href={`/dashboard/policies/${r.policy.id}`}
-              className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white border border-amber-100 hover:border-amber-300 transition"
+              className="flex items-center justify-between gap-3 px-3 py-2 rounded-lg bg-white border border-slate-100 hover:border-slate-200 transition"
             >
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900 truncate">{r.policy.title}</p>
@@ -64,7 +64,7 @@ export async function PoliciesPendingReview() {
                     : 'awaiting your decision'}
                 </p>
               </div>
-              <ArrowRight className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <ArrowRight className="w-4 h-4 text-slate-700 flex-shrink-0" />
             </Link>
           </li>
         ))}

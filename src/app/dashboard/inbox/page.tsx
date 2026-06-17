@@ -53,7 +53,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
           <Link
             key={f.k}
             href={`/dashboard/inbox?filter=${f.k}`}
-            className={`px-3 py-1 rounded-full text-xs font-medium border ${filter === f.k ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+            className={`px-3 py-1 rounded-full text-xs font-medium border ${filter === f.k ? 'bg-slate-50 border-slate-100 text-slate-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
           >
             {f.l}
           </Link>
@@ -64,8 +64,8 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         {items.length === 0 ? (
           <p className="p-8 text-center text-slate-400 text-sm">No notifications.</p>
         ) : items.map((n) => (
-          <div key={n.id} className={`p-4 flex items-start gap-3 ${n.isRead ? '' : 'bg-blue-50/30'}`}>
-            <div className={`w-2 h-2 rounded-full mt-2 ${n.isRead ? 'bg-slate-300' : 'bg-blue-500'}`} />
+          <div key={n.id} className={`p-4 flex items-start gap-3 ${n.isRead ? '' : 'bg-slate-50/30'}`}>
+            <div className={`w-2 h-2 rounded-full mt-2 ${n.isRead ? 'bg-slate-300' : 'bg-slate-500'}`} />
             <div className="flex-1 min-w-0">
               <div className="flex items-baseline justify-between gap-2">
                 <p className="text-sm font-medium text-slate-900">{n.title}</p>
@@ -73,7 +73,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               </div>
               <p className="text-sm text-slate-600 mt-0.5">{n.message}</p>
               {n.link && (
-                <Link href={n.link} className="text-xs text-blue-600 hover:underline mt-1 inline-block">
+                <Link href={n.link} className="text-xs text-slate-700 hover:underline mt-1 inline-block">
                   View →
                 </Link>
               )}

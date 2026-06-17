@@ -129,9 +129,9 @@ export function CultureNotificationsClient({ initial }: Props) {
 
       {/* Save */}
       <div className="flex items-center justify-end gap-3 pt-2">
-        {error && <span className="text-sm text-red-600">{error}</span>}
+        {error && <span className="text-sm text-slate-700">{error}</span>}
         {saved && (
-          <span className="text-sm text-emerald-700 inline-flex items-center gap-1">
+          <span className="text-sm text-slate-700 inline-flex items-center gap-1">
             <Check className="w-4 h-4" /> Saved
           </span>
         )}

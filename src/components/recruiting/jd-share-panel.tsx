@@ -108,11 +108,11 @@ export function JdSharePanel({ requisitionId, title }: Props) {
   }
 
   return (
-    <div className="rounded-xl border border-emerald-200 bg-gradient-to-br from-emerald-50/60 to-emerald-50/20 p-4 space-y-3">
+    <div className="rounded-xl border border-slate-100 bg-gradient-to-br from-slate-50/60 to-slate-50/20 p-4 space-y-3">
       <div>
-        <p className="text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">Published — distribute it</p>
-        <p className="text-xs text-emerald-900 mt-0.5">
-          Live at <a href={url || '#'} target="_blank" rel="noreferrer" className="font-mono text-emerald-700 hover:underline">{url || 'loading…'}</a>
+        <p className="text-[11px] font-semibold text-slate-700 uppercase tracking-wider">Published — distribute it</p>
+        <p className="text-xs text-slate-900 mt-0.5">
+          Live at <a href={url || '#'} target="_blank" rel="noreferrer" className="font-mono text-slate-700 hover:underline">{url || 'loading…'}</a>
         </p>
       </div>
 
@@ -147,19 +147,19 @@ export function JdSharePanel({ requisitionId, title }: Props) {
               disabled={!url}
               className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md bg-white border border-slate-300 text-slate-700 hover:bg-slate-50"
             >
-              {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+              {copied ? <Check className="w-3.5 h-3.5 text-slate-700" /> : <Copy className="w-3.5 h-3.5" />}
               {copied ? 'Copied' : 'Copy link'}
             </button>
             <a
               href={url || '#'}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-blue-600 hover:bg-blue-50 ml-auto"
+              className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md text-slate-700 hover:bg-slate-50 ml-auto"
             >
               Preview public page <ExternalLink className="w-3 h-3" />
             </a>
           </div>
-          <p className="text-[11px] text-emerald-700/80 leading-relaxed">
+          <p className="text-[11px] text-slate-700/80 leading-relaxed">
             These open each platform&apos;s compose window with the link pre-filled — click Post / Send.
             For real LinkedIn/Indeed auto-posting we&apos;d need their paid Talent Solutions API.
           </p>
@@ -178,14 +178,14 @@ export function JdSharePanel({ requisitionId, title }: Props) {
                   onClick={() => copySnippet(s.code, s.label)}
                   className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex-shrink-0"
                 >
-                  {snippetCopied === s.label ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                  {snippetCopied === s.label ? <Check className="w-3 h-3 text-slate-700" /> : <Copy className="w-3 h-3" />}
                   {snippetCopied === s.label ? 'Copied' : 'Copy'}
                 </button>
               </div>
               <pre className="text-[10.5px] font-mono text-slate-700 bg-slate-50 border border-slate-100 rounded px-2 py-1.5 overflow-x-auto whitespace-pre-wrap break-all">{s.code}</pre>
             </div>
           ))}
-          <p className="text-[11px] text-emerald-700/80 leading-relaxed">
+          <p className="text-[11px] text-slate-700/80 leading-relaxed">
             Paste the iframe into Webflow / WordPress / Framer. The JSON API and RSS feed are CORS-open and cached for 1 minute so your site stays fast.
           </p>
         </div>

@@ -285,11 +285,11 @@ export function HRPayrollView() {
 
       {/* Send-back banner */}
       {payrollRun?.sendBackReason && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
-          <Undo2 className="w-4 h-4 text-amber-600 mt-0.5" />
+        <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 flex items-start gap-3">
+          <Undo2 className="w-4 h-4 text-slate-700 mt-0.5" />
           <div className="text-sm">
-            <p className="font-semibold text-amber-900">Last sent back:</p>
-            <p className="text-amber-800">{payrollRun.sendBackReason}</p>
+            <p className="font-semibold text-slate-900">Last sent back:</p>
+            <p className="text-slate-900">{payrollRun.sendBackReason}</p>
           </div>
         </div>
       )}
@@ -301,14 +301,14 @@ export function HRPayrollView() {
             <select
               value={month}
               onChange={(e) => setMonth(Number(e.target.value))}
-              className="h-10 px-3 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="h-10 px-3 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-700"
             >
               {months.map((m, i) => <option key={i} value={i + 1}>{m}</option>)}
             </select>
             <select
               value={year}
               onChange={(e) => setYear(Number(e.target.value))}
-              className="h-10 px-3 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="h-10 px-3 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-700"
             >
               {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
@@ -333,7 +333,7 @@ export function HRPayrollView() {
                     `Submit ${months[month - 1]} ${year} payroll for CEO review?`,
                   )}
                   disabled={busy}
-                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  className="bg-slate-700 hover:bg-slate-700 text-white"
                 >
                   <Send className="w-4 h-4 mr-1.5" /> Submit to CEO
                 </Button>
@@ -351,7 +351,7 @@ export function HRPayrollView() {
                   `Final approval and release to Finance for ${months[month - 1]} ${year}?`,
                 )}
                 disabled={busy}
-                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="bg-slate-700 hover:bg-slate-700 text-white"
               >
                 <FileCheck className="w-4 h-4 mr-1.5" /> Approve &amp; Release to Finance
               </Button>
@@ -369,7 +369,7 @@ export function HRPayrollView() {
                       `Mark ${months[month - 1]} ${year} payroll as PAID? Employees will see their payslips.`,
                     )}
                     disabled={busy}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                    className="bg-slate-700 hover:bg-slate-700 text-white"
                   >
                     <BadgeCheck className="w-4 h-4 mr-1.5" /> Mark as Paid
                   </Button>
@@ -402,7 +402,7 @@ export function HRPayrollView() {
                 onClick={() => setSendBackOpen(true)}
                 disabled={busy}
                 variant="outline"
-                className="text-amber-700 border-amber-300 hover:bg-amber-50"
+                className="text-slate-700 border-slate-200 hover:bg-slate-50"
               >
                 <Undo2 className="w-4 h-4 mr-1.5" /> Send Back
               </Button>
@@ -423,11 +423,11 @@ export function HRPayrollView() {
               value={sendBackReason}
               onChange={(e) => setSendBackReason(e.target.value)}
               placeholder="Why are you sending this back?"
-              className="w-full min-h-[100px] px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="w-full min-h-[100px] px-3 py-2 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
             />
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => { setSendBackOpen(false); setSendBackReason('') }}>Cancel</Button>
-              <Button onClick={handleSendBack} className="bg-amber-600 hover:bg-amber-700 text-white">
+              <Button onClick={handleSendBack} className="bg-slate-700 hover:bg-slate-700 text-white">
                 <Undo2 className="w-4 h-4 mr-1.5" /> Send Back
               </Button>
             </div>
@@ -440,7 +440,7 @@ export function HRPayrollView() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !genBusy && setGenDocsOpen(false)}>
           <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-              <FileText className="w-5 h-5 text-blue-600" /> Generate Payslip PDFs
+              <FileText className="w-5 h-5 text-slate-700" /> Generate Payslip PDFs
             </h3>
             <p className="text-sm text-slate-600">
               Creates one document per employee on this run, attached to their profile. Idempotent — runs again won&apos;t duplicate.
@@ -475,7 +475,7 @@ export function HRPayrollView() {
               <Button
                 onClick={handleGeneratePayslipDocs}
                 disabled={genBusy}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
+                className="bg-slate-700 hover:bg-slate-700 text-white"
               >
                 {genBusy ? 'Generating…' : 'Generate'}
               </Button>
@@ -491,13 +491,13 @@ export function HRPayrollView() {
             <div className="flex items-center gap-2">
               {anomalies.anomalies.length === 0 ? (
                 <>
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <p className="text-sm font-semibold text-emerald-700">All clear — no anomalies vs last month.</p>
+                  <CheckCircle2 className="w-4 h-4 text-slate-700" />
+                  <p className="text-sm font-semibold text-slate-700">All clear — no anomalies vs last month.</p>
                 </>
               ) : (
                 <>
-                  <AlertTriangle className="w-4 h-4 text-amber-600" />
-                  <p className="text-sm font-semibold text-amber-800">
+                  <AlertTriangle className="w-4 h-4 text-slate-700" />
+                  <p className="text-sm font-semibold text-slate-900">
                     {anomalies.anomalies.length} item{anomalies.anomalies.length > 1 ? 's' : ''} need{anomalies.anomalies.length === 1 ? 's' : ''} a quick look
                   </p>
                 </>
@@ -524,7 +524,7 @@ export function HRPayrollView() {
                       </div>
                       <p className="text-xs text-slate-600 mt-0.5">{a.summary}</p>
                     </div>
-                    <a href={`/dashboard/payroll/payslip/${a.payslipId}`} className="text-xs text-blue-600 hover:underline shrink-0">View payslip →</a>
+                    <a href={`/dashboard/payroll/payslip/${a.payslipId}`} className="text-xs text-slate-700 hover:underline shrink-0">View payslip →</a>
                   </li>
                 )
               })}
@@ -536,10 +536,10 @@ export function HRPayrollView() {
       {/* KPI row */}
       {payrollRun && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <KpiCard label="Total Gross" value={formatCurrency(payrollRun.totalGross)} Icon={Wallet} color="bg-blue-50 text-blue-600" />
-          <KpiCard label="Total Net" value={formatCurrency(payrollRun.totalNet)} Icon={Banknote} color="bg-emerald-50 text-emerald-600" />
-          <KpiCard label="Total EOBI" value={formatCurrency(payrollRun.totalEOBI ?? 0)} Icon={ShieldCheck} color="bg-purple-50 text-purple-600" />
-          <KpiCard label="Total Income Tax" value={formatCurrency(payrollRun.totalTax ?? 0)} Icon={Landmark} color="bg-amber-50 text-amber-600" />
+          <KpiCard label="Total Gross" value={formatCurrency(payrollRun.totalGross)} Icon={Wallet} color="bg-slate-50 text-slate-700" />
+          <KpiCard label="Total Net" value={formatCurrency(payrollRun.totalNet)} Icon={Banknote} color="bg-slate-50 text-slate-700" />
+          <KpiCard label="Total EOBI" value={formatCurrency(payrollRun.totalEOBI ?? 0)} Icon={ShieldCheck} color="bg-slate-50 text-slate-700" />
+          <KpiCard label="Total Income Tax" value={formatCurrency(payrollRun.totalTax ?? 0)} Icon={Landmark} color="bg-slate-50 text-slate-700" />
         </div>
       )}
 
@@ -643,7 +643,7 @@ export function HRPayrollView() {
                       {p.isAdjusted && (
                         <span
                           title={p.adjustmentNote ?? 'Manually adjusted'}
-                          className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-100"
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-50 text-slate-700 border border-slate-100"
                         >
                           <Pencil className="w-2.5 h-2.5" /> Adjusted
                         </span>
@@ -678,7 +678,7 @@ export function HRPayrollView() {
                             grossSalary: p.grossSalary, netSalary: p.netSalary,
                             isAdjusted: p.isAdjusted, adjustmentNote: p.adjustmentNote,
                           })}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                           title="Adjust payslip"
                         >
                           <Pencil className="w-3.5 h-3.5" />
@@ -686,7 +686,7 @@ export function HRPayrollView() {
                       )}
                       <a
                         href={`/dashboard/payroll/payslip/${p.id}`}
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
+                        className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                         title="View payslip"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -709,7 +709,7 @@ export function HRPayrollView() {
           <ol className="px-5 pb-5 space-y-3">
             {payrollRun.approvals.map((a) => (
               <li key={a.id} className="flex items-start gap-3 text-sm">
-                <span className="mt-0.5 w-2 h-2 rounded-full bg-blue-500 shrink-0" />
+                <span className="mt-0.5 w-2 h-2 rounded-full bg-slate-500 shrink-0" />
                 <div className="flex-1">
                   <p className="text-slate-900">
                     <span className="font-semibold">{ACTION_LABEL[a.action] ?? a.action}</span>
@@ -758,9 +758,9 @@ function StagePipeline({ status, run }: { status: string; run: PayrollRun }) {
             const isDone = i < currentIdx || status === 'PAID'
             const isCurrent = i === currentIdx && status !== 'PAID'
             const dotClass = isDone
-              ? 'bg-emerald-500 text-white'
+              ? 'bg-slate-500 text-white'
               : isCurrent
-                ? 'bg-blue-500 text-white ring-4 ring-blue-100 animate-pulse'
+                ? 'bg-slate-500 text-white ring-4 ring-slate-100 animate-pulse'
                 : 'bg-slate-200 text-slate-500'
             const labelClass = isDone || isCurrent ? 'text-slate-900 font-semibold' : 'text-slate-400'
             return (
@@ -777,7 +777,7 @@ function StagePipeline({ status, run }: { status: string; run: PayrollRun }) {
                   </p>
                 </div>
                 {i < PAYROLL_STAGES.length - 1 && (
-                  <div className={`flex-1 h-0.5 ${i < currentIdx ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                  <div className={`flex-1 h-0.5 ${i < currentIdx ? 'bg-slate-300' : 'bg-slate-200'}`} />
                 )}
               </div>
             )

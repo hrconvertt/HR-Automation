@@ -1,42 +1,108 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { getTeamEmployeeIds } from '@/lib/team-scope'
 
 // Aggregate "Milestones & Moves" feed for the Active phase tab.
 // Birthdays + anniversaries this month, probation ends within 30 days,
 // last-90-day promotions/manager-changes, and tenure buckets.
+//
+// Scoping:
+//   HR_ADMIN / EXECUTIVE → all employees
+//   MANAGER / LEAD       → recursive team (all descendants in reporting tree)
+//   EMPLOYEE             → self only
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
   const payload = token ? verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const user = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { role: true, employee: { select: { id: true } } },
+  })
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const previewRole = user.role === 'HR_ADMIN' ? request.cookies.get('hr_preview_role')?.value : undefined
+  const effectiveRole = previewRole ?? user.role
+  const meId = user.employee?.id ?? null
+
+  // Resolve the set of employee IDs this caller can see. `null` means "no filter" (HR/Exec).
+  let scopeIds: string[] | null = null
+  if (effectiveRole === 'HR_ADMIN' || effectiveRole === 'EXECUTIVE') {
+    scopeIds = null
+  } else if ((effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') && meId) {
+    scopeIds = await getTeamEmployeeIds(meId, { includeSelf: false })
+    if (scopeIds.length === 0) {
+      // No reports — still allow self in the feed? No: a manager with no reports has an empty team feed.
+      return NextResponse.json({
+        birthdays: [], anniversaries: [], probationEnding: [],
+        promotions: [], managerChanges: [], deptTransfers: [],
+        tenure: { lt6: 0, m6to2y: 0, y2to5: 0, y5plus: 0 },
+      })
+    }
+  } else if (effectiveRole === 'EMPLOYEE' && meId) {
+    scopeIds = [meId]
+  } else {
+    // Unknown role or missing employee linkage — empty payload.
+    return NextResponse.json({
+      birthdays: [], anniversaries: [], probationEnding: [],
+      promotions: [], managerChanges: [], deptTransfers: [],
+      tenure: { lt6: 0, m6to2y: 0, y2to5: 0, y5plus: 0 },
+    })
+  }
 
   const now = new Date()
   const thisMonth = now.getMonth()
   const in30 = new Date(now); in30.setDate(in30.getDate() + 30)
   const last90 = new Date(now); last90.setDate(last90.getDate() - 90)
 
+  const empFilter = scopeIds ? { id: { in: scopeIds } } : {}
+  const empIdFilter = scopeIds ? { employeeId: { in: scopeIds } } : {}
+
   const [active, probations, promotions, managerChanges] = await Promise.all([
     prisma.employee.findMany({
-      where: { status: 'ACTIVE' },
+      where: { status: 'ACTIVE', ...empFilter },
       select: {
         id: true, fullName: true, dob: true, joiningDate: true, hideBirthday: true, hideAnniversary: true,
         departmentId: true,
+        position: { select: { level: true } },
         reportingManager: { select: { fullName: true } },
       },
     }),
     prisma.probationRecord.findMany({
-      where: { status: 'ACTIVE', endDate: { gte: now, lte: in30 } },
-      include: { employee: { select: { id: true, fullName: true } } },
+      where: { status: 'ACTIVE', endDate: { gte: now, lte: in30 }, ...empIdFilter },
+      include: {
+        employee: {
+          select: {
+            id: true, fullName: true,
+            position: { select: { level: true } },
+          },
+        },
+      },
       orderBy: { endDate: 'asc' },
     }),
     prisma.promotionRequest.findMany({
-      where: { status: 'APPROVED', effectiveDate: { gte: last90 } },
-      include: { employee: { select: { id: true, fullName: true, departmentId: true } } },
+      where: { status: 'APPROVED', effectiveDate: { gte: last90 }, ...empIdFilter },
+      include: {
+        employee: {
+          select: {
+            id: true, fullName: true, departmentId: true,
+            position: { select: { level: true } },
+          },
+        },
+      },
       orderBy: { effectiveDate: 'desc' },
     }),
     prisma.managerHistory.findMany({
-      where: { changedAt: { gte: last90 } },
-      include: { employee: { select: { id: true, fullName: true } } },
+      where: { changedAt: { gte: last90 }, ...empIdFilter },
+      include: {
+        employee: {
+          select: {
+            id: true, fullName: true,
+            position: { select: { level: true } },
+          },
+        },
+      },
       orderBy: { changedAt: 'desc' },
     }),
   ])
@@ -57,6 +123,7 @@ export async function GET(request: NextRequest) {
       fullName: e.fullName,
       date: new Date(now.getFullYear(), new Date(e.dob!).getMonth(), new Date(e.dob!).getDate()).toISOString(),
       manager: e.reportingManager?.fullName ?? null,
+      level: e.position?.level ?? null,
     }))
     .sort((a, b) => a.date.localeCompare(b.date))
 
@@ -72,6 +139,7 @@ export async function GET(request: NextRequest) {
         date: new Date(now.getFullYear(), jd.getMonth(), jd.getDate()).toISOString(),
         years,
         milestone,
+        level: e.position?.level ?? null,
       }
     })
     .sort((a, b) => a.date.localeCompare(b.date))
@@ -81,6 +149,7 @@ export async function GET(request: NextRequest) {
     fullName: p.employee.fullName,
     daysLeft: Math.ceil((p.endDate.getTime() - now.getTime()) / 86_400_000),
     endDate: p.endDate.toISOString(),
+    level: p.employee.position?.level ?? null,
   }))
 
   const promotionsList = promotions.map((p) => ({
@@ -88,6 +157,7 @@ export async function GET(request: NextRequest) {
     employee: p.employee.fullName,
     newDesignation: p.newDesignation,
     effectiveDate: p.effectiveDate.toISOString(),
+    level: p.employee.position?.level ?? null,
   }))
 
   const managerChangesList = managerChanges.map((m) => ({
@@ -96,10 +166,10 @@ export async function GET(request: NextRequest) {
     oldManager: managerName(m.oldManagerId),
     newManager: managerName(m.newManagerId),
     changedAt: m.changedAt.toISOString(),
+    level: m.employee.position?.level ?? null,
   }))
 
   // Department transfers — pulled from promotionRequest with newDepartmentId differing from old.
-  // The schema doesn't have a dedicated DepartmentHistory; we proxy via promotion requests.
   const deptIds = Array.from(new Set(promotions.map((p) => p.newDepartmentId).filter(Boolean) as string[]))
   const deptMap = deptIds.length
     ? Object.fromEntries((await prisma.department.findMany({ where: { id: { in: deptIds } }, select: { id: true, name: true } })).map((d) => [d.id, d.name]))
@@ -112,6 +182,7 @@ export async function GET(request: NextRequest) {
       from: null as string | null,
       to: p.newDepartmentId ? (deptMap[p.newDepartmentId] ?? null) : null,
       at: p.effectiveDate.toISOString(),
+      level: p.employee.position?.level ?? null,
     }))
 
   // Tenure buckets

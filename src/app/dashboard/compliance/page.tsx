@@ -20,10 +20,10 @@ interface ComplianceReport {
 }
 
 const COMPLIANCE_TYPES = [
-  { type: 'EOBI', label: 'EOBI', desc: 'Employees Old-Age Benefits Institution', color: 'text-blue-600', bg: 'bg-blue-50' },
-  { type: 'FBR_WITHHOLDING', label: 'FBR Withholding', desc: 'Federal Board of Revenue Tax', color: 'text-green-600', bg: 'bg-green-50' },
-  { type: 'PSEB', label: 'PSEB', desc: 'Pakistan Software Export Board', color: 'text-purple-600', bg: 'bg-purple-50' },
-  { type: 'SOCIAL_SECURITY', label: 'Social Security', desc: 'Provincial Social Security Contributions', color: 'text-amber-600', bg: 'bg-amber-50' },
+  { type: 'EOBI', label: 'EOBI', desc: 'Employees Old-Age Benefits Institution', color: 'text-slate-700', bg: 'bg-slate-50' },
+  { type: 'FBR_WITHHOLDING', label: 'FBR Withholding', desc: 'Federal Board of Revenue Tax', color: 'text-slate-700', bg: 'bg-slate-50' },
+  { type: 'PSEB', label: 'PSEB', desc: 'Pakistan Software Export Board', color: 'text-slate-700', bg: 'bg-slate-50' },
+  { type: 'SOCIAL_SECURITY', label: 'Social Security', desc: 'Provincial Social Security Contributions', color: 'text-slate-700', bg: 'bg-slate-50' },
 ]
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']

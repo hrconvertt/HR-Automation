@@ -44,7 +44,7 @@ export default function LoginPage() {
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col justify-between p-12">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">C</span>
             </div>
             <span className="text-white text-xl font-bold">Convertt HR</span>
@@ -53,7 +53,7 @@ export default function LoginPage() {
             <h2 className="text-white text-4xl font-bold leading-tight">
               Manage your workforce
               <br />
-              <span className="text-blue-400">smarter and faster.</span>
+              <span className="text-slate-300">smarter and faster.</span>
             </h2>
             <p className="text-slate-400 mt-4 text-lg">
               Complete HR management — from hiring to payroll, attendance to compliance.
@@ -81,7 +81,7 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center">
+            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-lg">C</span>
             </div>
             <span className="text-slate-900 text-xl font-bold">Convertt HR</span>
@@ -104,7 +104,7 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent text-sm"
                 placeholder="you@convertt.co"
               />
             </div>
@@ -120,13 +120,13 @@ export default function LoginPage() {
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent text-sm"
+                className="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-700 focus:border-transparent text-sm"
                 placeholder="••••••••"
               />
             </div>
 
             {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-3">
+              <div className="bg-slate-50 border border-slate-100 text-slate-700 text-sm rounded-lg px-4 py-3">
                 {error}
               </div>
             )}
@@ -134,7 +134,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm"
+              className="w-full bg-slate-700 hover:bg-slate-700 disabled:bg-slate-300 text-white font-semibold py-2.5 px-4 rounded-lg transition-colors text-sm"
             >
               {loading ? 'Signing in…' : 'Sign In'}
             </button>

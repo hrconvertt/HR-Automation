@@ -55,9 +55,9 @@ function expectedHours(t: Task) { return t.template?.expectedHours ?? t.customEx
 
 const STATUS_TONE: Record<string, string> = {
   ASSIGNED: 'bg-slate-100 text-slate-700',
-  IN_PROGRESS: 'bg-blue-100 text-blue-800',
-  COMPLETED: 'bg-emerald-100 text-emerald-800',
-  SCORED: 'bg-violet-100 text-violet-800',
+  IN_PROGRESS: 'bg-slate-100 text-slate-900',
+  COMPLETED: 'bg-slate-100 text-slate-900',
+  SCORED: 'bg-slate-100 text-slate-900',
 }
 
 export function TasksClient({ role, myTasks, teamTasks, templates, departments, reports }: Props) {
@@ -147,8 +147,8 @@ function MyTasksView({ tasks }: { tasks: Task[] }) {
                   <Badge className={STATUS_TONE[t.status] ?? 'bg-slate-100'}>{t.status}</Badge>
                 </div>
                 {t.delayReason && (
-                  <p className="text-xs text-slate-700 mt-2 bg-amber-50 border border-amber-200 rounded p-2">
-                    Delay reason: {t.delayReason} {t.delayJustified && <span className="text-emerald-700 ml-1">✓ justified</span>}
+                  <p className="text-xs text-slate-700 mt-2 bg-slate-50 border border-slate-100 rounded p-2">
+                    Delay reason: {t.delayReason} {t.delayJustified && <span className="text-slate-700 ml-1">✓ justified</span>}
                   </p>
                 )}
                 <div className="mt-3 flex items-center gap-2">
@@ -162,9 +162,9 @@ function MyTasksView({ tasks }: { tasks: Task[] }) {
                       Complete
                     </Button>
                   )}
-                  {overrun && <span className="text-xs text-amber-700">Overrun</span>}
+                  {overrun && <span className="text-xs text-slate-700">Overrun</span>}
                   {t.qualityScore != null && (
-                    <span className="text-xs text-violet-700 font-semibold">Quality: {t.qualityScore}/5</span>
+                    <span className="text-xs text-slate-700 font-semibold">Quality: {t.qualityScore}/5</span>
                   )}
                 </div>
               </div>
@@ -332,7 +332,7 @@ function TeamTasksView({ tasks, templates, reports }: { tasks: Task[]; templates
               <label className="block text-xs font-medium text-slate-700 mb-1">Notes</label>
               <Input value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
-            {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{err}</p>}
+            {err && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{err}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAssignOpen(false)} disabled={busy}>Cancel</Button>
@@ -460,7 +460,7 @@ function CatalogView({ templates, departments }: { templates: Template[]; depart
                 </Select>
               </div>
             </div>
-            {err && <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-2">{err}</p>}
+            {err && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{err}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)} disabled={busy}>Cancel</Button>
