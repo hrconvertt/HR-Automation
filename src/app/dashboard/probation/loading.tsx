@@ -2,7 +2,7 @@ export default function ProbationListLoading() {
   return (
     <div className="space-y-6">
       {/* Header skeleton */}
-      <div className="rounded-2xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-600 p-6 text-white shadow-md">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
         <div className="flex items-start gap-4 animate-pulse">
           <div className="rounded-xl bg-white/20 h-12 w-12" />
           <div className="flex-1 space-y-2">

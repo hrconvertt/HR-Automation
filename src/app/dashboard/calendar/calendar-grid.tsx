@@ -159,7 +159,7 @@ export function CalendarGrid({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600 p-6 text-white shadow-md">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
         <div className="flex items-start gap-3">
           <div className="rounded-xl bg-white/15 p-3 backdrop-blur">
             <CalendarIcon className="w-6 h-6" />

@@ -11,11 +11,13 @@ import { Input } from '@/components/ui/input'
 import { FileText } from 'lucide-react'
 
 const LETTER_OPTIONS = [
-  { value: 'EXPERIENCE',         label: 'Experience Letter',          hint: 'For new job applications, visas, etc.' },
-  { value: 'SALARY_CERTIFICATE', label: 'Salary Certificate',         hint: 'For bank loans, credit cards.' },
-  { value: 'NOC_VISA',           label: 'NOC for Visa',               hint: 'For travelling abroad.' },
-  { value: 'BONAFIDE',           label: 'Bonafide / Employment Verification', hint: 'For landlord, school, etc.' },
-  { value: 'RELIEVING',          label: 'Relieving Letter',           hint: 'Issued on exit.' },
+  { value: 'EXPERIENCE',          label: 'Experience Letter',          hint: 'For new job applications, visas, etc.' },
+  { value: 'SALARY_CERTIFICATE',  label: 'Salary Certificate',         hint: 'For bank loans, credit cards.' },
+  { value: 'NOC_VISA',            label: 'NOC for Visa',               hint: 'For travelling abroad.' },
+  { value: 'BONAFIDE',            label: 'Bonafide / Employment Verification', hint: 'For landlord, school, etc.' },
+  { value: 'CONFIRMATION',        label: 'Confirmation Letter',        hint: 'Post-probation confirmation.' },
+  { value: 'RELIEVING',           label: 'Relieving Letter',           hint: 'Issued on exit.' },
+  { value: 'SERVICE_CERTIFICATE', label: 'Service Certificate',        hint: 'Tenure-based certificate.' },
 ] as const
 
 export function RequestLetterDialog() {

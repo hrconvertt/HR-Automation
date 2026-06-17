@@ -54,9 +54,9 @@ export async function EmployeePayrollView({ employeeId }: { employeeId: string }
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50 to-teal-50 p-6">
-        <h2 className="text-xl font-bold text-slate-900">My Pay</h2>
-        <p className="text-sm text-slate-600 mt-1">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
+        <h2 className="text-xl font-bold">My Pay</h2>
+        <p className="text-sm text-white/85 mt-1">
           View your payslips, earnings, and tax info.
         </p>
       </div>

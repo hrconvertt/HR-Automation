@@ -71,9 +71,9 @@ export async function ManagerPayrollView({
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="rounded-2xl border border-purple-100 bg-gradient-to-r from-purple-50 to-fuchsia-50 p-6">
-        <h2 className="text-xl font-bold text-slate-900">My Payroll</h2>
-        <p className="text-sm text-slate-600 mt-1">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
+        <h2 className="text-xl font-bold">My Payroll</h2>
+        <p className="text-sm text-white/85 mt-1">
           Your payslip below, plus your team&apos;s attendance summary for {monthName(month)} {year}.
           Compensation amounts are managed by HR.
         </p>

@@ -9,6 +9,8 @@ export const LETTER_TYPES = [
   'BONAFIDE',
   'RELIEVING',
   'CONFIRMATION',
+  'SERVICE_CERTIFICATE',
+  'WARNING',
 ] as const
 export type LetterType = (typeof LETTER_TYPES)[number]
 
@@ -19,6 +21,8 @@ export const LETTER_TYPE_LABEL: Record<LetterType, string> = {
   BONAFIDE: 'Bonafide / Employment Verification',
   RELIEVING: 'Relieving Letter',
   CONFIRMATION: 'Employment Confirmation Letter',
+  SERVICE_CERTIFICATE: 'Service Certificate',
+  WARNING: 'Warning Letter',
 }
 
 export const COMPANY = {
@@ -181,6 +185,60 @@ export function generateLetter(
           `We hereby relieve them of all duties and responsibilities effective ${last}.`,
           ``,
           `We thank ${employee.fullName.split(' ')[0]} for their service and wish them success in their future endeavours.`,
+          ``,
+          sign,
+        ].join('\n'),
+      }
+    }
+
+    case 'CONFIRMATION': {
+      return {
+        subject: 'Employment Confirmation Letter',
+        body: [
+          `Dear ${employee.fullName.split(' ')[0]},`,
+          ``,
+          `We are pleased to confirm your employment with ${COMPANY.name} as ${employee.designation}${employee.department ? ` in the ${employee.department} department` : ''}, effective from ${joining}.`,
+          ``,
+          `Following the successful completion of your probationary period, your services are hereby confirmed on a permanent basis. All other terms and conditions of your appointment remain unchanged.`,
+          ``,
+          `We thank you for your contributions so far and look forward to a long and rewarding association.`,
+          ``,
+          sign,
+        ].join('\n'),
+      }
+    }
+
+    case 'SERVICE_CERTIFICATE': {
+      const exit = employee.exitDate ? fmtDate(employee.exitDate) : 'present'
+      return {
+        subject: 'Service Certificate',
+        body: [
+          `TO WHOM IT MAY CONCERN`,
+          ``,
+          `This is to certify that Mr./Ms. ${employee.fullName} (Employee Code: ${employee.employeeCode}${employee.cnic ? `, CNIC: ${employee.cnic}` : ''}) has been in the service of ${COMPANY.name} as ${employee.designation}${employee.department ? ` in the ${employee.department} department` : ''} from ${joining} to ${exit}.`,
+          ``,
+          `During this period of service, ${employee.fullName.split(' ')[0]} has been found sincere, hardworking, and dedicated to their responsibilities.`,
+          ``,
+          `This certificate has been issued at the employee's request${request.purpose ? ` ${request.purpose}` : ''}.`,
+          ``,
+          sign,
+        ].join('\n'),
+      }
+    }
+
+    case 'WARNING': {
+      return {
+        subject: 'Warning Letter',
+        body: [
+          `Dear ${employee.fullName.split(' ')[0]},`,
+          ``,
+          `This letter serves as a formal warning regarding your conduct${request.purpose ? ` — ${request.purpose}` : ''}.`,
+          ``,
+          `As an employee of ${COMPANY.name} in the role of ${employee.designation}${employee.department ? ` in the ${employee.department} department` : ''}, you are expected to uphold the standards and policies set by the organisation.`,
+          ``,
+          `You are advised to take this warning seriously and ensure immediate corrective action. Any recurrence of similar conduct may result in further disciplinary measures, including termination.`,
+          ``,
+          `Please acknowledge receipt of this letter.`,
           ``,
           sign,
         ].join('\n'),

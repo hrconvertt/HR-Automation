@@ -262,13 +262,13 @@ export function HRPayrollView() {
     <div className="space-y-6">
 
       {/* Banner */}
-      <div className="rounded-2xl border border-blue-100 bg-gradient-to-r from-blue-50 to-indigo-50 p-6">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
-            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-blue-600" /> Payroll — Multi-Stage Approval
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Sparkles className="w-5 h-5 text-white/90" /> Payroll — Multi-Stage Approval
             </h2>
-            <p className="text-sm text-slate-600 mt-1">
+            <p className="text-sm text-white/85 mt-1">
               HR prepares, CEO reviews, HR finalises, Finance pays out.
             </p>
           </div>

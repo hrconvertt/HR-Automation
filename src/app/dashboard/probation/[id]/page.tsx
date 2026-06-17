@@ -118,7 +118,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
     <div className="space-y-6">
       <BackButton fallback="/dashboard/probation" />
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-violet-600 via-fuchsia-600 to-pink-600 p-6 text-white shadow-md">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
         <div className="flex items-start gap-4">
           <div className="rounded-xl bg-white/15 p-3 backdrop-blur">
             <ShieldCheck className="w-7 h-7" />

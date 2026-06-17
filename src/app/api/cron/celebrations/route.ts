@@ -25,17 +25,25 @@ export async function GET(request: NextRequest) {
   const m = today.getMonth() + 1
   const d = today.getDate()
 
-  // Pull all active employees with privacy flags — we filter month/day in JS
-  // because Prisma SQL doesn't have a clean extract() helper across providers.
+  // Read culture notification scope config (single row, create with defaults if missing).
+  let config = await prisma.cultureNotificationConfig.findFirst()
+  if (!config) {
+    config = await prisma.cultureNotificationConfig.create({ data: {} })
+  }
+  const birthdayCompanyWide = config.birthdayNotificationScope === 'COMPANY_WIDE'
+  const anniversaryCompanyWide = config.anniversaryNotificationScope === 'COMPANY_WIDE'
+
+  // Pull all active employees with privacy flags + departmentId for team scoping.
   const all = await prisma.employee.findMany({
     where: { status: 'ACTIVE' },
     select: {
       id: true, fullName: true, dob: true, joiningDate: true,
-      reportingManagerId: true, hideBirthday: true, hideAnniversary: true,
+      reportingManagerId: true, departmentId: true,
+      hideBirthday: true, hideAnniversary: true,
     },
   })
 
-  // Find HR teammates to fan-out to.
+  // Find HR teammates to fan-out to (always notified).
   const hrUsers = await prisma.user.findMany({
     where: { role: 'HR_ADMIN' },
     select: { employee: { select: { id: true } } },
@@ -44,8 +52,35 @@ export async function GET(request: NextRequest) {
     .map((u) => u.employee?.id)
     .filter((x): x is string => typeof x === 'string')
 
-  const birthdays: { id: string; name: string }[] = []
-  const anniversaries: { id: string; name: string; years: number; milestone: boolean }[] = []
+  // Build deptId → [employeeId] map for scoped fan-out.
+  const empsByDept = new Map<string, string[]>()
+  for (const e of all) {
+    if (!e.departmentId) continue
+    const arr = empsByDept.get(e.departmentId) ?? []
+    arr.push(e.id)
+    empsByDept.set(e.departmentId, arr)
+  }
+
+  /**
+   * For a celebrant, return the list of employees who should receive the
+   * fan-out notification. Always includes HR + the celebrant. If team scope,
+   * adds same-department teammates. If company-wide, adds all active employees.
+   */
+  function audienceFor(celebrantId: string, celebrantDeptId: string | null, companyWide: boolean): string[] {
+    const set = new Set<string>(hrEmpIds)
+    set.add(celebrantId)
+    if (companyWide) {
+      for (const e of all) set.add(e.id)
+    } else if (celebrantDeptId) {
+      const teammates = empsByDept.get(celebrantDeptId) ?? []
+      for (const id of teammates) set.add(id)
+    }
+    set.delete(celebrantId) // celebrant gets their own dedicated message below
+    return Array.from(set)
+  }
+
+  const birthdays: { id: string; name: string; deptId: string | null }[] = []
+  const anniversaries: { id: string; name: string; years: number; milestone: boolean; deptId: string | null }[] = []
   const serviceCerts: string[] = []
 
   for (const e of all) {
@@ -53,7 +88,7 @@ export async function GET(request: NextRequest) {
     if (e.dob && !e.hideBirthday) {
       const dob = new Date(e.dob)
       if (dob.getMonth() + 1 === m && dob.getDate() === d) {
-        birthdays.push({ id: e.id, name: e.fullName })
+        birthdays.push({ id: e.id, name: e.fullName, deptId: e.departmentId })
       }
     }
     // Anniversary?
@@ -63,7 +98,7 @@ export async function GET(request: NextRequest) {
         const years = today.getFullYear() - jd.getFullYear()
         if (years >= 1) {
           const milestone = [1, 3, 5, 7, 10, 15, 20, 25].includes(years) || years >= 15
-          anniversaries.push({ id: e.id, name: e.fullName, years, milestone })
+          anniversaries.push({ id: e.id, name: e.fullName, years, milestone, deptId: e.departmentId })
           if (milestone) serviceCerts.push(e.id)
         }
       }
@@ -72,17 +107,20 @@ export async function GET(request: NextRequest) {
 
   // Send notifications.
   for (const b of birthdays) {
+    // Direct message to the celebrant
     await notify({
       employeeId: b.id,
       type: 'GENERAL',
       title: 'Happy Birthday!',
       message: 'Wishing you a wonderful year ahead from everyone at Convertt.',
     })
-    if (hrEmpIds.length) {
-      await notifyMany(hrEmpIds, {
+    // Fan-out — scoped by config (default: team only)
+    const audience = audienceFor(b.id, b.deptId, birthdayCompanyWide)
+    if (audience.length) {
+      await notifyMany(audience, {
         type: 'GENERAL',
         title: `Birthday today: ${b.name}`,
-        message: 'Consider sending a quick note or a Sign-Card invite.',
+        message: 'Send a quick note or join the Sign-Card.',
         link: `/dashboard/culture?tab=birthdays`,
       })
     }
@@ -94,8 +132,9 @@ export async function GET(request: NextRequest) {
       title: `Happy ${a.years}-year work anniversary!`,
       message: 'Thanks for everything you do — here is to many more.',
     })
-    if (hrEmpIds.length) {
-      await notifyMany(hrEmpIds, {
+    const audience = audienceFor(a.id, a.deptId, anniversaryCompanyWide)
+    if (audience.length) {
+      await notifyMany(audience, {
         type: 'GENERAL',
         title: `${a.years}-year anniversary: ${a.name}${a.milestone ? ' (milestone)' : ''}`,
         message: a.milestone ? 'Service Certificate auto-generated.' : 'Send a kudos!',

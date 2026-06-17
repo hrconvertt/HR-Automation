@@ -39,12 +39,12 @@ export default async function HelpIndexPage() {
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="rounded-2xl bg-gradient-to-r from-sky-50 to-cyan-50 border border-sky-100 p-6">
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
         <div className="flex items-center gap-3">
-          <HelpCircle className="w-8 h-8 text-sky-600" />
+          <HelpCircle className="w-8 h-8 text-white/90" />
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Help Center</h1>
-            <p className="text-sm text-gray-600 mt-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Help Center</h1>
+            <p className="text-sm text-white/85 mt-1">
               Step-by-step guides for everything in Convertt HR. Tailored to your role: <strong>{effectiveRole.replace('_', ' ')}</strong>.
             </p>
           </div>

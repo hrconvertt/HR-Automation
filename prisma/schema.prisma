@@ -1864,3 +1864,17 @@ model MonthlyMetric {
   @@unique([month, year])
   @@map("monthly_metrics")
 }
+
+// ─── CULTURE NOTIFICATION CONFIG ──────────────────────────────────────────────
+// Single-row settings table controlling fan-out scope for the celebration cron.
+// Read by /api/cron/celebrations; managed at /dashboard/settings/culture-notifications.
+model CultureNotificationConfig {
+  id                            String   @id @default(cuid())
+  birthdayNotificationScope     String   @default("TEAM_ONLY")     // TEAM_ONLY | COMPANY_WIDE
+  anniversaryNotificationScope  String   @default("TEAM_ONLY")     // TEAM_ONLY | COMPANY_WIDE
+  eventNotificationScope        String   @default("COMPANY_WIDE")  // COMPANY_WIDE (kept for future)
+  updatedAt                     DateTime @updatedAt
+  updatedById                   String?
+
+  @@map("culture_notification_config")
+}

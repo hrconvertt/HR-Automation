@@ -70,12 +70,12 @@ export default async function PerformancePage() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-r from-violet-50 to-fuchsia-50 border border-violet-100 p-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 flex items-center gap-2">
-          <TrendingUp className="w-6 h-6 text-violet-600" />
+      <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
+        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
+          <TrendingUp className="w-6 h-6 text-white/90" />
           Performance
         </h1>
-        <p className="text-sm text-gray-600 mt-1">
+        <p className="text-sm text-white/85 mt-1">
           {role === 'EMPLOYEE' && 'Track your goals, reviews, and growth journey.'}
           {role === 'MANAGER'  && 'Manage your team’s goals, reviews, and development.'}
           {role === 'HR_ADMIN' && 'Run review cycles, track performance across the company.'}
