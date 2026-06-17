@@ -16,6 +16,7 @@ import DocumentVisibilityToggle from '@/components/document-visibility-toggle'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import CompensationPanel from '@/components/compensation-panel'
+import { canSeeBanking } from '@/lib/can-see-banking'
 import { SystemRolesPanel } from '@/components/system-roles-panel'
 import { BackButton } from '@/components/ui/back-button'
 import { ResignationButton } from '@/components/resignation-button'
@@ -355,14 +356,19 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                 <dl className="space-y-3 text-sm">
                   {([
                     ['Phone', employee.phone],
-                    ['CNIC', employee.cnic],
+                    ['Home Phone', employee.homePhone],
+                    ['Office Phone', employee.officePhone],
                     ['Date of Birth', employee.dob ? formatDate(employee.dob) : null],
                     ['Gender', humanize(employee.gender)],
+                    ['Marital Status', humanize(employee.maritalStatus)],
+                    ['Nationality', employee.nationalityCountry],
                     ['Permanent Address', employee.address],
                     ['Temporary Address', employee.temporaryAddress],
                     ['Work Location Address', employee.workLocationAddress],
                     ['Emergency Contact', employee.emergencyContact],
+                    ['Emergency Relation', employee.emergencyRelation],
                     ['Emergency Phone', employee.emergencyPhone],
+                    ['Emergency Email', employee.emergencyEmail],
                   ] as [string, string | null | undefined][]).map(([label, value]) => value ? (
                     <div key={label} className="flex gap-3">
                       <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
@@ -372,6 +378,62 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                 </dl>
               </CardContent>
             </Card>
+
+            {/* Identity card — surfaces enriched CNIC + family info */}
+            {(employee.fatherOrHusbandName || employee.mothersMaidenName ||
+              employee.cnicIssuedOn || employee.cnicExpiresOn ||
+              employee.placeOfBirth || employee.cityOfBirth || employee.cnic) && (
+              <Card>
+                <CardHeader><CardTitle>Identity &amp; CNIC</CardTitle></CardHeader>
+                <CardContent>
+                  <dl className="space-y-3 text-sm">
+                    {([
+                      ['Father / Husband Name', employee.fatherOrHusbandName],
+                      ["Mother's Maiden Name", employee.mothersMaidenName],
+                      ['Place of Birth', employee.placeOfBirth],
+                      ['City of Birth', employee.cityOfBirth],
+                      ['CNIC #', employee.cnic],
+                      ['CNIC Issued On', employee.cnicIssuedOn ? formatDate(employee.cnicIssuedOn) : null],
+                      ['CNIC Expires On', employee.cnicExpiresOn ? formatDate(employee.cnicExpiresOn) : null],
+                      ['Place of Issuance', employee.placeOfIssuance],
+                      ['CNIC Birth Date', employee.cnicBirthDate ? formatDate(employee.cnicBirthDate) : null],
+                    ] as [string, string | null | undefined][]).map(([label, value]) => value ? (
+                      <div key={label} className="flex gap-3">
+                        <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
+                        <dd className="text-gray-900">{value}</dd>
+                      </div>
+                    ) : null)}
+                  </dl>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Banking — HR_ADMIN, FINANCE, and self only */}
+            {canSeeBanking({
+              viewerRole: effectiveRole,
+              viewerEmployeeId: myEmpId,
+              targetEmployeeId: employee.id,
+            }) && (employee.bankAccountName || employee.bankName || employee.bankAccount || employee.ibanAccount) && (
+              <Card>
+                <CardHeader><CardTitle>Banking</CardTitle></CardHeader>
+                <CardContent>
+                  <dl className="space-y-3 text-sm">
+                    {([
+                      ['Account Title', employee.bankAccountName],
+                      ['Bank Name', employee.bankName],
+                      ['Account #', employee.bankAccount],
+                      ['IBAN', employee.ibanAccount],
+                      ['Branch', employee.bankBranch],
+                    ] as [string, string | null | undefined][]).map(([label, value]) => value ? (
+                      <div key={label} className="flex gap-3">
+                        <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
+                        <dd className="text-gray-900">{value}</dd>
+                      </div>
+                    ) : null)}
+                  </dl>
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardHeader><CardTitle>Job Information</CardTitle></CardHeader>

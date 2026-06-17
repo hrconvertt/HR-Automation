@@ -131,7 +131,25 @@ model Employee {
   workLocationAddress String?    // Office address or remote-work address
   emergencyContact    String?
   emergencyPhone      String?
+  emergencyRelation   String?
+  emergencyEmail      String?
   photoUrl            String?
+
+  // ─── Extended personal info (enriched from BPM / Employee Info forms) ───
+  // All nullable — no migration risk to existing rows.
+  maritalStatus       String?   // Single | Married | Divorced | Widowed
+  fatherOrHusbandName String?
+  mothersMaidenName   String?
+  cnicIssuedOn        DateTime?
+  cnicExpiresOn       DateTime?
+  cnicBirthDate       DateTime? // CNIC-stated DOB (may differ from `dob`)
+  placeOfBirth        String?
+  cityOfBirth         String?
+  placeOfIssuance     String?
+  nationalityCountry  String?   // defaults to "Pakistan" when populated
+  homePhone           String?
+  officePhone         String?
+  bankAccountName     String?   // account title — name on the bank account
 
   // Job
   joiningDate         DateTime
