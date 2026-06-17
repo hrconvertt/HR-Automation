@@ -607,7 +607,16 @@ model Payslip {
   vehicleDeduction Float     @default(0)  // company vehicle / fuel-card recovery
   advanceDeduction Float     @default(0)  // recovery of a salary advance
   otherDeductions Float      @default(0)
+  lateDeduction   Float      @default(0)   // late / leave-based deduction surfaced in grid
   netSalary       Float
+  // Bank-payout override — grid lets HR override the value that goes to the bank
+  // file independent of netSalary. Falls back to netSalary when null.
+  transactionAmount Float?
+  // Auto-set bank reference text ("Salary <Month> <Year>"). Stored so exports
+  // are stable even if month/year format changes.
+  reference         String?
+  // HR-editable free-text note attached to the bank row (e.g. "Bank Acc Pend")
+  payoutNotes       String?
   // Adjustment audit
   isAdjusted      Boolean    @default(false) // HR has manually edited this row; Recompute will skip it
   adjustmentNote  String?                    // Free-text reason ("March bonus", "10 days encashed")

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { safeFetch } from '@/lib/safe-fetch'
 import { AdjustPayslipDialog, type AdjustablePayslip } from '@/components/payroll/adjust-payslip-dialog'
+import { PayrollGridEditor, type GridPayslip, type GridRole } from '@/components/payroll/payroll-grid-editor'
 import {
   PAYROLL_STAGES,
   stageIndex,
@@ -36,7 +37,6 @@ import {
 interface Payslip {
   id: string
   employeeId: string
-  employee: { fullName: string; employeeCode: string; designation: string }
   basic: number
   houseRent: number; utilities: number; food: number; fuel: number
   medicalAllowance: number; otherAllowance: number
@@ -50,6 +50,10 @@ interface Payslip {
   status: string
   isAdjusted: boolean
   adjustmentNote: string | null
+  lateDeduction: number
+  transactionAmount: number | null
+  payoutNotes: string | null
+  employee: { fullName: string; employeeCode: string; designation: string; ibanAccount?: string | null; bankAccount?: string | null; bankName?: string | null }
 }
 
 interface ApprovalRow {
@@ -539,7 +543,67 @@ export function HRPayrollView() {
         </div>
       )}
 
-      {/* Payslips Table */}
+      {/* Spreadsheet Grid Editor — Excel-like inline editing */}
+      {payrollRun && payrollRun.payslips.length > 0 && (
+        <Card className="rounded-2xl">
+          <CardHeader>
+            <CardTitle>Spreadsheet Editor — {months[month - 1]} {year}</CardTitle>
+          </CardHeader>
+          <div className="px-5 pb-5">
+            <PayrollGridEditor
+              runId={payrollRun.id}
+              month={month}
+              year={year}
+              runStatus={status}
+              role={gridRoleFor(status, roles)}
+              payslips={payrollRun.payslips.map((p): GridPayslip => ({
+                id: p.id,
+                employeeId: p.employeeId,
+                employee: {
+                  fullName: p.employee.fullName,
+                  employeeCode: p.employee.employeeCode,
+                  ibanAccount: p.employee.ibanAccount ?? null,
+                  bankAccount: p.employee.bankAccount ?? null,
+                  bankName: p.employee.bankName ?? null,
+                },
+                grossSalary: p.grossSalary,
+                otherDeductions: p.otherDeductions,
+                overtimePay: p.overtimePay,
+                lateDeduction: p.lateDeduction ?? 0,
+                netSalary: p.netSalary,
+                transactionAmount: p.transactionAmount ?? null,
+                payoutNotes: p.payoutNotes ?? null,
+                status: p.status,
+                adjustmentNote: p.adjustmentNote,
+                isAdjusted: p.isAdjusted,
+              }))}
+              onSaved={fetchPayroll}
+              onAdvanced={fetchPayroll}
+              onEditDetails={(payslipId) => {
+                const p = payrollRun.payslips.find((x) => x.id === payslipId)
+                if (!p) return
+                setAdjustTarget({
+                  id: p.id,
+                  employeeId: p.employeeId,
+                  employeeName: p.employee.fullName,
+                  basic: p.basic, houseRent: p.houseRent, utilities: p.utilities, food: p.food,
+                  fuel: p.fuel, medicalAllowance: p.medicalAllowance, otherAllowance: p.otherAllowance,
+                  overtimePay: p.overtimePay, bonus: p.bonus,
+                  leaveEncashment: p.leaveEncashment, arrears: p.arrears,
+                  eobi: p.eobi, incomeTax: p.incomeTax,
+                  providentFund: p.providentFund, healthcare: p.healthcare,
+                  loanDeduction: p.loanDeduction, advanceDeduction: p.advanceDeduction,
+                  otherDeductions: p.otherDeductions,
+                  grossSalary: p.grossSalary, netSalary: p.netSalary,
+                  isAdjusted: p.isAdjusted, adjustmentNote: p.adjustmentNote,
+                })
+              }}
+            />
+          </div>
+        </Card>
+      )}
+
+      {/* Legacy detail table (collapsed; still useful for read-only inspection) */}
       <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle>Employee Payslips — {months[month - 1]} {year}</CardTitle>
@@ -739,6 +803,13 @@ function stageTimestamp(stage: string, run: PayrollRun): string {
   const v = r[key]
   if (!v) return ''
   return new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })
+}
+
+function gridRoleFor(status: string, roles: string[]): GridRole {
+  if (roles.includes('HR_ADMIN') && (status === 'DRAFT' || status === 'PENDING_HR_FINAL')) return 'HR'
+  if (roles.includes('EXECUTIVE') && status === 'PENDING_CEO') return 'CEO'
+  if ((roles.includes('FINANCE') || roles.includes('HR_ADMIN')) && status === 'PENDING_FINANCE') return 'FINANCE'
+  return 'READONLY'
 }
 
 function KpiCard({ label, value, Icon, color }: {

@@ -67,7 +67,16 @@ export async function GET(request: NextRequest) {
       payslips: {
         where: payslipWhere,
         include: {
-          employee: { select: { fullName: true, employeeCode: true, designation: true } },
+          employee: {
+            select: {
+              fullName: true,
+              employeeCode: true,
+              designation: true,
+              ibanAccount: true,
+              bankAccount: true,
+              bankName: true,
+            },
+          },
         },
         orderBy: { employee: { fullName: 'asc' } },
       },
@@ -287,7 +296,16 @@ export async function POST(request: NextRequest) {
       include: {
         payslips: {
           include: {
-            employee: { select: { fullName: true, employeeCode: true, designation: true } },
+            employee: {
+            select: {
+              fullName: true,
+              employeeCode: true,
+              designation: true,
+              ibanAccount: true,
+              bankAccount: true,
+              bankName: true,
+            },
+          },
           },
         },
       },
