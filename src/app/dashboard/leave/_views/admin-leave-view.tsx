@@ -113,6 +113,23 @@ export default function AdminLeaveView() {
     fetchLeave()
   }
 
+  async function handleDelete(id: string, label: string) {
+    if (!confirm(
+      `Delete the leave request from ${label}?\n\n` +
+      `If it was approved, the matching attendance entries (L / HD) will be ` +
+      `removed and the leave balance will be restored. This cannot be undone.`,
+    )) return
+    setActionLoading(id)
+    const res = await fetch(`/api/leave/${id}`, { method: 'DELETE' })
+    setActionLoading(null)
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}))
+      alert(err.error || 'Failed to delete leave')
+      return
+    }
+    fetchLeave()
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -169,27 +186,42 @@ export default function AdminLeaveView() {
                         <Badge variant={statusVariant[r.status] ?? 'secondary'}>{LEAVE_STATUS_LABELS[r.status] ?? r.status}</Badge>
                       </TableCell>
                       <TableCell>
-                        {(r.status === 'PENDING' || r.status === 'PENDING_HR') && (
-                          <div className="flex gap-2">
-                            <Button
-                              size="sm"
-                              variant="success"
-                              onClick={() => handleApprove(r.id)}
-                              disabled={actionLoading === r.id}
-                              title={r.status === 'PENDING' ? 'Approve — manager has not yet acted, this will finalise' : 'Final HR sign-off'}
-                            >
-                              Approve
-                            </Button>
-                            <Button
-                              size="sm"
-                              variant="destructive"
-                              onClick={() => setRejectFor(r.id)}
-                              disabled={actionLoading === r.id}
-                            >
-                              Reject
-                            </Button>
-                          </div>
-                        )}
+                        <div className="flex gap-2">
+                          {(r.status === 'PENDING' || r.status === 'PENDING_HR') && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="success"
+                                onClick={() => handleApprove(r.id)}
+                                disabled={actionLoading === r.id}
+                                title={r.status === 'PENDING' ? 'Approve — manager has not yet acted, this will finalise' : 'Final HR sign-off'}
+                              >
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => setRejectFor(r.id)}
+                                disabled={actionLoading === r.id}
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {/* HR can hard-delete any leave (test cleanup or mistakes).
+                              Side-effects (AttendanceLog + LeaveBalance) are unwound
+                              in the API. */}
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleDelete(r.id, r.employee?.fullName ?? 'this employee')}
+                            disabled={actionLoading === r.id}
+                            title="Delete this leave (restores attendance + balance if approved)"
+                            className="text-slate-700 border-slate-300 hover:bg-slate-50"
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
