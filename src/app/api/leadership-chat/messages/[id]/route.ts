@@ -14,13 +14,18 @@ import { requireChatAccess } from '../../_access'
 
 const EDIT_WINDOW_MS = 5 * 60 * 1000
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+interface RouteParams {
+  params: Promise<{ id: string }>
+}
+
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  const { id } = await params
   const gate = await requireChatAccess()
   if (!gate.ok) return gate.response
   const { access } = gate
 
   const existing = await prisma.directMessage.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true, senderId: true, sentAt: true, deletedAt: true },
   })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -50,7 +55,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   }
 
   const message = await prisma.directMessage.update({
-    where: { id: params.id },
+    where: { id },
     data: { body: text, editedAt: new Date() },
     select: {
       id: true,
@@ -67,13 +72,14 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   return NextResponse.json({ message })
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(_req: NextRequest, { params }: RouteParams) {
+  const { id } = await params
   const gate = await requireChatAccess()
   if (!gate.ok) return gate.response
   const { access } = gate
 
   const existing = await prisma.directMessage.findUnique({
-    where: { id: params.id },
+    where: { id },
     select: { id: true, senderId: true, deletedAt: true },
   })
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -89,7 +95,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   }
 
   await prisma.directMessage.update({
-    where: { id: params.id },
+    where: { id },
     data: { deletedAt: new Date() },
   })
 

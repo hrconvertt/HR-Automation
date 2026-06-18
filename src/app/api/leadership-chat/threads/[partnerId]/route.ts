@@ -37,12 +37,17 @@ async function loadPartnerOrFail(partnerId: string) {
   return { ok: true as const, partner }
 }
 
-export async function GET(_req: NextRequest, { params }: { params: { partnerId: string } }) {
+interface RouteParams {
+  params: Promise<{ partnerId: string }>
+}
+
+export async function GET(_req: NextRequest, { params }: RouteParams) {
+  const { partnerId } = await params
   const gate = await requireChatAccess()
   if (!gate.ok) return gate.response
   const { access } = gate
 
-  const partnerCheck = await loadPartnerOrFail(params.partnerId)
+  const partnerCheck = await loadPartnerOrFail(partnerId)
   if (!partnerCheck.ok) return partnerCheck.response
   const partner = partnerCheck.partner
 
@@ -92,12 +97,13 @@ export async function GET(_req: NextRequest, { params }: { params: { partnerId: 
   })
 }
 
-export async function POST(request: NextRequest, { params }: { params: { partnerId: string } }) {
+export async function POST(request: NextRequest, { params }: RouteParams) {
+  const { partnerId } = await params
   const gate = await requireChatAccess()
   if (!gate.ok) return gate.response
   const { access } = gate
 
-  const partnerCheck = await loadPartnerOrFail(params.partnerId)
+  const partnerCheck = await loadPartnerOrFail(partnerId)
   if (!partnerCheck.ok) return partnerCheck.response
   const partner = partnerCheck.partner
 
