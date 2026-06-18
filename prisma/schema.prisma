@@ -1869,6 +1869,33 @@ model MonthlyMetric {
   @@map("monthly_metrics")
 }
 
+// ─── SIGN-UP ATTEMPT AUDIT ────────────────────────────────────────────────────
+// When a Clerk sign-up email isn't on the allowlist, clerk-sync deletes the
+// Clerk user immediately. Before deleting, we log a SignupAttempt row so HR
+// can review and (a) approve the legitimate ones (e.g. someone joined with
+// the wrong email) or (b) dismiss spam attempts.
+model SignupAttempt {
+  id              String    @id @default(cuid())
+  email           String
+  clerkUserId     String?
+  firstName       String?
+  lastName        String?
+  attemptedAt     DateTime  @default(now())
+  status          String    @default("PENDING") // PENDING | APPROVED | DISMISSED
+  reviewedAt      DateTime?
+  reviewedById    String?   // User.id of HR admin who acted
+  reviewNotes     String?
+  // When APPROVED, the newly-created User.id so HR can navigate to them.
+  resultingUserId String?
+  // Tracks last HR-notification fan-out so we don't spam the inbox
+  // when the same email retries within 24h.
+  lastNotifiedAt  DateTime?
+
+  @@index([status])
+  @@index([email])
+  @@map("signup_attempts")
+}
+
 // ─── CULTURE NOTIFICATION CONFIG ──────────────────────────────────────────────
 // Single-row settings table controlling fan-out scope for the celebration cron.
 // Read by /api/cron/celebrations; managed at /dashboard/settings/culture-notifications.

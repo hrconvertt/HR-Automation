@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { Suspense } from 'react'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import UserManagementClient from './client'
@@ -22,5 +23,9 @@ export default async function UserManagementPage() {
     }),
   ])
 
-  return <UserManagementClient departments={departments} managers={employees} />
+  return (
+    <Suspense fallback={null}>
+      <UserManagementClient departments={departments} managers={employees} />
+    </Suspense>
+  )
 }

@@ -56,15 +56,73 @@ export async function syncClerkUser(clerkUserId: string): Promise<ClerkSyncResul
   }
 
   // ─── REJECTED — email not on the allowlist ──────────────────────────────
-  // Delete the Clerk user immediately so they can't accumulate sessions or
-  // retry endlessly. Log the rejection so HR can audit attempts.
+  // Log a SignupAttempt row BEFORE deleting the Clerk user so HR can review
+  // and either approve (creates User/Employee + sends Clerk invite) or
+  // dismiss the attempt later.
   console.warn(`[clerk-sync] REJECTED unknown email: ${normalisedEmail} (clerk_id=${clerkUserId})`)
+  try {
+    await logSignupAttempt({
+      email: normalisedEmail,
+      clerkUserId,
+      firstName: clerkUser.firstName ?? null,
+      lastName: clerkUser.lastName ?? null,
+    })
+  } catch (err) {
+    console.error('[clerk-sync] failed to log signup attempt', err)
+  }
+
   try {
     await client.users.deleteUser(clerkUserId)
   } catch (err) {
     console.error('[clerk-sync] failed to delete rejected Clerk user', err)
   }
   return { userId: '', created: false, linked: false, rejected: true }
+}
+
+/**
+ * Record a rejected sign-up so HR can review later.
+ *
+ * Idempotent: if there's already an open PENDING attempt for the same email,
+ * just bump `attemptedAt`. Notifies HR_ADMINs once per 24h per email (de-dupe
+ * via SignupAttempt.lastNotifiedAt).
+ */
+async function logSignupAttempt(args: {
+  email: string
+  clerkUserId: string
+  firstName: string | null
+  lastName: string | null
+}): Promise<void> {
+  const { notifyHrOfSignupAttempt } = await import('@/lib/signup-attempt-notify')
+
+  const existing = await prisma.signupAttempt.findFirst({
+    where: { email: args.email, status: 'PENDING' },
+    orderBy: { attemptedAt: 'desc' },
+  })
+
+  if (existing) {
+    await prisma.signupAttempt.update({
+      where: { id: existing.id },
+      data: {
+        attemptedAt: new Date(),
+        clerkUserId: args.clerkUserId,
+        firstName: args.firstName ?? existing.firstName,
+        lastName: args.lastName ?? existing.lastName,
+      },
+    })
+    await notifyHrOfSignupAttempt(existing.id, args.email)
+    return
+  }
+
+  const created = await prisma.signupAttempt.create({
+    data: {
+      email: args.email,
+      clerkUserId: args.clerkUserId,
+      firstName: args.firstName,
+      lastName: args.lastName,
+      status: 'PENDING',
+    },
+  })
+  await notifyHrOfSignupAttempt(created.id, args.email)
 }
 
 /**
