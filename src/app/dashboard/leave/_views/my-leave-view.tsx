@@ -288,7 +288,7 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
                       </p>
                     )}
                   </div>
-                  <Badge variant={STATUS_TONE[r.status] ?? 'secondary'}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
+                  <Badge variant={STATUS_TONE[r.status] ?? 'secondary'}>{(r as unknown as { statusLabel?: string }).statusLabel ?? STATUS_LABEL[r.status] ?? r.status}</Badge>
                   {(r.status === 'PENDING' || r.status === 'PENDING_HR') && (
                     <button
                       onClick={() => handleCancel(r.id)}

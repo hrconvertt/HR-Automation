@@ -8,9 +8,11 @@
  *   Any other transition is rejected.
  *
  * Authorisation:
- *   - MANAGER: can act only at PENDING for their direct reports. Can't self-approve.
+ *   - Stage-1 approver (reportingManager for regulars, Co-Founder for
+ *     senior staff — stored as LeaveRequest.stageOneApproverId on submit):
+ *     can act only at PENDING. Can't self-approve.
  *   - HR_ADMIN: can act at any stage (final say).
- *   - EMPLOYEE / others: forbidden.
+ *   - EMPLOYEE / others (not the assigned stage-1 approver): forbidden.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -19,6 +21,7 @@ import { verifyToken } from '@/lib/auth'
 import { notify, notifyMany } from '@/lib/notifications'
 import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 import { dayKey } from '@/lib/date-utils'
+import { getStageOneApprover } from '@/lib/leave-approver'
 
 interface RouteParams {
   params: Promise<{ id: string }>
@@ -52,29 +55,49 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Request is no longer pending.' }, { status: 400 })
   }
 
-  // ── Manager guardrails ───────────────────────────────────────────────
-  if (payload.role === 'MANAGER') {
+  // ── Stage-1 approver resolution ──────────────────────────────────────
+  // The stored stageOneApproverId takes precedence (set on submit).
+  // For older rows it's null — fall back to deriving it now (and finally
+  // to reportingManager so legacy rows still work).
+  let effectiveStageOneApproverId: string | null = leaveRequest.stageOneApproverId
+  if (!effectiveStageOneApproverId) {
+    try {
+      effectiveStageOneApproverId = await getStageOneApprover(leaveRequest.employee.id)
+    } catch (e) {
+      console.warn('[approve] getStageOneApprover fallback failed', e)
+    }
+  }
+  if (!effectiveStageOneApproverId) {
+    effectiveStageOneApproverId = leaveRequest.employee.reportingManagerId
+  }
+
+  // ── Stage-1 approver guardrails (covers MANAGER + EXECUTIVE Co-Founder) ──
+  // HR_ADMIN can act at either stage from anywhere — checked separately.
+  const isHR = payload.role === 'HR_ADMIN'
+  if (!isHR) {
     if (leaveRequest.status === 'PENDING_HR') {
       return NextResponse.json({
-        error: 'This request is already past the manager stage. HR will finalise it.',
+        error: 'This request is already past the first-stage approval. HR will finalise it.',
       }, { status: 400 })
     }
     if (myEmpId && leaveRequest.employee.id === myEmpId) {
       return NextResponse.json({
-        error: 'You cannot approve your own leave. Your leave is reviewed by HR.',
+        error: 'You cannot approve your own leave.',
       }, { status: 403 })
     }
-    if (leaveRequest.employee.reportingManagerId !== myEmpId) {
+    if (effectiveStageOneApproverId !== myEmpId) {
       return NextResponse.json({
-        error: 'You can only approve leave for your direct reports.',
+        error: 'Only the assigned approver or HR can approve at stage 1.',
       }, { status: 403 })
     }
   }
 
   // ── Decide the resulting state ───────────────────────────────────────
-  const isManager = payload.role === 'MANAGER'
-  const isHR = payload.role === 'HR_ADMIN'
-  const movingToFinal = isHR // HR always finalises in one shot from whichever stage
+  // "Stage 1" = anyone who isn't HR acting on a PENDING request (so a
+  // Co-Founder approving a senior's leave goes through this branch).
+  // HR always finalises in one shot from whichever stage.
+  const isStageOneApprover = !isHR && leaveRequest.status === 'PENDING'
+  const movingToFinal = isHR
 
   // ── Perform the transition atomically ───────────────────────────────
   // We use `updateMany` with a status guard so two concurrent approvals
@@ -85,7 +108,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   let raceLost = false
 
   await prisma.$transaction(async (tx) => {
-    if (isManager) {
+    if (isStageOneApprover) {
       const result = await tx.leaveRequest.updateMany({
         where: { id, status: targetStatusNow },
         data: {
@@ -188,7 +211,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   // ── Notifications (outside the txn — best effort) ────────────────────
   const dateRange = `${leaveRequest.fromDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} – ${leaveRequest.toDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
 
-  if (isManager) {
+  if (isStageOneApprover) {
     // Tell HR there's something waiting for them
     const hrEmpIds = (
       await prisma.user.findMany({
@@ -253,6 +276,6 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   return NextResponse.json({
     success: true,
-    newStatus: isManager ? 'PENDING_HR' : 'APPROVED',
+    newStatus: isStageOneApprover ? 'PENDING_HR' : 'APPROVED',
   })
 }

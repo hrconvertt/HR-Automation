@@ -183,7 +183,7 @@ export default function AdminLeaveView() {
                       <TableCell>{formatDays(r.days)}</TableCell>
                       <TableCell className="max-w-[180px] truncate text-gray-500">{r.reason}</TableCell>
                       <TableCell>
-                        <Badge variant={statusVariant[r.status] ?? 'secondary'}>{LEAVE_STATUS_LABELS[r.status] ?? r.status}</Badge>
+                        <Badge variant={statusVariant[r.status] ?? 'secondary'}>{(r as unknown as { statusLabel?: string }).statusLabel ?? LEAVE_STATUS_LABELS[r.status] ?? r.status}</Badge>
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">

@@ -463,6 +463,12 @@ model LeaveRequest {
   // First-stage (manager) approver — set when the manager approves
   managerApprovedById String?
   managerApprovedAt   DateTime?
+  // Override of the default reportingManager-based stage-1 approver.
+  // Set on submit when the requester is senior staff (Manager / Lead /
+  // Head / Director / CTO / COO / C-suite) — those route through the
+  // Co-Founder instead of their reportingManager. Nullable for backwards
+  // compat with rows created before this field existed.
+  stageOneApproverId  String?
   // Final approver (HR) — set when HR finalises the request
   approvedById String?
   approvedAt   DateTime?

@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
 import { parseLocalDate, dayKey, isSameDay } from '@/lib/date-utils'
+import { getStageOneApprover, isSeniorStaffRole, isCoFounderDesignation } from '@/lib/leave-approver'
 
 /**
  * Count chargeable leave days between two dates (inclusive), applying:
@@ -106,14 +107,27 @@ export async function GET(request: NextRequest) {
   const where: Record<string, unknown> = {}
   if (status) where.status = status
 
-  // Role scoping
+  // Role scoping. Managers see their direct reports' requests AND any
+  // requests where they've been assigned as stage-1 approver (covers the
+  // Co-Founder seeing senior-staff routed leave).
   if (access.effectiveRole === 'EMPLOYEE' && access.employeeId) {
-    where.employeeId = access.employeeId
+    // Employees still see anything routed to them as stage-1 approver
+    // (e.g. CEO approving a Co-Founder's leave even if role is EXECUTIVE,
+    // which already falls in the else-branch — this branch is the literal
+    // EMPLOYEE role).
+    where.OR = [
+      { employeeId: access.employeeId },
+      { stageOneApproverId: access.employeeId },
+    ]
   } else if (access.effectiveRole === 'MANAGER' && access.employeeId) {
     where.OR = [
       { employeeId: access.employeeId },
       { employee: { reportingManagerId: access.employeeId } },
+      { stageOneApproverId: access.employeeId },
     ]
+  } else if (access.effectiveRole === 'EXECUTIVE' && access.employeeId) {
+    // Executive (incl. Co-Founder + CEO) — full visibility plus their own inbox.
+    if (employeeId) where.employeeId = employeeId
   } else if (employeeId) {
     // HR / Executive can filter to a specific employee if they want
     where.employeeId = employeeId
@@ -124,7 +138,15 @@ export async function GET(request: NextRequest) {
     orderBy: { createdAt: 'desc' },
     take: 50,
     include: {
-      employee: { select: { fullName: true, employeeCode: true } },
+      employee: {
+        select: {
+          fullName: true,
+          employeeCode: true,
+          designation: true,
+          user: { select: { role: true } },
+          position: { select: { level: true } },
+        },
+      },
     },
   })
 
@@ -148,13 +170,36 @@ export async function GET(request: NextRequest) {
     )
   }
 
-  const withBalance = requests.map((r) => {
-    if (r.status !== 'PENDING' && r.status !== 'PENDING_HR') return r
-    const bal = balanceLookup.get(`${r.employeeId}::${r.leaveType}`)
-    return { ...r, requesterBalance: bal ?? null }
+  const decorated = requests.map((r) => {
+    const requesterRole = r.employee.user?.role ?? null
+    const requesterDesignation = r.employee.designation ?? null
+    const requesterPositionLevel = r.employee.position?.level ?? null
+    const senior =
+      isSeniorStaffRole(requesterRole, requesterDesignation, requesterPositionLevel) ||
+      isCoFounderDesignation(requesterDesignation)
+    // Derived status label — keeps clients out of the senior-staff logic.
+    let statusLabel: string
+    if (r.status === 'PENDING') statusLabel = senior ? 'Awaiting Co-Founder' : 'Awaiting Manager'
+    else if (r.status === 'PENDING_HR') statusLabel = 'Awaiting HR'
+    else if (r.status === 'APPROVED') statusLabel = 'Approved'
+    else if (r.status === 'REJECTED') statusLabel = 'Rejected'
+    else if (r.status === 'CANCELLED') statusLabel = 'Cancelled'
+    else statusLabel = r.status
+
+    const bal =
+      r.status === 'PENDING' || r.status === 'PENDING_HR'
+        ? balanceLookup.get(`${r.employeeId}::${r.leaveType}`) ?? null
+        : null
+
+    return {
+      ...r,
+      statusLabel,
+      requesterIsSenior: senior,
+      requesterBalance: bal,
+    }
   })
 
-  return NextResponse.json({ requests: withBalance })
+  return NextResponse.json({ requests: decorated })
 }
 
 export async function POST(request: NextRequest) {
@@ -260,6 +305,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Insufficient ${leaveType} balance. Available: ${balance.remaining} days` }, { status: 400 })
     }
 
+    // ── Resolve the stage-1 approver (Co-Founder for seniors, manager
+    //    for regulars, special cases for CEO/CF/HR). Stored on the row so
+    //    the approve endpoint can authorise without re-running the logic.
+    const stageOneApproverId = await getStageOneApprover(empId)
+
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
         employeeId: empId,
@@ -271,6 +321,7 @@ export async function POST(request: NextRequest) {
         lastDayHalf,
         reason: reason ?? '',
         status: 'PENDING',
+        stageOneApproverId,
       },
     })
 
@@ -294,8 +345,12 @@ export async function POST(request: NextRequest) {
       where: { role: 'HR_ADMIN', employee: { isNot: null } },
       select: { employee: { select: { id: true } } },
     })
+    // Stage-1 approver replaces the default reportingManager notification —
+    // for seniors that's the Co-Founder; for regulars it's still the
+    // reportingManager (because getStageOneApprover returns it for them).
+    const stageOneNotifyTarget = stageOneApproverId ?? emp?.reportingManagerId ?? null
     const notifyTargets = [
-      ...(emp?.reportingManagerId ? [emp.reportingManagerId] : []),
+      ...(stageOneNotifyTarget ? [stageOneNotifyTarget] : []),
       ...hrEmployees
         .map((hr) => hr.employee?.id)
         .filter((eid): eid is string => !!eid && eid !== empId),

@@ -185,7 +185,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
                         {LEAVE_LABEL[r.leaveType] ?? r.leaveType} · {fmtDate(r.fromDate)} → {fmtDate(r.toDate)} · {formatDays(r.days)}
                       </span>
                       <Badge variant={r.status === 'PENDING' ? 'warning' : 'default'}>
-                        {LEAVE_STATUS_LABELS[r.status] ?? r.status}
+                        {(r as unknown as { statusLabel?: string }).statusLabel ?? LEAVE_STATUS_LABELS[r.status] ?? r.status}
                       </Badge>
                     </li>
                   ))}
