@@ -6,7 +6,7 @@
  * Plays it light but firm — they're not getting in.
  */
 
-import Link from 'next/link'
+import UnauthorizedSignOutButton from './sign-out-button'
 
 export const metadata = {
   title: 'Not on the list — Convertt HR',
@@ -34,12 +34,7 @@ export default function UnauthorizedPage() {
           Otherwise: thanks for trying, but this dance floor&apos;s full. 🕺
         </p>
         <div className="mt-8">
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition"
-          >
-            Back to sign-in
-          </Link>
+          <UnauthorizedSignOutButton />
         </div>
       </div>
     </div>
