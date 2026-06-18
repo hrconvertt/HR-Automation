@@ -55,10 +55,27 @@ export default function LoginPage() {
           <SignIn
             routing="path"
             path="/login"
-            signUpUrl="/login"
             forceRedirectUrl="/dashboard"
             fallbackRedirectUrl="/dashboard"
+            appearance={{
+              elements: {
+                // Invite-only — hide all sign-up affordances. New employees
+                // arrive via HR-sent Clerk invitations, not self-registration.
+                footerAction: 'hidden',
+                footerActionLink: 'hidden',
+                footer: 'hidden',
+              },
+            }}
           />
+
+          {/* HR sends invitations from /dashboard/settings/users — no self sign-up */}
+          <p className="mt-6 text-center text-xs text-slate-500">
+            Don&apos;t have an account?{' '}
+            <span className="text-slate-700 font-medium">
+              Contact HR for an invitation
+            </span>
+            .
+          </p>
 
           <p className="mt-8 text-center text-xs text-slate-400">
             © {new Date().getFullYear()} Convertt HR. All rights reserved.
