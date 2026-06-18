@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import OrgTree from '@/components/org-chart/org-tree'
@@ -7,10 +7,10 @@ export default async function OrgChartPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
-  // Org chart is visible to ALL roles — it's the company directory hierarchy.
+  // Org chart is visible to ALL roles â€” it's the company directory hierarchy.
   // Only HR_ADMIN can edit (drag-reparent). Non-HR_ADMIN roles see read-only.
   const previewRole =
     payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined

@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Unified "Time & Attendance" page.
  *
- * Single sidebar entry → role-routed view → outer tabs:
- *   My Time          — personal clock-in / calendar
- *   My Leave         — leave application + history
- *   Attendance Grid  — company-wide / team grid (HR / Manager / Lead / Executive)
- *   Approvals        — pending leave + OT inbox (HR / Manager / Lead)
+ * Single sidebar entry â†’ role-routed view â†’ outer tabs:
+ *   My Time          â€” personal clock-in / calendar
+ *   My Leave         â€” leave application + history
+ *   Attendance Grid  â€” company-wide / team grid (HR / Manager / Lead / Executive)
+ *   Approvals        â€” pending leave + OT inbox (HR / Manager / Lead)
  *
  * The underlying Attendance + Leave modules stay intact; this is composition,
  * not a rewrite of their internals.
@@ -25,7 +25,7 @@ export default async function TimePage({ searchParams }: PageProps) {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({
@@ -39,7 +39,7 @@ export default async function TimePage({ searchParams }: PageProps) {
   const effectiveRole = previewRole ?? user.role
 
   const { tab } = await searchParams
-  // HR / Exec / Manager / Lead land on the team view by default — that's the
+  // HR / Exec / Manager / Lead land on the team view by default â€” that's the
   // page they need 95% of the time (who is clocked in, who's late, who's on
   // leave). They can switch to My Time if they want their personal panel.
   const defaultTab =
@@ -62,7 +62,7 @@ export default async function TimePage({ searchParams }: PageProps) {
     )
   }
 
-  // Departments are only needed when the user can see the grid tab — fetch
+  // Departments are only needed when the user can see the grid tab â€” fetch
   // them up-front so the client shell doesn't need a second round-trip.
   const canSeeGrid =
     effectiveRole === 'HR_ADMIN' ||

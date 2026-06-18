@@ -21,7 +21,7 @@ interface RouteParams { params: Promise<{ id: string }> }
 
 async function getHrUser(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },

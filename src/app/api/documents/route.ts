@@ -1,12 +1,12 @@
-/**
+﻿/**
  * GET /api/documents?employeeId=...
  *
  *   Returns employee documents.
  *   Role enforcement (single DB, four roles):
- *     • HR_ADMIN / EXECUTIVE → any employee's documents
- *     • MANAGER              → their direct reports' documents only
- *     • EMPLOYEE             → their own documents only
- *     • Others               → 403
+ *     â€¢ HR_ADMIN / EXECUTIVE â†’ any employee's documents
+ *     â€¢ MANAGER              â†’ their direct reports' documents only
+ *     â€¢ EMPLOYEE             â†’ their own documents only
+ *     â€¢ Others               â†’ 403
  *
  *   Without these checks, any authenticated user could enumerate other
  *   employees' documents by guessing IDs.
@@ -17,11 +17,11 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Resolve the caller's actual role + employeeId from the DB (don't
-  // trust the token alone — roles can be revoked).
+  // trust the token alone â€” roles can be revoked).
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: { role: true, employee: { select: { id: true } } },
@@ -66,7 +66,7 @@ export async function GET(request: NextRequest) {
       ? { employeeId, visibleToEmployee: true }
       : { employeeId },
     orderBy: [{ type: 'asc' }, { createdAt: 'desc' }],
-    // Don't ship blobs in the list payload — they're served via /download.
+    // Don't ship blobs in the list payload â€” they're served via /download.
     select: {
       id: true, employeeId: true, type: true, name: true, url: true,
       size: true, mimeType: true, fileSize: true, fileMimeType: true,
@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ documents })
 }
 
-// POST /api/documents — multipart upload (name, type, file)
+// POST /api/documents â€” multipart upload (name, type, file)
 //
 // HR can upload for anyone. Employees can upload to their own record.
 // Manager can upload for their direct reports. Stored as BYTEA so we
@@ -91,7 +91,7 @@ const ALLOWED_MIME = new Set([
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
   const effectiveRole = previewRole ?? me.role
   const myEmpId = me.employee?.id ?? null
 
-  // HR previewing as another role is a "view-only" — block uploads.
+  // HR previewing as another role is a "view-only" â€” block uploads.
   if (me.role === 'HR_ADMIN' && previewRole && previewRole !== 'HR_ADMIN') {
     return NextResponse.json({ error: 'View-only while previewing role' }, { status: 403 })
   }
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
 
   // Auto-flip the matching OnboardingTask to DONE if the doc type maps to
   // one of the 5 employee-uploadable items (CNIC / PHOTO / ADDRESS_PROOF /
-  // EDUCATIONAL_CERTIFICATE / EXPERIENCE). Idempotent — skips if already done.
+  // EDUCATIONAL_CERTIFICATE / EXPERIENCE). Idempotent â€” skips if already done.
   try {
     const checklist = await prisma.onboardingChecklist.findUnique({
       where: { employeeId },
@@ -177,7 +177,7 @@ export async function POST(request: NextRequest) {
       })
     }
   } catch (e) {
-    // Non-fatal — the upload itself succeeded.
+    // Non-fatal â€” the upload itself succeeded.
     console.error('[documents POST] task flip failed', e)
   }
 

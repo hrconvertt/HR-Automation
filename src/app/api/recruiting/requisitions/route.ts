@@ -1,11 +1,11 @@
-/**
+﻿/**
  * POST /api/recruiting/requisitions
  *
  *   Creates a JobRequisition.
  *
- *   • MANAGER caller → request goes in with status='PENDING', requestedById set
+ *   â€¢ MANAGER caller â†’ request goes in with status='PENDING', requestedById set
  *     to the manager's employee.id. Awaits HR approval.
- *   • HR_ADMIN caller → request goes in as 'OPEN' directly (admin override).
+ *   â€¢ HR_ADMIN caller â†’ request goes in as 'OPEN' directly (admin override).
  *
  *   Notifies HR_ADMIN users when a manager submits a PENDING request.
  */
@@ -16,7 +16,7 @@ import { generateJD } from '@/lib/jd-generator'
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({
@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
   // Preview mode: HR can preview Manager view and still submit a request
   // (the request gets attributed to HR's own employee record). For other
-  // role previews (Employee, Executive) we keep the block — they have no
+  // role previews (Employee, Executive) we keep the block â€” they have no
   // legitimate reason to create requisitions.
   const previewRole = request.cookies.get('hr_preview_role')?.value
   const effectiveRole = (previewRole && me.role === 'HR_ADMIN')
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
   if (!title) return NextResponse.json({ error: 'Job title is required' }, { status: 400 })
   if (isManager && !me.employee) {
-    return NextResponse.json({ error: 'Your account has no employee record — contact HR' }, { status: 400 })
+    return NextResponse.json({ error: 'Your account has no employee record â€” contact HR' }, { status: 400 })
   }
 
   const status        = isHR ? 'OPEN' : 'PENDING'
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       data: hrs.filter((h) => h.employee).map((h) => ({
         employeeId: h.employee!.id,
         type: 'HIRING_REQUEST',
-        title: `New hiring request — ${title}`,
+        title: `New hiring request â€” ${title}`,
         message: `${managerName} requested ${vacancies} ${vacancies === 1 ? 'hire' : 'hires'} for "${title}"`,
         link: `/dashboard/recruiting?tab=requests&id=${created.id}`,
       })),

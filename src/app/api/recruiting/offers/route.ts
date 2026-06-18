@@ -1,9 +1,9 @@
-/**
+﻿/**
  * POST /api/recruiting/offers
  *
  *   Creates a JobOffer for a candidate AND drafts an offer-letter email
  *   in the Email Queue (status=DRAFT so HR reviews before sending).
- *   Also advances candidate.stage → 'OFFER' if not already there.
+ *   Also advances candidate.stage â†’ 'OFFER' if not already there.
  *
  *   HR_ADMIN or MANAGER. Preview mode: HR-as-Manager allowed (same as
  *   the Hiring Request flow); other previews blocked.
@@ -21,7 +21,7 @@ function escapeHtml(s: string): string {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     : '7 days from the date of this email'
   const salaryPkr = `PKR ${Math.round(salaryRaw).toLocaleString()}/month`
 
-  const subject = `Offer of Employment — ${candidate.requisition?.title ?? 'Convertt'}`
+  const subject = `Offer of Employment â€” ${candidate.requisition?.title ?? 'Convertt'}`
   const bodyHtml = `
 <p>Dear ${escapeHtml(firstName)},</p>
 <p>Following your interviews, we're delighted to extend an offer to join <strong>Convertt</strong> as <strong>${escapeHtml(candidate.requisition?.title ?? 'Team Member')}</strong>.</p>
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
 <strong>Offer Valid Until:</strong> ${escapeHtml(expiryLine)}<br/>
 <strong>Location:</strong> Mega Tower, Main Boulevard Gulberg, Lahore (On-Site)</p>
 ${note ? `<p>${escapeHtml(note)}</p>` : ''}
-<p>The detailed terms — probation, leave entitlements, statutory deductions, etc. — are in the attached Employment Agreement. Please review and reply with your acceptance or any questions.</p>
+<p>The detailed terms â€” probation, leave entitlements, statutory deductions, etc. â€” are in the attached Employment Agreement. Please review and reply with your acceptance or any questions.</p>
 <p>We're excited about what you'll build with us.</p>
 <p>Warm regards,<br/>Convertt HR</p>
 `.trim()

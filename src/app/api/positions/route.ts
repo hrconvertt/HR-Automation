@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GET  /api/positions       - list positions (with employee counts, departments)
  * POST /api/positions       - create a new position (HR only)
  *
@@ -12,7 +12,7 @@ import { isValidPositionLevel } from '@/lib/position-levels'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({

@@ -1,11 +1,11 @@
-/**
+﻿/**
  * Save a generated document into the employee's Document record.
  *
  * Stores the regeneration URL (with extras encoded) so the document can be
- * re-pulled later. The blob isn't stored — we save the recipe.
+ * re-pulled later. The blob isn't stored â€” we save the recipe.
  *
  * Why store the URL not the HTML?
- *   - HTML is large (5–10 KB per doc) and not searchable
+ *   - HTML is large (5â€“10 KB per doc) and not searchable
  *   - Templates may evolve; regenerating from the same params ensures
  *     consistency or shows the latest version
  *   - We capture the exact extras at the moment of issuance for audit
@@ -15,7 +15,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 
-// Map document-generator types → EmployeeDocument.type values
+// Map document-generator types â†’ EmployeeDocument.type values
 const TYPE_MAP: Record<string, string> = {
   offer_letter:                'OFFER_LETTER',
   employment_agreement:        'EMPLOYMENT_AGREEMENT',
@@ -51,7 +51,7 @@ const HR_ONLY_TYPES = new Set([
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = await request.json()
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 // GET: list saved docs for an employee (optionally filtered by type)
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)

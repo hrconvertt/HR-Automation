@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import RolesMatrix from '@/components/roles-matrix'
@@ -7,7 +7,7 @@ export default async function RolesPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   if (payload.role !== 'HR_ADMIN') {

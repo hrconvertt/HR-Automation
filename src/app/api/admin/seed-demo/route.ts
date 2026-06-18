@@ -1,8 +1,8 @@
-/**
- * Demo data seeder endpoint — HR-only.
+﻿/**
+ * Demo data seeder endpoint â€” HR-only.
  *
- * POST   → seed demo Attendance/Leave/Policies data (idempotent)
- * DELETE → wipe all demo-marked rows
+ * POST   â†’ seed demo Attendance/Leave/Policies data (idempotent)
+ * DELETE â†’ wipe all demo-marked rows
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -11,10 +11,10 @@ import { seedDemo, wipeDemo } from '@/lib/demo-seed'
 
 async function requireHR(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   if (!hasRole(payload, 'HR_ADMIN')) {
-    return { error: NextResponse.json({ error: 'Forbidden — HR only' }, { status: 403 }) }
+    return { error: NextResponse.json({ error: 'Forbidden â€” HR only' }, { status: 403 }) }
   }
   const previewRole = request.cookies.get('hr_preview_role')?.value
   if (previewRole && previewRole !== 'HR_ADMIN') {

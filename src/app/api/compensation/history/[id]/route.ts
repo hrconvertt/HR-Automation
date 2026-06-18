@@ -18,7 +18,7 @@ interface RouteParams { params: Promise<{ id: string }> }
 
 async function requireHR(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   if (!hasRole(payload, 'HR_ADMIN')) {
     return { error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }

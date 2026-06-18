@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
@@ -10,7 +10,7 @@ export default async function HelpIndexPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({
@@ -78,7 +78,7 @@ export default async function HelpIndexPage() {
 
       {/* AI chatbot tip */}
       <div className="rounded-xl bg-slate-50 border border-slate-100 p-4 flex items-start gap-3">
-        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">💬</div>
+        <div className="w-9 h-9 rounded-full bg-slate-100 flex items-center justify-center flex-shrink-0">ðŸ’¬</div>
         <div>
           <p className="font-semibold text-gray-900 text-sm">Prefer asking instead of reading?</p>
           <p className="text-sm text-gray-700 mt-0.5">

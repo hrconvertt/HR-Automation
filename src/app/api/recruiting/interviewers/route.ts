@@ -1,7 +1,7 @@
-/**
+﻿/**
  * GET /api/recruiting/interviewers
  *
- *   Returns the pool of employees who can interview candidates — anyone
+ *   Returns the pool of employees who can interview candidates â€” anyone
  *   with the MANAGER, LEAD, or HR_ADMIN role membership, plus any active
  *   employee whose designation mentions "Lead", "Manager", "Head", "HR".
  *
@@ -13,7 +13,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const roles = await prisma.userRole.findMany({

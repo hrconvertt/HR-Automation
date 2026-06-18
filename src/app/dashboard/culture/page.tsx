@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -11,7 +11,7 @@ import { CultureClient } from './culture-client'
 export default async function CulturePage() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? verifyToken(tok) : null
+  const payload = tok ? await verifyToken(tok) : null
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({
@@ -29,8 +29,8 @@ export default async function CulturePage() {
   const isHR = effectiveRole === 'HR_ADMIN' && !previewRole
 
   // Scope birthdays / anniversaries by role.
-  //   HR / Executive  — company-wide (they coordinate celebrations)
-  //   Everyone else   — own department only ("the team that he is")
+  //   HR / Executive  â€” company-wide (they coordinate celebrations)
+  //   Everyone else   â€” own department only ("the team that he is")
   // No-employee accounts (HR-only logins) fall back to company-wide.
   const seesCompanyWide =
     effectiveRole === 'HR_ADMIN' ||
@@ -160,7 +160,7 @@ export default async function CulturePage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-900 truncate">{e.fullName}</p>
-                      <p className="text-xs text-slate-500 truncate">{e.designation} · {e.department?.name ?? '—'}</p>
+                      <p className="text-xs text-slate-500 truncate">{e.designation} Â· {e.department?.name ?? 'â€”'}</p>
                     </div>
                     <Badge variant="secondary">
                       {new Date(thisYear, e.dobMonth, e.dobDay).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
@@ -186,10 +186,10 @@ export default async function CulturePage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-slate-900 truncate">{e.fullName}</p>
-                      <p className="text-xs text-slate-500 truncate">{e.designation} · {e.department?.name ?? '—'}</p>
+                      <p className="text-xs text-slate-500 truncate">{e.designation} Â· {e.department?.name ?? 'â€”'}</p>
                     </div>
                     <Badge className="bg-slate-100 text-slate-900">
-                      {e.years} year{e.years === 1 ? '' : 's'} · {new Date(thisYear, e.joinMonth, e.joinDay).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                      {e.years} year{e.years === 1 ? '' : 's'} Â· {new Date(thisYear, e.joinMonth, e.joinDay).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
                     </Badge>
                   </div>
                 ))}

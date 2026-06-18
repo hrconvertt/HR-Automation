@@ -1,5 +1,5 @@
-/**
- * Dashboard card — "Policies awaiting your review".
+﻿/**
+ * Dashboard card â€” "Policies awaiting your review".
  *
  * Server component: looks up PolicyReview rows where the current user is the
  * reviewer and status=PENDING. Used on Executive + HR home pages. Renders
@@ -15,7 +15,7 @@ export async function PoliciesPendingReview() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) return null
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) return null
 
   const user = await prisma.user.findUnique({
@@ -28,7 +28,7 @@ export async function PoliciesPendingReview() {
     where: {
       reviewerId: user.employee.id,
       status: 'PENDING',
-      // Only IN_REVIEW policies — a rejected/restarted policy may leave
+      // Only IN_REVIEW policies â€” a rejected/restarted policy may leave
       // stale PENDING rows we don't want to surface.
       policy: { status: 'IN_REVIEW' },
     },
@@ -45,7 +45,7 @@ export async function PoliciesPendingReview() {
       <div className="flex items-center gap-2 mb-3">
         <ClipboardCheck className="w-4 h-4 text-slate-700" />
         <p className="text-sm font-semibold text-slate-900">
-          Policies awaiting your review · {pending.length}
+          Policies awaiting your review Â· {pending.length}
         </p>
       </div>
       <ul className="space-y-2">
@@ -58,7 +58,7 @@ export async function PoliciesPendingReview() {
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900 truncate">{r.policy.title}</p>
                 <p className="text-[11px] text-slate-500 truncate">
-                  {r.policy.category.replace(/_/g, ' ')} ·{' '}
+                  {r.policy.category.replace(/_/g, ' ')} Â·{' '}
                   {r.policy.submittedForReviewAt
                     ? `submitted ${new Date(r.policy.submittedForReviewAt).toLocaleDateString()}`
                     : 'awaiting your decision'}

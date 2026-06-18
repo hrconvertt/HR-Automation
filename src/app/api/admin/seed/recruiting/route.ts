@@ -1,8 +1,8 @@
-/**
- * Seed Recruiting demo data — JobRequisitions + Candidates in various stages.
+﻿/**
+ * Seed Recruiting demo data â€” JobRequisitions + Candidates in various stages.
  *
- *   POST   /api/admin/seed/recruiting   → create demo rows
- *   DELETE /api/admin/seed/recruiting   → remove rows where isDemo=true
+ *   POST   /api/admin/seed/recruiting   â†’ create demo rows
+ *   DELETE /api/admin/seed/recruiting   â†’ remove rows where isDemo=true
  *
  * HR_ADMIN only. Tags everything with `isDemo: true` plus a `[DEMO]`
  * prefix in human-visible titles so it's easy to spot in lists.
@@ -13,7 +13,7 @@ import { verifyToken } from '@/lib/auth'
 
 async function gate(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return { error: 'Unauthorized' as const, status: 401 }
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
           isDemo: true,
         },
       })
-      // Make "stuck" rows older — set updatedAt via a follow-up update.
+      // Make "stuck" rows older â€” set updatedAt via a follow-up update.
       if (bucket.stuck && i < 3) {
         await prisma.candidate.update({
           where: { id: c.id },

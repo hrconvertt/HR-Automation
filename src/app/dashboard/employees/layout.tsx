@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -15,7 +15,7 @@ const roleLabels: Record<string, string> = {
 export default async function EmployeesLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
 
   let effectiveRole = 'EMPLOYEE'
   if (payload) {
@@ -32,7 +32,7 @@ export default async function EmployeesLayout({ children }: { children: React.Re
 
   return (
     <div className="-m-4 lg:-m-6 min-h-full bg-slate-50">
-      {/* Flat module header — tight row, no decorative tile.
+      {/* Flat module header â€” tight row, no decorative tile.
           Title + breadcrumb on left, role chip inline. Workday-style. */}
       <div className="bg-white border-b border-slate-200">
         <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3 flex-wrap">

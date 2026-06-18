@@ -1,4 +1,4 @@
-function escapeHtml(s: string): string {
+﻿function escapeHtml(s: string): string {
   return s.replace(/[<>&"']/g, (c) => ({
     '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;',
   } as Record<string, string>)[c])
@@ -41,7 +41,7 @@ const TYPE_LABEL: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   })
   if (!candidate) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
 
-  // Manager scoping — only the hiring manager (or HR) can schedule for this candidate.
+  // Manager scoping â€” only the hiring manager (or HR) can schedule for this candidate.
   if (effectiveRole === 'MANAGER') {
     if (!me.employee?.id || candidate.requisition.requestedById !== me.employee.id) {
       return NextResponse.json(
@@ -98,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Determine round — 1 + existing interviews for this candidate.
+  // Determine round â€” 1 + existing interviews for this candidate.
   const priorCount = await prisma.interview.count({ where: { candidateId } })
   const round = priorCount + 1
 
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   }) + ' at ' + scheduledAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
   const firstName = candidate.fullName.split(' ')[0]
-  const subject = `Interview invitation — ${TYPE_LABEL[type]} with Convertt for ${candidate.requisition.title}`
+  const subject = `Interview invitation â€” ${TYPE_LABEL[type]} with Convertt for ${candidate.requisition.title}`
   const interviewerLine = interviewers.length
     ? `<p><strong>You'll be meeting:</strong> ${interviewers.map((iv) => escapeHtml(`${iv.fullName}${iv.designation ? ` (${iv.designation})` : ''}`)).join(', ')}</p>`
     : ''
@@ -173,7 +173,7 @@ ${notesLine}
         employeeId: iv.id,
         type: 'GENERAL',
         title: 'Interview scheduled',
-        message: `${candidate.fullName} — ${TYPE_LABEL[type]} on ${slotLine}.`,
+        message: `${candidate.fullName} â€” ${TYPE_LABEL[type]} on ${slotLine}.`,
         link: `/dashboard/recruiting?tab=schedule`,
       }),
     ),
@@ -188,7 +188,7 @@ ${notesLine}
       'Day, Date, Time + Timezone': slotLine + ' PKT',
       '~45 minutes': `~${Math.round(duration)} minutes`,
       'Video call / In-person / Phone': TYPE_LABEL[type],
-      'Meeting link / Office address — Mega Tower, Lahore': meetingLink || 'Mega Tower, Lahore',
+      'Meeting link / Office address â€” Mega Tower, Lahore': meetingLink || 'Mega Tower, Lahore',
       'Name, Title': interviewers.map((iv) => `${iv.fullName}${iv.designation ? ` (${iv.designation})` : ''}`).join(', ') || 'TBD',
     },
     conditionContext: { round },

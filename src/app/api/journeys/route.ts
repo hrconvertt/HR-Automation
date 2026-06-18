@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 import {
@@ -9,7 +9,7 @@ import { buildEmail, type EmailTrigger } from '@/lib/email-templates'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const previewRole = request.cookies.get('hr_preview_role')?.value
@@ -128,7 +128,7 @@ export async function POST(request: NextRequest) {
     await notify({
       employeeId,
       type: 'GENERAL',
-      title: type === 'ONBOARDING' ? '🎉 Welcome to Convertt!' : '📋 Offboarding Process Started',
+      title: type === 'ONBOARDING' ? 'ðŸŽ‰ Welcome to Convertt!' : 'ðŸ“‹ Offboarding Process Started',
       message: type === 'ONBOARDING'
         ? `Your onboarding journey is live. Check your tasks in the Onboarding portal.`
         : `Your offboarding journey is set up. Last working day: ${target?.toLocaleDateString('en-GB')}.`,
@@ -139,7 +139,7 @@ export async function POST(request: NextRequest) {
     if (journey.employee.reportingManagerId) {
       await notifyMany([journey.employee.reportingManagerId], {
         type: 'GENERAL',
-        title: type === 'ONBOARDING' ? `🎉 New joiner: ${journey.employee.fullName}` : `📋 Offboarding: ${journey.employee.fullName}`,
+        title: type === 'ONBOARDING' ? `ðŸŽ‰ New joiner: ${journey.employee.fullName}` : `ðŸ“‹ Offboarding: ${journey.employee.fullName}`,
         message: type === 'ONBOARDING'
           ? `Onboarding tasks have been assigned to you. Review them in the Onboarding portal.`
           : `Knowledge-transfer + announcement tasks await. See the Offboarding portal.`,
@@ -147,10 +147,10 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    // ─── Auto-queue email drafts for HR review ────────────────────────────
-    // Onboarding → Offer Letter (permanent or internship variant)
-    // Offboarding (resignation/mutual) → Notice Period email
-    // Offboarding (termination*/layoff) → Termination email
+    // â”€â”€â”€ Auto-queue email drafts for HR review â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    // Onboarding â†’ Offer Letter (permanent or internship variant)
+    // Offboarding (resignation/mutual) â†’ Notice Period email
+    // Offboarding (termination*/layoff) â†’ Termination email
     try {
       const empFull = await prisma.employee.findUnique({
         where: { id: employeeId },
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
       }
     } catch (err) {
       console.error('[journey email auto-queue]', err)
-      // Non-fatal — the journey was created successfully
+      // Non-fatal â€” the journey was created successfully
     }
 
     return NextResponse.json({ journey })

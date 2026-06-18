@@ -1,8 +1,8 @@
-/**
+﻿/**
  * /api/exit-clearance
  *
- * GET  — list clearances (HR-only). Includes basic employee info + status.
- * POST — initiate a new clearance for an employee. Body: { employeeId, lastWorkingDay? }
+ * GET  â€” list clearances (HR-only). Includes basic employee info + status.
+ * POST â€” initiate a new clearance for an employee. Body: { employeeId, lastWorkingDay? }
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -11,7 +11,7 @@ import { computeFinalSettlement } from '@/lib/final-settlement'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

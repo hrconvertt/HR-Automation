@@ -1,5 +1,5 @@
-/**
- * POST /api/recruiting/candidates/bulk — HR or Manager.
+﻿/**
+ * POST /api/recruiting/candidates/bulk â€” HR or Manager.
  *
  *   Body:
  *     { action: 'MOVE_TOP_N_TO_SCREENING', requisitionId: string, n: number }
@@ -13,7 +13,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true, role: true } })
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

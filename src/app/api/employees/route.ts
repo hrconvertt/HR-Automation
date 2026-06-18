@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole, hashPassword } from '@/lib/auth'
 import { buildStandardOnboardingTasks } from '@/lib/onboarding-tasks'
@@ -22,7 +22,7 @@ async function nextEmployeeCode(deptCode: string): Promise<string> {
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Determine effective role (HR can preview as another role via cookie)
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -142,9 +142,9 @@ export async function POST(request: NextRequest) {
       // record + CompensationHistory row are created in the same transaction
       // so AutoPilot can pick the new hire up immediately.
       // Shape: { basic, houseRent, utilities, food, fuel, medicalAllowance, otherAllowance }
-      //   — any missing field defaults to 0
+      //   â€” any missing field defaults to 0
       // Or:    { totalGross, splitPct: { basic: 0.6, houseRent: 0.4, ... } }
-      //   — convenience for the simplified "Total Gross" UI
+      //   â€” convenience for the simplified "Total Gross" UI
       salary,
     } = body
 
@@ -204,14 +204,14 @@ export async function POST(request: NextRequest) {
     }
     const empType = employeeType ?? 'PROBATION'
 
-    // ─── Auto-provision login (Step 3a) ─────────────────────────────────────
+    // â”€â”€â”€ Auto-provision login (Step 3a) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Every new hire gets a User row so they can log into the portal.
     // Self-healing:
-    //   • If a User with this email already exists (re-hire, manual seed),
+    //   â€¢ If a User with this email already exists (re-hire, manual seed),
     //     LINK to it instead of failing.
-    //   • Otherwise create one with a temp password = employeeCode (lowercased).
+    //   â€¢ Otherwise create one with a temp password = employeeCode (lowercased).
     //     mustChangePass=true forces a reset on first login.
-    //   • DB role defaults to EMPLOYEE; HR can elevate later.
+    //   â€¢ DB role defaults to EMPLOYEE; HR can elevate later.
     // Note: We do the Employee create and the User create/link in a single
     // transaction so a half-provisioned hire is impossible.
     const tempPassword = employeeCode.toLowerCase()
@@ -259,7 +259,7 @@ export async function POST(request: NextRequest) {
         })
       }
 
-      // ─── Initial Compensation (optional) ────────────────────────────
+      // â”€â”€â”€ Initial Compensation (optional) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // Captured at hire-time so HR doesn't have to navigate to the
       // Compensation tab as a separate step. AutoPilot uses these values
       // immediately on the next payroll run.
@@ -374,9 +374,9 @@ export async function POST(request: NextRequest) {
     })
 
     // Initialize leave balances.
-    //   PERMANENT  → full daysPerYear allocation up-front.
-    //   PROBATION / INTERNSHIP / TRAINING → accrualPerMonth × probation
-    //   months (default 3). No ANNUAL row is created — probationers do
+    //   PERMANENT  â†’ full daysPerYear allocation up-front.
+    //   PROBATION / INTERNSHIP / TRAINING â†’ accrualPerMonth Ã— probation
+    //   months (default 3). No ANNUAL row is created â€” probationers do
     //   not accrue annual leave in the Pakistani standard.
     const policies = await prisma.leavePolicy.findMany({
       where: { employeeType: empType },
@@ -390,7 +390,7 @@ export async function POST(request: NextRequest) {
         : 0
 
     for (const policy of policies) {
-      // Probation policies without an accrualPerMonth get skipped — they
+      // Probation policies without an accrualPerMonth get skipped â€” they
       // are stale rows from the old "6 days/year" model.
       const isProbationary = empType !== 'PERMANENT'
       if (isProbationary && policy.leaveType === 'ANNUAL') continue

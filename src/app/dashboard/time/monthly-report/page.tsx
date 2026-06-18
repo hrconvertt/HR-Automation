@@ -1,5 +1,5 @@
-/**
- * Monthly Report — HR-only sub-page of the Time & Attendance module.
+﻿/**
+ * Monthly Report â€” HR-only sub-page of the Time & Attendance module.
  * Renders AdminTimeView in 'summary' mode (per-employee attendance summary).
  */
 
@@ -15,7 +15,7 @@ export default async function MonthlyReportPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })

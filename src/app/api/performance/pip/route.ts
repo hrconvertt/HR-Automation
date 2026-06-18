@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return null
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -93,8 +93,8 @@ export async function POST(request: NextRequest) {
   await notify({
     employeeId,
     type: 'PIP_CREATED',
-    title: '⚠️ Performance Improvement Plan',
-    message: `A PIP has been started for you (${new Date(startDate).toLocaleDateString('en-GB')} – ${new Date(endDate).toLocaleDateString('en-GB')}). Review the objectives in Performance.`,
+    title: 'âš ï¸ Performance Improvement Plan',
+    message: `A PIP has been started for you (${new Date(startDate).toLocaleDateString('en-GB')} â€“ ${new Date(endDate).toLocaleDateString('en-GB')}). Review the objectives in Performance.`,
     link: '/dashboard/performance',
   })
   if (emp?.reportingManagerId) {

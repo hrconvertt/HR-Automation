@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notifyMany } from '@/lib/notifications'
@@ -6,7 +6,7 @@ import { cycleWindow, computeTimeMetrics } from '@/lib/performance-metrics'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return null
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -115,7 +115,7 @@ export async function GET(request: NextRequest) {
 }
 
 // POST /api/performance/reviews
-// HR opens a review cycle — auto-creates a PerformanceReview row for every active employee
+// HR opens a review cycle â€” auto-creates a PerformanceReview row for every active employee
 // body: { reviewPeriod: "H1-2026", reviewType: "BIANNUAL" }
 export async function POST(request: NextRequest) {
   const access = await resolveAccess(request)
@@ -157,15 +157,15 @@ export async function POST(request: NextRequest) {
     select: { id: true, reportingManagerId: true },
   })
 
-  // ─── Compute cycle window for Time & Work metrics ───
-  // Returns null for legacy types (MONTHLY_11, QUARTERLY) — metrics stay null.
+  // â”€â”€â”€ Compute cycle window for Time & Work metrics â”€â”€â”€
+  // Returns null for legacy types (MONTHLY_11, QUARTERLY) â€” metrics stay null.
   const window = cycleWindow(reviewType, reviewPeriod)
 
   // Create draft reviews for each + link their open goals
   let created = 0
   let goalsLinked = 0
   for (const emp of activeEmployees) {
-    // Time & Work metrics — only when we have a valid window
+    // Time & Work metrics â€” only when we have a valid window
     let metrics: Awaited<ReturnType<typeof computeTimeMetrics>> | null = null
     if (window) {
       try {
@@ -213,7 +213,7 @@ export async function POST(request: NextRequest) {
   // Notify every active employee that their review is due
   await notifyMany(activeEmployees.map((e) => e.id), {
     type: 'REVIEW_SELF_DUE',
-    title: `📝 ${reviewType.replace('_', ' ')} review opened — ${reviewPeriod}`,
+    title: `ðŸ“ ${reviewType.replace('_', ' ')} review opened â€” ${reviewPeriod}`,
     message: 'Your self-appraisal is due. Open the Performance module to complete it.',
     link: '/dashboard/performance',
   })

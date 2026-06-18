@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -7,7 +7,7 @@ import { TasksClient } from './tasks-client'
 export default async function TasksPage() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? verifyToken(tok) : null
+  const payload = tok ? await verifyToken(tok) : null
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({

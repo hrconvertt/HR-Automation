@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
@@ -20,7 +20,7 @@ export default async function PerformancePage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({
@@ -34,7 +34,7 @@ export default async function PerformancePage() {
     user.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined
   const role = (previewRole ?? user.role) as 'HR_ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'EXECUTIVE'
   const employeeId = user.employee?.id ?? null
-  // HR is "previewing" when they're viewing as a non-HR role — destructive actions disabled
+  // HR is "previewing" when they're viewing as a non-HR role â€” destructive actions disabled
   const isPreviewMode = user.role === 'HR_ADMIN' && !!previewRole && previewRole !== 'HR_ADMIN'
 
   // Scope reviews list by role for the Reviews tab
@@ -77,7 +77,7 @@ export default async function PerformancePage() {
         </h1>
         <p className="text-sm text-white/85 mt-1">
           {role === 'EMPLOYEE' && 'Track your goals, reviews, and growth journey.'}
-          {role === 'MANAGER'  && 'Manage your team’s goals, reviews, and development.'}
+          {role === 'MANAGER'  && 'Manage your teamâ€™s goals, reviews, and development.'}
           {role === 'HR_ADMIN' && 'Run review cycles, track performance across the company.'}
           {role === 'EXECUTIVE' && 'Strategic view of company-wide performance.'}
         </p>
@@ -92,20 +92,20 @@ export default async function PerformancePage() {
           {showDisciplinaryTabs && <TabsTrigger value="pip">PIP</TabsTrigger>}
         </TabsList>
 
-        {/* OVERVIEW TAB — Step 9 */}
+        {/* OVERVIEW TAB â€” Step 9 */}
         <TabsContent value="overview">
           <PerformanceAnalytics role={role} employeeId={employeeId} />
         </TabsContent>
 
-        {/* GOALS TAB — Step 1 */}
+        {/* GOALS TAB â€” Step 1 */}
         <TabsContent value="goals">
           <GoalsPanel role={role} employeeId={employeeId} isPreviewMode={isPreviewMode} />
         </TabsContent>
 
-        {/* REVIEWS TAB — Step 2 */}
+        {/* REVIEWS TAB â€” Step 2 */}
         <TabsContent value="reviews">
           <div className="space-y-4">
-            {/* Self-review CTA — surfaces the most-recent pending self-appraisal */}
+            {/* Self-review CTA â€” surfaces the most-recent pending self-appraisal */}
             {role === 'EMPLOYEE' && employeeId && (() => {
               const myPending = reviews.find(
                 (r) => r.employeeId === employeeId && r.status === 'PENDING',
@@ -172,8 +172,8 @@ export default async function PerformancePage() {
                         </TableCell>
                         <TableCell>{r.reviewPeriod}</TableCell>
                         <TableCell><Badge variant="secondary">{r.reviewType.replace('_', ' ')}</Badge></TableCell>
-                        <TableCell className="text-sm text-gray-600">{r.employee.reportingManager?.fullName ?? '—'}</TableCell>
-                        <TableCell>{r.overallRating ? `${r.overallRating}/5` : '—'}</TableCell>
+                        <TableCell className="text-sm text-gray-600">{r.employee.reportingManager?.fullName ?? 'â€”'}</TableCell>
+                        <TableCell>{r.overallRating ? `${r.overallRating}/5` : 'â€”'}</TableCell>
                         <TableCell>
                           <Badge variant={
                             r.status === 'HR_FINALIZED' ? 'success' :

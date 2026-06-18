@@ -1,21 +1,21 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EmailTemplatesClient } from './email-templates-client'
 
 const SEED_TEMPLATES = [
-  { key: 'interview_invite', subject: 'Interview Invitation – {{role}} at Convertt', description: 'Sent when a candidate moves to INTERVIEW stage.', variables: 'candidateName, role, interviewDate, meetingLink' },
-  { key: 'offer_letter', subject: 'Employment Offer – {{designation}} at Convertt', description: 'Sent when an offer is generated.', variables: 'candidateName, designation, salary, joiningDate' },
-  { key: 'rejection_polite', subject: 'Application Update – Convertt', description: 'Polite rejection email.', variables: 'candidateName, role' },
-  { key: 'probation_confirm', subject: 'Confirmation of Employment – Convertt', description: 'Sent when probation is confirmed.', variables: 'employeeName, designation, effectiveDate' },
-  { key: 'settling_checkin_reminder', subject: 'Day-30 Check-in Reminder – {{employeeName}}', description: 'Reminds manager to submit settling check-in.', variables: 'employeeName, managerName, dueDate' },
+  { key: 'interview_invite', subject: 'Interview Invitation â€“ {{role}} at Convertt', description: 'Sent when a candidate moves to INTERVIEW stage.', variables: 'candidateName, role, interviewDate, meetingLink' },
+  { key: 'offer_letter', subject: 'Employment Offer â€“ {{designation}} at Convertt', description: 'Sent when an offer is generated.', variables: 'candidateName, designation, salary, joiningDate' },
+  { key: 'rejection_polite', subject: 'Application Update â€“ Convertt', description: 'Polite rejection email.', variables: 'candidateName, role' },
+  { key: 'probation_confirm', subject: 'Confirmation of Employment â€“ Convertt', description: 'Sent when probation is confirmed.', variables: 'employeeName, designation, effectiveDate' },
+  { key: 'settling_checkin_reminder', subject: 'Day-30 Check-in Reminder â€“ {{employeeName}}', description: 'Reminds manager to submit settling check-in.', variables: 'employeeName, managerName, dueDate' },
 ]
 
 export default async function EmailTemplatesPage() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? verifyToken(tok) : null
+  const payload = tok ? await verifyToken(tok) : null
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })

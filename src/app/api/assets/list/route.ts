@@ -1,5 +1,5 @@
-/**
- * GET /api/assets/list → { assets, assignments }
+﻿/**
+ * GET /api/assets/list â†’ { assets, assignments }
  *
  * HR_ADMIN sees everything. Managers see their team's assignments only.
  * Employees see their own. Salary-confidentiality doesn't apply here
@@ -11,7 +11,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
     assetWhere = { id: '__none__' }
     assignWhere = meId ? { returnedDate: null, employeeId: meId } : { id: '__none__' }
   } else if (effectiveRole === 'EXECUTIVE') {
-    // Executives see assignments at a high level — no inventory CRUD.
+    // Executives see assignments at a high level â€” no inventory CRUD.
     assetWhere = {}
   }
 

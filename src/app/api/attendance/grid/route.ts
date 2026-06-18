@@ -1,4 +1,4 @@
-/**
+﻿/**
  * GET /api/attendance/grid?month=YYYY-MM&department=<dept>&search=<query>&summary=1
  *
  * Returns a Workday-style attendance grid mirroring the source xlsx:
@@ -6,14 +6,14 @@
  *   - One cell per day of the requested month
  *   - Status values: P / WFH / L / H / A / WE  (present / wfh / leave / half / absent / weekend)
  *
- * When summary=1, returns per-month totals across the Nov-2025 → Jun-2026 range
- * (Convertt's reporting window) instead of a per-day grid — used by Summary View.
+ * When summary=1, returns per-month totals across the Nov-2025 â†’ Jun-2026 range
+ * (Convertt's reporting window) instead of a per-day grid â€” used by Summary View.
  *
  * Role gating (enforced server-side, NOT trusted from query):
- *   HR_ADMIN  — all employees
- *   EXECUTIVE — all employees, no export
- *   MANAGER   — self + direct reports
- *   EMPLOYEE  — self only
+ *   HR_ADMIN  â€” all employees
+ *   EXECUTIVE â€” all employees, no export
+ *   MANAGER   â€” self + direct reports
+ *   EMPLOYEE  â€” self only
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -44,7 +44,7 @@ function parseMonth(monthStr: string | null): { year: number; month: number } {
 }
 
 function deriveStatus(log: { status: string; workType: string } | undefined, isWeekend: boolean, isLeaveDay: boolean, isHalfDay: boolean): CellStatus {
-  // Check the actual logged status FIRST — if the employee was marked PRESENT
+  // Check the actual logged status FIRST â€” if the employee was marked PRESENT
   // on a Saturday (e.g. weekend on-call work), show "P", not "WE".
   if (log) {
     if (log.status === 'LEAVE') return isHalfDay ? 'H' : 'L'
@@ -56,7 +56,7 @@ function deriveStatus(log: { status: string; workType: string } | undefined, isW
     if (log.status === 'HOLIDAY') return 'WE'
     if (log.status === 'ABSENT') return 'A'
   }
-  // No explicit log for this day — fall back to weekend / leave / absent.
+  // No explicit log for this day â€” fall back to weekend / leave / absent.
   if (isWeekend) return 'WE'
   if (isLeaveDay) return isHalfDay ? 'H' : 'L'
   return 'A'
@@ -64,7 +64,7 @@ function deriveStatus(log: { status: string; workType: string } | undefined, isW
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await prisma.user.findUnique({
@@ -107,7 +107,7 @@ export async function GET(request: NextRequest) {
     orderBy: { fullName: 'asc' },
   })
 
-  // ── SUMMARY MODE ────────────────────────────────────────────────────────
+  // â”€â”€ SUMMARY MODE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (isSummary) {
     const firstMonth = REPORTING_MONTHS[0]
     const lastMonth = REPORTING_MONTHS[REPORTING_MONTHS.length - 1]
@@ -193,7 +193,7 @@ export async function GET(request: NextRequest) {
         id: emp.id,
         fullName: emp.fullName,
         designation: emp.designation,
-        department: emp.department?.name ?? '—',
+        department: emp.department?.name ?? 'â€”',
         photoUrl: emp.photoUrl,
         months,
         ytd,
@@ -211,7 +211,7 @@ export async function GET(request: NextRequest) {
     })
   }
 
-  // ── GRID MODE (per-day for one month) ───────────────────────────────────
+  // â”€â”€ GRID MODE (per-day for one month) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const { year, month } = parseMonth(searchParams.get('month'))
   const mStart = new Date(year, month - 1, 1)
   const mEnd = new Date(year, month, 0)
@@ -269,10 +269,10 @@ export async function GET(request: NextRequest) {
       let status: CellStatus = isWeekend
         ? 'WE'
         : dt > today
-          ? 'A' // future days — render as blank; client maps 'A' for future to dash
+          ? 'A' // future days â€” render as blank; client maps 'A' for future to dash
           : deriveStatus(log, false, onLeave, halfDay)
-      // Future days: keep as 'A' but flag with isWeekend=false; UI shows '—' for dt > today
-      // (we don't have a separate "future" status — UI handles via date check)
+      // Future days: keep as 'A' but flag with isWeekend=false; UI shows 'â€”' for dt > today
+      // (we don't have a separate "future" status â€” UI handles via date check)
       if (dt > today && !isWeekend) {
         // Sentinel: use absent for now, the UI will treat future days via the day index check
       }
@@ -289,7 +289,7 @@ export async function GET(request: NextRequest) {
       id: emp.id,
       fullName: emp.fullName,
       designation: emp.designation,
-      department: emp.department?.name ?? '—',
+      department: emp.department?.name ?? 'â€”',
       photoUrl: emp.photoUrl,
       days,
       totals: { present, leave, wfh, hd, absent },

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/recruiting/candidates
  *
  *   Creates a new Candidate in stage='APPLIED' on a given requisition.
@@ -11,7 +11,7 @@ import { scoreCandidate } from '@/lib/candidate-scoring'
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },

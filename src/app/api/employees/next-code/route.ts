@@ -1,11 +1,11 @@
-/**
+﻿/**
  * GET /api/employees/next-code?dept=<departmentId>
  *
  * Suggests the next CON-{DEPT}-{NNN} employee code for a department by
  * scanning existing CON-{DEPT}-NNN codes and picking max + 1, zero-padded
  * to three digits.
  *
- * HR_ADMIN only — used by the New Employee dialog.
+ * HR_ADMIN only â€” used by the New Employee dialog.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -13,7 +13,7 @@ import { verifyToken, hasRole } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

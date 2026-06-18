@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 
@@ -6,7 +6,7 @@ import { verifyToken, hasRole } from '@/lib/auth'
  * GET /api/compliance
  *
  *   Statutory reports (EOBI / FBR / PSEB / Social Security).
- *   HR_ADMIN and EXECUTIVE only — these touch tax + statutory filings.
+ *   HR_ADMIN and EXECUTIVE only â€” these touch tax + statutory filings.
  *   Managers and Employees do not see this data.
  *
  *   HR previewing as another role inherits that role's scope, so
@@ -14,7 +14,7 @@ import { verifyToken, hasRole } from '@/lib/auth'
  */
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const previewRole = request.cookies.get('hr_preview_role')?.value

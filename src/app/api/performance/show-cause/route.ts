@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return null
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -66,10 +66,10 @@ export async function GET(request: NextRequest) {
  * Create a new performance-concern record.
  *
  * Two modes:
- *   MANAGER mode (default) — manager flags the pattern, records initial concerns,
+ *   MANAGER mode (default) â€” manager flags the pattern, records initial concerns,
  *     and schedules a meeting with the employee. status = MEETING_REQUESTED.
  *
- *   HR mode (if `issueImmediately: true`) — HR may skip the meeting stage
+ *   HR mode (if `issueImmediately: true`) â€” HR may skip the meeting stage
  *     and issue a formal Show Cause Notice directly. status = ISSUED.
  */
 export async function POST(request: NextRequest) {
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
   // Occurrence number across all stages
   const prior = await prisma.showCause.count({ where: { employeeId } })
 
-  // HR direct-issue path — skip meeting, jump straight to ISSUED
+  // HR direct-issue path â€” skip meeting, jump straight to ISSUED
   if (issueImmediately && access.effectiveRole === 'HR_ADMIN') {
     if (!description) {
       return NextResponse.json({ error: 'description required when issuing immediately' }, { status: 400 })
@@ -127,7 +127,7 @@ export async function POST(request: NextRequest) {
     await notify({
       employeeId,
       type: 'SHOW_CAUSE_ISSUED',
-      title: '⚠️ Show Cause Notice',
+      title: 'âš ï¸ Show Cause Notice',
       message: `You have been issued a ${issueType.replace('_', ' ')} notice. Please respond${deadline ? ` by ${new Date(deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}.`,
       link: '/dashboard/performance',
     })
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
   await notify({
     employeeId,
     type: 'SHOW_CAUSE_ISSUED',
-    title: '📋 Performance discussion requested',
+    title: 'ðŸ“‹ Performance discussion requested',
     message: `${access.userName ?? 'Your manager'} would like to discuss ${issueType.replace('_', ' ').toLowerCase()} concerns with you${meetingScheduledFor ? ` on ${new Date(meetingScheduledFor).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}.`,
     link: '/dashboard/performance',
   })
@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
     await notify({
       employeeId: hr,
       type: 'SHOW_CAUSE_ISSUED',
-      title: '👀 Performance concern flagged',
+      title: 'ðŸ‘€ Performance concern flagged',
       message: `${access.userName ?? 'A manager'} flagged a ${issueType.replace('_', ' ').toLowerCase()} concern. Awaiting meeting outcome.`,
       link: '/dashboard/performance',
     })

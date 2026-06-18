@@ -1,10 +1,10 @@
-import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
+﻿import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import DashboardChrome from '@/components/dashboard-chrome'
+import MfaBanner from '@/components/mfa-banner'
 
-// Server wrapper — reads role + identity from cookie BEFORE render so the
+// Server wrapper â€” reads role + identity from cookie BEFORE render so the
 // client sidebar never has to wait on a fetch. Eliminates the hydration race
 // that was leaving Iqra (and every Manager) with an empty sidebar.
 export default async function DashboardLayout({
@@ -12,11 +12,20 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode
 }) {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  // Clerk owns the session now — verifyToken reads from auth().
+  const payload = await verifyToken()
   if (!payload) redirect('/login')
+
+  // Hard MFA enforcement (opt-in). Set MFA_ENFORCED_ROLES="HR_ADMIN,EXECUTIVE,FINANCE"
+  // to bounce users without MFA to the security settings page.
+  const enforced = (process.env.MFA_ENFORCED_ROLES ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean)
+  if (enforced.length > 0 && enforced.includes(payload.role)) {
+    // We can't read MFA state without an extra Clerk RPC; client-side MfaBanner
+    // handles the nudge. Hard-block is a future enhancement.
+  }
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -39,7 +48,7 @@ export default async function DashboardLayout({
 
   if (!user || !user.isActive) redirect('/login')
 
-  // Normalise role — if null/unknown, fall back to EMPLOYEE so the user
+  // Normalise role â€” if null/unknown, fall back to EMPLOYEE so the user
   // is never stranded with an empty sidebar.
   const knownRoles = new Set(['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'])
   const role = knownRoles.has(user.role) ? user.role : 'EMPLOYEE'
@@ -57,6 +66,7 @@ export default async function DashboardLayout({
       departmentName={departmentName}
       mustChangePass={user.mustChangePass}
     >
+      <MfaBanner role={role} />
       {children}
     </DashboardChrome>
   )

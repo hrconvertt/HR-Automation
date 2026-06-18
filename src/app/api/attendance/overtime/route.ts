@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/attendance/overtime
  * Approve or update overtime hours for an attendance log entry.
  * Body: { attendanceLogId, overtimeHours, approve }
@@ -6,7 +6,7 @@
  * Authorisation rules:
  *   - HR_ADMIN: can approve any employee's OT (including managers').
  *   - MANAGER:  can approve OT for their direct reports ONLY.
- *               They CANNOT approve their own OT — that escalates to HR.
+ *               They CANNOT approve their own OT â€” that escalates to HR.
  *   - Everyone else: forbidden.
  */
 
@@ -16,7 +16,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload || !['HR_ADMIN', 'MANAGER'].includes(payload.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'attendanceLogId required' }, { status: 400 })
   }
 
-  // ── Manager-specific guardrails ──────────────────────────────────────────
+  // â”€â”€ Manager-specific guardrails â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (payload.role === 'MANAGER') {
     const me = await prisma.user.findUnique({
       where: { id: payload.userId },
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Attendance log not found' }, { status: 404 })
     }
 
-    // Block self-approval — managers cannot sign off on their own OT.
+    // Block self-approval â€” managers cannot sign off on their own OT.
     if (myEmpId && target.employee.id === myEmpId) {
       return NextResponse.json({
         error: 'You cannot approve your own overtime. Your overtime is reviewed by HR.',

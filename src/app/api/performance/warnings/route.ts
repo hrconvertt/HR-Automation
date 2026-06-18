@@ -1,5 +1,5 @@
-/**
- * Employee Warnings — HR / Manager-initiated. Three warnings auto-escalate
+﻿/**
+ * Employee Warnings â€” HR / Manager-initiated. Three warnings auto-escalate
  * to a Show Cause (created with status SHOW_CAUSE_REQUESTED so HR sees it
  * in the inbox).
  *
@@ -12,7 +12,7 @@ import { verifyToken } from '@/lib/auth'
 
 async function resolveCaller(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return { error: 'Unauthorized' as const, status: 401 }
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
     data: { employeeId, reason, category, severity, issuedById: c.me.id },
   })
 
-  // 3-strike escalation — count UN-RESOLVED warnings (we don't track a
+  // 3-strike escalation â€” count UN-RESOLVED warnings (we don't track a
   // resolved flag yet, so use the last 12 months as a rolling window).
   const cutoff = new Date(Date.now() - 365 * 86_400_000)
   const recentCount = await prisma.employeeWarning.count({

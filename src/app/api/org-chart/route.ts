@@ -1,15 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 
-// ─── Org Chart — nested tree from Employee.reportingManagerId ────────────────
+// â”€â”€â”€ Org Chart â€” nested tree from Employee.reportingManagerId â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Role-gated to HR_ADMIN + EXECUTIVE + MANAGER + EMPLOYEE (read-only for non-HR).
 // Builds a tree live from the DB. The CEO (designation contains "CEO" or
 // "Chief Executive") becomes the visual root; a Co-Founder (designation contains
 // "Co-Founder" / "Founder") renders as a peer of the CEO with a soft connector.
 // Any other root-level employees with no manager are bucketed under a small
 // "Unassigned" virtual node at the bottom so HR can drag them to a real parent.
-// Cycles are broken gracefully — the second occurrence is marked with a warning
+// Cycles are broken gracefully â€” the second occurrence is marked with a warning
 // rather than recursing infinitely.
 
 export interface OrgNode {
@@ -70,7 +70,7 @@ function sortChildren(nodes: OrgNode[]): OrgNode[] {
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Preview-aware effective role: HR can preview as Exec etc.
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
 
   // Include ACTIVE + PROBATION + ON_LEAVE. Excluding only the truly-departed
   // (RESIGNED / TERMINATED / INACTIVE) means people on probation or extended
-  // leave still appear in the org chart — explains why Iqra Naveed seemed
+  // leave still appear in the org chart â€” explains why Iqra Naveed seemed
   // to vanish when her status was flipped to PROBATION at one point.
   const employees = await prisma.employee.findMany({
     where: { status: { notIn: ['RESIGNED', 'TERMINATED', 'INACTIVE'] } },
@@ -158,7 +158,7 @@ export async function GET(request: NextRequest) {
     }
     const parent = nodes.get(parentId)
     if (!parent) {
-      // Manager points at an inactive/missing employee — treat as root.
+      // Manager points at an inactive/missing employee â€” treat as root.
       roots.push(node)
       continue
     }
@@ -166,7 +166,7 @@ export async function GET(request: NextRequest) {
     // and mark it so the UI can show a warning chip.
     if (inCycle.has(node.id) && inCycle.has(parent.id)) {
       // Detach: keep the cyclic node at the top level with a warning.
-      node.warning = 'Reporting cycle detected — please fix manager assignment'
+      node.warning = 'Reporting cycle detected â€” please fix manager assignment'
       roots.push(node)
       continue
     }
@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
 
   // Orphans get a small warning so HR notices them.
   for (const o of orphans) {
-    if (!o.warning) o.warning = 'No manager set — drag onto a manager to fix'
+    if (!o.warning) o.warning = 'No manager set â€” drag onto a manager to fix'
   }
 
   let tree: OrgNode
@@ -233,7 +233,7 @@ export async function GET(request: NextRequest) {
   } else if (roots.length === 1) {
     tree = roots[0]
   } else {
-    // No CEO and multiple roots — fall back to the first root and bucket the
+    // No CEO and multiple roots â€” fall back to the first root and bucket the
     // rest under "Unassigned". This is a degraded state HR should fix.
     tree = roots[0]
     orphans.push(...roots.slice(1))

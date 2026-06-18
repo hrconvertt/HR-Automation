@@ -1,18 +1,18 @@
-/**
+﻿/**
  * GET /api/time/calendar?month=YYYY-MM
  *
  * Unified per-employee per-day status for a month, overlaying:
- *   - Attendance punches    → PRESENT / WORKING / ABSENT
- *   - Approved leave        → LEAVE (with type)
- *   - Public holidays       → HOLIDAY (with name)
- *   - Weekends              → WEEKEND
- *   - Future dates          → FUTURE
+ *   - Attendance punches    â†’ PRESENT / WORKING / ABSENT
+ *   - Approved leave        â†’ LEAVE (with type)
+ *   - Public holidays       â†’ HOLIDAY (with name)
+ *   - Weekends              â†’ WEEKEND
+ *   - Future dates          â†’ FUTURE
  *
  * Role scoping:
- *   - EMPLOYEE   → self only
- *   - MANAGER    → self + direct reports
- *   - HR_ADMIN   → everyone
- *   - EXECUTIVE  → everyone (read-only)
+ *   - EMPLOYEE   â†’ self only
+ *   - MANAGER    â†’ self + direct reports
+ *   - HR_ADMIN   â†’ everyone
+ *   - EXECUTIVE  â†’ everyone (read-only)
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -31,7 +31,7 @@ type DayStatus =
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await prisma.user.findUnique({
@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
   } else if (effectiveRole === 'MANAGER' && myEmpId) {
     employeeFilter = { OR: [{ id: myEmpId }, { reportingManagerId: myEmpId }] }
   }
-  // HR / EXECUTIVE — no filter
+  // HR / EXECUTIVE â€” no filter
 
   const [employees, logs, leaves, holidays] = await Promise.all([
     prisma.employee.findMany({
@@ -100,7 +100,7 @@ export async function GET(request: NextRequest) {
     }),
   ])
 
-  // Index for fast lookup — key by full YYYY-MM-DD so logs from adjacent months
+  // Index for fast lookup â€” key by full YYYY-MM-DD so logs from adjacent months
   // (TZ-shifted) can't collide.
   const logsByEmpDay = new Map<string, typeof logs[number]>()
   for (const l of logs) logsByEmpDay.set(`${l.employeeId}:${dayKey(l.date)}`, l)
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
   const holidaysByDay = new Map<string, string>()
   for (const h of holidays) holidaysByDay.set(dayKey(h.date), h.name)
 
-  // Build employee → day → status grid
+  // Build employee â†’ day â†’ status grid
   const grid = employees.map((emp) => {
     const days: Record<number, DayStatus> = {}
     for (let d = 1; d <= daysInMonth; d++) {
@@ -116,7 +116,7 @@ export async function GET(request: NextRequest) {
       date.setHours(0, 0, 0, 0)
       const dayOfWeek = date.getDay()
 
-      // Priority: HOLIDAY → LEAVE → WEEKEND → FUTURE → attendance
+      // Priority: HOLIDAY â†’ LEAVE â†’ WEEKEND â†’ FUTURE â†’ attendance
       // Holidays beat FUTURE so upcoming public holidays still show on the grid.
 
       const todayKey = dayKey(date)
@@ -154,7 +154,7 @@ export async function GET(request: NextRequest) {
         continue
       }
 
-      // Attendance log — anyone who clocked in (in-progress or done) is PRESENT.
+      // Attendance log â€” anyone who clocked in (in-progress or done) is PRESENT.
       // The "live working now" state lives on the Today tab; calendar is a
       // month view where the distinction doesn't add information.
       const log = logsByEmpDay.get(`${emp.id}:${todayKey}`)
@@ -170,7 +170,7 @@ export async function GET(request: NextRequest) {
         days[d] = { kind: 'ABSENT' }
         continue
       }
-      // No record — for today that means NOT_IN (treated like empty); for past dates → ABSENT
+      // No record â€” for today that means NOT_IN (treated like empty); for past dates â†’ ABSENT
       if (date < today) {
         days[d] = { kind: 'ABSENT' }
       } else {
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
       employeeId: emp.id,
       fullName: emp.fullName,
       employeeCode: emp.employeeCode,
-      department: emp.department?.name ?? '—',
+      department: emp.department?.name ?? 'â€”',
       days,
     }
   })

@@ -341,7 +341,18 @@ export default function DashboardChrome({
   }
 
   async function handleLogout() {
-    await fetch('/api/auth/logout', { method: 'POST' })
+    // Clerk owns the session — clear it via Clerk's signOut().
+    // We still hit /api/auth/logout for any legacy hr_preview_role cookie
+    // cleanup; it's a no-op for the Clerk session itself.
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+    } catch {
+      /* ignore */
+    }
+    if (typeof window !== 'undefined' && (window as unknown as { Clerk?: { signOut: (opts?: { redirectUrl?: string }) => Promise<void> } }).Clerk) {
+      await (window as unknown as { Clerk: { signOut: (opts?: { redirectUrl?: string }) => Promise<void> } }).Clerk.signOut({ redirectUrl: '/login' })
+      return
+    }
     router.push('/login')
   }
 

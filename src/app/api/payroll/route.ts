@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { calculatePayslip } from '@/lib/payroll'
@@ -7,7 +7,7 @@ import { dayKey } from '@/lib/date-utils'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return { error: 'Unauthorized' as const, status: 401 }
 
   const user = await prisma.user.findUnique({
@@ -41,9 +41,9 @@ export async function GET(request: NextRequest) {
 
   // Scope payslip query by role.
   // SALARY VISIBILITY RULE (locked down): Manager + Lead do NOT see team
-  // payslip amounts. They only see their OWN payslip here — team attendance
+  // payslip amounts. They only see their OWN payslip here â€” team attendance
   // is rendered separately by the manager-payroll-view (no amounts).
-  // EMPLOYEE should NEVER see DRAFT payslips — only finalized ones.
+  // EMPLOYEE should NEVER see DRAFT payslips â€” only finalized ones.
   let payslipWhere: {
     employeeId?: string
     employee?: { reportingManagerId: string }
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
     payslipWhere = { employeeId, status: { in: FINALIZED } }
   } else if (effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') {
     if (!employeeId) return NextResponse.json({ payrollRun: null })
-    // Only their own payslip — never their team's. Compensation amounts
+    // Only their own payslip â€” never their team's. Compensation amounts
     // are HR/Exec/Finance + owner-only.
     payslipWhere = { employeeId, status: { in: FINALIZED } }
   }
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Payroll for this month already exists' }, { status: 409 })
     }
 
-    // Detect prior payslips for this month — these come from the IBFT historical
+    // Detect prior payslips for this month â€” these come from the IBFT historical
     // import (no PayrollRun attached). We'll wrap them in the new run instead of
     // bulk-creating duplicates and hitting the (employeeId, month, year) unique key.
     const orphanPayslips = await prisma.payslip.findMany({
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // TZ-safe month range — explicit local midnight start to local end of last day.
+    // TZ-safe month range â€” explicit local midnight start to local end of last day.
     const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0)
     const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
 
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Approved leave for the month — needed to count paid leave as PRESENT
+    // Approved leave for the month â€” needed to count paid leave as PRESENT
     // (CASUAL / SICK / etc. are paid; only UNPAID leave reduces pay).
     const approvedLeaves = await prisma.leaveRequest.findMany({
       where: {
@@ -209,7 +209,7 @@ export async function POST(request: NextRequest) {
 
     const payslipsData = employees
       .filter((emp) => emp.salary != null)
-      .filter((emp) => !orphanEmpIds.has(emp.id))  // skip — historical payslip exists, will be re-linked below
+      .filter((emp) => !orphanEmpIds.has(emp.id))  // skip â€” historical payslip exists, will be re-linked below
       .map((emp) => {
         const salary = emp.salary!
         // Paid days = actual attendance + paid leave (CASUAL/SICK/etc.).
@@ -324,7 +324,7 @@ export async function POST(request: NextRequest) {
     console.error('[POST /api/payroll]', error)
     // Surface the actual error message in production so HR can debug
     // instead of staring at "Internal server error". Strip the stack trace
-    // (still logged server-side) — only the human-readable message goes out.
+    // (still logged server-side) â€” only the human-readable message goes out.
     const msg = error instanceof Error ? error.message : String(error)
     // Embed detail in the error string so the existing client alert() shows it
     return NextResponse.json(

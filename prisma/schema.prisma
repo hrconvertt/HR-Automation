@@ -17,10 +17,14 @@ datasource db {
 model User {
   id             String    @id @default(cuid())
   email          String    @unique
-  password       String
+  // ─── Clerk integration (primary authentication source as of the Clerk migration) ───
+  // Set on first sign-in via the Clerk webhook (see src/app/api/webhooks/clerk/route.ts)
+  // or defensively by syncClerkUser() in src/lib/clerk-sync.ts.
+  clerkUserId    String?   @unique
+  password       String    // DEPRECATED — retained for rollback. Clerk owns auth now.
   role           String    @default("EMPLOYEE") // PRIMARY view (HR_ADMIN | MANAGER | LEAD | EMPLOYEE | EXECUTIVE | FINANCE) — used for default landing page
   userRoles      UserRole[]                     // FULL set of roles — Workday-style multi-role
-  mustChangePass Boolean   @default(true)
+  mustChangePass Boolean   @default(true)        // DEPRECATED — Clerk handles password resets
   isActive       Boolean   @default(true)
   lastLogin      DateTime?
   // ─── User preferences (Settings/Account) ───

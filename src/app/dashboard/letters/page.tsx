@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -12,7 +12,7 @@ export default async function LettersPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({
@@ -82,7 +82,7 @@ export default async function LettersPage() {
 
   return (
     <div className="space-y-5">
-      {/* Header — charcoal hero */}
+      {/* Header â€” charcoal hero */}
       <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div className="flex items-start gap-3">
@@ -92,7 +92,7 @@ export default async function LettersPage() {
             <div>
               <h1 className="text-2xl font-semibold tracking-tight">Letters</h1>
               <p className="text-sm text-white/85 mt-1">
-                {role === 'EMPLOYEE' && 'Request formal letters — experience, salary certificate, visa NOC, and more.'}
+                {role === 'EMPLOYEE' && 'Request formal letters â€” experience, salary certificate, visa NOC, and more.'}
                 {role === 'MANAGER'  && 'Track letter requests across your team.'}
                 {role === 'HR_ADMIN' && 'Review pending letter requests and issue auto-numbered formal letters.'}
                 {role === 'EXECUTIVE' && 'Letter issuance activity across the company.'}
@@ -109,7 +109,7 @@ export default async function LettersPage() {
           <div>
             <h2 className="text-base font-semibold text-slate-900">Need a letter?</h2>
             <p className="text-sm text-slate-600 mt-0.5">
-              Pick from 8 letter types — Experience, Salary Certificate, NOC for Visa, Bonafide,
+              Pick from 8 letter types â€” Experience, Salary Certificate, NOC for Visa, Bonafide,
               Confirmation, Relieving, Service Certificate, Warning. HR will review and issue.
             </p>
           </div>

@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 
@@ -7,7 +7,7 @@ import { verifyToken } from '@/lib/auth'
 // retype "Sr. Software Engineer" / "Senior Software Engineer" / etc.
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  if (!token || !verifyToken(token)) {
+  if (!token || !await verifyToken(token)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

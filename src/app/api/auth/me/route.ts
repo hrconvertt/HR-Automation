@@ -1,16 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
-export async function GET(request: NextRequest) {
-  const token = request.cookies.get('hr_token')?.value
-  if (!token) {
-    return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
-  }
-
-  const payload = verifyToken(token)
+export async function GET(_request: NextRequest) {
+  // Clerk is the source of truth — verifyToken reads from auth().
+  const payload = await verifyToken()
   if (!payload) {
-    return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
   }
 
   try {

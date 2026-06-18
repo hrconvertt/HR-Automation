@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
@@ -9,7 +9,7 @@ import { notify } from '@/lib/notifications'
 // row, and notifies the employee + old manager + new manager.
 export async function PATCH(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (payload.role !== 'HR_ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -53,7 +53,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'New manager not found' }, { status: 404 })
     }
 
-    // Cycle detection — walk up new manager's chain; if we hit employeeId,
+    // Cycle detection â€” walk up new manager's chain; if we hit employeeId,
     // this would close a loop.
     let cursorId: string | null = newManager.id
     const visited = new Set<string>()
@@ -103,7 +103,7 @@ export async function PATCH(request: NextRequest) {
     }),
   ])
 
-  // Notifications — fire-and-forget; notify() swallows errors.
+  // Notifications â€” fire-and-forget; notify() swallows errors.
   const newMgrLabel = newManager ? newManager.fullName : 'no manager'
   await Promise.all([
     notify({

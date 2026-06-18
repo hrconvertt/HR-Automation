@@ -1,5 +1,5 @@
-/**
- * HR-only utility — clears the logged-in HR Admin's attendance for today only.
+﻿/**
+ * HR-only utility â€” clears the logged-in HR Admin's attendance for today only.
  * Useful for resetting test punches. Doesn't affect other employees.
  */
 
@@ -9,7 +9,7 @@ import { verifyToken, hasRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) {
     return NextResponse.json({ error: 'HR only' }, { status: 403 })

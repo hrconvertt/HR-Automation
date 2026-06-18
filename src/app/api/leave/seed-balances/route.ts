@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/leave/seed-balances?employeeId=<id>
  *
  * HR_ADMIN-only. Seeds (or refreshes) LeaveBalance rows for the current year
@@ -38,10 +38,10 @@ function prorate(fullYear: number, joiningDate: Date | null, year: number): numb
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (payload.role !== 'HR_ADMIN') {
-    return NextResponse.json({ error: 'Forbidden — HR only' }, { status: 403 })
+    return NextResponse.json({ error: 'Forbidden â€” HR only' }, { status: 403 })
   }
 
   const { searchParams } = new URL(request.url)

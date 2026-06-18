@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Look up user → employee via Prisma (token's employeeId can be stale)
+  // Look up user â†’ employee via Prisma (token's employeeId can be stale)
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
     include: { employee: { select: { id: true } } },
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const wantAll = searchParams.get('all') === 'true'
 
-  // ── "All employees" mode — HR_ADMIN / EXECUTIVE only ─────────────────
+  // â”€â”€ "All employees" mode â€” HR_ADMIN / EXECUTIVE only â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (wantAll) {
     if (payload.role !== 'HR_ADMIN' && payload.role !== 'EXECUTIVE') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
 
   if (!empId) return NextResponse.json({ balances: [] })
 
-  // ── Authorisation: who's balance can the caller see? ─────────────────
+  // â”€â”€ Authorisation: who's balance can the caller see? â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // EMPLOYEE: only self
   // MANAGER:  self + direct reports
   // HR_ADMIN / EXECUTIVE: anyone
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ balances: mapped })
 }
 
-// ─── helpers ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 type RawBalanceWithEmp = {
   id: string; leaveType: string; allocated: number; used: number; remaining: number;
@@ -102,7 +102,7 @@ function groupByEmployee(rows: RawBalanceWithEmp[]) {
       employeeId: b.employee.id,
       fullName: b.employee.fullName,
       employeeCode: b.employee.employeeCode,
-      department: b.employee.department?.name ?? '—',
+      department: b.employee.department?.name ?? 'â€”',
       balances: [],
       totalAllocated: 0, totalUsed: 0, totalRemaining: 0,
     }

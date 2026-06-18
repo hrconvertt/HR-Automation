@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
@@ -6,7 +6,7 @@ import { LETTER_TYPES, type LetterType } from '@/lib/letter-templates'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return null
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ letters })
 }
 
-// POST /api/letters — employee creates a request
+// POST /api/letters â€” employee creates a request
 // body: { letterType, purpose?, destinationCountry?, bankName?, travelFrom?, travelTo? }
 export async function POST(request: NextRequest) {
   const access = await resolveAccess(request)

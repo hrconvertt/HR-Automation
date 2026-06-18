@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { getPayrollConfig } from '@/lib/config'
@@ -13,9 +13,9 @@ import { notifyMany } from '@/lib/notifications'
 
 /**
  * Sum the worked-time across multiple IN/OUT pairs in a day.
- * Robust to missing OUT (last punch is IN → not yet counted, returns 0 for that session).
+ * Robust to missing OUT (last punch is IN â†’ not yet counted, returns 0 for that session).
  */
-// (was: isoDay — now provided by `dayKey` in @/lib/date-utils)
+// (was: isoDay â€” now provided by `dayKey` in @/lib/date-utils)
 
 function sumSessionPairs(punches: { type: string; timestamp: Date }[]): number {
   let total = 0
@@ -32,7 +32,7 @@ function sumSessionPairs(punches: { type: string; timestamp: Date }[]): number {
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Resolve effective role (HR can preview)
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
         employeeId: emp.id,
         employeeCode: emp.employeeCode,
         fullName: emp.fullName,
-        department: emp.department?.name ?? '—',
+        department: emp.department?.name ?? 'â€”',
         clockIn: log?.clockIn ?? null,
         clockOut: isCurrentlyIn ? null : (log?.clockOut ?? null),
         status: effectiveStatus,
@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
 
     const todayStats = {
       present: allRecords.filter(r => r.status === 'PRESENT' || r.status === 'LATE').length,
-      late: 0, // deprecated — no longer surfaced to UI
+      late: 0, // deprecated â€” no longer surfaced to UI
       absent: allRecords.filter(r => r.status === 'ABSENT').length,
       notYetIn: allRecords.filter(r => r.status === 'NOT_IN').length,
       wfh: allRecords.filter(r => r.workType === 'WFH' && r.clockIn).length,
@@ -163,7 +163,7 @@ export async function GET(request: NextRequest) {
   const startDate = new Date(year, month - 1, 1)
   const endDate = new Date(year, month, 0)
 
-  // Overtime logs view — records with overtimeHours > 0
+  // Overtime logs view â€” records with overtimeHours > 0
   if (isOvertime) {
     const logs = await prisma.attendanceLog.findMany({
       where: {
@@ -226,7 +226,7 @@ export async function GET(request: NextRequest) {
     const holidayKeys = new Set(holidays.map((h) => dayKey(h.date)))
     const today = new Date(); today.setHours(0, 0, 0, 0)
 
-    // Walk all weekdays in the period (up to yesterday — today doesn't auto-absent)
+    // Walk all weekdays in the period (up to yesterday â€” today doesn't auto-absent)
     const weekdaysInPeriod: Date[] = []
     {
       const cur = new Date(startDate); cur.setHours(0,0,0,0)
@@ -296,12 +296,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // NOTE: clock-in always logs against the *logged-in user's own* Employee record,
   // never against the role they're previewing. So preview-mode restrictions don't
-  // apply here — the punch is unambiguous regardless of which view they're using.
+  // apply here â€” the punch is unambiguous regardless of which view they're using.
 
   // Look up user's actual employee id (token can be stale after data re-imports)
   const user = await prisma.user.findUnique({
@@ -326,7 +326,7 @@ export async function POST(request: NextRequest) {
       clientContext?: ClientContext
     }
 
-    // ── Authorisation: who is this punch FOR? ────────────────────────────
+    // â”€â”€ Authorisation: who is this punch FOR? â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     // Only HR_ADMIN may punch on behalf of another employee. Everyone else
     // is locked to their own record, regardless of what they send in the body.
     let empId: string
@@ -350,7 +350,7 @@ export async function POST(request: NextRequest) {
     const ctx: ClientContext = clientContext ?? {}
 
     if (action === 'CLOCK_IN') {
-      // ── Multi-punch: check the latest punch of the day ─────────────────
+      // â”€â”€ Multi-punch: check the latest punch of the day â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       const latestPunch = await prisma.attendancePunch.findFirst({
         where: { employeeId: empId, date: logDate },
         orderBy: { timestamp: 'desc' },
@@ -362,7 +362,7 @@ export async function POST(request: NextRequest) {
       }
       const isResume = !!latestPunch && latestPunch.type === 'OUT'
 
-      // ── Trust scoring ──────────────────────────────────────────────────
+      // â”€â”€ Trust scoring â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
       // HR / manual entries (where bodyEmployeeId is for someone else) bypass scoring
       const isManualEntry = bodyEmployeeId && bodyEmployeeId !== myEmpId
       let scoring = null as Awaited<ReturnType<typeof scoreClockIn>> | null
@@ -439,7 +439,7 @@ export async function POST(request: NextRequest) {
       const log = await prisma.attendanceLog.upsert({
         where: { employeeId_date: { employeeId: empId, date: logDate } },
         update: {
-          // Re-opening the day after a break — clockOut becomes null again so UI shows "clocked in"
+          // Re-opening the day after a break â€” clockOut becomes null again so UI shows "clocked in"
           clockOut: null,
           // Self-heal: if the day was marked ABSENT (e.g. HR manual entry or
           // auto-absent flip after EOD) but the employee actually clocked back
@@ -492,7 +492,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         message:
           scoring?.decision === 'MANAGER_REVIEW'
-            ? `${isResume ? 'Resumed' : 'Clocked in'} — flagged for manager review`
+            ? `${isResume ? 'Resumed' : 'Clocked in'} â€” flagged for manager review`
             : isResume
               ? 'Resumed from break'
               : 'Clocked in successfully',
@@ -519,7 +519,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'You are already clocked out. Tap Check In to resume.' }, { status: 400 })
       }
 
-      // Score the clock-out (lighter touch — no block, just record)
+      // Score the clock-out (lighter touch â€” no block, just record)
       let outScore: number | null = null
       if (!bodyEmployeeId || bodyEmployeeId === myEmpId) {
         const s = await scoreClockIn({ employeeId: empId, ip, ctx })
@@ -568,8 +568,8 @@ export async function POST(request: NextRequest) {
       const sessionCount = allPunches.filter((p) => p.type === 'OUT').length
       return NextResponse.json({
         message: sessionCount > 1
-          ? `Clocked out — ${sessionCount} sessions today, ${hoursWorked.toFixed(1)}h total`
-          : `Clocked out — ${hoursWorked.toFixed(1)}h today`,
+          ? `Clocked out â€” ${sessionCount} sessions today, ${hoursWorked.toFixed(1)}h total`
+          : `Clocked out â€” ${hoursWorked.toFixed(1)}h today`,
         log,
         totalHours: Math.round(hoursWorked * 100) / 100,
         sessionCount,

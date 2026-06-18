@@ -1,4 +1,4 @@
-/**
+﻿/**
  * POST /api/admin/email-templates/test
  * HR_ADMIN. Sends a test of the given template to the current user, with
  * sample variables filled in. Creates an EmailSend row in DRAFT status
@@ -13,7 +13,7 @@ import { substituteSquareBracketVars } from '@/lib/email-triggers'
 export async function POST(request: NextRequest) {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? verifyToken(tok) : null
+  const payload = tok ? await verifyToken(tok) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },

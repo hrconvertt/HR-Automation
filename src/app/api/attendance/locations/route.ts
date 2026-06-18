@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 
@@ -8,7 +8,7 @@ function unauth(msg = 'Unauthorized', status = 401) {
 
 async function requireHR(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return { error: unauth() }
   if (!hasRole(payload, 'HR_ADMIN')) return { error: unauth('Forbidden', 403) }
   const previewRole = request.cookies.get('hr_preview_role')?.value

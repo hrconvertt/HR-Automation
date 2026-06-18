@@ -65,7 +65,7 @@ export default async function PrintPayslipPage({ params }: PageProps) {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const tokenPayload = verifyToken(token)
+  const tokenPayload = await verifyToken(token)
   if (!tokenPayload) redirect('/login')
 
   const user = await prisma.user.findUnique({

@@ -53,7 +53,7 @@ const FINANCE_ALLOWED_FIELDS = new Set<UpdateField>(['status', 'payoutNotes'])
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Block edits while previewing a different role

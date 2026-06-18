@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { canSeeAggregateSalary } from '@/lib/can-see-salary'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Determine effective role for salary gating on the payroll_summary report.
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
             },
           })
         } catch { /* audit must not block the 403 */ }
-        return NextResponse.json({ error: 'Forbidden — payroll data is restricted' }, { status: 403 })
+        return NextResponse.json({ error: 'Forbidden â€” payroll data is restricted' }, { status: 403 })
       }
       const payslips = await prisma.payslip.findMany({
         where: {

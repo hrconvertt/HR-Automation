@@ -15,7 +15,7 @@ import { sendEmail } from '@/lib/email'
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? verifyToken(tok) : null
+  const payload = tok ? await verifyToken(tok) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })
   if (!me || me.role !== 'HR_ADMIN') return NextResponse.json({ error: 'HR only' }, { status: 403 })

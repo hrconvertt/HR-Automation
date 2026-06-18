@@ -1,12 +1,12 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasAnyRole } from '@/lib/auth'
 
-// Lifecycle dashboard metrics — funnel counts, time-to-onboarded avg,
+// Lifecycle dashboard metrics â€” funnel counts, time-to-onboarded avg,
 // attrition by phase (last 12 months).
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasAnyRole(payload, ['HR_ADMIN', 'EXECUTIVE'])) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

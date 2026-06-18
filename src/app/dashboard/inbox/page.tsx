@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
@@ -14,7 +14,7 @@ const LIFECYCLE_TYPES = new Set([
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({
@@ -74,7 +74,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
               <p className="text-sm text-slate-600 mt-0.5">{n.message}</p>
               {n.link && (
                 <Link href={n.link} className="text-xs text-slate-700 hover:underline mt-1 inline-block">
-                  View →
+                  View â†’
                 </Link>
               )}
             </div>

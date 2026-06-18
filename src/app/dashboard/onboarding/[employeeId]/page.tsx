@@ -15,7 +15,7 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
   const { employeeId } = await params
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({

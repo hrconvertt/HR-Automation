@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -11,7 +11,7 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
   const sp = (await searchParams) ?? {}
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? verifyToken(tok) : null
+  const payload = tok ? await verifyToken(tok) : null
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({
@@ -32,9 +32,9 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
   const isLead = effectiveRole === 'LEAD'
 
   // Calendar visibility:
-  //   HR / Executive  — see everyone's birthdays + anniversaries
-  //   Manager / Lead  — see own department only (their team feels like home)
-  //   Employee        — see own department only
+  //   HR / Executive  â€” see everyone's birthdays + anniversaries
+  //   Manager / Lead  â€” see own department only (their team feels like home)
+  //   Employee        â€” see own department only
   // Probation milestones stay HR-only (already enforced below).
   // Holidays + company events are company-wide for everyone.
   const seesAllPeople = isHR || isExec
@@ -44,7 +44,7 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
   const year = sp.year ? Number(sp.year) : today.getFullYear()
   const month = sp.month ? Number(sp.month) : today.getMonth()
 
-  // Range for queries: first → last of viewed month
+  // Range for queries: first â†’ last of viewed month
   const monthStart = new Date(year, month, 1)
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59)
 
@@ -85,9 +85,9 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
   ])
 
   // Scope leaves:
-  //   HR / Executive  — see everyone's approved leaves
-  //   Manager / Lead  — see team's leaves + their own
-  //   Employee        — see own only
+  //   HR / Executive  â€” see everyone's approved leaves
+  //   Manager / Lead  â€” see team's leaves + their own
+  //   Employee        â€” see own only
   // Bug fix: the previous filter omitted the manager's own leave (they only
   //   matched direct reports) and excluded EXECUTIVE/LEAD entirely. Aqib's
   //   own approved leave wasn't surfacing because he viewed his own calendar

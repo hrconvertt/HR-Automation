@@ -1,41 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
 
-// Lightweight Edge-compatible JWT decode (no verification — verification happens in API routes)
-function decodeTokenPayload(token: string): { userId: string; role: string; exp: number } | null {
-  try {
-    const parts = token.split('.')
-    if (parts.length !== 3) return null
-    const padded = parts[1] + '==='.slice((parts[1].length + 3) % 4)
-    const json = atob(padded.replace(/-/g, '+').replace(/_/g, '/'))
-    return JSON.parse(json)
-  } catch {
-    return null
+// Routes that DO NOT require a Clerk session.
+//   /login           — Clerk's <SignIn/> page itself
+//   /careers/*       — public job listings + application form
+//   /api/webhooks/*  — Clerk → us webhooks (signed)
+//   /api/careers/*   — public applicant intake endpoints
+//   /payslip/*/print — print views (token-scoped, not session-scoped)
+//   /letters/*/print — same
+//   /increment-letter/* — same
+const isPublicRoute = createRouteMatcher([
+  '/login(.*)',
+  '/careers(.*)',
+  '/api/webhooks(.*)',
+  '/api/careers(.*)',
+  '/payslip/(.*)/print',
+  '/letters/(.*)/print',
+  '/increment-letter(.*)',
+  '/',
+])
+
+export default clerkMiddleware(async (auth, req) => {
+  if (!isPublicRoute(req)) {
+    await auth.protect()
   }
-}
-
-export function middleware(request: NextRequest) {
-  const token = request.cookies.get('hr_token')?.value
-  const { pathname } = request.nextUrl
-
-  const isLoginPage = pathname === '/login'
-  const isDashboard = pathname.startsWith('/dashboard')
-
-  const decoded = token ? decodeTokenPayload(token) : null
-  const user = decoded && decoded.exp > Math.floor(Date.now() / 1000) ? decoded : null
-
-  if (isDashboard && !user) {
-    const loginUrl = new URL('/login', request.url)
-    loginUrl.searchParams.set('from', pathname)
-    return NextResponse.redirect(loginUrl)
-  }
-
-  if (isLoginPage && user) {
-    return NextResponse.redirect(new URL('/dashboard', request.url))
-  }
-
-  return NextResponse.next()
-}
+})
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  // Run middleware on everything except Next internals and static files
+  matcher: [
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    '/(api|trpc)(.*)',
+  ],
 }

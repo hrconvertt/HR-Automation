@@ -1,8 +1,8 @@
-/**
- * Policies — clean library model (Option A).
+﻿/**
+ * Policies â€” clean library model (Option A).
  *
- *   HR_ADMIN          → HRPoliciesView (CRUD + publish/archive)
- *   Everyone else     → EmployeePoliciesView (read-only library — same content for
+ *   HR_ADMIN          â†’ HRPoliciesView (CRUD + publish/archive)
+ *   Everyone else     â†’ EmployeePoliciesView (read-only library â€” same content for
  *                       Employee, Manager, Executive). Searchable, category filter,
  *                       click into a policy to read.
  *
@@ -21,7 +21,7 @@ export default async function PoliciesPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({

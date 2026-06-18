@@ -1,9 +1,9 @@
-/**
+﻿/**
  * POST /api/admin/monthly-revenue
  *
  *   HR enters the company's gross revenue for a given month so the
  *   Executive dashboard can compute Cost-of-People % and Revenue per
- *   Employee. Upsert — re-entering the same month overwrites.
+ *   Employee. Upsert â€” re-entering the same month overwrites.
  *
  *   HR_ADMIN only. Preview-mode blocked.
  */
@@ -13,7 +13,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })
   if (!me || me.role !== 'HR_ADMIN') return NextResponse.json({ error: 'HR only' }, { status: 403 })
@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true, role: true } })
   if (!me || me.role !== 'HR_ADMIN') return NextResponse.json({ error: 'HR only' }, { status: 403 })

@@ -1,10 +1,10 @@
-/**
+﻿/**
  * GET /api/time/approvals
  *
  * Unified inbox of everything waiting on the caller's decision.
  *
- *   MANAGER  → OT pending for direct reports + Leave at PENDING (manager stage)
- *   HR_ADMIN → All OT pending + all Leave at PENDING_HR (final stage) + any
+ *   MANAGER  â†’ OT pending for direct reports + Leave at PENDING (manager stage)
+ *   HR_ADMIN â†’ All OT pending + all Leave at PENDING_HR (final stage) + any
  *              PENDING leave that has no manager attached (HR fast-path)
  *
  * Each item carries enough context to render and to dispatch the correct
@@ -17,7 +17,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (payload.role !== 'HR_ADMIN' && payload.role !== 'MANAGER') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
   const myEmpId = user?.employee?.id ?? null
   const isHR = payload.role === 'HR_ADMIN'
 
-  // ── Build employee scope ──────────────────────────────────────────────
+  // â”€â”€ Build employee scope â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const empScope: Record<string, unknown> = isHR ? {} : { reportingManagerId: myEmpId }
 
-  // ── Overtime — pending approval ───────────────────────────────────────
+  // â”€â”€ Overtime â€” pending approval â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   //   Currently HR-only. Managers don't approve OT in this build (feature kept
   //   in code for future re-enable: just remove the `isHR ?` gate below).
   const otLogs = isHR ? await prisma.attendanceLog.findMany({
@@ -54,13 +54,13 @@ export async function GET(request: NextRequest) {
       id: l.id,
       employeeId: l.employeeId,
       fullName: l.employee.fullName,
-      department: l.employee.department?.name ?? '—',
+      department: l.employee.department?.name ?? 'â€”',
       date: l.date.toISOString(),
       overtimeHours: l.overtimeHours,
       hoursWorked: l.hoursWorked,
     }))
 
-  // ── Leave — by stage and role ─────────────────────────────────────────
+  // â”€â”€ Leave â€” by stage and role â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // For MANAGER: PENDING (their stage) only; their own requests excluded
   // For HR_ADMIN: PENDING_HR (their stage) + any PENDING for employees without a manager
   let leaveItems: Array<{
@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
         id: l.id,
         employeeId: l.employeeId,
         fullName: l.employee.fullName,
-        department: l.employee.department?.name ?? '—',
+        department: l.employee.department?.name ?? 'â€”',
         leaveType: l.leaveType,
         fromDate: l.fromDate.toISOString(),
         toDate: l.toDate.toISOString(),

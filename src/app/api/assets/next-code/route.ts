@@ -1,5 +1,5 @@
-/**
- * GET /api/assets/next-code → { next: "CON-AST-009" }
+﻿/**
+ * GET /api/assets/next-code â†’ { next: "CON-AST-009" }
  *
  * Scans AssetAssignment.assetCode for existing CON-AST-NNN entries and
  * returns max + 1, zero-padded to 3 digits. HR-only.
@@ -10,7 +10,7 @@ import { verifyToken, hasRole } from '@/lib/auth'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

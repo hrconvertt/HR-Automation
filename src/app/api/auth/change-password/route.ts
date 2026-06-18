@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, verifyPassword, hashPassword } from '@/lib/auth'
 
@@ -13,7 +13,7 @@ import { verifyToken, verifyPassword, hashPassword } from '@/lib/auth'
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
   if (!token) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
   const { currentPassword, newPassword } = await request.json().catch(() => ({}))

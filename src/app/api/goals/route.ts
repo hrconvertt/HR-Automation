@@ -1,10 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return { error: 'Unauthorized' as const, status: 401 }
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -20,7 +20,7 @@ async function resolveAccess(request: NextRequest) {
   }
 }
 
-// GET /api/goals  →  scoped by role
+// GET /api/goals  â†’  scoped by role
 // query: ?employeeId=xxx  (HR/Manager can pass)
 export async function GET(request: NextRequest) {
   const access = await resolveAccess(request)
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ goals })
 }
 
-// POST /api/goals  →  create new goal
+// POST /api/goals  â†’  create new goal
 // body: { employeeId?, description, kpi?, target?, weight? }
 //   - employee creates own: omit employeeId
 //   - HR/Manager: pass employeeId (and verify scope for manager)

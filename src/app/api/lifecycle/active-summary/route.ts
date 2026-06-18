@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { getTeamEmployeeIds } from '@/lib/team-scope'
@@ -8,12 +8,12 @@ import { getTeamEmployeeIds } from '@/lib/team-scope'
 // last-90-day promotions/manager-changes, and tenure buckets.
 //
 // Scoping:
-//   HR_ADMIN / EXECUTIVE → all employees
-//   MANAGER / LEAD       → recursive team (all descendants in reporting tree)
-//   EMPLOYEE             → self only
+//   HR_ADMIN / EXECUTIVE â†’ all employees
+//   MANAGER / LEAD       â†’ recursive team (all descendants in reporting tree)
+//   EMPLOYEE             â†’ self only
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await prisma.user.findUnique({
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
   } else if ((effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') && meId) {
     scopeIds = await getTeamEmployeeIds(meId, { includeSelf: false })
     if (scopeIds.length === 0) {
-      // No reports — still allow self in the feed? No: a manager with no reports has an empty team feed.
+      // No reports â€” still allow self in the feed? No: a manager with no reports has an empty team feed.
       return NextResponse.json({
         birthdays: [], anniversaries: [], probationEnding: [],
         promotions: [], managerChanges: [], deptTransfers: [],
@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   } else if (effectiveRole === 'EMPLOYEE' && meId) {
     scopeIds = [meId]
   } else {
-    // Unknown role or missing employee linkage — empty payload.
+    // Unknown role or missing employee linkage â€” empty payload.
     return NextResponse.json({
       birthdays: [], anniversaries: [], probationEnding: [],
       promotions: [], managerChanges: [], deptTransfers: [],
@@ -169,7 +169,7 @@ export async function GET(request: NextRequest) {
     level: m.employee.position?.level ?? null,
   }))
 
-  // Department transfers — pulled from promotionRequest with newDepartmentId differing from old.
+  // Department transfers â€” pulled from promotionRequest with newDepartmentId differing from old.
   const deptIds = Array.from(new Set(promotions.map((p) => p.newDepartmentId).filter(Boolean) as string[]))
   const deptMap = deptIds.length
     ? Object.fromEntries((await prisma.department.findMany({ where: { id: { in: deptIds } }, select: { id: true, name: true } })).map((d) => [d.id, d.name]))

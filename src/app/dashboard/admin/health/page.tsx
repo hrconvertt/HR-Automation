@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -7,7 +7,7 @@ import { HealthPanel } from '@/components/admin/health-panel'
 import { MonthlyRevenueCard } from '@/components/admin/monthly-revenue-card'
 
 /**
- * /dashboard/admin/health — System Health page.
+ * /dashboard/admin/health â€” System Health page.
  *
  *   Server-renders the initial scan, then a client component lets HR
  *   re-scan and trigger individual auto-fixes.
@@ -19,7 +19,7 @@ export default async function HealthPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })

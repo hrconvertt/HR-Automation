@@ -1,13 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 
 /**
- * GET   /api/profile/notifications — list current user's NotificationPreference rows
- * PATCH /api/profile/notifications — upsert one or many rows
+ * GET   /api/profile/notifications â€” list current user's NotificationPreference rows
+ * PATCH /api/profile/notifications â€” upsert one or many rows
  *
  * Body for PATCH:
- *   { prefs: [{ category, emailEnabled, inAppEnabled }, …] }
+ *   { prefs: [{ category, emailEnabled, inAppEnabled }, â€¦] }
  *
  * Missing rows default to {email:true, inApp:true} on the read side, so an
  * empty DB == "subscribed to everything". HR can flip categories per user.
@@ -17,7 +17,7 @@ const CATEGORIES = ['LEAVE', 'PROBATION', 'PERFORMANCE', 'DOCUMENTS', 'CELEBRATI
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
   if (!token) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
   const rows = await prisma.notificationPreference.findMany({
@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
   if (!token) return NextResponse.json({ error: 'Unauthenticated' }, { status: 401 })
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
 
   const { prefs } = (await request.json().catch(() => ({}))) as {

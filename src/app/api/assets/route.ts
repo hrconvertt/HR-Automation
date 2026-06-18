@@ -1,5 +1,5 @@
-/**
- * POST /api/assets — HR creates an Asset + AssetAssignment in one call.
+﻿/**
+ * POST /api/assets â€” HR creates an Asset + AssetAssignment in one call.
  *
  * Body JSON:
  *   {
@@ -14,7 +14,7 @@ import { verifyToken, hasRole } from '@/lib/auth'
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

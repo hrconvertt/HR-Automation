@@ -1,5 +1,5 @@
-/**
- * Public holidays — read by anyone (used to compute leave days), write only by HR.
+﻿/**
+ * Public holidays â€” read by anyone (used to compute leave days), write only by HR.
  */
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -9,7 +9,7 @@ import { parseLocalDate } from '@/lib/date-utils'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload || payload.role !== 'HR_ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload || payload.role !== 'HR_ADMIN') {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
@@ -74,7 +74,7 @@ export async function DELETE(request: NextRequest) {
   const id = searchParams.get('id')
   if (!id) return NextResponse.json({ error: 'id is required' }, { status: 400 })
 
-  // Idempotent delete — if the row doesn't exist (already removed in another
+  // Idempotent delete â€” if the row doesn't exist (already removed in another
   // tab, or never created), return success rather than 500.
   const result = await prisma.holiday.deleteMany({ where: { id } })
   return NextResponse.json({ success: true, deleted: result.count })

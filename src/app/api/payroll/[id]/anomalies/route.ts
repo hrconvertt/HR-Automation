@@ -26,7 +26,7 @@ const NET_DELTA_THRESHOLD_PCT = 10 // anything >10% change vs prior is flagged
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({

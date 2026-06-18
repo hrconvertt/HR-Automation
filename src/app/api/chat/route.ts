@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -19,15 +19,15 @@ You can help with:
 Company context:
 - Working days: Monday to Friday (some employees also work Saturday/Sunday per their schedule)
 - Standard working hours: 8 hours/day
-- Overtime is calculated at 2× hourly rate (Pakistan Factories Act)
+- Overtime is calculated at 2Ã— hourly rate (Pakistan Factories Act)
 - EOBI contribution: 1% of basic salary (capped at PKR 470/month)
 - Leave types: Annual, Sick, Casual, Maternity/Paternity
 
-Keep responses concise and helpful. If a question is outside HR scope, politely redirect. Do not make up specific employee data — direct users to check their profile or contact HR directly for personal records.`
+Keep responses concise and helpful. If a question is outside HR scope, politely redirect. Do not make up specific employee data â€” direct users to check their profile or contact HR directly for personal records.`
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  if (!token || !verifyToken(token)) {
+  if (!token || !await verifyToken(token)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

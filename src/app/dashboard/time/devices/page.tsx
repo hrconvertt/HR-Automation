@@ -1,5 +1,5 @@
-/**
- * Devices — HR-only sub-page of the Time & Attendance module.
+﻿/**
+ * Devices â€” HR-only sub-page of the Time & Attendance module.
  * Renders AdminTimeView in 'devices' mode (sync token + device setup).
  */
 
@@ -15,7 +15,7 @@ export default async function DevicesPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
-  const payload = verifyToken(token)
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })

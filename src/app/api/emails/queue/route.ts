@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 import { buildEmail, type EmailTrigger } from '@/lib/email-templates'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
@@ -24,11 +24,11 @@ export async function GET(request: NextRequest) {
 }
 
 // Create a new draft. Supports two modes:
-//   1) trigger-based: { employeeId, trigger, extras? } — auto-builds subject + body from template
+//   1) trigger-based: { employeeId, trigger, extras? } â€” auto-builds subject + body from template
 //   2) manual:        { employeeId?, toEmail, subject, bodyHtml, trigger?='CUSTOM' }
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

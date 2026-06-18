@@ -1,4 +1,4 @@
-import { cookies } from 'next/headers'
+﻿import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -13,13 +13,13 @@ const roleLabels: Record<string, string> = {
 }
 
 /**
- * Recruiting module layout — same flat Workday-style header as People/Payroll.
+ * Recruiting module layout â€” same flat Workday-style header as People/Payroll.
  * Title + breadcrumb on the left, role chip on the right, no decorative tile.
  */
 export default async function RecruitingLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
 
   let effectiveRole = 'EMPLOYEE'
   if (payload) {

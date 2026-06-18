@@ -1,8 +1,8 @@
-/**
+﻿/**
  * Generate a personalised HR document from employee data.
  *
  * GET  /api/documents/generate?type=offer_letter&employeeId=xxx
- *    → returns HTML inline (browser opens it, user prints/saves as PDF)
+ *    â†’ returns HTML inline (browser opens it, user prints/saves as PDF)
  *
  * Access:
  *   - HR_ADMIN can generate any document for any employee
@@ -25,7 +25,7 @@ const ALWAYS_HR_ONLY: DocumentType[] = [
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? verifyToken(token) : null
+  const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { searchParams } = new URL(request.url)
