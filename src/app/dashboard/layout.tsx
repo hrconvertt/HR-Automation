@@ -1,4 +1,5 @@
 ﻿import { redirect } from 'next/navigation'
+import { auth } from '@clerk/nextjs/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import DashboardChrome from '@/components/dashboard-chrome'
@@ -14,7 +15,19 @@ export default async function DashboardLayout({
 }) {
   // Clerk owns the session now — verifyToken reads from auth().
   const payload = await verifyToken()
-  if (!payload) redirect('/login')
+  if (!payload) {
+    // Two reasons we could be here:
+    //   (a) Not signed in to Clerk at all → send to /login
+    //   (b) Signed in to Clerk but their email isn't on the DB allowlist.
+    //       clerk-sync has already deleted the rejected Clerk user, but we
+    //       might still be holding a session cookie. Send to /unauthorized
+    //       so the user understands they're not on the guest list.
+    const session = await auth().catch(() => null)
+    if (session?.userId) {
+      redirect('/unauthorized')
+    }
+    redirect('/login')
+  }
 
   // Hard MFA enforcement (opt-in). Set MFA_ENFORCED_ROLES="HR_ADMIN,EXECUTIVE,FINANCE"
   // to bounce users without MFA to the security settings page.

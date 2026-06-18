@@ -15,11 +15,17 @@ export interface ClerkSyncResult {
   userId: string
   created: boolean
   linked: boolean
+  rejected?: boolean   // email not on the allowlist; Clerk user has been deleted
 }
 
 /**
- * Link a Clerk user to a DB User row. If no matching row exists (by email),
- * create one with role=EMPLOYEE. Idempotent.
+ * Link a Clerk user to an existing DB User row by email. INVITE-ONLY:
+ * if no matching DB row exists, the Clerk user is REJECTED (deleted) —
+ * we don't auto-create new accounts for unknown emails. HR adds employees
+ * through the User Management panel, which seeds the DB row first and
+ * then sends the Clerk invite.
+ *
+ * Idempotent.
  */
 export async function syncClerkUser(clerkUserId: string): Promise<ClerkSyncResult | null> {
   const client = await clerkClient()
@@ -31,6 +37,7 @@ export async function syncClerkUser(clerkUserId: string): Promise<ClerkSyncResul
     clerkUser.emailAddresses[0]?.emailAddress ??
     null
   if (!email) return null
+  const normalisedEmail = email.toLowerCase()
 
   // Already linked?
   const linked = await prisma.user.findUnique({ where: { clerkUserId } })
@@ -38,8 +45,8 @@ export async function syncClerkUser(clerkUserId: string): Promise<ClerkSyncResul
     return { userId: linked.id, created: false, linked: true }
   }
 
-  // Match by email
-  const byEmail = await prisma.user.findUnique({ where: { email: email.toLowerCase() } })
+  // Match by email — allowlist check.
+  const byEmail = await prisma.user.findUnique({ where: { email: normalisedEmail } })
   if (byEmail) {
     const updated = await prisma.user.update({
       where: { id: byEmail.id },
@@ -48,19 +55,16 @@ export async function syncClerkUser(clerkUserId: string): Promise<ClerkSyncResul
     return { userId: updated.id, created: false, linked: true }
   }
 
-  // No existing User — create. New users default to EMPLOYEE; HR can
-  // promote afterwards via the User Management panel.
-  const created = await prisma.user.create({
-    data: {
-      email: email.toLowerCase(),
-      clerkUserId,
-      password: '', // deprecated column, Clerk owns auth
-      role: 'EMPLOYEE',
-      isActive: true,
-      mustChangePass: false,
-    },
-  })
-  return { userId: created.id, created: true, linked: true }
+  // ─── REJECTED — email not on the allowlist ──────────────────────────────
+  // Delete the Clerk user immediately so they can't accumulate sessions or
+  // retry endlessly. Log the rejection so HR can audit attempts.
+  console.warn(`[clerk-sync] REJECTED unknown email: ${normalisedEmail} (clerk_id=${clerkUserId})`)
+  try {
+    await client.users.deleteUser(clerkUserId)
+  } catch (err) {
+    console.error('[clerk-sync] failed to delete rejected Clerk user', err)
+  }
+  return { userId: '', created: false, linked: false, rejected: true }
 }
 
 /**
