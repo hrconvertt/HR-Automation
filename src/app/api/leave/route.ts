@@ -310,6 +310,11 @@ export async function POST(request: NextRequest) {
     //    the approve endpoint can authorise without re-running the logic.
     const stageOneApproverId = await getStageOneApprover(empId)
 
+    // When there's no stage-1 approver (Co-Founder's own leave, or no
+    // Co-Founder configured), skip straight to PENDING_HR so HR sees it
+    // immediately. Otherwise normal two-stage: PENDING → PENDING_HR → APPROVED.
+    const initialStatus = stageOneApproverId ? 'PENDING' : 'PENDING_HR'
+
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
         employeeId: empId,
@@ -320,7 +325,7 @@ export async function POST(request: NextRequest) {
         firstDayHalf,
         lastDayHalf,
         reason: reason ?? '',
-        status: 'PENDING',
+        status: initialStatus,
         stageOneApproverId,
       },
     })

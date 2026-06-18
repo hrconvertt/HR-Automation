@@ -246,6 +246,8 @@ model Employee {
   promotionRequests   PromotionRequest[]
   onboardingFeedback  OnboardingFeedback?
   policyReviews       PolicyReview[]
+  dmsSent             DirectMessage[]   @relation("DmSent")
+  dmsReceived         DirectMessage[]   @relation("DmReceived")
 
   // Rehire / boomerang
   rehireDate          DateTime?
@@ -1914,4 +1916,28 @@ model CultureNotificationConfig {
   updatedById                   String?
 
   @@map("culture_notification_config")
+}
+
+// ─── LEADERSHIP DIRECT MESSAGES ───────────────────────────────────────────────
+// Internal DM channel restricted to senior staff (HR_ADMIN, MANAGER, LEAD,
+// EXECUTIVE + Head/Director/CTO/COO/CFO/Chief/Principal/Founder designations
+// + LEAD+ position levels). Two-party only — group chats are out of scope.
+// `threadKey` = sorted([senderId, recipientId]).join('|') so we can list
+// conversations efficiently from either direction with a single index.
+model DirectMessage {
+  id          String    @id @default(cuid())
+  senderId    String
+  sender      Employee  @relation("DmSent", fields: [senderId], references: [id])
+  recipientId String
+  recipient   Employee  @relation("DmReceived", fields: [recipientId], references: [id])
+  threadKey   String
+  body        String    @db.Text
+  sentAt      DateTime  @default(now())
+  readAt      DateTime?
+  editedAt    DateTime?
+  deletedAt   DateTime?
+
+  @@index([threadKey, sentAt])
+  @@index([recipientId, readAt])
+  @@map("direct_messages")
 }

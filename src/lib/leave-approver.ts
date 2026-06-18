@@ -1,44 +1,36 @@
 /**
  * Leave approver routing.
  *
- * Convertt has two tiers of leave routing:
+ * Convertt routes ALL leave through the Co-Founder (Khawer) → HR:
  *
- *   - Regular employees                          → reportingManager → HR
- *   - Senior staff (Manager / Lead / Head /      → Co-Founder       → HR
- *     Director / CTO / COO / C-suite)
+ *   - Regular employees     → Co-Founder → HR
+ *   - Senior staff          → Co-Founder → HR
+ *   - HR's own leave        → Co-Founder → another HR (HR can't self-approve)
+ *   - Co-Founder's own leave→ (no stage-1) → HR  (single-stage)
  *
- * Plus a few special cases:
- *   - The Co-Founder's own leave                 → CEO (fallback HR)
- *   - The CEO's own leave                        → Co-Founder (fallback HR)
- *   - HR's own leave                             → Co-Founder
+ * The CEO (Asghar) is NEVER a leave approver. His only approval role in
+ * the system is PAYROLL (handled in src/app/api/payroll/*).
  *
- * Detection of "senior staff" is intentionally permissive — role +
- * designation keywords + Position.level — because real-world titles drift
- * faster than the role enum.
+ * Note: historically regular employees routed via reportingManager. Per
+ * user clarification: "Asghar will only be asked for payroll approval
+ * otherwise leaves are from Khawer" — Khawer is the single approver for
+ * every leave in the company.
+ *
+ * The senior-staff predicate is still re-exported here because other
+ * modules (e.g. the GET /api/leave status-label decorator) use it to
+ * decide UI copy ("Awaiting Co-Founder").
  */
 
 import { prisma } from '@/lib/prisma'
 
-const DESIGNATION_SENIOR_RE = /\b(head|director|cto|coo|cfo|vp|vice president|chief|principal)\b/i
+// DRY: the "senior staff" predicate is owned by senior-staff.ts and used by
+// both the leave-approver and the leadership-messaging gates so they can't
+// drift apart. Re-exported below.
+import { isSeniorStaffRole } from '@/lib/senior-staff'
+export { isSeniorStaffRole }
+
 const COFOUNDER_DESIGNATION_RE = /co-?founder/i
 const CEO_DESIGNATION_RE = /chief executive|\bceo\b/i
-const SENIOR_POSITION_LEVELS = new Set(['HEAD', 'DIRECTOR', 'C_SUITE', 'LEAD', 'MANAGER'])
-const SENIOR_ROLES = new Set(['MANAGER', 'LEAD', 'EXECUTIVE'])
-
-/**
- * Pure check — does this person count as "senior staff" for routing?
- * Used both by the submit endpoint and the UI badge.
- */
-export function isSeniorStaffRole(
-  role: string | null | undefined,
-  designation?: string | null,
-  positionLevel?: string | null,
-): boolean {
-  if (role && SENIOR_ROLES.has(role)) return true
-  if (designation && DESIGNATION_SENIOR_RE.test(designation)) return true
-  if (positionLevel && SENIOR_POSITION_LEVELS.has(positionLevel)) return true
-  return false
-}
 
 /** True if the designation looks like a Co-Founder title (Syed Khawer). */
 export function isCoFounderDesignation(designation?: string | null): boolean {
@@ -120,49 +112,28 @@ async function loadEmployeeForRouting(employeeId: string): Promise<EmployeeForRo
 /**
  * Returns the Employee.id of the person who should approve stage-1 for
  * the given requester, or null if no approver can be resolved (caller
- * should treat as HR-only single-stage).
+ * treats null as "single-stage HR approval" — the request is created
+ * with status='PENDING_HR' so HR sees it directly).
  *
- * See module docstring for the routing rules.
+ * Rules:
+ *   1. Requester IS the Co-Founder → null  (skip to HR)
+ *   2. Otherwise                    → Co-Founder's employeeId
+ *   3. No Co-Founder in DB          → null (HR direct)
+ *
+ * The CEO is NEVER returned by this function.
  */
 export async function getStageOneApprover(employeeId: string): Promise<string | null> {
   const emp = await loadEmployeeForRouting(employeeId)
   if (!emp) return null
 
-  const designation = emp.designation
-  const role = emp.user?.role ?? null
-  const level = emp.position?.level ?? null
+  // Rule 1 — the Co-Founder's own leaves skip stage 1.
+  if (isCoFounderDesignation(emp.designation)) return null
 
-  // ── Special cases first ─────────────────────────────────────────────
-  if (isCoFounderDesignation(designation)) {
-    // Co-Founder's own leave → CEO (or HR)
-    const ceo = await findCeoEmployeeId()
-    if (ceo && ceo !== emp.id) return ceo
-    return findFirstHrEmployeeId()
-  }
-  if (isCeoDesignation(designation)) {
-    // CEO's own leave → Co-Founder (or HR)
-    const cf = await findCoFounderEmployeeId()
-    if (cf && cf !== emp.id) return cf
-    return findFirstHrEmployeeId()
-  }
-  if (role === 'HR_ADMIN') {
-    // HR's own leave → Co-Founder (or null = HR-only, but then they'd be
-    // approving themselves — fall back to CEO)
-    const cf = await findCoFounderEmployeeId()
-    if (cf && cf !== emp.id) return cf
-    const ceo = await findCeoEmployeeId()
-    if (ceo && ceo !== emp.id) return ceo
-    return null
-  }
+  // Rule 2 — everyone else (regular employees, senior staff, HR, even the
+  // CEO) routes through the Co-Founder.
+  const cf = await findCoFounderEmployeeId()
+  if (cf && cf !== emp.id) return cf
 
-  // ── Senior staff → Co-Founder ───────────────────────────────────────
-  if (isSeniorStaffRole(role, designation, level)) {
-    const cf = await findCoFounderEmployeeId()
-    if (cf && cf !== emp.id) return cf
-    // Fallback — no Co-Founder configured, use reportingManager.
-    return emp.reportingManagerId ?? null
-  }
-
-  // ── Regular employees → reportingManager ────────────────────────────
-  return emp.reportingManagerId ?? null
+  // Rule 3 — fallback: no Co-Founder configured, single-stage HR.
+  return null
 }

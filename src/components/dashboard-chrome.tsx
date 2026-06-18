@@ -36,6 +36,7 @@ import {
   Sparkles,
   Network,
   CalendarCheck,
+  MessageSquare,
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import AIChatbot from '@/components/ai-chatbot'
@@ -77,6 +78,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/org-chart',
   '/dashboard/settings/roles',
   '/dashboard/settings/positions',
+  '/dashboard/leadership-chat',
 ])
 
 function applyFocus(groups: NavGroup[]): NavGroup[] {
@@ -289,6 +291,7 @@ interface Props {
   designation: string | null
   departmentName: string | null
   mustChangePass: boolean
+  canUseLeadershipChat?: boolean
   children: React.ReactNode
 }
 
@@ -299,6 +302,7 @@ export default function DashboardChrome({
   designation,
   departmentName,
   mustChangePass,
+  canUseLeadershipChat = false,
   children,
 }: Props) {
   const pathname = usePathname()
@@ -361,7 +365,45 @@ export default function DashboardChrome({
     return pathname.startsWith(href)
   }
 
-  const navGroups = applyFocus(NAV_GROUPS_BY_ROLE[role] ?? NAV_GROUPS_BY_ROLE.EMPLOYEE)
+  const [chatUnread, setChatUnread] = useState(0)
+  useEffect(() => {
+    if (!canUseLeadershipChat) return
+    let cancelled = false
+    async function load() {
+      try {
+        const res = await fetch('/api/leadership-chat/unread-count', { cache: 'no-store' })
+        if (!res.ok) return
+        const data = await res.json()
+        if (!cancelled) setChatUnread(data.count ?? 0)
+      } catch {
+        /* ignore */
+      }
+    }
+    void load()
+    const id = setInterval(() => void load(), 30000)
+    return () => {
+      cancelled = true
+      clearInterval(id)
+    }
+  }, [canUseLeadershipChat])
+
+  // Inject the Leadership Chat nav entry for eligible roles. It rides in the
+  // first group of each role's nav so it's always visible above the fold.
+  const baseGroups = NAV_GROUPS_BY_ROLE[role] ?? NAV_GROUPS_BY_ROLE.EMPLOYEE
+  const navGroupsWithChat: NavGroup[] = canUseLeadershipChat
+    ? baseGroups.map((g, idx) =>
+        idx === 0
+          ? {
+              ...g,
+              items: [
+                ...g.items,
+                { href: '/dashboard/leadership-chat', label: 'Leadership Chat', icon: MessageSquare },
+              ],
+            }
+          : g,
+      )
+    : baseGroups
+  const navGroups = applyFocus(navGroupsWithChat)
 
   const displayRole = (() => {
     if (role === 'HR_ADMIN') {
@@ -444,7 +486,12 @@ export default function DashboardChrome({
                     `}
                   >
                     <Icon className="w-4 h-4 flex-shrink-0" />
-                    {item.label}
+                    <span className="flex-1">{item.label}</span>
+                    {item.href === '/dashboard/leadership-chat' && chatUnread > 0 && (
+                      <span className="ml-auto inline-flex items-center justify-center min-w-[18px] h-[18px] px-1.5 rounded-full bg-slate-500 text-white text-[10px] font-semibold">
+                        {chatUnread > 9 ? '9+' : chatUnread}
+                      </span>
+                    )}
                   </Link>
                 )
               })}

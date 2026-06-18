@@ -4,6 +4,7 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import DashboardChrome from '@/components/dashboard-chrome'
 import MfaBanner from '@/components/mfa-banner'
+import { canUseLeadershipChat } from '@/lib/can-message'
 
 // Server wrapper â€” reads role + identity from cookie BEFORE render so the
 // client sidebar never has to wait on a fetch. Eliminates the hydration race
@@ -54,6 +55,7 @@ export default async function DashboardLayout({
           fullName: true,
           designation: true,
           department: { select: { name: true } },
+          position: { select: { level: true } },
         },
       },
     },
@@ -69,6 +71,10 @@ export default async function DashboardLayout({
   const displayName = user.employee?.fullName ?? user.email ?? 'User'
   const designation = user.employee?.designation ?? null
   const departmentName = user.employee?.department?.name ?? null
+  const positionLevel = user.employee?.position?.level ?? null
+
+  // Leadership-chat eligibility — surfaces (or hides) the sidebar entry.
+  const canUseChat = canUseLeadershipChat(role, designation, positionLevel)
 
   return (
     <DashboardChrome
@@ -78,6 +84,7 @@ export default async function DashboardLayout({
       designation={designation}
       departmentName={departmentName}
       mustChangePass={user.mustChangePass}
+      canUseLeadershipChat={canUseChat}
     >
       <MfaBanner role={role} />
       {children}
