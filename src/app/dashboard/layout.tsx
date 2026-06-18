@@ -1,5 +1,5 @@
 ﻿import { redirect } from 'next/navigation'
-import { auth } from '@clerk/nextjs/server'
+import { auth, clerkClient } from '@clerk/nextjs/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import DashboardChrome from '@/components/dashboard-chrome'
@@ -76,6 +76,28 @@ export default async function DashboardLayout({
   // Leadership-chat eligibility — surfaces (or hides) the sidebar entry.
   const canUseChat = canUseLeadershipChat(role, designation, positionLevel)
 
+  // Check Clerk MFA state server-side so the banner is reliable even when
+  // Clerk's client SDK fails to hydrate (which would otherwise show a false
+  // "no MFA" nudge on every page load). Default to "MFA enabled" if the
+  // lookup fails, so a transient Clerk API hiccup never spams HR with the
+  // banner.
+  let mfaEnabled = true
+  try {
+    const session = await auth().catch(() => null)
+    if (session?.userId) {
+      const client = await clerkClient()
+      const clerkUser = await client.users.getUser(session.userId).catch(() => null)
+      if (clerkUser) {
+        mfaEnabled =
+          !!clerkUser.twoFactorEnabled ||
+          !!clerkUser.totpEnabled ||
+          !!clerkUser.backupCodeEnabled
+      }
+    }
+  } catch {
+    mfaEnabled = true
+  }
+
   return (
     <DashboardChrome
       role={role}
@@ -86,7 +108,7 @@ export default async function DashboardLayout({
       mustChangePass={user.mustChangePass}
       canUseLeadershipChat={canUseChat}
     >
-      <MfaBanner role={role} />
+      <MfaBanner role={role} mfaEnabled={mfaEnabled} />
       {children}
     </DashboardChrome>
   )

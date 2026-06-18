@@ -4,6 +4,13 @@ import { SignIn } from '@clerk/nextjs'
 // <ClerkProvider> in src/app/layout.tsx; we only handle the marketing
 // half of the split screen here.
 export default function LoginPage() {
+  // If the publishable key isn't set on Vercel, Clerk's components render
+  // as null silently — leaving an empty page. Catch that explicitly and
+  // show a diagnostic message so HR knows what's wrong instead of staring
+  // at blank space.
+  const hasKey =
+    !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY &&
+    process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY.startsWith('pk_')
   return (
     <div className="min-h-screen flex">
       {/* Left sidebar — marketing pitch */}
@@ -52,21 +59,37 @@ export default function LoginPage() {
             <span className="text-slate-900 text-xl font-bold">Convertt HR</span>
           </div>
 
-          <SignIn
-            routing="path"
-            path="/login"
-            forceRedirectUrl="/dashboard"
-            fallbackRedirectUrl="/dashboard"
-            appearance={{
-              elements: {
-                // Invite-only — hide all sign-up affordances. New employees
-                // arrive via HR-sent Clerk invitations, not self-registration.
-                footerAction: 'hidden',
-                footerActionLink: 'hidden',
-                footer: 'hidden',
-              },
-            }}
-          />
+          {hasKey ? (
+            <SignIn
+              routing="path"
+              path="/login"
+              forceRedirectUrl="/dashboard"
+              fallbackRedirectUrl="/dashboard"
+              appearance={{
+                elements: {
+                  // Invite-only — hide all sign-up affordances. New employees
+                  // arrive via HR-sent Clerk invitations, not self-registration.
+                  footerAction: 'hidden',
+                  footerActionLink: 'hidden',
+                  footer: 'hidden',
+                },
+              }}
+            />
+          ) : (
+            <div className="rounded-lg border border-slate-300 bg-slate-50 p-6 text-sm">
+              <p className="font-semibold text-slate-900">Sign-in is misconfigured.</p>
+              <p className="mt-2 text-slate-700">
+                Authentication isn&apos;t initialised on this deployment. An admin needs
+                to set <code className="rounded bg-slate-200 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code>{' '}
+                in the Vercel environment variables (Production + Preview + Development)
+                and redeploy.
+              </p>
+              <p className="mt-3 text-xs text-slate-500">
+                Once set, this message disappears automatically and the sign-in form
+                will render here.
+              </p>
+            </div>
+          )}
 
           {/* HR sends invitations from /dashboard/settings/users — no self sign-up */}
           <p className="mt-6 text-center text-xs text-slate-500">
