@@ -107,6 +107,7 @@ model Position {
   active       Boolean    @default(true)
   employees    Employee[]
   salaryBands  SalaryBand[]
+  kpiDefaults  KpiMetric[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt @default(now())
 
@@ -248,6 +249,9 @@ model Employee {
   policyReviews       PolicyReview[]
   dmsSent             DirectMessage[]   @relation("DmSent")
   dmsReceived         DirectMessage[]   @relation("DmReceived")
+  kpiAssignments      KpiAssignment[]
+  dailyLogs           DailyLog[]
+  dailyKpis           DailyKpi[]
 
   // Rehire / boomerang
   rehireDate          DateTime?
@@ -1940,4 +1944,98 @@ model DirectMessage {
   @@index([threadKey, sentAt])
   @@index([recipientId, readAt])
   @@map("direct_messages")
+}
+
+// ─── DAILY LOGGING + KPI TRACKING ─────────────────────────────────────────────
+// Fully data-driven. HR configures the metric library, per-employee
+// assignments, soft cutoffs, task categories, inquiry templates and
+// analytics visibility from /dashboard/settings/daily-logging. Nothing
+// is hardcoded — see src/lib/daily-logging-config.ts for the JSON blob
+// stored under Config(key="daily_logging").
+
+// HR-defined library of KPIs. May default-bind to a Position so HR can
+// bulk-assign "Code Commits" to every Developer. Leads can still override
+// per employee.
+model KpiMetric {
+  id                String          @id @default(cuid())
+  name              String
+  unit              String          @default("count") // count | hours | currency | percent
+  description       String?
+  isActive          Boolean         @default(true)
+  defaultPositionId String?
+  defaultPosition   Position?       @relation(fields: [defaultPositionId], references: [id])
+  defaultTarget     Int?
+  createdAt         DateTime        @default(now())
+  createdById       String?
+  assignments       KpiAssignment[]
+  records           DailyKpi[]
+
+  @@index([defaultPositionId])
+  @@map("kpi_metrics")
+}
+
+// Which metrics apply to which employee + that employee's target.
+model KpiAssignment {
+  id           String    @id @default(cuid())
+  employeeId   String
+  employee     Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  metricId     String
+  metric       KpiMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  target       Int
+  assignedById String?
+  assignedAt   DateTime  @default(now())
+  isActive     Boolean   @default(true)
+
+  @@unique([employeeId, metricId])
+  @@index([employeeId])
+  @@map("kpi_assignments")
+}
+
+// Daily task log row + embedded Ask-Why inquiry loop.
+model DailyLog {
+  id                 String    @id @default(cuid())
+  employeeId         String
+  employee           Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  date               DateTime  @db.Date
+  taskName           String
+  category           String?
+  hoursInvested      Decimal   @db.Decimal(4, 2)
+  status             String    @default("COMPLETED") // NOT_STARTED | IN_PROGRESS | COMPLETED | BLOCKED
+  notes              String?
+  // Inquiry loop
+  inquiryStatus      String    @default("NONE") // NONE | PENDING | RESOLVED
+  managerInquiry     String?
+  managerInquiryAt   DateTime?
+  managerInquiryById String?
+  employeeResponse   String?
+  employeeResponseAt DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([employeeId, date])
+  @@index([inquiryStatus])
+  @@map("daily_logs")
+}
+
+// Per (employee, date, metric) actuals + target snapshot + inquiry loop.
+model DailyKpi {
+  id                 String    @id @default(cuid())
+  employeeId         String
+  employee           Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  metricId           String
+  metric             KpiMetric @relation(fields: [metricId], references: [id], onDelete: Cascade)
+  date               DateTime  @db.Date
+  target             Int
+  actual             Int
+  inquiryStatus      String    @default("NONE")
+  managerInquiry     String?
+  managerInquiryAt   DateTime?
+  managerInquiryById String?
+  employeeResponse   String?
+  employeeResponseAt DateTime?
+  createdAt          DateTime  @default(now())
+
+  @@unique([employeeId, metricId, date])
+  @@index([employeeId, date])
+  @@map("daily_kpis")
 }

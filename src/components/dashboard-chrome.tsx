@@ -37,6 +37,7 @@ import {
   Network,
   CalendarCheck,
   MessageSquare,
+  ClipboardList,
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import AIChatbot from '@/components/ai-chatbot'
@@ -79,6 +80,10 @@ const FOCUS_PATHS = new Set([
   '/dashboard/settings/roles',
   '/dashboard/settings/positions',
   '/dashboard/leadership-chat',
+  '/dashboard/daily-log',
+  '/dashboard/daily-log/inquiries',
+  '/dashboard/daily-review',
+  '/dashboard/settings/daily-logging',
 ])
 
 function applyFocus(groups: NavGroup[]): NavGroup[] {
@@ -99,6 +104,8 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
         { href: '/dashboard/payroll', label: 'Payroll', icon: Banknote },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
+        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
+        { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
       ],
     },
     {
@@ -131,6 +138,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
         { href: '/dashboard/settings/roles', label: 'Role Assignment', icon: Shield },
         { href: '/dashboard/settings/positions', label: 'Positions', icon: Briefcase },
+        { href: '/dashboard/settings/daily-logging', label: 'Daily Logging Settings', icon: ClipboardList },
         { href: '/dashboard/help', label: 'Help Center', icon: HelpCircle },
       ],
     },
@@ -153,6 +161,8 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
+        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
+        { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
       ],
     },
     {
@@ -184,6 +194,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
         { href: '/dashboard/employees', label: 'Directory', icon: Users },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
+        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
       ],
     },
     {
@@ -212,6 +223,8 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/employees', label: 'My Team', icon: Users },
         { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
         { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
+        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
+        { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
       ],
     },
     {
@@ -261,6 +274,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
+        { href: '/dashboard/daily-review', label: 'Team Analytics', icon: BarChart3 },
       ],
     },
     {
