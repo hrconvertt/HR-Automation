@@ -16,6 +16,8 @@ const isPublicRoute = createRouteMatcher([
   '/payslip/(.*)/print',
   '/letters/(.*)/print',
   '/increment-letter(.*)',
+  '/reset-session',
+  '/unauthorized',
   '/',
 ])
 
