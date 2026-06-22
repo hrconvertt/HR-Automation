@@ -33,6 +33,10 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
     },
   })
   if (!employee) notFound()
+  // Onboarding workspace is not meaningful for exited employees.
+  if (['RESIGNED', 'TERMINATED', 'INACTIVE', 'LAYOFF'].includes(employee.status)) {
+    redirect('/dashboard/onboarding')
+  }
 
   // Auth: HR_ADMIN, the hire's manager, or the hire themselves.
   const isHR = me.role === 'HR_ADMIN'
@@ -44,7 +48,8 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
 
   const tasks = employee.onboarding?.tasks ?? []
   const total = tasks.length
-  const done = tasks.filter((t) => t.isComplete).length
+  // NOT_REQUIRED counts as completed for progress %.
+  const done = tasks.filter((t) => t.status === 'COMPLETED' || t.status === 'NOT_REQUIRED' || t.isComplete).length
   const pct = total > 0 ? Math.round((done / total) * 100) : 0
   const today = new Date()
   const daysSinceJoin = Math.floor((today.getTime() - new Date(employee.joiningDate).getTime()) / 86400000)
@@ -90,6 +95,11 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
           orderIndex: t.orderIndex,
           isComplete: t.isComplete,
           completedAt: t.completedAt?.toISOString() ?? null,
+          status: t.status ?? (t.isComplete ? 'COMPLETED' : 'PENDING'),
+          notRequiredReason: t.notRequiredReason ?? null,
+          attachedDocumentId: t.attachedDocumentId ?? null,
+          documentType: t.documentType ?? null,
+          isEmployeeUploadable: t.isEmployeeUploadable ?? false,
         }))}
         canEdit={isHR}
         canMarkComplete={canComplete}

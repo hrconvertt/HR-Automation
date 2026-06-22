@@ -19,15 +19,21 @@ function avatarTone(name: string): string {
   return AVATAR_PALETTE[h % AVATAR_PALETTE.length]
 }
 
+// Employees in any "exited" status should never appear on the
+// onboarding board, even if a stale checklist row exists.
+const EXCLUDED_EMP_STATUSES = ['RESIGNED', 'TERMINATED', 'INACTIVE', 'LAYOFF']
+
 async function getData() {
   const today = new Date()
   const [checklists, probations] = await Promise.all([
     prisma.onboardingChecklist.findMany({
+      where: { employee: { status: { notIn: EXCLUDED_EMP_STATUSES } } },
       orderBy: { createdAt: 'desc' },
       include: { employee: { select: { id: true, fullName: true, employeeCode: true, joiningDate: true, designation: true } } },
       take: 50,
     }),
     prisma.probationRecord.findMany({
+      where: { employee: { status: { notIn: EXCLUDED_EMP_STATUSES } } },
       orderBy: { endDate: 'asc' },
       include: { employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } } },
     }),

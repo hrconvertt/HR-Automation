@@ -15,7 +15,8 @@ export async function POST(request: NextRequest, ctx: { params: Promise<{ employ
   })
   if (!checklist) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const allDone = checklist.tasks.length > 0 && checklist.tasks.every((t) => t.isComplete)
+  // NOT_REQUIRED counts as done (it's HR/manager explicitly skipping).
+  const allDone = checklist.tasks.length > 0 && checklist.tasks.every((t) => t.isComplete || t.status === 'COMPLETED' || t.status === 'NOT_REQUIRED')
   const days = Math.floor((Date.now() - new Date(checklist.employee.joiningDate).getTime()) / 86400000)
   if (!allDone) return NextResponse.json({ error: 'Not all tasks complete' }, { status: 400 })
   if (days < 30) return NextResponse.json({ error: 'Employee has not reached Day 30' }, { status: 400 })

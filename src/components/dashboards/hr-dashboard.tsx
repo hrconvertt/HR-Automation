@@ -165,11 +165,11 @@ async function loadData() {
   // ─── Lifecycle funnel + attrition (T6) ───
   const oneYearAgo = new Date(today); oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1)
   const [onboardingActive, probationActive, exitInFlight, completedOnboard, hires12mo, exits12mo] = await Promise.all([
-    prisma.onboardingChecklist.count({ where: { status: { not: 'COMPLETED' } } }),
-    prisma.probationRecord.count({ where: { status: 'ACTIVE' } }),
+    prisma.onboardingChecklist.count({ where: { status: { not: 'COMPLETED' }, employee: { status: { notIn: ['RESIGNED', 'TERMINATED', 'INACTIVE', 'LAYOFF'] } } } }),
+    prisma.probationRecord.count({ where: { status: 'ACTIVE', employee: { status: { notIn: ['RESIGNED', 'TERMINATED', 'INACTIVE', 'LAYOFF'] } } } }),
     prisma.exitClearance.count({ where: { status: 'IN_PROGRESS' } }),
     prisma.onboardingChecklist.findMany({
-      where: { status: 'COMPLETED', completedAt: { gte: oneYearAgo, not: null } },
+      where: { status: 'COMPLETED', completedAt: { gte: oneYearAgo, not: null }, employee: { status: { notIn: ['RESIGNED', 'TERMINATED', 'INACTIVE', 'LAYOFF'] } } },
       include: { employee: { select: { joiningDate: true } } },
     }),
     prisma.employee.count({ where: { joiningDate: { gte: oneYearAgo } } }),

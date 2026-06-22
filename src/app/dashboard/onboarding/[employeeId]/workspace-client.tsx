@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Check, Plus, Trash2 } from 'lucide-react'
+import { Check, Plus, Trash2, Upload, X, Paperclip, RotateCcw } from 'lucide-react'
 
 interface Task {
   id: string
@@ -15,6 +15,11 @@ interface Task {
   orderIndex: number
   isComplete: boolean
   completedAt: string | null
+  status: string                  // PENDING | IN_PROGRESS | COMPLETED | NOT_REQUIRED
+  notRequiredReason: string | null
+  attachedDocumentId: string | null
+  documentType: string | null
+  isEmployeeUploadable: boolean
 }
 
 interface Props {
@@ -37,6 +42,27 @@ const CATEGORY_LABELS: Record<string, string> = {
   OTHER: 'Custom Tasks',
 }
 
+// Tasks that look like document uploads — match either by the explicit
+// isEmployeeUploadable flag, by documentType being set, or by a keyword in
+// the title for the broader Workday-style set (NDA, agreement, offer letter,
+// bank details).
+function isDocumentTask(t: Task): boolean {
+  if (t.isEmployeeUploadable) return true
+  if (t.documentType) return true
+  const lower = t.title.toLowerCase()
+  return (
+    lower.includes('cnic') ||
+    lower.includes('photo') ||
+    lower.includes('address proof') ||
+    lower.includes('education') ||
+    lower.includes('experience') ||
+    lower.includes('nda') ||
+    lower.includes('agreement') ||
+    lower.includes('offer letter') ||
+    lower.includes('bank')
+  )
+}
+
 export function OnboardingWorkspace(props: Props) {
   const router = useRouter()
   const [tasks, setTasks] = useState(props.tasks)
@@ -45,15 +71,87 @@ export function OnboardingWorkspace(props: Props) {
   const [pending, startTransition] = useTransition()
   const [showAdd, setShowAdd] = useState(false)
   const [newTask, setNewTask] = useState({ title: '', owner: 'HR', category: 'OTHER', description: '' })
+  const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
+  const [notRequiredFor, setNotRequiredFor] = useState<Task | null>(null)
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({})
 
-  async function toggleTask(t: Task) {
-    const next = !t.isComplete
-    setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, isComplete: next, completedAt: next ? new Date().toISOString() : null } : x))
-    await fetch(`/api/onboarding/tasks/${t.id}`, {
-      method: 'PATCH',
+  function applyTask(t: { id: string } & Partial<Task>) {
+    setTasks((prev) => prev.map((x) => x.id === t.id ? { ...x, ...t } as Task : x))
+  }
+
+  async function markComplete(t: Task) {
+    setBusyTaskId(t.id)
+    const res = await fetch(`/api/onboarding/tasks/${t.id}/complete`, {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ isComplete: next }),
+      body: JSON.stringify({}),
     })
+    if (res.ok) {
+      const { task } = await res.json()
+      applyTask(task)
+    } else {
+      const { error } = await res.json().catch(() => ({ error: 'Failed' }))
+      alert(error || 'Failed to mark complete')
+    }
+    setBusyTaskId(null)
+    startTransition(() => router.refresh())
+  }
+
+  async function undoTask(t: Task) {
+    setBusyTaskId(t.id)
+    // Both /complete and /not-required accept { undo: true }; pick the route
+    // based on the current state.
+    const endpoint = t.status === 'NOT_REQUIRED'
+      ? `/api/onboarding/tasks/${t.id}/not-required`
+      : `/api/onboarding/tasks/${t.id}/complete`
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ undo: true }),
+    })
+    if (res.ok) {
+      const { task } = await res.json()
+      applyTask(task)
+    } else {
+      const { error } = await res.json().catch(() => ({ error: 'Failed' }))
+      alert(error || 'Failed to undo')
+    }
+    setBusyTaskId(null)
+    startTransition(() => router.refresh())
+  }
+
+  async function uploadForTask(t: Task, file: File) {
+    setBusyTaskId(t.id)
+    const fd = new FormData()
+    fd.append('file', file)
+    const res = await fetch(`/api/onboarding/tasks/${t.id}/upload`, { method: 'POST', body: fd })
+    if (res.ok) {
+      const { task } = await res.json()
+      applyTask(task)
+    } else {
+      const { error } = await res.json().catch(() => ({ error: 'Upload failed' }))
+      alert(error || 'Upload failed')
+    }
+    setBusyTaskId(null)
+    startTransition(() => router.refresh())
+  }
+
+  async function submitNotRequired(t: Task, reason: string) {
+    setBusyTaskId(t.id)
+    const res = await fetch(`/api/onboarding/tasks/${t.id}/not-required`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason }),
+    })
+    if (res.ok) {
+      const { task } = await res.json()
+      applyTask(task)
+    } else {
+      const { error } = await res.json().catch(() => ({ error: 'Failed' }))
+      alert(error || 'Failed to mark not required')
+    }
+    setBusyTaskId(null)
+    setNotRequiredFor(null)
     startTransition(() => router.refresh())
   }
 
@@ -66,7 +164,7 @@ export function OnboardingWorkspace(props: Props) {
     })
     if (res.ok) {
       const { task } = await res.json()
-      setTasks((prev) => [...prev, task])
+      setTasks((prev) => [...prev, { ...task, status: task.status ?? 'PENDING', notRequiredReason: null, attachedDocumentId: null }])
       setNewTask({ title: '', owner: 'HR', category: 'OTHER', description: '' })
       setShowAdd(false)
     }
@@ -122,51 +220,139 @@ export function OnboardingWorkspace(props: Props) {
       </Card>
 
       {/* Task groups */}
-      {grouped.map(({ cat, items }) => (
-        <Card key={cat} className="rounded-xl border-slate-200 p-5">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-slate-900">{CATEGORY_LABELS[cat]}</h3>
-            <p className="text-xs text-slate-500">{items.filter((i) => i.isComplete).length} / {items.length} done</p>
-          </div>
-          <div className="space-y-2">
-            {items.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No tasks.</p>
-            ) : items.map((t) => {
-              const canCheck = props.canEdit
-                || t.owner === props.viewerRole
-                || (t.owner === 'IT' && props.viewerRole === 'HR_ADMIN')
-                || (props.viewerRole === 'EMPLOYEE' && t.owner === 'EMPLOYEE')
-              return (
-                <div key={t.id} className={`flex items-start gap-3 p-2 rounded ${t.isComplete ? 'bg-slate-50/50' : 'bg-slate-50/50'}`}>
-                  <button
-                    type="button"
-                    disabled={!canCheck || pending}
-                    onClick={() => toggleTask(t)}
-                    className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 ${t.isComplete ? 'bg-slate-500 border-slate-500 text-white' : 'border-slate-300 bg-white'} disabled:opacity-40`}
-                  >
-                    {t.isComplete && <Check className="w-3 h-3" />}
-                  </button>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm ${t.isComplete ? 'line-through text-slate-500' : 'text-slate-900'}`}>{t.title}</p>
-                    {t.description && <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>}
-                    <p className="text-[10px] uppercase tracking-wide text-slate-400 mt-1">Owner: {t.owner}</p>
+      {grouped.map(({ cat, items }) => {
+        const completedCount = items.filter((i) => i.status === 'COMPLETED' || i.status === 'NOT_REQUIRED' || i.isComplete).length
+        return (
+          <Card key={cat} className="rounded-xl border-slate-200 p-5">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-slate-900">{CATEGORY_LABELS[cat]}</h3>
+              <p className="text-xs text-slate-500">{completedCount} / {items.length} done</p>
+            </div>
+            <div className="space-y-2">
+              {items.length === 0 ? (
+                <p className="text-xs text-slate-400 italic">No tasks.</p>
+              ) : items.map((t) => {
+                const isHR = props.viewerRole === 'HR_ADMIN'
+                const isExecutive = props.viewerRole === 'EXECUTIVE'
+                // Action visibility:
+                //   - HR or the assigned manager (canEdit at this layer ≡ HR;
+                //     manager visibility is implied by the page-level auth gate).
+                //   - The hire themselves for EMPLOYEE-owned or uploadable tasks.
+                const canAct = !isExecutive && (props.canEdit
+                  || t.owner === props.viewerRole
+                  || (t.owner === 'IT' && isHR)
+                  || (props.viewerRole === 'EMPLOYEE' && (t.owner === 'EMPLOYEE' || t.isEmployeeUploadable)))
+                // "Not required" is HR or the assigned manager only — employees can't
+                // skip their own tasks (that's a manager call).
+                const canMarkNotRequired = !isExecutive && (isHR || props.viewerRole === 'MANAGER')
+
+                const isDocTask = isDocumentTask(t)
+                const isDone = t.status === 'COMPLETED' || t.isComplete
+                const isSkipped = t.status === 'NOT_REQUIRED'
+                const isPendingState = !isDone && !isSkipped
+                const rowBusy = busyTaskId === t.id || pending
+
+                return (
+                  <div key={t.id} className={`rounded-lg p-3 border ${isDone ? 'bg-slate-50 border-slate-100' : isSkipped ? 'bg-slate-50/60 border-slate-100' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-start gap-3">
+                      <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-slate-700 border-slate-700 text-white' : isSkipped ? 'bg-slate-200 border-slate-200 text-slate-500' : 'border-slate-300 bg-white'}`}>
+                        {isDone && <Check className="w-3 h-3" />}
+                        {isSkipped && <X className="w-3 h-3" />}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-sm ${isDone ? 'line-through text-slate-500' : isSkipped ? 'text-slate-500' : 'text-slate-900'}`}>{t.title}</p>
+                        {t.description && <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>}
+                        <p className="text-[10px] uppercase tracking-wide text-slate-400 mt-1">
+                          Status: {t.status.replace('_', ' ').toLowerCase()} · Owner: {t.owner}
+                          {t.completedAt && (isDone || isSkipped) ? ` · ${new Date(t.completedAt).toLocaleDateString()}` : ''}
+                        </p>
+
+                        {isSkipped && t.notRequiredReason && (
+                          <p className="text-xs text-slate-600 mt-1 italic">&ldquo;{t.notRequiredReason}&rdquo;</p>
+                        )}
+
+                        {isDone && t.attachedDocumentId && (
+                          <div className="mt-2 flex items-center gap-2 text-xs">
+                            <Paperclip className="w-3 h-3 text-slate-500" />
+                            <a
+                              href={`/api/documents/${t.attachedDocumentId}/download`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-slate-700 underline hover:text-slate-900"
+                            >
+                              View document
+                            </a>
+                          </div>
+                        )}
+
+                        {canAct && (
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            {isPendingState && (
+                              <>
+                                <Button size="sm" variant="outline" disabled={rowBusy} onClick={() => markComplete(t)}>
+                                  <Check className="w-3 h-3 mr-1" /> Mark Done
+                                </Button>
+                                {isDocTask && (
+                                  <>
+                                    <input
+                                      type="file"
+                                      ref={(el) => { fileInputs.current[t.id] = el }}
+                                      className="hidden"
+                                      accept=".pdf,.jpg,.jpeg,.png,.docx,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                                      onChange={(e) => {
+                                        const f = e.target.files?.[0]
+                                        if (f) uploadForTask(t, f)
+                                        e.target.value = ''
+                                      }}
+                                    />
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      disabled={rowBusy}
+                                      onClick={() => fileInputs.current[t.id]?.click()}
+                                    >
+                                      <Upload className="w-3 h-3 mr-1" /> Upload
+                                    </Button>
+                                  </>
+                                )}
+                                {canMarkNotRequired && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    disabled={rowBusy}
+                                    onClick={() => setNotRequiredFor(t)}
+                                  >
+                                    <X className="w-3 h-3 mr-1" /> Not Required
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {(isDone || isSkipped) && (
+                              <Button size="sm" variant="ghost" disabled={rowBusy} onClick={() => undoTask(t)}>
+                                <RotateCcw className="w-3 h-3 mr-1" /> {isSkipped ? 'Reactivate' : 'Undo'}
+                              </Button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      {props.canEdit && (
+                        <button
+                          type="button"
+                          onClick={() => deleteTask(t.id)}
+                          className="text-slate-400 hover:text-slate-700 p-1"
+                          title="Delete task"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  {props.canEdit && (
-                    <button
-                      type="button"
-                      onClick={() => deleteTask(t.id)}
-                      className="text-slate-400 hover:text-slate-700 p-1"
-                      title="Delete task"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </Card>
-      ))}
+                )
+              })}
+            </div>
+          </Card>
+        )
+      })}
 
       {props.canEdit && (
         <Card className="rounded-xl border-slate-200 p-5">
@@ -234,13 +420,47 @@ export function OnboardingWorkspace(props: Props) {
         <Card className="rounded-xl border-slate-200 p-5 flex items-center justify-between">
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Mark Onboarding Complete</h3>
-            <p className="text-xs text-slate-500 mt-1">Enabled when all tasks are done AND the employee has been here ≥ 30 days.</p>
+            <p className="text-xs text-slate-500 mt-1">Enabled when all tasks are done (or marked not required) AND the employee has been here ≥ 30 days.</p>
           </div>
           <Button onClick={markFullyOnboarded} disabled={!props.canMarkComplete}>
             Mark Fully Onboarded
           </Button>
         </Card>
       )}
+
+      {notRequiredFor && (
+        <NotRequiredDialog
+          task={notRequiredFor}
+          onCancel={() => setNotRequiredFor(null)}
+          onConfirm={(reason) => submitNotRequired(notRequiredFor, reason)}
+        />
+      )}
+    </div>
+  )
+}
+
+function NotRequiredDialog({ task, onCancel, onConfirm }: { task: Task; onCancel: () => void; onConfirm: (reason: string) => void }) {
+  const [reason, setReason] = useState('')
+  return (
+    <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-4" onClick={onCancel}>
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md p-5" onClick={(e) => e.stopPropagation()}>
+        <h3 className="text-sm font-semibold text-slate-900">Mark &ldquo;{task.title}&rdquo; as not required</h3>
+        <p className="text-xs text-slate-500 mt-1">This task will be counted as completed for progress %, but no work was done. Useful for things HR doesn&rsquo;t do yet (e.g. ID Cards).</p>
+        <label className="block mt-3">
+          <span className="text-xs font-medium text-slate-700">Reason (optional)</span>
+          <textarea
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            placeholder="e.g. We don't issue ID cards yet"
+            className="mt-1 w-full border border-slate-200 rounded-md p-2 text-sm"
+            rows={3}
+          />
+        </label>
+        <div className="mt-4 flex justify-end gap-2">
+          <Button size="sm" variant="outline" onClick={onCancel}>Cancel</Button>
+          <Button size="sm" onClick={() => onConfirm(reason)}>Mark Not Required</Button>
+        </div>
+      </div>
     </div>
   )
 }

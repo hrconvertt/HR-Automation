@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     where: {
       welcomeEmailScheduledFor: { lte: todayEnd, not: null },
       welcomeEmailSentAt: null,
+      employee: { status: { notIn: ['RESIGNED', 'TERMINATED', 'INACTIVE', 'LAYOFF'] } },
     },
     include: { employee: { select: { id: true, fullName: true, joiningDate: true, workLocationAddress: true } } },
   })
