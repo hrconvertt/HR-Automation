@@ -19,6 +19,8 @@ const isPublicRoute = createRouteMatcher([
   '/reset-session',
   '/unauthorized',
   '/auth-debug',
+  '/sign-in',
+  '/api/auth/emergency-signin',
   '/',
 ])
 
