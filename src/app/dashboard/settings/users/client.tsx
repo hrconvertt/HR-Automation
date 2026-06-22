@@ -108,12 +108,45 @@ export default function UserManagementClient({
           </p>
         </div>
         {tab === 'users' && (
-          <button
-            onClick={() => setInviteOpen(true)}
-            className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800"
-          >
-            + Invite Employee
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={async () => {
+                if (!confirm(
+                  'Sync all employee emails to HR\'s canonical roster?\n\n' +
+                  'This updates each User\'s email to the one listed in your spreadsheet ' +
+                  '(e.g. Momna → momnafatima021@gmail.com). Clerk links are cleared so the ' +
+                  'next sign-in re-links cleanly. Safe to run multiple times.',
+                )) return
+                try {
+                  const res = await fetch('/api/settings/users/sync-emails', { method: 'POST' })
+                  const data = await res.json()
+                  if (!res.ok) { alert(data.error || 'Sync failed'); return }
+                  const s = data.summary as { updated: number; unchanged: number; unmatched: string[]; conflicts: unknown[] }
+                  alert(
+                    `Sync complete.\n\n` +
+                    `Updated:   ${s.updated}\n` +
+                    `Unchanged: ${s.unchanged}\n` +
+                    `Unmatched: ${s.unmatched.length}${s.unmatched.length ? ' — ' + s.unmatched.join(', ') : ''}\n` +
+                    `Conflicts: ${s.conflicts.length}\n\n` +
+                    `Tell affected employees to visit /reset-session, then sign in again.`,
+                  )
+                  refresh()
+                } catch (e) {
+                  alert((e as Error).message || 'Network error')
+                }
+              }}
+              className="px-4 py-2 bg-white border border-slate-300 text-slate-800 rounded-lg text-sm font-semibold hover:bg-slate-50"
+              title="One-click sync of all 27 employee emails to HR's canonical roster"
+            >
+              Sync Emails from Roster
+            </button>
+            <button
+              onClick={() => setInviteOpen(true)}
+              className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800"
+            >
+              + Invite Employee
+            </button>
+          </div>
         )}
       </header>
 
