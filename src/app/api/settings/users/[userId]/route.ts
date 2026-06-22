@@ -11,6 +11,7 @@ export const runtime = 'nodejs'
 
 type Action =
   | { action: 'change-role'; primaryRole: string; additionalRoles?: string[] }
+  | { action: 'change-email'; email: string }
   | { action: 'reset-password' }
   | { action: 'reset-mfa' }
   | { action: 'lock' }
@@ -46,6 +47,37 @@ export async function POST(req: NextRequest, ctx: { params: Promise<{ userId: st
           }
         })
         return NextResponse.json({ ok: true })
+      }
+      case 'change-email': {
+        const newEmail = String(body.email ?? '').trim().toLowerCase()
+        if (!newEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+          return NextResponse.json({ error: 'Invalid email format' }, { status: 400 })
+        }
+        if (newEmail === user.email.toLowerCase()) {
+          return NextResponse.json({ ok: true, message: 'No change' })
+        }
+        // Conflict: no other User can already have this email
+        const conflict = await prisma.user.findUnique({ where: { email: newEmail } })
+        if (conflict) {
+          return NextResponse.json(
+            { error: `That email is already used by another user.` },
+            { status: 409 },
+          )
+        }
+        await prisma.$transaction(async (tx) => {
+          // Update User + the linked Employee row (if any).
+          // Clear clerkUserId so any stale Clerk link is broken — next sign-in
+          // will re-link cleanly under the new email.
+          await tx.user.update({
+            where: { id: userId },
+            data: { email: newEmail, clerkUserId: null },
+          })
+          const emp = await tx.employee.findFirst({ where: { userId } })
+          if (emp) {
+            await tx.employee.update({ where: { id: emp.id }, data: { email: newEmail } })
+          }
+        })
+        return NextResponse.json({ ok: true, email: newEmail })
       }
       case 'reset-password': {
         if (!user.clerkUserId) {

@@ -209,6 +209,20 @@ export default function UserManagementClient({
                           Change role
                         </button>
                         <button
+                          onClick={() => {
+                            const newEmail = prompt(
+                              `Change sign-in email for ${u.fullName}?\nCurrent: ${u.email}\n\nThe employee will need to sign in with this new email next time.`,
+                              u.email,
+                            )
+                            if (newEmail && newEmail.trim() !== u.email) {
+                              actOn(u.id, 'change-email', { email: newEmail.trim() })
+                            }
+                          }}
+                          className="block w-full text-left px-4 py-2 hover:bg-slate-50"
+                        >
+                          Edit email
+                        </button>
+                        <button
                           onClick={() => confirm(`Send password reset to ${u.email}?`) && actOn(u.id, 'reset-password')}
                           className="block w-full text-left px-4 py-2 hover:bg-slate-50"
                           disabled={!u.clerkLinked}
