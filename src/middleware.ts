@@ -18,6 +18,7 @@ const isPublicRoute = createRouteMatcher([
   '/increment-letter(.*)',
   '/reset-session',
   '/unauthorized',
+  '/auth-debug',
   '/',
 ])
 
