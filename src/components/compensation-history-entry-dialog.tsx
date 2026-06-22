@@ -36,6 +36,7 @@ interface Props {
 }
 
 const TYPES = [
+  { value: 'REGULAR',    label: 'Regular Pay' },
   { value: 'HIRE',       label: 'Hire — Joining offer' },
   { value: 'INITIAL',    label: 'Initial Setup' },
   { value: 'INCREMENT',  label: 'Annual Increment' },

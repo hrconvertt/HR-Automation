@@ -178,14 +178,28 @@ export function HRPayrollView() {
   const status = payrollRun?.status ?? 'DRAFT'
   const canEdit = canEditPayslipsAtStage(status, roles)
 
-  async function handleGenerate() {
+  async function handleGenerate(replace = false) {
     setBusy(true)
-    const r = await safeFetch('/api/payroll', {
+    // New auto-generate endpoint: pulls latest comp + applies resignation
+    // filter + pro-rates partial-month exits. POST /api/payroll/generate.
+    const r = await safeFetch<{ payrollRun: { id: string }; count: number }>('/api/payroll/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ month, year }),
+      body: JSON.stringify({ month, year, replace }),
     })
     setBusy(false)
-    if (!r.ok) alert(r.error ?? 'Failed to generate')
+    if (!r.ok) {
+      // 409 means a run already exists — offer to replace if it's still DRAFT.
+      const msg = r.error ?? 'Failed to generate'
+      if (msg.toLowerCase().includes('already exists')) {
+        if (confirm(`A payroll run already exists for ${months[month - 1]} ${year}. Replace it? (Only DRAFT runs can be replaced.)`)) {
+          handleGenerate(true)
+          return
+        }
+      } else {
+        alert(msg)
+      }
+      return
+    }
     fetchPayroll()
   }
 
@@ -314,10 +328,13 @@ export function HRPayrollView() {
             </select>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {!payrollRun && isHR && (
-              <Button onClick={handleGenerate} disabled={busy}>
+            {/* Generate button — auto-pulls latest comp + applies resignation
+                filter + pro-rates exits. Always visible to HR (re-clicks
+                require confirming a replace when a DRAFT already exists). */}
+            {isHR && (!payrollRun || payrollRun.status === 'DRAFT') && (
+              <Button onClick={() => handleGenerate(false)} disabled={busy}>
                 <Sparkles className="w-4 h-4 mr-1.5" />
-                {busy ? 'Preparing…' : `Prepare ${months[month - 1]} ${year} Payroll`}
+                {busy ? 'Generating…' : payrollRun ? 'Regenerate' : `Generate ${months[month - 1]} ${year}`}
               </Button>
             )}
 

@@ -99,8 +99,8 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         },
       })
 
-      // Write history (only if there's a real change, or it's the first record)
-      if (oldGross !== newGross) {
+      // Write history (only if there's a real change, REGULAR confirmation, or it's the first record)
+      if (oldGross !== newGross || type === 'REGULAR') {
         const pct = oldGross > 0 ? ((newGross - oldGross) / oldGross) * 100 : null
         const hist = await tx.compensationHistory.create({
           data: {

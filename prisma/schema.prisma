@@ -1693,6 +1693,15 @@ model ManagerHistory {
   changedAt       DateTime @default(now())
   changedById     String
   reason          String?
+  // ─── Role History extensions (F8) ─────────────────────────────────
+  // Manual + editable role-history entries. When `title` is set the row
+  // represents a Role History entry ("Promoted to Senior Designer"); when
+  // null the row is a pure manager-reparenting record kept for backward
+  // compat. `effectiveDate` defaults to `changedAt` for legacy rows.
+  title           String?   // e.g. "Senior Designer"
+  notes           String?   // free-form HR note shown on the row
+  effectiveDate   DateTime? // when the change took effect (display date)
+  isManual        Boolean   @default(false) // true = HR typed it; false = auto from reparent
 
   @@index([employeeId, changedAt])
   @@map("manager_history")

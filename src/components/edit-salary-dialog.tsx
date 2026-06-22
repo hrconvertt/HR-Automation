@@ -12,7 +12,7 @@
  * through approvals would extend this component with a `mode="propose"` prop.
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -53,6 +53,7 @@ interface Props {
 }
 
 const CHANGE_TYPES = [
+  { value: 'REGULAR',    label: 'Regular Pay',       hint: 'Standard monthly salary — no increase or decrease, just confirming this month’s pay.' },
   { value: 'INCREMENT',  label: 'Annual Increment', hint: 'Yearly merit raise based on performance review.' },
   { value: 'PROMOTION',  label: 'Promotion',        hint: 'Compensation aligned with a new role or band.' },
   { value: 'BONUS',      label: 'Bonus',            hint: 'One-off variable payment.' },
@@ -78,12 +79,32 @@ export default function EditSalaryDialog({
     medicalAllowance:  current?.medicalAllowance ?? 0,
     otherAllowance:    current?.otherAllowance   ?? 0,
     effectiveFrom: isAddHistory ? '' : new Date().toISOString().split('T')[0],
-    type: isAddHistory ? 'INCREMENT' : (current ? 'INCREMENT' : 'INITIAL'),
+    type: isAddHistory ? 'INCREMENT' : (current ? 'REGULAR' : 'INITIAL'),
     reason: '',
     notifyInApp: !isAddHistory,
     notifyEmail: !isAddHistory,
     monthlyPayDay: current?.monthlyPayDay ?? '' as number | '',
   })
+
+  // Re-seed form from `current` each time the dialog opens. Without this,
+  // the useState initializer above only runs once per mount and the form
+  // stays stuck at the initial zeros if the dialog mounted before the
+  // salary record loaded.
+  useEffect(() => {
+    if (!open) return
+    setForm((prev) => ({
+      ...prev,
+      basic:            current?.basic            ?? prev.basic,
+      houseRent:        current?.houseRent        ?? prev.houseRent,
+      utilities:        current?.utilities        ?? prev.utilities,
+      food:             current?.food             ?? prev.food,
+      fuel:             current?.fuel             ?? prev.fuel,
+      medicalAllowance: current?.medicalAllowance ?? prev.medicalAllowance,
+      otherAllowance:   current?.otherAllowance   ?? prev.otherAllowance,
+      monthlyPayDay:    current?.monthlyPayDay    ?? '' as number | '',
+    }))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, current?.basic, current?.houseRent, current?.utilities, current?.food, current?.fuel, current?.medicalAllowance, current?.otherAllowance])
 
   const oldGross = useMemo(() => current
     ? current.basic + current.houseRent + current.utilities + current.food +
@@ -159,10 +180,11 @@ export default function EditSalaryDialog({
         setError('Historical effective date must be in the past.'); return
       }
     } else {
-      if (current && diff === 0) {
+      // REGULAR pay = no change required; HR is just confirming this month's pay.
+      if (current && diff === 0 && form.type !== 'REGULAR') {
         setError('No changes to save. Adjust at least one pay component first.'); return
       }
-      if (current && !form.reason.trim()) {
+      if (current && form.type !== 'REGULAR' && !form.reason.trim()) {
         setError('Please provide a reason for this compensation change.'); return
       }
     }

@@ -1,18 +1,20 @@
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import { formatDate, formatCurrency } from '@/lib/utils'
-import { Badge } from '@/components/ui/badge'
+import { formatDate } from '@/lib/utils'
+import RoleHistoryCard, { type RoleEntry, type ManagerOption } from '@/components/role-history-card'
 
 interface CompRow { id: string; effectiveDate: string; type: string; oldSalary: number; newSalary: number; incrementPct: number | null; reason: string | null }
 interface ReviewRow { id: string; reviewPeriod: string; reviewType: string; overallRating: number | null; finalCategory: string | null }
-interface ManagerRow { changedAt: string; oldManagerId: string | null; newManagerId: string | null; reason: string | null }
 
 interface Props {
+  employeeId: string
   joiningDate: string
   confirmationDate: string | null
   exitDate: string | null
   designation: string
   managerName: string | null
-  managerHistory: ManagerRow[]
+  roleEntries: RoleEntry[]
+  managers: ManagerOption[]
+  canEditRoles: boolean
   compensationHistory: CompRow[] | null
   reviews: ReviewRow[] | null
 }
@@ -46,9 +48,12 @@ function nextMilestone(joiningDate: string): { years: number; daysAway: number }
 }
 
 export default function EmployeeLifecycleTab({
-  joiningDate, confirmationDate, exitDate, designation, managerName,
-  managerHistory, compensationHistory, reviews,
+  employeeId, joiningDate, confirmationDate, exitDate, designation, managerName,
+  roleEntries, managers, canEditRoles, compensationHistory: _compensationHistory, reviews,
 }: Props) {
+  // compensationHistory is intentionally not rendered — single source of truth
+  // lives on the Compensation tab (F4). Prop retained for caller back-compat.
+  void _compensationHistory
   const tenure = tenureDescription(joiningDate, exitDate)
   const milestone = nextMilestone(joiningDate)
 
@@ -82,59 +87,22 @@ export default function EmployeeLifecycleTab({
         </CardContent>
       </Card>
 
-      {/* Role History */}
-      <Card>
-        <CardHeader><CardTitle>Role History</CardTitle></CardHeader>
-        <CardContent>
-          <ul className="space-y-2 text-sm">
-            <li className="flex justify-between gap-3 border-l-2 border-slate-200 pl-3">
-              <div>
-                <p className="font-medium text-gray-900">{designation}</p>
-                <p className="text-xs text-gray-500">{managerName ? `Manager: ${managerName}` : 'No manager'}</p>
-              </div>
-              <span className="text-xs text-gray-400">{formatDate(joiningDate)} → {exitDate ? formatDate(exitDate) : 'present'}</span>
-            </li>
-            {managerHistory.length === 0 ? null : managerHistory.map((m, i) => (
-              <li key={i} className="flex justify-between gap-3 border-l-2 border-slate-200 pl-3">
-                <div>
-                  <p className="text-gray-700">Manager changed</p>
-                  {m.reason ? <p className="text-xs text-gray-500">{m.reason}</p> : null}
-                </div>
-                <span className="text-xs text-gray-400">{formatDate(m.changedAt)}</span>
-              </li>
-            ))}
-          </ul>
-        </CardContent>
-      </Card>
+      {/* Role History — editable card (F8) */}
+      <RoleHistoryCard
+        employeeId={employeeId}
+        designation={designation}
+        managerName={managerName}
+        joiningDate={joiningDate}
+        exitDate={exitDate}
+        entries={roleEntries}
+        managers={managers}
+        canEdit={canEditRoles}
+      />
 
-      {/* Compensation Timeline */}
-      {compensationHistory && (
-        <Card>
-          <CardHeader><CardTitle>Compensation Timeline</CardTitle></CardHeader>
-          <CardContent>
-            {compensationHistory.length === 0 ? (
-              <p className="text-sm text-gray-400">No compensation changes recorded.</p>
-            ) : (
-              <ul className="space-y-2 text-sm">
-                {compensationHistory.map((c) => (
-                  <li key={c.id} className="flex justify-between gap-3 border-l-2 border-slate-200 pl-3">
-                    <div>
-                      <p className="font-medium text-gray-900">
-                        {formatCurrency(c.oldSalary)} → {formatCurrency(c.newSalary)}
-                        {c.incrementPct != null && c.incrementPct !== 0 ? (
-                          <Badge variant="success" className="ml-2">+{c.incrementPct}%</Badge>
-                        ) : null}
-                      </p>
-                      <p className="text-xs text-gray-500">{c.type} {c.reason ? `· ${c.reason}` : ''}</p>
-                    </div>
-                    <span className="text-xs text-gray-400">{formatDate(c.effectiveDate)}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      {/* Compensation Timeline — moved to dedicated Compensation tab.
+          Keeping the prop in the interface for backward compatibility but
+          intentionally not rendering it here (single source of truth).
+       */}
 
       {/* Reviews — hidden entirely when there are no finalized reviews yet. */}
       {reviews && reviews.length > 0 && (

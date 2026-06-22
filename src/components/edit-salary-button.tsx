@@ -146,6 +146,7 @@ export default function EditSalaryButton({ employeeId, employeeName, current }: 
                 <Select value={form.type} onValueChange={(v) => setField('type', v)}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="REGULAR">Regular Pay</SelectItem>
                     <SelectItem value="INCREMENT">Annual Increment</SelectItem>
                     <SelectItem value="PROMOTION">Promotion</SelectItem>
                     <SelectItem value="BONUS">Bonus / One-off</SelectItem>

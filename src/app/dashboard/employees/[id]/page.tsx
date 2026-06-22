@@ -237,6 +237,21 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
   const lifecycleShowsComp = isHR || isViewingOwn
   const lifecycleShowsReviews = isHR || isViewingOwn || (isManager && isMyTeamMember)
 
+  // Manager options + manager name lookup for the editable Role History card.
+  const managerOptions = (isHR && !isPreviewMode)
+    ? await prisma.employee.findMany({
+        where: { status: 'ACTIVE', id: { not: employee.id } },
+        select: { id: true, fullName: true },
+        orderBy: { fullName: 'asc' },
+      })
+    : []
+  const managerNameById = new Map<string, string>(
+    managerOptions.map((m) => [m.id, m.fullName] as const),
+  )
+  if (employee.reportingManager && employee.reportingManagerId) {
+    managerNameById.set(employee.reportingManagerId, employee.reportingManager.fullName)
+  }
+
   return (
     <div className="space-y-6">
       <BackButton fallback="/dashboard/employees" />
@@ -473,17 +488,25 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
         {/* Lifecycle */}
         {showLifecycleTab && <TabsContent value="lifecycle">
           <EmployeeLifecycleTab
+            employeeId={employee.id}
             joiningDate={employee.joiningDate.toISOString()}
             confirmationDate={employee.confirmationDate?.toISOString() ?? null}
             exitDate={employee.exitDate?.toISOString() ?? null}
             designation={employee.designation}
             managerName={employee.reportingManager?.fullName ?? null}
-            managerHistory={employee.managerHistory.map((h) => ({
+            roleEntries={employee.managerHistory.map((h) => ({
+              id: h.id,
+              title: h.title ?? null,
               changedAt: h.changedAt.toISOString(),
-              oldManagerId: h.oldManagerId,
-              newManagerId: h.newManagerId,
+              effectiveDate: h.effectiveDate?.toISOString() ?? null,
               reason: h.reason,
+              notes: h.notes ?? null,
+              isManual: h.isManual,
+              newManagerId: h.newManagerId,
+              managerName: h.newManagerId ? (managerNameById.get(h.newManagerId) ?? null) : null,
             }))}
+            managers={managerOptions}
+            canEditRoles={canEditFull}
             compensationHistory={
               lifecycleShowsComp
                 ? displayHistory.map((c) => ({

@@ -4,7 +4,7 @@ import { useState, useTransition, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Check, Plus, Trash2, Upload, X, Paperclip, RotateCcw } from 'lucide-react'
+import { Check, Trash2, Upload, X, Paperclip, RotateCcw } from 'lucide-react'
 
 interface Task {
   id: string
@@ -31,15 +31,18 @@ interface Props {
   canEdit: boolean
   canMarkComplete: boolean
   viewerRole: string
+  joiningDate: string
 }
 
-const CATEGORY_ORDER = ['PRE_ARRIVAL', 'DAY_1', 'WEEK_1_PAPERWORK', 'WEEK_1_IT', 'OTHER']
+// "Custom Tasks" (OTHER) deliberately not rendered — HR no longer wants
+// ad-hoc task creation in this workspace. Existing OTHER rows in the DB
+// are retained (no data deleted) but hidden from the UI.
+const CATEGORY_ORDER = ['PRE_ARRIVAL', 'DAY_1', 'WEEK_1_PAPERWORK', 'WEEK_1_IT']
 const CATEGORY_LABELS: Record<string, string> = {
   PRE_ARRIVAL: 'Pre-Arrival',
   DAY_1: 'Day 1',
   WEEK_1_PAPERWORK: 'Week 1 — Paperwork',
   WEEK_1_IT: 'Week 1 — IT & Access',
-  OTHER: 'Custom Tasks',
 }
 
 // Tasks that look like document uploads — match either by the explicit
@@ -69,8 +72,6 @@ export function OnboardingWorkspace(props: Props) {
   const [day1, setDay1] = useState(props.day1Schedule)
   const [notes, setNotes] = useState(props.notes)
   const [pending, startTransition] = useTransition()
-  const [showAdd, setShowAdd] = useState(false)
-  const [newTask, setNewTask] = useState({ title: '', owner: 'HR', category: 'OTHER', description: '' })
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
   const [notRequiredFor, setNotRequiredFor] = useState<Task | null>(null)
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({})
@@ -155,21 +156,6 @@ export function OnboardingWorkspace(props: Props) {
     startTransition(() => router.refresh())
   }
 
-  async function addTask() {
-    if (!newTask.title.trim()) return
-    const res = await fetch(`/api/onboarding/tasks`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ checklistId: props.checklistId, ...newTask }),
-    })
-    if (res.ok) {
-      const { task } = await res.json()
-      setTasks((prev) => [...prev, { ...task, status: task.status ?? 'PENDING', notRequiredReason: null, attachedDocumentId: null }])
-      setNewTask({ title: '', owner: 'HR', category: 'OTHER', description: '' })
-      setShowAdd(false)
-    }
-  }
-
   async function deleteTask(id: string) {
     if (!confirm('Delete this task?')) return
     const res = await fetch(`/api/onboarding/tasks/${id}`, { method: 'DELETE' })
@@ -199,7 +185,31 @@ export function OnboardingWorkspace(props: Props) {
   const grouped = CATEGORY_ORDER.map((cat) => ({
     cat,
     items: tasks.filter((t) => t.category === cat).sort((a, b) => a.orderIndex - b.orderIndex),
-  })).filter((g) => g.items.length > 0 || g.cat === 'OTHER')
+  })).filter((g) => g.items.length > 0)
+
+  // Compute the precise reason the "Mark Fully Onboarded" button is blocked,
+  // so HR sees exactly what's holding them up rather than a silent disabled state.
+  // The same gating rules live server-side in /api/onboarding/[employeeId]/complete:
+  //   1. Every task must be COMPLETED or NOT_REQUIRED
+  //   2. Employee must be ≥ 30 days from joiningDate
+  // Hidden OTHER (Custom) tasks still count — server enforces the gate, so we
+  // include them in the client-side calculation to keep the tooltip honest.
+  const allOnboardingTasks = tasks // includes hidden OTHER rows
+  const pendingCount = allOnboardingTasks.filter(
+    (t) => !(t.isComplete || t.status === 'COMPLETED' || t.status === 'NOT_REQUIRED'),
+  ).length
+  const daysSinceJoin = Math.floor(
+    (Date.now() - new Date(props.joiningDate).getTime()) / 86400000,
+  )
+  const daysShort = Math.max(0, 30 - daysSinceJoin)
+  const blockerParts: string[] = []
+  if (pendingCount > 0) blockerParts.push(`${pendingCount} task${pendingCount === 1 ? '' : 's'} pending`)
+  if (daysShort > 0) {
+    blockerParts.push(`Employee has been here ${daysSinceJoin} day${daysSinceJoin === 1 ? '' : 's'} (need 30)`)
+  }
+  const blockerTooltip = blockerParts.length > 0
+    ? `Blocked: ${blockerParts.join(' · ')}`
+    : ''
 
   return (
     <div className="space-y-5">
@@ -354,51 +364,8 @@ export function OnboardingWorkspace(props: Props) {
         )
       })}
 
-      {props.canEdit && (
-        <Card className="rounded-xl border-slate-200 p-5">
-          {!showAdd ? (
-            <Button onClick={() => setShowAdd(true)} variant="outline" size="sm">
-              <Plus className="w-3.5 h-3.5 mr-1" /> Add Task
-            </Button>
-          ) : (
-            <div className="space-y-2">
-              <input
-                value={newTask.title}
-                onChange={(e) => setNewTask((p) => ({ ...p, title: e.target.value }))}
-                placeholder="Task title"
-                className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
-              />
-              <textarea
-                value={newTask.description}
-                onChange={(e) => setNewTask((p) => ({ ...p, description: e.target.value }))}
-                placeholder="Description (optional)"
-                className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm"
-              />
-              <div className="flex gap-2">
-                <select
-                  value={newTask.owner}
-                  onChange={(e) => setNewTask((p) => ({ ...p, owner: e.target.value }))}
-                  className="border border-slate-200 rounded-md px-2 py-1.5 text-sm"
-                >
-                  <option value="HR">HR</option>
-                  <option value="MANAGER">Manager</option>
-                  <option value="EMPLOYEE">Employee</option>
-                  <option value="IT">IT</option>
-                </select>
-                <select
-                  value={newTask.category}
-                  onChange={(e) => setNewTask((p) => ({ ...p, category: e.target.value }))}
-                  className="border border-slate-200 rounded-md px-2 py-1.5 text-sm"
-                >
-                  {CATEGORY_ORDER.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>)}
-                </select>
-                <Button onClick={addTask} size="sm">Add</Button>
-                <Button onClick={() => setShowAdd(false)} variant="outline" size="sm">Cancel</Button>
-              </div>
-            </div>
-          )}
-        </Card>
-      )}
+      {/* Custom Tasks (Add Task) — removed per HR request. Existing custom
+          task data is retained in the DB but no longer rendered. */}
 
       {/* Notes */}
       <Card className="rounded-xl border-slate-200 p-5">
@@ -421,8 +388,15 @@ export function OnboardingWorkspace(props: Props) {
           <div>
             <h3 className="text-sm font-semibold text-slate-900">Mark Onboarding Complete</h3>
             <p className="text-xs text-slate-500 mt-1">Enabled when all tasks are done (or marked not required) AND the employee has been here ≥ 30 days.</p>
+            {!props.canMarkComplete && blockerTooltip && (
+              <p className="text-xs text-slate-700 mt-1 font-medium">{blockerTooltip}</p>
+            )}
           </div>
-          <Button onClick={markFullyOnboarded} disabled={!props.canMarkComplete}>
+          <Button
+            onClick={markFullyOnboarded}
+            disabled={!props.canMarkComplete}
+            title={!props.canMarkComplete ? (blockerTooltip || 'Not eligible yet.') : 'Mark this hire as fully onboarded'}
+          >
             Mark Fully Onboarded
           </Button>
         </Card>

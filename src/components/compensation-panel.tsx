@@ -75,6 +75,7 @@ function payslipStatusTone(status: string): string {
 }
 
 const TYPE_LABELS: Record<string, { label: string; tone: string }> = {
+  REGULAR:     { label: 'Regular Pay',       tone: 'bg-slate-100 text-slate-900' },
   INCREMENT:   { label: 'Annual Increment', tone: 'bg-slate-100 text-slate-900' },
   PROMOTION:   { label: 'Promotion',         tone: 'bg-slate-100 text-slate-900' },
   BONUS:       { label: 'Bonus',             tone: 'bg-slate-100 text-slate-900' },
@@ -242,11 +243,26 @@ export default function CompensationPanel({
         <CardHeader className="border-b border-slate-100">
           <CardTitle className="flex items-center gap-2 text-base">
             <Wallet className="w-4 h-4 text-slate-500" /> Pay Components
-            {currentSalary?.effectiveFrom && (
-              <span className="text-[11px] font-normal text-slate-500 ml-2">
-                effective {fmtDate(currentSalary.effectiveFrom)}
-              </span>
-            )}
+            {(() => {
+              // Show the MOST RECENT effective date so HR always sees the
+              // latest cycle, not a stale Salary.effectiveFrom that wasn't
+              // refreshed when a newer CompensationHistory row was added
+              // via the backfill / per-entry edit paths.
+              const latestHistEff = latestChange?.effectiveDate
+                ? new Date(latestChange.effectiveDate)
+                : null
+              const salaryEff = currentSalary?.effectiveFrom
+                ? new Date(currentSalary.effectiveFrom)
+                : null
+              const effective = latestHistEff && (!salaryEff || latestHistEff > salaryEff)
+                ? latestHistEff
+                : salaryEff
+              return effective ? (
+                <span className="text-[11px] font-normal text-slate-500 ml-2">
+                  effective {fmtDate(effective)}
+                </span>
+              ) : null
+            })()}
           </CardTitle>
         </CardHeader>
         <CardContent className="pt-5">

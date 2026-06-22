@@ -104,6 +104,7 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
         canEdit={isHR}
         canMarkComplete={canComplete}
         viewerRole={me.role}
+        joiningDate={employee.joiningDate.toISOString()}
       />
     </div>
   )

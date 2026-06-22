@@ -159,9 +159,9 @@ export function PayrollGridEditor({
   }
 
   const ROLE_ACTION_LABEL: Record<GridRole, string | null> = {
-    HR: runStatus === 'DRAFT' ? 'Close & Send to CEO'
-      : runStatus === 'PENDING_HR_FINAL' ? 'Approve & Release to Finance' : null,
-    CEO: runStatus === 'PENDING_CEO' ? 'Close & Send to Finance' : null,
+    HR: runStatus === 'DRAFT' ? 'Save & Send to CEO'
+      : runStatus === 'PENDING_HR_FINAL' ? 'Save & Release to Finance' : null,
+    CEO: runStatus === 'PENDING_CEO' ? 'Save & Send to Finance' : null,
     FINANCE: runStatus === 'PENDING_FINANCE' ? 'Mark as Paid' : null,
     READONLY: null,
   }
