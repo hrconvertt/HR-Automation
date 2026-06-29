@@ -244,7 +244,14 @@ export function HRPayrollView() {
 
   function downloadIBFT() {
     if (!payrollRun) return
-    window.open(`/api/payroll/${payrollRun.id}/export-ibft`, '_blank')
+    // New multi-format endpoint — IBFT format covers all non-Faysal banks
+    window.open(`/api/payroll/${payrollRun.id}/export?format=IBFT`, '_blank')
+  }
+
+  function downloadIFT() {
+    if (!payrollRun) return
+    // IFT format = Faysal Bank accounts only (PK<dd>FAYS*)
+    window.open(`/api/payroll/${payrollRun.id}/export?format=IFT`, '_blank')
   }
 
   async function handleGeneratePayslipDocs() {
@@ -329,10 +336,16 @@ export function HRPayrollView() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Generate button — auto-pulls latest comp + applies resignation
-                filter + pro-rates exits. Always visible to HR (re-clicks
-                require confirming a replace when a DRAFT already exists). */}
-            {isHR && (!payrollRun || payrollRun.status === 'DRAFT') && (
-              <Button onClick={() => handleGenerate(false)} disabled={busy}>
+                filter + pro-rates exits. Visible to HR whenever the run is
+                either missing, draft, OR empty (zero payslips) — the empty
+                case lets HR recover from a botched generate that left an
+                advanced-stage run with no rows. */}
+            {isHR && (
+              !payrollRun ||
+              payrollRun.status === 'DRAFT' ||
+              (payrollRun.payslips?.length ?? 0) === 0
+            ) && (
+              <Button onClick={() => handleGenerate(true)} disabled={busy}>
                 <Sparkles className="w-4 h-4 mr-1.5" />
                 {busy ? 'Generating…' : payrollRun ? 'Regenerate' : `Generate ${months[month - 1]} ${year}`}
               </Button>
@@ -379,6 +392,9 @@ export function HRPayrollView() {
                 <Button onClick={downloadIBFT} variant="outline">
                   <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
                 </Button>
+                <Button onClick={downloadIFT} variant="outline">
+                  <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IFT
+                </Button>
                 {(isFinance || isHR) && (
                   <Button
                     onClick={() => handleTransition(
@@ -399,6 +415,9 @@ export function HRPayrollView() {
                 <Button onClick={downloadIBFT} variant="outline">
                   <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
                 </Button>
+                <Button onClick={downloadIFT} variant="outline">
+                  <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IFT
+                </Button>
                 {isHR && (
                   <Button onClick={() => setGenDocsOpen(true)} variant="outline">
                     <FileText className="w-4 h-4 mr-1.5" /> Generate Payslip PDFs
@@ -411,6 +430,9 @@ export function HRPayrollView() {
             {payrollRun && ['APPROVED','LOCKED','DISBURSED','CLOSED'].includes(status) && (
               <Button onClick={downloadIBFT} variant="outline">
                 <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
+              </Button>
+              <Button onClick={downloadIFT} variant="outline">
+                <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IFT
               </Button>
             )}
 
