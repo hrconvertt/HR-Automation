@@ -7,6 +7,18 @@ export async function GET(request: NextRequest) {
   const payload = token ? await verifyToken(token) : null
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Lifecycle overview = company-wide HR analytics (headcount, joiners, exits,
+  // names of departing employees). Restrict to roles that legitimately see
+  // workforce-wide data: HR_ADMIN and EXECUTIVE. Honour HR preview cookie so
+  // HR previewing as Employee/Manager/Lead/Finance gets the same 403 they
+  // would in real life.
+  const previewRole =
+    payload.role === 'HR_ADMIN' ? request.cookies.get('hr_preview_role')?.value : undefined
+  const effectiveRole = previewRole ?? payload.role
+  if (effectiveRole !== 'HR_ADMIN' && effectiveRole !== 'EXECUTIVE') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+
   const now = new Date()
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const nextMonthStart = new Date(now.getFullYear(), now.getMonth() + 1, 1)
