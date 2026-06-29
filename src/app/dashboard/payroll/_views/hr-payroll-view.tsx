@@ -428,12 +428,14 @@ export function HRPayrollView() {
 
             {/* Legacy / historical paid runs — show download */}
             {payrollRun && ['APPROVED','LOCKED','DISBURSED','CLOSED'].includes(status) && (
-              <Button onClick={downloadIBFT} variant="outline">
-                <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
-              </Button>
-              <Button onClick={downloadIFT} variant="outline">
-                <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IFT
-              </Button>
+              <>
+                <Button onClick={downloadIBFT} variant="outline">
+                  <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IBFT
+                </Button>
+                <Button onClick={downloadIFT} variant="outline">
+                  <FileSpreadsheet className="w-4 h-4 mr-1.5" /> Download IFT
+                </Button>
+              </>
             )}
 
             {payrollRun && canSendBack && status !== 'DRAFT' && status !== 'PAID' && (
@@ -746,7 +748,14 @@ export function HRPayrollView() {
             <CardTitle>Activity</CardTitle>
           </CardHeader>
           <ol className="px-5 pb-5 space-y-3">
-            {payrollRun.approvals.map((a) => (
+            {payrollRun.approvals.filter((a) => {
+              // Hide legacy approval rows
+              if (a.action === 'APPROVE') return false
+              const label = ACTION_LABEL[a.action] ?? ''
+              if (label.toLowerCase().includes('legacy')) return false
+              if (a.comment?.toLowerCase().includes('legacy endpoint')) return false
+              return true
+            }).map((a) => (
               <li key={a.id} className="flex items-start gap-3 text-sm">
                 <span className="mt-0.5 w-2 h-2 rounded-full bg-slate-500 shrink-0" />
                 <div className="flex-1">

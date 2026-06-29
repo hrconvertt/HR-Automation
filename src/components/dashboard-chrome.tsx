@@ -38,6 +38,13 @@ import {
   CalendarCheck,
   MessageSquare,
   ClipboardList,
+  Search,
+  ArrowLeft,
+  FileText,
+  Banknote as BanknoteIcon,
+  Plane as PlaneIcon,
+  Mail as MailIcon,
+  User as UserIcon,
 } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 import AIChatbot from '@/components/ai-chatbot'
@@ -298,6 +305,201 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
   ],
 }
 
+// Nested sidebar groups — when the user is inside one of these paths,
+// the sidebar shows a focused nested menu with a "Back" link.
+const NESTED_NAV: Record<string, NavGroup[]> = {
+  '/dashboard/performance': [
+    {
+      label: 'Performance',
+      items: [
+        { href: '/dashboard/performance', label: 'Overview', icon: TrendingUp },
+        { href: '/dashboard/performance/reviews', label: 'Reviews', icon: ClipboardList },
+        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
+        { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
+        { href: '/dashboard/performance/pip', label: 'PIPs', icon: ShieldCheck },
+        { href: '/dashboard/culture', label: 'Recognition', icon: Sparkles },
+      ],
+    },
+  ],
+  '/dashboard/lifecycle': [
+    {
+      label: 'Lifecycle',
+      items: [
+        { href: '/dashboard/lifecycle?tab=onboarding', label: 'Onboarding', icon: UserPlus },
+        { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
+        { href: '/dashboard/lifecycle?tab=active', label: 'Active', icon: Users },
+        { href: '/dashboard/lifecycle?tab=exit', label: 'Exit Clearance', icon: LogOut },
+      ],
+    },
+  ],
+}
+
+function getActiveNav(
+  pathname: string,
+  baseGroups: NavGroup[],
+): { groups: NavGroup[]; nested: boolean } {
+  for (const prefix of Object.keys(NESTED_NAV)) {
+    if (pathname.startsWith(prefix)) {
+      return { groups: NESTED_NAV[prefix], nested: true }
+    }
+  }
+  return { groups: baseGroups, nested: false }
+}
+
+interface SearchResultItem {
+  type: 'employee' | 'payslip' | 'policy' | 'leave' | 'letter'
+  id: string
+  title: string
+  subtitle?: string
+  href: string
+}
+
+function SearchBar() {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [results, setResults] = useState<SearchResultItem[]>([])
+  const [loading, setLoading] = useState(false)
+  const wrapperRef = useState<HTMLDivElement | null>(null)
+  const containerRef = useState<HTMLDivElement | null>(null)
+  // Using plain refs via useState is awkward; use useRef-style with state setter
+  // ↑ keep simple: manage via direct DOM querySelector below
+
+  // Global Cmd/Ctrl+K to open
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault()
+        setOpen(true)
+      }
+      if (e.key === 'Escape') {
+        setOpen(false)
+        setQuery('')
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Click-outside to close
+  useEffect(() => {
+    if (!open) return
+    function onClick(e: MouseEvent) {
+      const el = document.getElementById('hr-search-wrapper')
+      if (el && !el.contains(e.target as Node)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onClick)
+    return () => document.removeEventListener('mousedown', onClick)
+  }, [open])
+
+  // Debounced fetch
+  useEffect(() => {
+    if (!open || query.trim().length < 2) {
+      setResults([])
+      return
+    }
+    setLoading(true)
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`, {
+          cache: 'no-store',
+        })
+        if (res.ok) {
+          const data = await res.json()
+          setResults(data.results ?? [])
+        }
+      } catch {
+        /* ignore */
+      } finally {
+        setLoading(false)
+      }
+    }, 200)
+    return () => clearTimeout(t)
+  }, [query, open])
+
+  // suppress unused
+  void wrapperRef
+  void containerRef
+
+  function iconFor(type: SearchResultItem['type']) {
+    if (type === 'employee') return <UserIcon className="w-4 h-4 text-slate-500" />
+    if (type === 'payslip') return <BanknoteIcon className="w-4 h-4 text-slate-500" />
+    if (type === 'policy') return <FileText className="w-4 h-4 text-slate-500" />
+    if (type === 'leave') return <PlaneIcon className="w-4 h-4 text-slate-500" />
+    if (type === 'letter') return <MailIcon className="w-4 h-4 text-slate-500" />
+    return <Search className="w-4 h-4 text-slate-500" />
+  }
+
+  return (
+    <div id="hr-search-wrapper" className="relative w-[280px] max-w-full">
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="p-2 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
+          aria-label="Search"
+          title="Search (Ctrl+K)"
+        >
+          <Search className="w-5 h-5" />
+        </button>
+      ) : (
+        <div className="relative">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 bg-white shadow-sm">
+            <Search className="w-4 h-4 text-gray-400" />
+            <input
+              autoFocus
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search people, payslips, policies, leaves…"
+              className="flex-1 outline-none text-sm bg-transparent"
+            />
+            <kbd className="text-[10px] text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">
+              Esc
+            </kbd>
+          </div>
+          {(query.trim().length >= 2 || loading) && (
+            <div className="absolute top-full left-0 right-0 mt-1 max-h-[400px] overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg z-50">
+              {loading && (
+                <div className="px-3 py-2 text-xs text-gray-500">Searching…</div>
+              )}
+              {!loading && results.length === 0 && (
+                <div className="px-3 py-2 text-xs text-gray-500">No results.</div>
+              )}
+              {!loading &&
+                results.map((r) => (
+                  <button
+                    key={`${r.type}-${r.id}`}
+                    type="button"
+                    onClick={() => {
+                      router.push(r.href)
+                      setOpen(false)
+                      setQuery('')
+                    }}
+                    className="flex items-start gap-2 w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
+                  >
+                    <div className="mt-0.5">{iconFor(r.type)}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{r.title}</p>
+                      {r.subtitle && (
+                        <p className="text-xs text-gray-500 truncate">{r.subtitle}</p>
+                      )}
+                    </div>
+                    <span className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">
+                      {r.type}
+                    </span>
+                  </button>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface Props {
   role: string
   displayName: string
@@ -417,7 +619,8 @@ export default function DashboardChrome({
           : g,
       )
     : baseGroups
-  const navGroups = applyFocus(navGroupsWithChat)
+  const { groups: activeGroups, nested } = getActiveNav(pathname, navGroupsWithChat)
+  const navGroups = nested ? activeGroups : applyFocus(activeGroups)
 
   const displayRole = (() => {
     if (role === 'HR_ADMIN') {
@@ -467,7 +670,7 @@ export default function DashboardChrome({
           </button>
         </div>
 
-        {FOCUS_MODE && (
+        {FOCUS_MODE && !nested && (
           <div className="mx-2 mt-3 mb-1 px-3 py-2 rounded-md bg-slate-500/10 border border-slate-500/30 text-slate-200 text-[10px] leading-snug">
             <p className="font-semibold uppercase tracking-wider">Focus Mode</p>
             <p className="mt-0.5 text-slate-100/80">
@@ -477,6 +680,16 @@ export default function DashboardChrome({
         )}
 
         <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
+          {nested && (
+            <Link
+              href="/dashboard"
+              onClick={() => setSidebarOpen(false)}
+              className="flex items-center gap-2 px-3 py-2 rounded-md text-[12px] font-medium text-slate-400 hover:text-white hover:bg-slate-700/40 transition-colors mb-2"
+            >
+              <ArrowLeft className="w-4 h-4 flex-shrink-0" />
+              Back to main menu
+            </Link>
+          )}
           {navGroups.map((group) => (
             <div key={group.label}>
               <p className="px-3 mb-2 text-[10px] font-semibold text-slate-500 uppercase tracking-widest">
@@ -555,6 +768,8 @@ export default function DashboardChrome({
           </Link>
 
           <div className="flex-1" />
+
+          <SearchBar />
 
           <div className="flex items-center gap-1.5">
             <Link

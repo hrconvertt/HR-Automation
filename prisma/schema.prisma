@@ -314,6 +314,19 @@ model AttendancePunch {
   @@map("attendance_punches")
 }
 
+model TimesheetEntry {
+  id          String   @id @default(cuid())
+  employeeId  String
+  date        DateTime @db.Date
+  category    String?
+  hours       Decimal  @db.Decimal(4, 2)
+  taskId      String?
+  notes       String?
+  createdAt   DateTime @default(now())
+  @@index([employeeId, date])
+  @@map("timesheet_entries")
+}
+
 model AttendanceLog {
   id           String    @id @default(cuid())
   employeeId   String

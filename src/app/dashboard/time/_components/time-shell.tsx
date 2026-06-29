@@ -24,6 +24,7 @@ import AdminTimeView from '@/app/dashboard/attendance/_views/admin-time-view'
 import TeamTimeView from '@/app/dashboard/attendance/_views/team-time-view'
 import ExecutiveTimeView from '@/app/dashboard/attendance/_views/executive-time-view'
 import { ApprovalsInbox } from './approvals-inbox'
+import { TimesheetPanel } from './timesheet-panel'
 
 type TabKey = 'my-time' | 'my-leave' | 'team-time' | 'approvals'
 
@@ -33,6 +34,8 @@ interface Props {
   employeeName: string | null
   initialTab: string
   departments: string[]
+  timeTrackingMode?: 'BASIC' | 'TIMESHEET' | 'JOBS'
+  timesheetCategories?: string[]
 }
 
 function canSeeApprovals(role: string): boolean {
@@ -52,7 +55,9 @@ function normalizeTab(tab: string): string {
   return tab
 }
 
-export function TimeShell({ role, employeeId, employeeName, initialTab, departments }: Props) {
+export function TimeShell({ role, employeeId, employeeName, initialTab, timeTrackingMode = 'BASIC', timesheetCategories = [] }: Props) {
+  // `departments` prop reserved for future grid filters
+  void undefined
   const teamLabel =
     role === 'HR_ADMIN' || role === 'EXECUTIVE' ? 'Everyone' : 'Team Time'
   const tabs: { key: TabKey; label: string; icon: typeof Clock; show: boolean }[] = [
@@ -94,7 +99,15 @@ export function TimeShell({ role, employeeId, employeeName, initialTab, departme
       {/* Tab content */}
       <div>
         {activeTab === 'my-time' && employeeId && (
-          <MyTimeView employeeId={employeeId} employeeName={employeeName ?? ''} />
+          <div className="space-y-6">
+            <MyTimeView employeeId={employeeId} employeeName={employeeName ?? ''} />
+            {(timeTrackingMode === 'TIMESHEET' || timeTrackingMode === 'JOBS') && (
+              <TimesheetPanel
+                mode={timeTrackingMode}
+                categories={timesheetCategories}
+              />
+            )}
+          </div>
         )}
         {activeTab === 'my-time' && !employeeId && (
           <div className="rounded-2xl bg-gray-50 border border-gray-200 p-6 text-sm text-gray-600">

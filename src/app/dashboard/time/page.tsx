@@ -75,6 +75,18 @@ export default async function TimePage({ searchParams }: PageProps) {
       )
     : []
 
+  const modeRow = await prisma.config.findUnique({ where: { key: 'timeTrackingMode' } })
+  const catRow = await prisma.config.findUnique({ where: { key: 'timesheetCategories' } })
+  const timeTrackingMode: 'BASIC' | 'TIMESHEET' | 'JOBS' = (
+    ['BASIC', 'TIMESHEET', 'JOBS'] as const
+  ).includes((modeRow?.value ?? '') as 'BASIC' | 'TIMESHEET' | 'JOBS')
+    ? (modeRow!.value as 'BASIC' | 'TIMESHEET' | 'JOBS')
+    : 'BASIC'
+  const timesheetCategories = (catRow?.value ?? 'Dev\nQA\nMeetings\nAdmin')
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean)
+
   return (
     <TimeShell
       role={effectiveRole}
@@ -82,6 +94,8 @@ export default async function TimePage({ searchParams }: PageProps) {
       employeeName={user.employee?.fullName ?? null}
       initialTab={initialTab}
       departments={departments}
+      timeTrackingMode={timeTrackingMode}
+      timesheetCategories={timesheetCategories}
     />
   )
 }
