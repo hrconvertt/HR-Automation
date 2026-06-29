@@ -172,7 +172,10 @@ export async function GET(request: NextRequest) {
             if (status === 'P') present++
             else if (status === 'WFH') { present++; wfh++ }
             else if (status === 'L') leave++
-            else if (status === 'H') { hd++; leave += 0.5 }
+            // Half-days count in the HD column only — they're not "full leave"
+            // days. Combining 0.5s into the L column was producing the Ali Hassan
+            // L=3-but-only-2-leave-cells bug.
+            else if (status === 'H') { hd++ }
             else if (status === 'A') absent++
           }
           cur.setDate(cur.getDate() + 1)

@@ -45,6 +45,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   })
   const myEmpId = me?.employee?.id ?? null
 
+  // Optional approver comment — surfaced to the employee on the leave detail
+  // page + included in notification.
+  let approvalComment: string | null = null
+  try {
+    const body = await request.json().catch(() => null)
+    if (body && typeof body.comment === 'string' && body.comment.trim().length > 0) {
+      approvalComment = body.comment.trim().slice(0, 2000)
+    }
+  } catch { /* body optional */ }
+
   const { id } = await params
   const leaveRequest = await prisma.leaveRequest.findUnique({
     where: { id },
@@ -115,6 +125,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           status: 'PENDING_HR',
           managerApprovedById: myEmpId,
           managerApprovedAt: new Date(),
+          ...(approvalComment ? { approvalComment } : {}),
         },
       })
       if (result.count === 0) { raceLost = true; return }
@@ -127,6 +138,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           managerApprovedAt: leaveRequest.managerApprovedAt ?? new Date(),
           approvedById: myEmpId,
           approvedAt: new Date(),
+          ...(approvalComment ? { approvalComment } : {}),
         },
       })
       if (result.count === 0) { raceLost = true; return }

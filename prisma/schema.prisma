@@ -494,6 +494,14 @@ model LeaveRequest {
   rejectedReason String?
   rejectedById   String?
   attachmentUrl  String?
+  // Inline attachment (PDF/JPG/PNG, max ~5MB) uploaded with the request —
+  // e.g. a sick-leave doctor's note.
+  attachmentBytes  Bytes?
+  attachmentMime   String?
+  attachmentName   String?
+  // Optional comment captured at approve-time. Shown to the employee on
+  // the leave detail page.
+  approvalComment  String?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 

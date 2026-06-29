@@ -354,7 +354,7 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
               >
                 <td
                   onClick={() => onRowClick(emp.id)}
-                  className="sticky left-0 z-10 bg-white group-hover:bg-slate-50/40 border-b border-r border-slate-200 px-3 py-1.5 cursor-pointer"
+                  className="sticky left-0 z-30 bg-white group-hover:bg-slate-50 border-b border-r border-slate-200 px-3 py-1.5 cursor-pointer shadow-[1px_0_0_0_rgb(226_232_240)]"
                 >
                   <div className="flex items-center gap-2">
                     <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">

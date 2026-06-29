@@ -217,9 +217,31 @@ export async function POST(request: NextRequest) {
       leaveType, startDate, endDate, reason,
       employeeId: bodyEmpId,
       firstDayHalf: rawFirstHalf, lastDayHalf: rawLastHalf,
+      attachmentBase64, attachmentMime, attachmentName,
     } = body
     const firstDayHalf = !!rawFirstHalf
     const lastDayHalf = !!rawLastHalf
+
+    // ── Validate attachment if provided ──
+    let attachmentBytes: Buffer | null = null
+    let safeMime: string | null = null
+    let safeName: string | null = null
+    if (attachmentBase64 && typeof attachmentBase64 === 'string') {
+      const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+      if (typeof attachmentMime !== 'string' || !allowed.includes(attachmentMime.toLowerCase())) {
+        return NextResponse.json({ error: 'Attachment must be PDF, JPG, or PNG.' }, { status: 400 })
+      }
+      try {
+        attachmentBytes = Buffer.from(attachmentBase64, 'base64')
+      } catch {
+        return NextResponse.json({ error: 'Invalid attachment encoding.' }, { status: 400 })
+      }
+      if (attachmentBytes.length > 5 * 1024 * 1024) {
+        return NextResponse.json({ error: 'Attachment exceeds 5 MB.' }, { status: 400 })
+      }
+      safeMime = attachmentMime
+      safeName = typeof attachmentName === 'string' ? attachmentName.slice(0, 240) : 'attachment'
+    }
 
     if (!leaveType || !startDate || !endDate) {
       return NextResponse.json({ error: 'leaveType, startDate, and endDate are required' }, { status: 400 })
@@ -327,6 +349,9 @@ export async function POST(request: NextRequest) {
         reason: reason ?? '',
         status: initialStatus,
         stageOneApproverId,
+        attachmentBytes: attachmentBytes ?? undefined,
+        attachmentMime: safeMime ?? undefined,
+        attachmentName: safeName ?? undefined,
       },
     })
 

@@ -38,6 +38,7 @@ import {
   CalendarCheck,
   MessageSquare,
   ClipboardList,
+  CheckCircle2,
   Search,
   ArrowLeft,
   FileText,
@@ -66,6 +67,9 @@ const FOCUS_PATHS = new Set([
   '/dashboard/time',
   '/dashboard/attendance',
   '/dashboard/leave',
+  '/dashboard/leave/me',
+  '/dashboard/leave/requests',
+  '/dashboard/leave/approved',
   '/dashboard/policies',
   '/dashboard/letters',
   '/dashboard/employees',
@@ -87,9 +91,6 @@ const FOCUS_PATHS = new Set([
   '/dashboard/settings/roles',
   '/dashboard/settings/positions',
   '/dashboard/leadership-chat',
-  '/dashboard/daily-log',
-  '/dashboard/daily-log/inquiries',
-  '/dashboard/daily-review',
   '/dashboard/settings/daily-logging',
 ])
 
@@ -108,11 +109,10 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'People', icon: Users },
         { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
+        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/payroll', label: 'Payroll', icon: Banknote },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
-        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
-        { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
       ],
     },
     {
@@ -165,11 +165,10 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'Team Members', icon: Users },
         { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
+        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
-        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
-        { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
       ],
     },
     {
@@ -197,11 +196,11 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
         { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
+        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
         { href: '/dashboard/employees', label: 'Directory', icon: Users },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
-        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
       ],
     },
     {
@@ -229,9 +228,8 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'My Team', icon: Users },
         { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
-        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
-        { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
+        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
       ],
     },
     {
@@ -278,10 +276,10 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/reports', label: 'Workforce Analytics', icon: PieChart },
         { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance & Leaves', icon: CalendarCheck },
+        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
-        { href: '/dashboard/daily-review', label: 'Team Analytics', icon: BarChart3 },
       ],
     },
     {
@@ -313,10 +311,8 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       label: 'Performance',
       items: [
         { href: '/dashboard/performance', label: 'Overview', icon: TrendingUp },
-        { href: '/dashboard/performance/reviews', label: 'Reviews', icon: ClipboardList },
         { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
         { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
-        { href: '/dashboard/performance/pip', label: 'PIPs', icon: ShieldCheck },
         { href: '/dashboard/culture', label: 'Recognition', icon: Sparkles },
       ],
     },
@@ -329,6 +325,34 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
         { href: '/dashboard/lifecycle?tab=active', label: 'Active', icon: Users },
         { href: '/dashboard/lifecycle?tab=exit', label: 'Exit Clearance', icon: LogOut },
+      ],
+    },
+  ],
+  '/dashboard/time': [
+    {
+      label: 'Time Tracking',
+      items: [
+        { href: '/dashboard/time?tab=my-time', label: 'My Time', icon: Clock },
+        { href: '/dashboard/time?tab=team-time', label: 'Everyone', icon: Users },
+      ],
+    },
+  ],
+  '/dashboard/attendance': [
+    {
+      label: 'Attendance',
+      items: [
+        { href: '/dashboard/attendance?view=grid', label: 'Grid View', icon: CalendarCheck },
+        { href: '/dashboard/attendance?view=summary', label: 'Summary View', icon: BarChart3 },
+      ],
+    },
+  ],
+  '/dashboard/leave': [
+    {
+      label: 'Leave',
+      items: [
+        { href: '/dashboard/leave/me', label: 'My Leave', icon: PlaneIcon },
+        { href: '/dashboard/leave/requests', label: 'Leave Requests', icon: Inbox },
+        { href: '/dashboard/leave/approved', label: 'Leave Approved', icon: CheckCircle2 },
       ],
     },
   ],
