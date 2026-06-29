@@ -297,11 +297,11 @@ export function PayrollGridEditor({
               const reference = `Salary ${['January','February','March','April','May','June','July','August','September','October','November','December'][month - 1]} ${year}`
               return (
                 <tr key={r.p.id} className="border-t border-slate-100 hover:bg-slate-50/50">
-                  <td className="px-2 py-1.5 align-top">
-                    <div className="flex items-center gap-1.5">
-                      <div className="min-w-0">
+                  <td className="px-2 py-1.5 align-top max-w-[180px]">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="min-w-0 flex-1">
                         <p className="font-medium text-slate-900 truncate">{r.p.employee.fullName}</p>
-                        <p className="text-[10px] text-slate-400 font-mono">{r.p.employee.employeeCode}</p>
+                        <p className="text-[10px] text-slate-400 font-mono truncate">{r.p.employee.employeeCode}</p>
                       </div>
                       {r.p.isAdjusted && (
                         <span title={r.p.adjustmentNote ?? 'Adjusted'} className="text-[9px] text-slate-700 bg-slate-50 px-1 rounded">ADJ</span>

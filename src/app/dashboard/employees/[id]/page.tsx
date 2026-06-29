@@ -270,10 +270,10 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
           <Avatar name={employee.fullName} src={employee.photoUrl} size="lg" />
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-start gap-3 justify-between">
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">{employee.fullName}</h1>
-                <p className="text-gray-500 text-sm mt-0.5">{employee.designation}</p>
-                <p className="text-xs text-gray-400 mt-0.5 font-mono">{employee.employeeCode}</p>
+              <div className="min-w-0 flex-1">
+                <h1 className="text-lg md:text-xl font-bold text-gray-900 truncate">{employee.fullName}</h1>
+                <p className="text-gray-500 text-sm mt-0.5 truncate">{employee.designation}</p>
+                <p className="text-xs text-gray-400 mt-0.5 font-mono break-all">{employee.employeeCode}</p>
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant={employee.status === 'ACTIVE' ? 'success' : 'secondary'}>

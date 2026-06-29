@@ -457,7 +457,7 @@ function SearchBar() {
   }
 
   return (
-    <div id="hr-search-wrapper" className="relative w-[280px] max-w-full">
+    <div id="hr-search-wrapper" className="relative w-auto sm:w-[280px] max-w-full min-w-0">
       {!open ? (
         <button
           type="button"

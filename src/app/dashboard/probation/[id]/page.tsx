@@ -119,13 +119,13 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
       <BackButton fallback="/dashboard/probation" />
       {/* Header */}
       <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
-        <div className="flex items-start gap-4">
-          <div className="rounded-xl bg-white/15 p-3 backdrop-blur">
+        <div className="flex items-start gap-4 flex-wrap">
+          <div className="rounded-xl bg-white/15 p-3 backdrop-blur flex-shrink-0">
             <ShieldCheck className="w-7 h-7" />
           </div>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold tracking-tight">{rec.employee.fullName}</h1>
-            <p className="text-white/85 mt-1 text-sm">
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight truncate">{rec.employee.fullName}</h1>
+            <p className="text-white/85 mt-1 text-xs md:text-sm break-words">
               {rec.employee.designation} · {rec.employee.employeeCode}
               {rec.employee.department && ` · ${rec.employee.department.name}`}
               {rec.employee.reportingManager && ` · Manager: ${rec.employee.reportingManager.fullName}`}
@@ -166,6 +166,9 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
       </div>
 
       {err && <div className="rounded-md bg-slate-50 border border-slate-100 p-3 text-sm text-slate-900">{err}</div>}
+
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5">
+        <div className="space-y-5 min-w-0">
 
       {/* Timeline */}
       <Card className="p-5">
@@ -322,6 +325,19 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         </Card>
       )}
 
+        </div>
+
+        {/* Activity Timeline — right sidebar (chronological audit trail) */}
+        <aside className="space-y-3 lg:sticky lg:top-4 lg:self-start min-w-0">
+          <Card className="p-4">
+            <h2 className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+              <Activity className="w-3.5 h-3.5" /> Activity
+            </h2>
+            <ActivityTimeline rec={rec} canSeeManagerNotes={isHR || isManager || !!rec.outcomeEnactedAt} />
+          </Card>
+        </aside>
+      </div>
+
       {/* Adjust Duration Dialog */}
       <Dialog open={adjustOpen} onOpenChange={setAdjustOpen}>
         <DialogContent>
@@ -336,14 +352,6 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           />
         </DialogContent>
       </Dialog>
-
-      {/* Activity Timeline — chronological audit trail */}
-      <Card className="p-5">
-        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4 flex items-center gap-2">
-          <Activity className="w-4 h-4" /> Activity
-        </h2>
-        <ActivityTimeline rec={rec} canSeeManagerNotes={isHR || isManager || !!rec.outcomeEnactedAt} />
-      </Card>
 
       {/* Force Enact Dialog */}
       <Dialog open={forceOpen} onOpenChange={setForceOpen}>
@@ -635,18 +643,18 @@ function ActivityTimeline({ rec, canSeeManagerNotes }: { rec: ProbationRec; canS
   }
 
   return (
-    <ol className="relative ml-3">
-      <div className="absolute left-[7px] top-2 bottom-2 w-px bg-slate-200" aria-hidden />
+    <ol className="relative ml-2 min-w-0">
+      <div className="absolute left-[5px] top-2 bottom-2 w-px bg-slate-200" aria-hidden />
       {events.map((e, i) => {
         const d = new Date(e.at)
         return (
-          <li key={i} className="relative pl-6 pb-5 last:pb-0">
-            <span className={`absolute left-0 top-1.5 w-3.5 h-3.5 rounded-full ${toneClass[e.tone]} ring-4 ring-white shadow-sm`} aria-hidden />
-            <p className="text-sm font-semibold text-slate-900">{e.label}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
-              {relativeTime(d)} · {d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+          <li key={i} className="relative pl-5 pb-3 last:pb-0 min-w-0">
+            <span className={`absolute left-0 top-1.5 w-2.5 h-2.5 rounded-full ${toneClass[e.tone]} ring-2 ring-white shadow-sm`} aria-hidden />
+            <p className="text-sm font-semibold text-slate-900 break-words">{e.label}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">
+              {relativeTime(d)} · {d.toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
             </p>
-            {e.detail && <p className="text-xs text-slate-700 mt-1 bg-slate-50 rounded px-2 py-1.5 whitespace-pre-wrap">{e.detail}</p>}
+            {e.detail && <p className="text-xs text-slate-700 mt-1 bg-slate-50 rounded px-2 py-1 whitespace-pre-wrap break-words line-clamp-3">{e.detail}</p>}
           </li>
         )
       })}
