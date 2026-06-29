@@ -86,6 +86,11 @@ const FOCUS_PATHS = new Set([
   '/dashboard/admin/seed',
   '/dashboard/admin/health',
   '/dashboard/culture',
+  '/dashboard/culture/events',
+  '/dashboard/culture/recognition',
+  '/dashboard/culture/birthdays',
+  '/dashboard/culture/anniversaries',
+  '/dashboard/lifecycle/exit',
   '/dashboard/calendar',
   '/dashboard/org-chart',
   '/dashboard/settings/roles',
@@ -319,21 +324,24 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
   ],
   '/dashboard/lifecycle': [
     {
-      label: 'Lifecycle',
+      label: 'Employee Lifecycle',
       items: [
-        { href: '/dashboard/lifecycle?tab=onboarding', label: 'Onboarding', icon: UserPlus },
+        { href: '/dashboard/lifecycle', label: 'Overview', icon: Users },
+        { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
-        { href: '/dashboard/lifecycle?tab=active', label: 'Active', icon: Users },
-        { href: '/dashboard/lifecycle?tab=exit', label: 'Exit Clearance', icon: LogOut },
+        { href: '/dashboard/employees', label: 'Active', icon: Users },
+        { href: '/dashboard/lifecycle/exit', label: 'Exit Clearance', icon: LogOut },
       ],
     },
   ],
-  '/dashboard/time': [
+  '/dashboard/culture': [
     {
-      label: 'Time Tracking',
+      label: 'People & Culture',
       items: [
-        { href: '/dashboard/time?tab=my-time', label: 'My Time', icon: Clock },
-        { href: '/dashboard/time?tab=team-time', label: 'Everyone', icon: Users },
+        { href: '/dashboard/culture/events', label: 'Events', icon: CalendarDays },
+        { href: '/dashboard/culture/recognition', label: 'Recognition', icon: Heart },
+        { href: '/dashboard/culture/birthdays', label: 'Birthdays', icon: Sparkles },
+        { href: '/dashboard/culture/anniversaries', label: 'Anniversaries', icon: Award },
       ],
     },
   ],

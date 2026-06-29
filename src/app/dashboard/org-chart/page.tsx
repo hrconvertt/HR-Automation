@@ -1,7 +1,8 @@
-﻿import { cookies } from 'next/headers'
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import OrgTree from '@/components/org-chart/org-tree'
+import { DepartmentBreakdown } from '@/components/org-chart/department-breakdown'
 
 export default async function OrgChartPage() {
   const cookieStore = await cookies()
@@ -10,8 +11,8 @@ export default async function OrgChartPage() {
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
-  // Org chart is visible to ALL roles â€” it's the company directory hierarchy.
-  // Only HR_ADMIN can edit (drag-reparent). Non-HR_ADMIN roles see read-only.
+  // Org chart is visible to ALL roles — it's the company directory hierarchy.
+  // Only HR_ADMIN can edit (drag-reparent + manage departments).
   const previewRole =
     payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined
   const effectiveRole = previewRole ?? payload.role
@@ -27,6 +28,12 @@ export default async function OrgChartPage() {
             : 'Read-only view of the company hierarchy.'}
         </p>
       </div>
+
+      {/* Department Breakdown — collapsible panel above the tree. Complements
+          the tree: tree shows reporting structure; this shows ownership +
+          headcount by department. */}
+      <DepartmentBreakdown canEdit={canEdit} />
+
       <OrgTree canEdit={canEdit} />
     </div>
   )

@@ -88,6 +88,8 @@ model Department {
   code        String     @unique // BD, UIUX, WBS …
   name        String
   headId      String?
+  headEmployeeId String?
+  head        Employee?  @relation("DepartmentHead", fields: [headEmployeeId], references: [id])
   employees   Employee[]
   positions   Position[]
   taskTemplates TaskTemplate[]
@@ -252,6 +254,9 @@ model Employee {
   kpiAssignments      KpiAssignment[]
   dailyLogs           DailyLog[]
   dailyKpis           DailyKpi[]
+
+  // Department headship — inverse of Department.head (DepartmentHead)
+  headedDepartments   Department[] @relation("DepartmentHead")
 
   // Rehire / boomerang
   rehireDate          DateTime?

@@ -58,14 +58,19 @@ export async function POST(request: NextRequest) {
           { status: 409 },
         )
       }
-      if (existing.status !== 'DRAFT') {
+      // HR_ADMIN can wipe ANY stage (DRAFT, PENDING_CEO, PENDING_HR_FINAL,
+      // PENDING_FINANCE) — they explicitly confirmed in the UI. PAID is the
+      // one we refuse to obliterate, since employees may have been notified
+      // and money may have moved.
+      if (existing.status === 'PAID') {
         return NextResponse.json(
-          { error: `Cannot replace a run that has advanced past DRAFT (current: ${existing.status}).` },
+          { error: 'Cannot regenerate a payroll run that has already been marked PAID.' },
           { status: 409 },
         )
       }
-      // Replacing a DRAFT — wipe its payslips first.
+      // Wipe its payslips + approval rows first, then drop the run.
       await prisma.payslip.deleteMany({ where: { payrollRunId: existing.id } })
+      await prisma.payrollRunApproval.deleteMany({ where: { runId: existing.id } }).catch(() => {})
       await prisma.payrollRun.delete({ where: { id: existing.id } })
     }
 

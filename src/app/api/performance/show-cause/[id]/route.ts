@@ -182,3 +182,23 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   return NextResponse.json({ notice: updated })
 }
+
+/**
+ * Permanently delete a Show Cause record. HR_ADMIN only — used to clean up
+ * test entries or mistaken flags. Linked PIP records (if any) are NOT cascaded:
+ * the PIP is independent once created and must be handled separately.
+ */
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const access = await resolveAccess(request)
+  if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (access.effectiveRole !== 'HR_ADMIN' || access.actualRole !== 'HR_ADMIN') {
+    return NextResponse.json({ error: 'Only HR can delete Show Cause records' }, { status: 403 })
+  }
+
+  const { id } = await params
+  const notice = await prisma.showCause.findUnique({ where: { id }, select: { id: true } })
+  if (!notice) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  await prisma.showCause.delete({ where: { id } })
+  return NextResponse.json({ ok: true })
+}

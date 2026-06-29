@@ -335,20 +335,43 @@ export function HRPayrollView() {
             </select>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {/* Generate button — auto-pulls latest comp + applies resignation
-                filter + pro-rates exits. Visible to HR whenever the run is
-                either missing, draft, OR empty (zero payslips) — the empty
-                case lets HR recover from a botched generate that left an
-                advanced-stage run with no rows. */}
+            {/* Generate / Regenerate — ALWAYS visible to HR_ADMIN, even after
+                DRAFT. Regenerating an advanced run wipes the existing payslips
+                (confirmation required) so HR can recover from a botched run.
+                Prominent slate-900 styling so it's hard to miss. */}
             {isHR && (
-              !payrollRun ||
-              payrollRun.status === 'DRAFT' ||
-              (payrollRun.payslips?.length ?? 0) === 0
-            ) && (
-              <Button onClick={() => handleGenerate(true)} disabled={busy}>
+              <Button
+                onClick={() => {
+                  const isRegen = !!payrollRun
+                  const advanced = payrollRun && payrollRun.status !== 'DRAFT' && (payrollRun.payslips?.length ?? 0) > 0
+                  if (isRegen && advanced) {
+                    if (!confirm(
+                      `Regenerate ${months[month - 1]} ${year} payroll?\n\n` +
+                      `This will WIPE the current run (currently in ${stageLabel(payrollRun.status)}) ` +
+                      `and start fresh with the latest compensation data. This cannot be undone.`,
+                    )) return
+                  }
+                  handleGenerate(true)
+                }}
+                disabled={busy}
+                title="Generate fresh payslips from the latest compensation data. Pro-rates partial-month exits; skips resigned employees."
+                className="bg-slate-900 hover:bg-slate-800 text-white shadow-sm"
+              >
                 <Sparkles className="w-4 h-4 mr-1.5" />
-                {busy ? 'Generating…' : payrollRun ? 'Regenerate' : `Generate ${months[month - 1]} ${year}`}
+                {busy ? 'Generating…' : payrollRun ? `Regenerate ${months[month - 1]}` : `Generate ${months[month - 1]} ${year}`}
               </Button>
+            )}
+
+            {/* Quick link to add a holiday — holidays affect pro-rated calcs
+                so surface this where HR actually runs payroll. */}
+            {isHR && (
+              <a
+                href="/dashboard/settings/time-tracking#holidays"
+                className="inline-flex items-center gap-1.5 px-3 h-10 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                title="Add a public holiday — used for pro-rating salaries and working-day counts"
+              >
+                📅 Add Holiday
+              </a>
             )}
 
             {/* Stage-specific actions */}

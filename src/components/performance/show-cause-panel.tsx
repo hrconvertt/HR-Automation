@@ -23,7 +23,7 @@ import {
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import {
   Plus, AlertTriangle, ArrowUpCircle, CheckCircle2, MessageSquare,
-  Calendar, FileWarning, ChevronRight, Clock,
+  Calendar, FileWarning, ChevronRight, Clock, Trash2, Printer,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 
@@ -625,7 +625,43 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
           </div>
         )}
 
-        <DialogFooter className="border-t border-slate-200 pt-3 mt-4">
+        <DialogFooter className="border-t border-slate-200 pt-3 mt-4 flex-wrap gap-2 justify-between">
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Print — visible once formally issued (HR + Exec + own employee). */}
+            {notice.issueDate && (
+              <Button
+                variant="outline"
+                onClick={() => window.open(`/show-cause/${notice.id}/print`, '_blank')}
+              >
+                <Printer className="w-4 h-4 mr-1.5" /> Print Notice
+              </Button>
+            )}
+            {/* Delete — HR only. Used for cleaning up test entries. */}
+            {isHR && (
+              <Button
+                variant="outline"
+                disabled={busy}
+                onClick={async () => {
+                  if (!confirm('Permanently delete this Show Cause record? Used for cleaning up test entries — irreversible.')) return
+                  if (notice.status === 'ESCALATED_TO_PIP') {
+                    if (!confirm('This Show Cause has been escalated to a PIP. Deleting will NOT delete the linked PIP. Continue?')) return
+                  }
+                  setBusy(true); setError('')
+                  const res = await fetch(`/api/performance/show-cause/${notice.id}`, { method: 'DELETE' })
+                  setBusy(false)
+                  if (!res.ok) {
+                    const d = await res.json().catch(() => ({}))
+                    setError(d.error ?? 'Delete failed')
+                    return
+                  }
+                  onUpdated()
+                }}
+                className="text-slate-700 border-slate-300 hover:bg-slate-50"
+              >
+                <Trash2 className="w-4 h-4 mr-1.5" /> Delete
+              </Button>
+            )}
+          </div>
           <Button variant="outline" onClick={onClose}>Close</Button>
         </DialogFooter>
       </DialogContent>
