@@ -317,6 +317,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                       confirmationDate: employee.confirmationDate?.toISOString() ?? null,
                       exitDate: employee.exitDate?.toISOString() ?? null,
                       bankName: employee.bankName,
+                      bankCode: employee.bankCode,
                       bankAccount: employee.bankAccount,
                       bankBranch: employee.bankBranch,
                       eobiNumber: employee.eobiNumber,

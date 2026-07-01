@@ -93,7 +93,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     if (!employee) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     // Strip sensitive identifiers — bank + statutory tax IDs are HR/self only.
     const {
-      bankName: _bn, bankAccount: _ba, bankBranch: _bb,
+      bankName: _bn, bankCode: _bc, bankAccount: _ba, bankBranch: _bb,
       eobiNumber: _eobi, ntn: _ntn, sessiNumber: _sessi,
       ...safe
     } = employee
@@ -139,7 +139,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       employeeType, status, workLocation, timings, workDays,
       confirmationDate, exitDate,
       // Bank fields
-      bankName, bankAccount, bankBranch,
+      bankName, bankCode, bankAccount, bankBranch,
       // Statutory / Tax IDs (Pakistan)
       eobiNumber, ntn, sessiNumber,
       // Directory visibility (HR-controlled)
@@ -177,6 +177,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         confirmationDate: confirmationDate ? new Date(confirmationDate) : undefined,
         exitDate: exitDate ? new Date(exitDate) : undefined,
         bankName,
+        bankCode,
         bankAccount,
         bankBranch,
         eobiNumber,

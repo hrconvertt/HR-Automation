@@ -186,6 +186,7 @@ model Employee {
 
   // Bank & Compensation
   bankName            String?
+  bankCode            String?  // SWIFT / branch / bank code (e.g. HBL1234 or HABBPKKA)
   bankAccount         String?
   bankBranch          String?
   ibanAccount         String?  // IBAN format account # from payroll IBFT sheets
@@ -232,6 +233,7 @@ model Employee {
   compensationHistory CompensationHistory[]
   trainingRecords     TrainingRecord[]
   showCauses          ShowCause[]
+  terminations        Termination[]
   pips                PIP[]
   jobOffers           JobOffer[]
   hiringRequests      JobRequisition[] @relation("HiringRequests")  // requisitions this manager raised
@@ -1681,11 +1683,66 @@ model ExitClearance {
   handoverSignedAt        DateTime?
   handoverSignedByMgr     Boolean  @default(false)
   status               String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
+  // Trigger source — what kicked off this clearance.
+  //   RESIGNATION  — employee self-served from /dashboard/resign
+  //   TERMINATION  — HR initiated via Termination workflow (off Show Cause)
+  //   LAYOFF       — workforce reduction
+  //   OTHER        — manual/legacy
+  triggerType          String   @default("OTHER")
+  // Back-link to the Termination row (when triggered by TERMINATION).
+  terminationId        String?
   completedAt          DateTime?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
   @@map("exit_clearances")
+}
+
+// ─── TERMINATION ──────────────────────────────────────────────────────────────
+// HR-initiated termination workflow. Spun up from a Show Cause "Proceed to
+// Termination" decision, or independently. Drives a 6-stage process from
+// initial decision through final exit clearance.
+//
+// Stage machine:
+//   INITIATED         — HR has decided to terminate
+//   MEETING_SCHEDULED — employee + manager notified of meeting
+//   MEETING_HELD      — meeting outcome recorded
+//   NOTICE_ISSUED     — formal termination letter generated + delivered
+//   IN_EXIT_CLEARANCE — handed off to Exit Clearance module
+//   COMPLETED         — last working day passed + clearance done
+//   CANCELLED         — HR backed out (only allowed before NOTICE_ISSUED)
+model Termination {
+  id                 String   @id @default(cuid())
+  employeeId         String
+  employee           Employee @relation(fields: [employeeId], references: [id])
+  initiatedById      String   // userId of HR_ADMIN
+  initiatedByName    String?  // snapshot
+  // Optional link back to the originating Show Cause (when escalated from one).
+  showCauseId        String?
+  reason             String   // detailed free-text reason
+  reasonCategory     String   // MISCONDUCT | PERFORMANCE | ATTENDANCE | POLICY_VIOLATION | REDUNDANCY | OTHER
+  // Meeting stage
+  meetingScheduledAt DateTime?
+  meetingLocation    String?
+  meetingAgenda      String?
+  meetingHeldAt      DateTime?
+  meetingNotes       String?
+  // Notice stage
+  noticeIssuedAt     DateTime?
+  noticeLetterBody   String?  // generated formal notice snapshot (rendered by /termination-notice/[id]/print)
+  // Final
+  lastWorkingDay     DateTime
+  exitClearanceId    String?
+  cancelledAt        DateTime?
+  cancellationReason String?
+  status             String   @default("INITIATED")
+  // Activity log — JSON array of { at, by, action, note } entries.
+  activityLog        String?
+  isDemo             Boolean  @default(false)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("terminations")
 }
 
 // ─── RESIGNATION ──────────────────────────────────────────────────────────────

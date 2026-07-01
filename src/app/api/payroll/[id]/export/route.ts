@@ -54,7 +54,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       payslips: {
         include: {
           employee: {
-            select: { fullName: true, ibanAccount: true, bankAccount: true, bankName: true },
+            select: { fullName: true, ibanAccount: true, bankAccount: true, bankName: true, bankCode: true },
           },
         },
       },
@@ -97,7 +97,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       other.push({
         'Beneficiary First Name': p.employee.fullName,
         'Beneficiary Account No': iban,
-        'Bank': bankCodeFromIban(iban) || (p.employee.bankName ?? ''),
+        'Bank': p.employee.bankCode || bankCodeFromIban(iban) || (p.employee.bankName ?? ''),
         'Transaction Amount': amount,
         'Reference # 1': reference,
         'Reference # 9': reference,

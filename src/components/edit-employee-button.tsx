@@ -39,6 +39,7 @@ interface EditEmployeeButtonProps {
     exitDate: string | null
     // Bank — HR-only, hidden from Manager via the API
     bankName?: string | null
+    bankCode?: string | null
     bankAccount?: string | null
     bankBranch?: string | null
     // Statutory / Tax IDs — HR + self only
@@ -285,6 +286,11 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
                   <Input value={form.bankName ?? ''} onChange={(e) => f('bankName', e.target.value)} placeholder="e.g. HBL, UBL, Meezan" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank Code</label>
+                  <Input value={form.bankCode ?? ''} onChange={(e) => f('bankCode', e.target.value)} placeholder="HBL1234 or HABBPKKA" />
+                  <p className="text-[10px] text-gray-400 mt-1">Branch/SWIFT/bank code (e.g. HBL1234 or HABBPKKA)</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
