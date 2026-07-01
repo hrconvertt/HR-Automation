@@ -17,9 +17,6 @@ export default async function TerminationDetailPage({ params }: PageProps) {
   const previewRole =
     payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined
   const effectiveRole = previewRole ?? payload.role
-  if (effectiveRole !== 'HR_ADMIN' && effectiveRole !== 'EXECUTIVE') {
-    redirect('/dashboard')
-  }
 
   const t = await prisma.termination.findUnique({
     where: { id },
@@ -36,6 +33,21 @@ export default async function TerminationDetailPage({ params }: PageProps) {
   })
   if (!t) notFound()
 
+  // Auth: HR + Exec see all; affected employee sees their own workflow
+  // (so notification links + email CTAs don't dead-end). Everyone else 403.
+  const me = await prisma.user.findUnique({
+    where: { id: payload.userId },
+    select: { employee: { select: { id: true } } },
+  })
+  const isHR = effectiveRole === 'HR_ADMIN'
+  const isExec = effectiveRole === 'EXECUTIVE'
+  const isSelf = me?.employee?.id === t.employeeId
+  if (!isHR && !isExec && !isSelf) {
+    redirect('/dashboard')
+  }
+
+  // Only actual HR (not preview mode, not the affected employee) can drive
+  // stage transitions from the detail view.
   const canAct = effectiveRole === 'HR_ADMIN' && payload.role === 'HR_ADMIN'
 
   return <TerminationDetailClient initial={JSON.parse(JSON.stringify(t))} canAct={canAct} />

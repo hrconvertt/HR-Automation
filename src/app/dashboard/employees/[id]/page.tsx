@@ -437,6 +437,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                     {([
                       ['Account Title', employee.bankAccountName],
                       ['Bank Name', employee.bankName],
+                      ['Bank Code', employee.bankCode],
                       ['Account #', employee.bankAccount],
                       ['IBAN', employee.ibanAccount],
                       ['Branch', employee.bankBranch],
