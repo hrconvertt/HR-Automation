@@ -23,9 +23,10 @@ import {
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import {
   Plus, AlertTriangle, ArrowUpCircle, CheckCircle2, MessageSquare,
-  Calendar, FileWarning, ChevronRight, Clock, Trash2, Printer,
+  Calendar, FileWarning, ChevronRight, Clock, Trash2, Printer, ShieldAlert,
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
 
 interface Notice {
   id: string
@@ -344,6 +345,7 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
   notice: Notice; isHR: boolean; isManager: boolean; isOwn: boolean; onClose: () => void; onUpdated: () => void;
 }) {
   const [activeAction, setActiveAction] = useState<string | null>(null)
+  const [terminateOpen, setTerminateOpen] = useState(false)
   const [form, setForm] = useState({
     meetingNotes: notice.meetingNotes ?? '',
     escalationReason: notice.escalationReason ?? '',
@@ -636,6 +638,16 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
                 <Printer className="w-4 h-4 mr-1.5" /> Print Notice
               </Button>
             )}
+            {/* Proceed to Termination — HR only, once formally issued. */}
+            {isHR && notice.issueDate && notice.status !== 'ESCALATED_TERMINATION' && (
+              <Button
+                variant="outline"
+                onClick={() => setTerminateOpen(true)}
+                className="text-red-700 border-red-200 hover:bg-red-50"
+              >
+                <ShieldAlert className="w-4 h-4 mr-1.5" /> Proceed to Termination
+              </Button>
+            )}
             {/* Delete — HR only. Used for cleaning up test entries. */}
             {isHR && (
               <Button
@@ -663,6 +675,115 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
             )}
           </div>
           <Button variant="outline" onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+
+      {terminateOpen && (
+        <ProceedToTerminationDialog
+          notice={notice}
+          onClose={() => setTerminateOpen(false)}
+          onDone={() => { setTerminateOpen(false); onUpdated() }}
+        />
+      )}
+    </Dialog>
+  )
+}
+
+// ─── Proceed to Termination dialog ───────────────────────────────────────────
+
+function ProceedToTerminationDialog({ notice, onClose, onDone }: {
+  notice: Notice; onClose: () => void; onDone: () => void;
+}) {
+  const router = useRouter()
+  const [reasonCategory, setReasonCategory] = useState('MISCONDUCT')
+  const [reason, setReason] = useState(
+    (notice.description ?? notice.meetingConcerns ?? notice.escalationReason ?? '').trim(),
+  )
+  const [lastWorkingDay, setLastWorkingDay] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function submit() {
+    setError('')
+    if (!reason.trim()) return setError('Enter a detailed reason.')
+    if (!lastWorkingDay) return setError('Pick a proposed last working day.')
+    setSaving(true)
+    const res = await fetch('/api/termination', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employeeId: notice.employee.id,
+        showCauseId: notice.id,
+        reason,
+        reasonCategory,
+        lastWorkingDay,
+      }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (!res.ok) return setError(data.error ?? 'Failed to initiate termination.')
+    router.push(`/dashboard/lifecycle/termination/${data.termination.id}`)
+    onDone()
+  }
+
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 text-red-800">
+            <ShieldAlert className="w-4 h-4" /> Proceed to Termination
+          </DialogTitle>
+          <p className="text-xs text-slate-600 mt-1">
+            This initiates a formal termination workflow linked to this Show Cause. The employee will be notified
+            once you schedule the meeting. Continue only if the Show Cause response has been reviewed and
+            termination has been decided.
+          </p>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Reason category</label>
+            <Select value={reasonCategory} onValueChange={setReasonCategory}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="MISCONDUCT">Misconduct</SelectItem>
+                <SelectItem value="PERFORMANCE">Performance</SelectItem>
+                <SelectItem value="ATTENDANCE">Attendance</SelectItem>
+                <SelectItem value="POLICY_VIOLATION">Policy Violation</SelectItem>
+                <SelectItem value="REDUNDANCY">Redundancy</SelectItem>
+                <SelectItem value="OTHER">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Detailed reason</label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={5}
+              className="w-full text-sm rounded-md border border-slate-200 px-3 py-2"
+              placeholder="Cite the pattern, prior meetings, Show Cause reference, and response. This forms part of the formal termination notice."
+            />
+          </div>
+
+          <div>
+            <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Proposed last working day</label>
+            <Input type="date" value={lastWorkingDay} onChange={(e) => setLastWorkingDay(e.target.value)} />
+          </div>
+
+          {error && <p className="text-sm text-red-800 bg-red-50 border border-red-100 rounded p-2">{error}</p>}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button
+            onClick={submit}
+            disabled={saving}
+            className="bg-red-700 hover:bg-red-700 text-white"
+          >
+            {saving ? 'Initiating…' : 'Initiate Termination'}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
