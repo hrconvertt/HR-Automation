@@ -376,7 +376,7 @@ export function HRPayrollView() {
                   disabled={busy}
                   className="bg-slate-700 hover:bg-slate-700 text-white"
                 >
-                  <Send className="w-4 h-4 mr-1.5" /> Submit to CEO
+                  <Send className="w-4 h-4 mr-1.5" /> Save &amp; Submit to CEO
                 </Button>
               </>
             )}
@@ -678,8 +678,31 @@ export function HRPayrollView() {
             {loading ? (
               <TableRow><TableCell colSpan={9} className="text-center py-8 text-slate-400">Loading…</TableCell></TableRow>
             ) : !payrollRun ? (
-              <TableRow><TableCell colSpan={9} className="text-center py-8 text-slate-400">
-                No payroll for this period. Click &quot;Prepare {months[month - 1]} {year} Payroll&quot; to start.
+              <TableRow><TableCell colSpan={9} className="py-8">
+                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+                  <Wallet className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    No payroll for {months[month - 1]} {year} yet
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                    Pulls every active employee&apos;s latest compensation
+                    (Regular Pay or the most recent change) and creates a draft run
+                    ready for adjustments.
+                  </p>
+                  {isHR && (
+                    <button
+                      onClick={() => handleGenerate(false)}
+                      disabled={busy}
+                      className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 disabled:opacity-50"
+                    >
+                      <Sparkles className="w-4 h-4" />
+                      {busy ? 'Generating…' : `Generate Payroll for ${months[month - 1]} ${year}`}
+                    </button>
+                  )}
+                  <p className="text-xs text-slate-400 mt-3">
+                    You&apos;ll be able to edit values before submitting to the CEO.
+                  </p>
+                </div>
               </TableCell></TableRow>
             ) : payrollRun.payslips.length === 0 ? (
               <TableRow><TableCell colSpan={9} className="text-center py-8 text-slate-400">No payslips.</TableCell></TableRow>
