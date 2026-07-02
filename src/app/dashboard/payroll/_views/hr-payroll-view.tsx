@@ -362,18 +362,6 @@ export function HRPayrollView() {
               </Button>
             )}
 
-            {/* Quick link to add a holiday — holidays affect pro-rated calcs
-                so surface this where HR actually runs payroll. */}
-            {isHR && (
-              <a
-                href="/dashboard/settings/time-tracking#holidays"
-                className="inline-flex items-center gap-1.5 px-3 h-10 rounded-xl border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
-                title="Add a public holiday — used for pro-rating salaries and working-day counts"
-              >
-                📅 Add Holiday
-              </a>
-            )}
-
             {/* Stage-specific actions */}
             {payrollRun && status === 'DRAFT' && isHR && (
               <>
