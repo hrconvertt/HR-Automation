@@ -1,27 +1,19 @@
-﻿/**
- * Unified "Time & Attendance" page.
+/**
+ * /dashboard/time — role-based redirect.
  *
- * Single sidebar entry â†’ role-routed view â†’ outer tabs:
- *   My Time          â€” personal clock-in / calendar
- *   My Leave         â€” leave application + history
- *   Attendance Grid  â€” company-wide / team grid (HR / Manager / Lead / Executive)
- *   Approvals        â€” pending leave + OT inbox (HR / Manager / Lead)
+ * HR / Manager / Lead / Executive → /dashboard/time/everyone
+ * Employee                        → /dashboard/time/me
  *
- * The underlying Attendance + Leave modules stay intact; this is composition,
- * not a rewrite of their internals.
+ * The actual views live at the sub-routes so the sidebar can offer
+ * "My Time" and "Everyone" as first-class nested entries.
  */
 
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { TimeShell } from './_components/time-shell'
 
-interface PageProps {
-  searchParams: Promise<{ tab?: string }>
-}
-
-export default async function TimePage({ searchParams }: PageProps) {
+export default async function TimePage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   if (!token) redirect('/login')
@@ -30,7 +22,7 @@ export default async function TimePage({ searchParams }: PageProps) {
 
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },
-    include: { employee: { select: { id: true, fullName: true } } },
+    select: { role: true },
   })
   if (!user) redirect('/login')
 
@@ -38,64 +30,13 @@ export default async function TimePage({ searchParams }: PageProps) {
     user.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined
   const effectiveRole = previewRole ?? user.role
 
-  const { tab } = await searchParams
-  // HR / Exec / Manager / Lead land on the team view by default â€” that's the
-  // page they need 95% of the time (who is clocked in, who's late, who's on
-  // leave). They can switch to My Time if they want their personal panel.
-  const defaultTab =
-    effectiveRole === 'HR_ADMIN' ||
-    effectiveRole === 'EXECUTIVE' ||
-    effectiveRole === 'MANAGER' ||
-    effectiveRole === 'LEAD'
-      ? 'team-time'
-      : 'my-time'
-  const initialTab = tab ?? defaultTab
-
-  if (!user.employee && effectiveRole !== 'HR_ADMIN' && effectiveRole !== 'EXECUTIVE') {
-    return (
-      <div className="rounded-2xl bg-slate-50 border border-slate-100 p-6">
-        <h2 className="text-lg font-semibold text-slate-900">Profile setup needed</h2>
-        <p className="text-sm text-slate-900 mt-2">
-          Your account isn&apos;t linked to an employee record. Contact HR.
-        </p>
-      </div>
-    )
-  }
-
-  // Departments are only needed when the user can see the grid tab â€” fetch
-  // them up-front so the client shell doesn't need a second round-trip.
-  const canSeeGrid =
+  if (
     effectiveRole === 'HR_ADMIN' ||
     effectiveRole === 'MANAGER' ||
     effectiveRole === 'LEAD' ||
     effectiveRole === 'EXECUTIVE'
-  const departments = canSeeGrid
-    ? (await prisma.department.findMany({ select: { name: true }, orderBy: { name: 'asc' } })).map(
-        (d) => d.name,
-      )
-    : []
-
-  const modeRow = await prisma.config.findUnique({ where: { key: 'timeTrackingMode' } })
-  const catRow = await prisma.config.findUnique({ where: { key: 'timesheetCategories' } })
-  const timeTrackingMode: 'BASIC' | 'TIMESHEET' | 'JOBS' = (
-    ['BASIC', 'TIMESHEET', 'JOBS'] as const
-  ).includes((modeRow?.value ?? '') as 'BASIC' | 'TIMESHEET' | 'JOBS')
-    ? (modeRow!.value as 'BASIC' | 'TIMESHEET' | 'JOBS')
-    : 'BASIC'
-  const timesheetCategories = (catRow?.value ?? 'Dev\nQA\nMeetings\nAdmin')
-    .split('\n')
-    .map((s) => s.trim())
-    .filter(Boolean)
-
-  return (
-    <TimeShell
-      role={effectiveRole}
-      employeeId={user.employee?.id ?? null}
-      employeeName={user.employee?.fullName ?? null}
-      initialTab={initialTab}
-      departments={departments}
-      timeTrackingMode={timeTrackingMode}
-      timesheetCategories={timesheetCategories}
-    />
-  )
+  ) {
+    redirect('/dashboard/time/everyone')
+  }
+  redirect('/dashboard/time/me')
 }

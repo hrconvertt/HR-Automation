@@ -56,6 +56,7 @@ interface NavItem {
   href: string
   label: string
   icon: React.ComponentType<{ className?: string }>
+  roles?: string[]
 }
 interface NavGroup {
   label: string
@@ -97,6 +98,8 @@ const FOCUS_PATHS = new Set([
   '/dashboard/settings/roles',
   '/dashboard/leadership-chat',
   '/dashboard/settings/daily-logging',
+  '/dashboard/time/me',
+  '/dashboard/time/everyone',
 ])
 
 function applyFocus(groups: NavGroup[]): NavGroup[] {
@@ -354,6 +357,20 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       ],
     },
   ],
+  '/dashboard/time': [
+    {
+      label: 'Time Tracking',
+      items: [
+        { href: '/dashboard/time/me', label: 'My Time', icon: User },
+        {
+          href: '/dashboard/time/everyone',
+          label: 'Everyone',
+          icon: Users,
+          roles: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'],
+        },
+      ],
+    },
+  ],
   '/dashboard/leave': [
     {
       label: 'Leave',
@@ -369,10 +386,17 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
 function getActiveNav(
   pathname: string,
   baseGroups: NavGroup[],
+  role: string,
 ): { groups: NavGroup[]; nested: boolean } {
   for (const prefix of Object.keys(NESTED_NAV)) {
     if (pathname.startsWith(prefix)) {
-      return { groups: NESTED_NAV[prefix], nested: true }
+      const filtered = NESTED_NAV[prefix]
+        .map((g) => ({
+          ...g,
+          items: g.items.filter((i) => !i.roles || i.roles.includes(role)),
+        }))
+        .filter((g) => g.items.length > 0)
+      return { groups: filtered, nested: true }
     }
   }
   return { groups: baseGroups, nested: false }
@@ -651,7 +675,7 @@ export default function DashboardChrome({
           : g,
       )
     : baseGroups
-  const { groups: activeGroups, nested } = getActiveNav(pathname, navGroupsWithChat)
+  const { groups: activeGroups, nested } = getActiveNav(pathname, navGroupsWithChat, role)
   const navGroups = nested ? activeGroups : applyFocus(activeGroups)
 
   const displayRole = (() => {
