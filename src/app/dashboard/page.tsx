@@ -8,16 +8,41 @@ import { EmployeeDashboard } from '@/components/dashboards/employee-dashboard'
 import { ExecutiveDashboard } from '@/components/dashboards/executive-dashboard'
 
 export default async function DashboardPage() {
-  const cookieStore = await cookies()
-  const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
-  const payload = await verifyToken(token)
+  // verifyToken() checks Clerk's session first, then the hr_token emergency
+  // JWT cookie. Do NOT gate on the hr_token cookie existing — Clerk-only
+  // sessions have no hr_token, and redirecting them to /login caused a
+  // /login ⇄ /dashboard redirect loop (Clerk's <SignIn/> immediately bounced
+  // the active session back here).
+  const payload = await verifyToken()
   if (!payload) redirect('/login')
 
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    include: { employee: { select: { id: true, fullName: true } } },
-  })
+  const cookieStore = await cookies()
+
+  let user
+  try {
+    user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      include: { employee: { select: { id: true, fullName: true } } },
+    })
+  } catch (err) {
+    console.error('[dashboard] failed to load user for dashboard body', err)
+    return (
+      <div className="p-6 bg-slate-50 border border-slate-200 rounded-xl">
+        <h2 className="text-lg font-semibold text-slate-900">
+          Couldn&apos;t load your dashboard
+        </h2>
+        <p className="text-sm text-slate-700 mt-2">
+          Something went wrong while fetching your data. This is usually temporary.
+        </p>
+        <a
+          href="/dashboard"
+          className="mt-4 inline-block rounded-md bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+        >
+          Retry
+        </a>
+      </div>
+    )
+  }
   if (!user) redirect('/login')
 
   const userName = user.employee?.fullName ?? user.email

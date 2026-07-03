@@ -1,9 +1,17 @@
-import { SignIn } from '@clerk/nextjs'
+import { ClerkSignInWithFallback } from '@/components/auth/clerk-signin-with-fallback'
 
-// Clerk's <SignIn/> in a B&W shell. The themed appearance comes from
-// <ClerkProvider> in src/app/layout.tsx; we only handle the marketing
-// half of the split screen here.
-export default function LoginPage() {
+// Clerk's <SignIn/> in a B&W shell, wrapped in a load watchdog that falls
+// back to the emergency email + password form if Clerk's JS fails to mount
+// (e.g. the deployment domain isn't allowed on the Clerk instance). The
+// themed appearance comes from <ClerkProvider> in src/app/layout.tsx; we
+// only handle the marketing half of the split screen here.
+export default async function LoginPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}) {
+  const sp = await searchParams
+  const startInPasswordMode = sp.method === 'password'
   // If the publishable key isn't set on Vercel, Clerk's components render
   // as null silently — leaving an empty page. Catch that explicitly and
   // show a diagnostic message so HR knows what's wrong instead of staring
@@ -60,34 +68,18 @@ export default function LoginPage() {
           </div>
 
           {hasKey ? (
-            <SignIn
-              routing="path"
-              path="/login"
-              forceRedirectUrl="/dashboard"
-              fallbackRedirectUrl="/dashboard"
-              appearance={{
-                elements: {
-                  // Invite-only — hide all sign-up affordances. New employees
-                  // arrive via HR-sent Clerk invitations, not self-registration.
-                  footerAction: 'hidden',
-                  footerActionLink: 'hidden',
-                  footer: 'hidden',
-                },
-              }}
-            />
+            <ClerkSignInWithFallback startInPasswordMode={startInPasswordMode} />
           ) : (
-            <div className="rounded-lg border border-slate-300 bg-slate-50 p-6 text-sm">
-              <p className="font-semibold text-slate-900">Sign-in is misconfigured.</p>
-              <p className="mt-2 text-slate-700">
-                Authentication isn&apos;t initialised on this deployment. An admin needs
-                to set <code className="rounded bg-slate-200 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code>{' '}
-                in the Vercel environment variables (Production + Preview + Development)
-                and redeploy.
-              </p>
-              <p className="mt-3 text-xs text-slate-500">
-                Once set, this message disappears automatically and the sign-in form
-                will render here.
-              </p>
+            <div>
+              <div className="rounded-lg border border-slate-300 bg-slate-50 p-4 text-sm mb-6">
+                <p className="font-semibold text-slate-900">Standard sign-in is misconfigured.</p>
+                <p className="mt-2 text-slate-700">
+                  <code className="rounded bg-slate-200 px-1.5 py-0.5 text-xs">NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY</code>{' '}
+                  isn&apos;t set on this deployment. You can still sign in with
+                  email &amp; password below.
+                </p>
+              </div>
+              <ClerkSignInWithFallback startInPasswordMode />
             </div>
           )}
 
