@@ -26,10 +26,31 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
   }
 
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, password: true, role: true, isActive: true },
-  })
+  // Allowlist matching: the User row's own email, OR the linked Employee's
+  // work / personal email (all stored lowercase).
+  const userSelect = { id: true, password: true, role: true, isActive: true } as const
+  let user = await prisma.user.findUnique({ where: { email }, select: userSelect })
+  if (!user) {
+    const employee = await prisma.employee.findFirst({
+      where: {
+        OR: [
+          { email: { equals: email, mode: 'insensitive' } },
+          { personalEmail: { equals: email, mode: 'insensitive' } },
+        ],
+      },
+      select: { user: { select: userSelect } },
+    })
+    user = employee?.user ?? null
+    if (!employee) {
+      // Same rejection flow as the Clerk path — land in the HR approval queue.
+      try {
+        const { logSignupAttempt } = await import('@/lib/clerk-sync')
+        await logSignupAttempt({ email, clerkUserId: null, firstName: null, lastName: null })
+      } catch (err) {
+        console.error('[emergency-signin] failed to log signup attempt', err)
+      }
+    }
+  }
   if (!user) {
     return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
   }

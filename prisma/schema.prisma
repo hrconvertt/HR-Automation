@@ -129,6 +129,10 @@ model Employee {
   // Personal
   fullName            String
   email               String    @unique
+  // Secondary personal email — either address signs the employee in
+  // (Clerk AND emergency-JWT paths both match against email OR personalEmail).
+  // Always stored lowercase.
+  personalEmail       String?   @unique
   phone               String?
   cnic                String?
   dob                 DateTime?
@@ -256,6 +260,7 @@ model Employee {
   kpiAssignments      KpiAssignment[]
   dailyLogs           DailyLog[]
   dailyKpis           DailyKpi[]
+  inviteTokens        InviteToken[]
 
   // Department headship — inverse of Department.head (DepartmentHead)
   headedDepartments   Department[] @relation("DepartmentHead")
@@ -1990,6 +1995,24 @@ model MonthlyMetric {
 // Clerk user immediately. Before deleting, we log a SignupAttempt row so HR
 // can review and (a) approve the legitimate ones (e.g. someone joined with
 // the wrong email) or (b) dismiss spam attempts.
+// ─── LOGIN INVITE TOKENS ─────────────────────────────────────────────────────
+// One-time "set your password" links emailed to employees. Only the SHA-256
+// hash of the token is stored — the raw token exists only inside the email.
+model InviteToken {
+  id          String    @id @default(cuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id])
+  tokenHash   String    @unique   // SHA-256 hex of the raw token — never store raw
+  sentTo      String              // which email address the link was sent to
+  expiresAt   DateTime            // 7 days from creation
+  usedAt      DateTime?
+  createdById String              // User.id of the HR admin who sent it
+  createdAt   DateTime  @default(now())
+
+  @@index([employeeId])
+  @@map("invite_tokens")
+}
+
 model SignupAttempt {
   id              String    @id @default(cuid())
   email           String

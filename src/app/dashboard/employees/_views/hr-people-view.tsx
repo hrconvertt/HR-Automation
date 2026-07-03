@@ -28,7 +28,7 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select'
-import { Search, Plus, ExternalLink } from 'lucide-react'
+import { Search, Plus, ExternalLink, Mail } from 'lucide-react'
 import { getInitials } from '@/lib/utils'
 
 interface Department {
@@ -46,6 +46,12 @@ interface Employee {
   employeeType: string
   status: string
   department: { name: string } | null
+  // HR-only login/invite status (from GET /api/employees enrichment)
+  invite?: {
+    status: 'ACTIVE' | 'INVITED' | 'NONE'
+    invitedAt?: string
+    sentTo?: string
+  }
 }
 
 const statusTone: Record<string, string> = {
@@ -123,6 +129,12 @@ export function HRPeopleView() {
     message: string
   }>(null)
   const [copied, setCopied] = useState(false)
+
+  // ─── Login invites (self-set password links) ───
+  const [invitingId, setInvitingId] = useState<string | null>(null)
+  const [inviteNotice, setInviteNotice] = useState('')
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkSending, setBulkSending] = useState(false)
 
   const fetchEmployees = useCallback(async () => {
     setLoading(true)
@@ -236,6 +248,57 @@ export function HRPeopleView() {
     fetchEmployees()
   }
 
+  const uninvitedCount = employees.filter(
+    (e) => e.status === 'ACTIVE' && e.invite?.status === 'NONE',
+  ).length
+
+  async function sendInvite(emp: Employee) {
+    setInvitingId(emp.id)
+    setInviteNotice('')
+    try {
+      const res = await fetch('/api/invites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employeeId: emp.id }),
+      })
+      const data = await res.json().catch(() => ({}))
+      setInviteNotice(
+        res.ok
+          ? `Login invite sent to ${data.sentTo ?? emp.email}.`
+          : data.error ?? 'Failed to send invite.',
+      )
+      if (res.ok) fetchEmployees()
+    } catch {
+      setInviteNotice('Network error — invite not sent.')
+    } finally {
+      setInvitingId(null)
+    }
+  }
+
+  async function sendBulkInvites() {
+    setBulkSending(true)
+    setInviteNotice('')
+    try {
+      const res = await fetch('/api/invites/bulk', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setInviteNotice(
+          data.total === 0
+            ? 'Everyone already has a login or a pending invite.'
+            : `Invites sent: ${data.sent} of ${data.total}${data.failed ? ` (${data.failed} failed)` : ''}.`,
+        )
+        fetchEmployees()
+      } else {
+        setInviteNotice(data.error ?? 'Bulk invite failed.')
+      }
+    } catch {
+      setInviteNotice('Network error — bulk invite failed.')
+    } finally {
+      setBulkSending(false)
+      setBulkOpen(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
       {/* One unified panel — module title already says "People",
@@ -289,17 +352,38 @@ export function HRPeopleView() {
             </SelectContent>
           </Select>
 
-          {/* Right cluster: count + primary action */}
+          {/* Right cluster: count + actions */}
           <div className="ml-auto flex items-center gap-3">
             <span className="text-xs text-slate-500">
               {employees.length} {employees.length === 1 ? 'record' : 'records'}
             </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setBulkOpen(true)}
+              disabled={bulkSending}
+            >
+              <Mail className="w-4 h-4 mr-1.5" />
+              Invite all uninvited
+            </Button>
             <Button onClick={() => setAddOpen(true)} size="sm">
               <Plus className="w-4 h-4 mr-1.5" />
               Add Employee
             </Button>
           </div>
         </div>
+        {inviteNotice && (
+          <div className="px-4 py-2 border-b border-slate-100 bg-slate-50 text-xs text-slate-700 flex items-center justify-between gap-3">
+            <span>{inviteNotice}</span>
+            <button
+              type="button"
+              className="text-slate-400 hover:text-slate-600"
+              onClick={() => setInviteNotice('')}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
         {/* Card grid — BambooHR-style people view */}
         <div className="p-4 bg-slate-50/50">
           {loading ? (
@@ -340,6 +424,36 @@ export function HRPeopleView() {
                         </span>
                       </div>
                       <p className="text-[10px] font-mono text-slate-400 mt-2">{emp.employeeCode}</p>
+                      {/* Login/invite status + action (HR only — API enriches) */}
+                      {emp.invite && (
+                        <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-100">
+                          <span className="text-[10px] text-slate-500">
+                            {emp.invite.status === 'ACTIVE'
+                              ? 'Login: Active'
+                              : emp.invite.status === 'INVITED'
+                                ? `Invited ${emp.invite.invitedAt ? new Date(emp.invite.invitedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : ''} (pending)`
+                                : 'Never invited'}
+                          </span>
+                          {emp.invite.status !== 'ACTIVE' && (
+                            <button
+                              type="button"
+                              className="text-[10px] font-semibold text-slate-700 hover:text-slate-900 underline underline-offset-2 disabled:opacity-50"
+                              disabled={invitingId === emp.id}
+                              onClick={(e) => {
+                                e.preventDefault()
+                                e.stopPropagation()
+                                sendInvite(emp)
+                              }}
+                            >
+                              {invitingId === emp.id
+                                ? 'Sending…'
+                                : emp.invite.status === 'INVITED'
+                                  ? 'Resend invite'
+                                  : 'Send login invite'}
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </Link>
@@ -348,6 +462,35 @@ export function HRPeopleView() {
           )}
         </div>
       </Card>
+
+      {/* Bulk invite confirmation */}
+      <Dialog open={bulkOpen} onOpenChange={(o) => !bulkSending && setBulkOpen(o)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Invite all uninvited</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 text-sm text-slate-700">
+            <p>
+              This sends a one-time <b>set-your-password</b> link to every active
+              employee who has an email address and no login yet.
+            </p>
+            <p className="text-xs text-slate-500">
+              In the current list: <b>{uninvitedCount}</b>{' '}
+              {uninvitedCount === 1 ? 'employee has' : 'employees have'} never been
+              invited. Links expire in 7 days. Employees without any email are
+              skipped.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBulkOpen(false)} disabled={bulkSending}>
+              Cancel
+            </Button>
+            <Button onClick={sendBulkInvites} disabled={bulkSending}>
+              {bulkSending ? 'Sending…' : 'Send invites'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Employee Dialog */}
       <Dialog open={addOpen} onOpenChange={setAddOpen}>

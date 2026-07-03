@@ -55,6 +55,43 @@ export async function syncClerkUser(clerkUserId: string): Promise<ClerkSyncResul
     return { userId: updated.id, created: false, linked: true }
   }
 
+  // Match against the Employee allowlist — work email OR personal email.
+  // (Both are stored lowercase; use case-insensitive compare defensively.)
+  const employee = await prisma.employee.findFirst({
+    where: {
+      OR: [
+        { email: { equals: normalisedEmail, mode: 'insensitive' } },
+        { personalEmail: { equals: normalisedEmail, mode: 'insensitive' } },
+      ],
+    },
+    select: { id: true, userId: true, email: true },
+  })
+  if (employee) {
+    if (employee.userId) {
+      // Employee already has a User row (matched via personal email, or the
+      // User row carries a different address) — just link the Clerk id.
+      const updated = await prisma.user.update({
+        where: { id: employee.userId },
+        data: { clerkUserId },
+      })
+      return { userId: updated.id, created: false, linked: true }
+    }
+    // Allowlisted employee with no User row yet — provision one.
+    const created = await prisma.user.create({
+      data: {
+        email: employee.email.toLowerCase(),
+        clerkUserId,
+        password: '',
+        role: 'EMPLOYEE',
+        mustChangePass: false,
+        isActive: true,
+        userRoles: { create: { role: 'EMPLOYEE' } },
+        employee: { connect: { id: employee.id } },
+      },
+    })
+    return { userId: created.id, created: true, linked: true }
+  }
+
   // ─── REJECTED — email not on the allowlist ──────────────────────────────
   // Log a SignupAttempt row BEFORE deleting the Clerk user so HR can review
   // and either approve (creates User/Employee + sends Clerk invite) or
@@ -86,9 +123,9 @@ export async function syncClerkUser(clerkUserId: string): Promise<ClerkSyncResul
  * just bump `attemptedAt`. Notifies HR_ADMINs once per 24h per email (de-dupe
  * via SignupAttempt.lastNotifiedAt).
  */
-async function logSignupAttempt(args: {
+export async function logSignupAttempt(args: {
   email: string
-  clerkUserId: string
+  clerkUserId: string | null
   firstName: string | null
   lastName: string | null
 }): Promise<void> {

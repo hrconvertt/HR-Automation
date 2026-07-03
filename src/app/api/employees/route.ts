@@ -110,6 +110,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ employees: filtered })
   }
 
+  // HR-only enrichment: login/invite status per employee so the People list
+  // can show "Never invited / Invited (pending) / Active" + invite actions.
+  if (effectiveRole === 'HR_ADMIN' && employees.length > 0) {
+    const extras = await prisma.employee.findMany({
+      where: { id: { in: employees.map((e) => e.id) } },
+      select: {
+        id: true,
+        personalEmail: true,
+        user: { select: { password: true, clerkUserId: true } },
+        inviteTokens: {
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: { createdAt: true, usedAt: true, expiresAt: true, sentTo: true },
+        },
+      },
+    })
+    const byId = new Map(extras.map((x) => [x.id, x]))
+    const now = Date.now()
+    const enriched = employees.map((e) => {
+      const x = byId.get(e.id)
+      const hasLogin = !!x?.user && (!!x.user.password || !!x.user.clerkUserId)
+      const t = x?.inviteTokens[0]
+      const invite = hasLogin
+        ? { status: 'ACTIVE' as const }
+        : t && !t.usedAt && t.expiresAt.getTime() > now
+          ? { status: 'INVITED' as const, invitedAt: t.createdAt, sentTo: t.sentTo }
+          : { status: 'NONE' as const }
+      return { ...e, personalEmail: x?.personalEmail ?? null, invite }
+    })
+    return NextResponse.json({ employees: enriched })
+  }
+
   return NextResponse.json({ employees })
 }
 
