@@ -151,8 +151,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
-        { href: '/dashboard/settings/roles', label: 'Role Assignment', icon: Shield },
-        { href: '/dashboard/settings/daily-logging', label: 'Daily Logging Settings', icon: ClipboardList },
         { href: '/dashboard/help', label: 'Help Center', icon: HelpCircle },
       ],
     },
