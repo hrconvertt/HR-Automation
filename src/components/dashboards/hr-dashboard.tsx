@@ -15,6 +15,7 @@ import {
   FileText, Users, TrendingUp, Sparkles, ClipboardList,
 } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
+import { memoKpi } from '@/lib/kpi-cache'
 import { PoliciesPendingReview } from '@/components/dashboards/policies-pending-review'
 
 function startOfToday(): Date {
@@ -238,7 +239,9 @@ async function loadData() {
 interface Props { userName: string }
 
 export async function HRDashboard({ userName }: Props) {
-  const d = await loadData()
+  // 60s smoothing memo — the HR dashboard runs 20+ aggregate queries; a
+  // revisit within a minute reuses the last result (role-level data only).
+  const d = await memoKpi('dashboard:HR_ADMIN', 60_000, loadData)
   const totalActions =
     d.pendingLeave + d.pendingOT + d.pendingHiringRequests +
     d.overdueProbation + d.pendingPayslipAdjustments + d.pendingPolicyAcks

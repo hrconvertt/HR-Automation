@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { cachedFetch } from '@/lib/client-cache'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -62,17 +63,18 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
     reason: '',
   })
 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (force = false) => {
     setLoading(true)
-    const [rRes, bRes] = await Promise.all([
-      fetch('/api/leave'),
-      fetch('/api/leave/balances'),
-    ])
-    const rData = await rRes.json()
-    const bData = await bRes.json()
-    setRequests(rData.requests ?? [])
-    setBalances(bData.balances ?? [])
-    setLoading(false)
+    try {
+      const [rData, bData] = await Promise.all([
+        cachedFetch<{ requests?: unknown[] }>('/api/leave', { force }),
+        cachedFetch<{ balances?: unknown[] }>('/api/leave/balances', { force }),
+      ])
+      setRequests((rData.requests ?? []) as never)
+      setBalances((bData.balances ?? []) as never)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { fetchAll() }, [fetchAll])
@@ -142,7 +144,7 @@ export default function TeamLeaveView({ managerEmployeeId, managerName }: { mana
     }
     setApplyOpen(false)
     setForm({ leaveType: 'CASUAL', startDate: '', endDate: '', reason: '' })
-    fetchAll()
+    fetchAll(true)
   }
 
   return (

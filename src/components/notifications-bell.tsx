@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Bell, CheckCheck } from 'lucide-react'
+import { cachedFetch, invalidateCache } from '@/lib/client-cache'
 
 interface Notification {
   id: string
@@ -16,6 +17,7 @@ interface Notification {
 }
 
 const POLL_INTERVAL_MS = 30_000
+const NOTIFICATIONS_URL = '/api/notifications?limit=10'
 
 function timeAgo(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime()
@@ -34,37 +36,60 @@ export default function NotificationsBell() {
   const [unreadCount, setUnreadCount] = useState(0)
   const [open, setOpen] = useState(false)
 
-  const fetchData = useCallback(async () => {
+  const abortRef = useRef<AbortController | null>(null)
+
+  const fetchData = useCallback(async (force = false) => {
     try {
-      const res = await fetch('/api/notifications?limit=10')
-      if (!res.ok) return
-      const data = await res.json()
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+      // SWR-lite: navigations re-mount the bell — serve the cached list
+      // instantly and revalidate in the background. Polls/focus force fresh.
+      const data = await cachedFetch<{ notifications?: Notification[]; unreadCount?: number }>(
+        NOTIFICATIONS_URL,
+        { staleMs: POLL_INTERVAL_MS, force, signal: controller.signal },
+      )
       setNotifications(data.notifications ?? [])
       setUnreadCount(data.unreadCount ?? 0)
     } catch {
-      // swallow — don't disturb the UI
+      // swallow — don't disturb the UI (includes aborts on unmount)
     }
   }, [])
 
   useEffect(() => {
     fetchData()
-    const t = setInterval(fetchData, POLL_INTERVAL_MS)
-    return () => clearInterval(t)
+    const t = setInterval(() => fetchData(true), POLL_INTERVAL_MS)
+    // Refetch when the tab regains focus/visibility — the user expects the
+    // badge to be current the moment they come back.
+    const onFocus = () => fetchData(true)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchData(true)
+    }
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      clearInterval(t)
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onVisibility)
+      abortRef.current?.abort() // abort in-flight on unmount
+    }
   }, [fetchData])
 
-  // Refetch when dropdown opens
+  // Refetch (fresh) when dropdown opens
   useEffect(() => {
-    if (open) fetchData()
+    if (open) fetchData(true)
   }, [open, fetchData])
 
   async function markOneRead(id: string) {
     await fetch(`/api/notifications/${id}`, { method: 'PATCH' })
+    invalidateCache(NOTIFICATIONS_URL)
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
     setUnreadCount((c) => Math.max(0, c - 1))
   }
 
   async function markAllRead() {
     await fetch('/api/notifications', { method: 'PATCH' })
+    invalidateCache(NOTIFICATIONS_URL)
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
     setUnreadCount(0)
   }

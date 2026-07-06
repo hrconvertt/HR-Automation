@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { cachedFetch } from '@/lib/client-cache'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -72,17 +73,18 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
     reason: '',
   })
 
-  const fetchLeave = useCallback(async () => {
+  const fetchLeave = useCallback(async (force = false) => {
     setLoading(true)
-    const [reqRes, balRes] = await Promise.all([
-      fetch('/api/leave'),
-      fetch('/api/leave/balances'),
-    ])
-    const reqData = await reqRes.json()
-    const balData = await balRes.json()
-    setRequests(reqData.requests ?? [])
-    setBalances(balData.balances ?? [])
-    setLoading(false)
+    try {
+      const [reqData, balData] = await Promise.all([
+        cachedFetch<{ requests?: LeaveRequest[] }>('/api/leave', { force }),
+        cachedFetch<{ balances?: LeaveBalance[] }>('/api/leave/balances', { force }),
+      ])
+      setRequests(reqData.requests ?? [])
+      setBalances(balData.balances ?? [])
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { fetchLeave() }, [fetchLeave])
@@ -117,7 +119,7 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
     if (!res.ok) { setFormError(data.error ?? 'Failed to submit'); return }
     setApplyOpen(false)
     setForm({ leaveType: 'CASUAL', startDate: '', endDate: '', reason: '' })
-    fetchLeave()
+    fetchLeave(true)
   }
 
   async function handleCancel(id: string) {
@@ -131,7 +133,7 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
       alert(d.error ?? 'Could not cancel the request.')
       return
     }
-    fetchLeave()
+    fetchLeave(true)
   }
 
   // Pending = anything not yet finalised (either manager or HR stage)

@@ -2,6 +2,7 @@
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { getPayrollRun, getPayrollAnomalies } from '@/lib/queries/payroll'
 import { HRPayrollView } from './_views/hr-payroll-view'
 import { ManagerPayrollView } from './_views/manager-payroll-view'
 import { EmployeePayrollView } from './_views/employee-payroll-view'
@@ -27,7 +28,34 @@ export default async function PayrollPage() {
   const effectiveRole = previewRole ?? user.role
 
   if (effectiveRole === 'HR_ADMIN') {
-    return <HRPayrollView />
+    // Server-render the current month's run + anomalies so the page paints
+    // with data immediately. Same query + role scoping as the API routes;
+    // the client view keeps its refetch logic for month changes/actions.
+    const now = new Date()
+    const month = now.getMonth() + 1
+    const year = now.getFullYear()
+    const run = await getPayrollRun({
+      effectiveRole: 'HR_ADMIN',
+      employeeId: user.employee?.id ?? null,
+      month,
+      year,
+    })
+    const anomalies = run ? await getPayrollAnomalies(run.id) : null
+    const roles = user.userRoles.length > 0
+      ? user.userRoles.map((r) => r.role)
+      : [user.role]
+    return (
+      <HRPayrollView
+        initialData={{
+          month,
+          year,
+          // Serialize Dates → ISO strings to match the client's fetch shape.
+          run: run ? JSON.parse(JSON.stringify(run)) : null,
+          anomalies: anomalies ? JSON.parse(JSON.stringify(anomalies)) : null,
+          me: { userId: user.id, roles, primaryRole: user.role },
+        }}
+      />
+    )
   }
   if (effectiveRole === 'EXECUTIVE') {
     return <ExecutivePayrollView />

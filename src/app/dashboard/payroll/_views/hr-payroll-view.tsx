@@ -10,7 +10,7 @@
  *   timeline reads from PayrollRunApproval rows.
  */
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -133,14 +133,25 @@ const ACTION_LABEL: Record<string, string> = {
   REJECT: 'Rejected',
 }
 
-export function HRPayrollView() {
+export interface HRPayrollInitialData {
+  month: number
+  year: number
+  run: PayrollRun | null
+  anomalies: AnomaliesResponse | null
+  me: MeResponse
+}
+
+export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialData }) {
   const now = new Date()
-  const [month, setMonth] = useState(now.getMonth() + 1)
-  const [year, setYear] = useState(now.getFullYear())
-  const [payrollRun, setPayrollRun] = useState<PayrollRun | null>(null)
-  const [anomalies, setAnomalies] = useState<AnomaliesResponse | null>(null)
-  const [me, setMe] = useState<MeResponse | null>(null)
-  const [loading, setLoading] = useState(true)
+  const [month, setMonth] = useState(initialData?.month ?? now.getMonth() + 1)
+  const [year, setYear] = useState(initialData?.year ?? now.getFullYear())
+  const [payrollRun, setPayrollRun] = useState<PayrollRun | null>(initialData?.run ?? null)
+  const [anomalies, setAnomalies] = useState<AnomaliesResponse | null>(initialData?.anomalies ?? null)
+  const [me, setMe] = useState<MeResponse | null>(initialData?.me ?? null)
+  const [loading, setLoading] = useState(!initialData)
+  // Server already rendered the initial month — skip the duplicate first fetch.
+  // Roles are static per session, so fetchMe is skipped entirely when provided.
+  const skipFirstFetch = useRef(!!initialData)
   const [busy, setBusy] = useState(false)
   const [adjustTarget, setAdjustTarget] = useState<AdjustablePayslip | null>(null)
   const [sendBackOpen, setSendBackOpen] = useState(false)
@@ -169,8 +180,17 @@ export function HRPayrollView() {
     setLoading(false)
   }, [month, year])
 
-  useEffect(() => { fetchMe() }, [fetchMe])
-  useEffect(() => { fetchPayroll() }, [fetchPayroll])
+  useEffect(() => {
+    if (initialData?.me) return
+    fetchMe()
+  }, [fetchMe, initialData])
+  useEffect(() => {
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false
+      return
+    }
+    fetchPayroll()
+  }, [fetchPayroll])
 
   const roles = me?.roles ?? []
   const isHR = roles.includes('HR_ADMIN')

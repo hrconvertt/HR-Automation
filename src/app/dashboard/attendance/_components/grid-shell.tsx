@@ -72,18 +72,22 @@ function currentReportingMonth(): string {
 interface ShellProps {
   role: string
   departments: string[]
+  /** Server-rendered grid for the default month (no filters). When present,
+   *  the shell paints immediately and skips the first client fetch. */
+  initialGrid?: GridResponse
 }
 
-export function AttendanceGridShell({ role, departments }: ShellProps) {
+export function AttendanceGridShell({ role, departments, initialGrid }: ShellProps) {
   const [view, setView] = useState<'grid' | 'summary'>('grid')
   const [month, setMonth] = useState<string>(currentReportingMonth())
   const [department, setDepartment] = useState<string>('')
   const [search, setSearch] = useState<string>('')
   const [debouncedSearch, setDebouncedSearch] = useState('')
-  const [gridData, setGridData] = useState<GridResponse | null>(null)
+  const [gridData, setGridData] = useState<GridResponse | null>(initialGrid ?? null)
   const [summaryData, setSummaryData] = useState<SummaryResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const skipFirstFetch = useRef(!!initialGrid && initialGrid.month === currentReportingMonth())
   const router = useRouter()
 
   // Debounce search
@@ -94,6 +98,11 @@ export function AttendanceGridShell({ role, departments }: ShellProps) {
 
   // Fetch on dependency change
   useEffect(() => {
+    // First run with server-rendered data for the same month: nothing to fetch.
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false
+      return
+    }
     let cancelled = false
     setLoading(true)
     setError(null)

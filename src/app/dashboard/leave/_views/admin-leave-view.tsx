@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { cachedFetch } from '@/lib/client-cache'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -63,17 +64,18 @@ export default function AdminLeaveView() {
   })
   const [formError, setFormError] = useState('')
 
-  const fetchLeave = useCallback(async () => {
+  const fetchLeave = useCallback(async (force = false) => {
     setLoading(true)
-    const [reqRes, balRes] = await Promise.all([
-      fetch('/api/leave'),
-      fetch('/api/leave/balances?all=true'),
-    ])
-    const reqData = await reqRes.json()
-    const balData = await balRes.json()
-    setRequests(reqData.requests ?? [])
-    setGroupedBalances(balData.grouped ?? [])
-    setLoading(false)
+    try {
+      const [reqData, balData] = await Promise.all([
+        cachedFetch<{ requests?: unknown[] }>('/api/leave', { force }),
+        cachedFetch<{ grouped?: unknown[] }>('/api/leave/balances?all=true', { force }),
+      ])
+      setRequests((reqData.requests ?? []) as never)
+      setGroupedBalances((balData.grouped ?? []) as never)
+    } finally {
+      setLoading(false)
+    }
   }, [])
 
   useEffect(() => { fetchLeave() }, [fetchLeave])
@@ -89,14 +91,14 @@ export default function AdminLeaveView() {
     if (!res.ok) { setFormError(data.error || 'Failed'); return }
     setApplyOpen(false)
     setForm({ leaveType: 'CASUAL', startDate: '', endDate: '', reason: '' })
-    fetchLeave()
+    fetchLeave(true)
   }
 
   async function handleApprove(id: string) {
     setActionLoading(id)
     await fetch(`/api/leave/${id}/approve`, { method: 'POST' })
     setActionLoading(null)
-    fetchLeave()
+    fetchLeave(true)
   }
 
   async function handleReject(id: string, reason: string) {
@@ -110,7 +112,7 @@ export default function AdminLeaveView() {
     setActionLoading(null)
     setRejectFor(null)
     setRejectReason('')
-    fetchLeave()
+    fetchLeave(true)
   }
 
   async function handleDelete(id: string, label: string) {
@@ -127,7 +129,7 @@ export default function AdminLeaveView() {
       alert(err.error || 'Failed to delete leave')
       return
     }
-    fetchLeave()
+    fetchLeave(true)
   }
 
   return (

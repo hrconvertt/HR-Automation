@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -79,15 +79,18 @@ function avatarTone(name: string): string {
   return AVATAR_PALETTE[h % AVATAR_PALETTE.length]
 }
 
-export function HRPeopleView() {
-  const [employees, setEmployees] = useState<Employee[]>([])
+export function HRPeopleView({ initialEmployees }: { initialEmployees?: Employee[] }) {
+  const [employees, setEmployees] = useState<Employee[]>(initialEmployees ?? [])
   const [departments, setDepartments] = useState<Department[]>([])
   const [designationOptions, setDesignationOptions] = useState<string[]>([])
   const [search, setSearch] = useState('')
   const [filterDept, setFilterDept] = useState('all')
   const [filterStatus, setFilterStatus] = useState('all')
   const [filterType, setFilterType] = useState('all')
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(!initialEmployees)
+  // When the server already rendered the initial list, skip the very first
+  // debounced fetch (it would re-request the same unfiltered data).
+  const skipFirstFetch = useRef(!!initialEmployees)
   const [addOpen, setAddOpen] = useState(false)
 
   const [form, setForm] = useState({
@@ -176,6 +179,10 @@ export function HRPeopleView() {
   }, [form.departmentId, addOpen, overrideCode])
 
   useEffect(() => {
+    if (skipFirstFetch.current) {
+      skipFirstFetch.current = false
+      return
+    }
     const t = setTimeout(fetchEmployees, 300)
     return () => clearTimeout(t)
   }, [fetchEmployees])

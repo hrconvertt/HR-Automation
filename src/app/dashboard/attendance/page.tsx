@@ -15,7 +15,18 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { buildAttendanceGrid, REPORTING_MONTHS } from '@/lib/queries/attendance-grid'
 import { AttendanceGridShell } from './_components/grid-shell'
+
+/** Default month for the initial server render — mirrors the client's
+ *  currentReportingMonth() so the SSR payload matches the first fetch. */
+function defaultReportingMonth(): string {
+  const now = new Date()
+  const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  return REPORTING_MONTHS.some((m) => `${m.year}-${String(m.month).padStart(2, '0')}` === key)
+    ? key
+    : '2026-06'
+}
 
 export default async function AttendanceGridPage() {
   const cookieStore = await cookies()
@@ -63,10 +74,20 @@ export default async function AttendanceGridPage() {
       ? [{ name: user.employee.department.name }]
       : []
 
+  // Server-render the initial grid (current month, no filters) so the page
+  // paints with data immediately. Same builder + role gates as the API route;
+  // the client shell keeps its refetch logic for month/filter changes.
+  const initialGrid = await buildAttendanceGrid({
+    effectiveRole,
+    myEmpId: user.employee?.id ?? null,
+    month: defaultReportingMonth(),
+  })
+
   return (
     <AttendanceGridShell
       role={effectiveRole}
       departments={departments.map((d) => d.name)}
+      initialGrid={initialGrid.mode === 'grid' ? initialGrid : undefined}
     />
   )
 }

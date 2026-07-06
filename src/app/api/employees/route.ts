@@ -2,6 +2,7 @@
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole, hashPassword } from '@/lib/auth'
 import { buildStandardOnboardingTasks } from '@/lib/onboarding-tasks'
+import { listEmployees, enrichWithInviteStatus } from '@/lib/queries/employees'
 
 // Returns the next available CON-{DEPT}-NNN code by scanning existing
 // codes for the prefix and picking max + 1. Avoids gaps becoming
@@ -50,47 +51,14 @@ export async function GET(request: NextRequest) {
   // the HR_ADMIN role.
   const managersOnly = searchParams.get('managersOnly') === '1'
 
-  // Role-based filters layered onto user filters
-  let roleFilter: object = {}
-  if (effectiveRole === 'MANAGER' && me) {
-    roleFilter = { reportingManagerId: me.id }
-  } else if (effectiveRole === 'EMPLOYEE') {
-    // Employees see directory of active people, but limited fields (handled in select below)
-    roleFilter = { status: 'ACTIVE' }
-  }
-  // HR_ADMIN and EXECUTIVE see all (no extra filter)
-
-  const employees = await prisma.employee.findMany({
-    where: {
-      AND: [
-        search
-          ? {
-              OR: [
-                { fullName: { contains: search, mode: 'insensitive' } },
-                { email: { contains: search, mode: 'insensitive' } },
-                { employeeCode: { contains: search, mode: 'insensitive' } },
-                { designation: { contains: search, mode: 'insensitive' } },
-              ],
-            }
-          : {},
-        departmentId ? { departmentId } : {},
-        status ? { status } : {},
-        employeeType ? { employeeType } : {},
-        roleFilter,
-      ],
-    },
-    select: {
-      id: true,
-      employeeCode: true,
-      fullName: true,
-      email: true,
-      designation: true,
-      employeeType: true,
-      status: true,
-      department: { select: { name: true } },
-    },
-    orderBy: { fullName: 'asc' },
-    take: limit,
+  const employees = await listEmployees({
+    effectiveRole,
+    meEmployeeId: me?.id ?? null,
+    search,
+    departmentId,
+    status,
+    employeeType,
+    limit,
   })
 
   if (managersOnly) {
@@ -113,32 +81,7 @@ export async function GET(request: NextRequest) {
   // HR-only enrichment: login/invite status per employee so the People list
   // can show "Never invited / Invited (pending) / Active" + invite actions.
   if (effectiveRole === 'HR_ADMIN' && employees.length > 0) {
-    const extras = await prisma.employee.findMany({
-      where: { id: { in: employees.map((e) => e.id) } },
-      select: {
-        id: true,
-        personalEmail: true,
-        user: { select: { password: true, clerkUserId: true } },
-        inviteTokens: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          select: { createdAt: true, usedAt: true, expiresAt: true, sentTo: true },
-        },
-      },
-    })
-    const byId = new Map(extras.map((x) => [x.id, x]))
-    const now = Date.now()
-    const enriched = employees.map((e) => {
-      const x = byId.get(e.id)
-      const hasLogin = !!x?.user && (!!x.user.password || !!x.user.clerkUserId)
-      const t = x?.inviteTokens[0]
-      const invite = hasLogin
-        ? { status: 'ACTIVE' as const }
-        : t && !t.usedAt && t.expiresAt.getTime() > now
-          ? { status: 'INVITED' as const, invitedAt: t.createdAt, sentTo: t.sentTo }
-          : { status: 'NONE' as const }
-      return { ...e, personalEmail: x?.personalEmail ?? null, invite }
-    })
+    const enriched = await enrichWithInviteStatus(employees)
     return NextResponse.json({ employees: enriched })
   }
 

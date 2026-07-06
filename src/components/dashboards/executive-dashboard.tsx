@@ -15,6 +15,7 @@
  */
 import Link from 'next/link'
 import { computeExecMetrics } from '@/lib/exec-metrics'
+import { memoKpi } from '@/lib/kpi-cache'
 import { PoliciesPendingReview } from '@/components/dashboards/policies-pending-review'
 import { formatCurrency } from '@/lib/utils'
 import {
@@ -23,7 +24,8 @@ import {
 } from 'lucide-react'
 
 export async function ExecutiveDashboard() {
-  const m = await computeExecMetrics()
+  // 60s smoothing memo — exec metrics aggregate the whole org per visit.
+  const m = await memoKpi('dashboard:EXECUTIVE', 60_000, computeExecMetrics)
 
   return (
     <div className="space-y-5">

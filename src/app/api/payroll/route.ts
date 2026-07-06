@@ -4,6 +4,7 @@ import { verifyToken } from '@/lib/auth'
 import { calculatePayslip } from '@/lib/payroll'
 import { getPayrollConfig } from '@/lib/config'
 import { dayKey } from '@/lib/date-utils'
+import { getPayrollRun } from '@/lib/queries/payroll'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -39,63 +40,9 @@ export async function GET(request: NextRequest) {
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
 
-  // Scope payslip query by role.
-  // SALARY VISIBILITY RULE (locked down): Manager + Lead do NOT see team
-  // payslip amounts. They only see their OWN payslip here â€” team attendance
-  // is rendered separately by the manager-payroll-view (no amounts).
-  // EMPLOYEE should NEVER see DRAFT payslips â€” only finalized ones.
-  let payslipWhere: {
-    employeeId?: string
-    employee?: { reportingManagerId: string }
-    status?: { in: string[] }
-  } = {}
-  const FINALIZED = ['APPROVED', 'RELEASED', 'FINALIZED', 'PAID', 'SENT']
-  if (effectiveRole === 'EMPLOYEE') {
-    if (!employeeId) return NextResponse.json({ payrollRun: null })
-    payslipWhere = { employeeId, status: { in: FINALIZED } }
-  } else if (effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') {
-    if (!employeeId) return NextResponse.json({ payrollRun: null })
-    // Only their own payslip â€” never their team's. Compensation amounts
-    // are HR/Exec/Finance + owner-only.
-    payslipWhere = { employeeId, status: { in: FINALIZED } }
-  }
-  // HR_ADMIN, EXECUTIVE, FINANCE: no extra filter (full payroll)
-
-  const payrollRun = await prisma.payrollRun.findFirst({
-    where: { month, year },
-    include: {
-      payslips: {
-        where: payslipWhere,
-        include: {
-          employee: {
-            select: {
-              fullName: true,
-              employeeCode: true,
-              designation: true,
-              ibanAccount: true,
-              bankAccount: true,
-              bankName: true,
-            },
-          },
-        },
-        orderBy: { employee: { fullName: 'asc' } },
-      },
-      approvals: { orderBy: { createdAt: 'asc' } },
-    },
-  })
-
-  const mapped = payrollRun
-    ? {
-        ...payrollRun,
-        payslips: payrollRun.payslips.map((p) => ({
-          ...p,
-          allowances:
-            p.houseRent + p.utilities + p.food + p.fuel + p.medicalAllowance + p.otherAllowance,
-          grossPay: p.grossSalary,
-          netPay: p.netSalary,
-        })),
-      }
-    : null
+  // Query + role-scoped salary visibility live in src/lib/queries/payroll.ts
+  // (shared with the /dashboard/payroll server component).
+  const mapped = await getPayrollRun({ effectiveRole, employeeId, month, year })
 
   return NextResponse.json({ payrollRun: mapped })
 }
