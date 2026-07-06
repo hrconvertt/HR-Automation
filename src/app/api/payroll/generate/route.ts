@@ -47,14 +47,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'month and year are required' }, { status: 400 })
     }
 
-    const existing = await prisma.payrollRun.findFirst({
+    // There may be MORE than one run for a period (older duplicates from
+    // earlier code paths), and — critically — Payslip has a global unique
+    // constraint on (employeeId, month, year), so ANY leftover payslip for
+    // this month blocks a fresh generate even if its parent run was dropped.
+    // So we look at every run for the period, refuse if any is PAID, and
+    // otherwise wipe ALL runs + ALL payslips for the month before rebuilding.
+    const existingRuns = await prisma.payrollRun.findMany({
       where: { month, year },
       select: { id: true, status: true },
     })
-    if (existing) {
+    if (existingRuns.length > 0) {
       if (!replace) {
         return NextResponse.json(
-          { error: 'A payroll run already exists for this period.', existingId: existing.id, status: existing.status },
+          {
+            error: 'A payroll run already exists for this period.',
+            existingId: existingRuns[0].id,
+            status: existingRuns[0].status,
+          },
           { status: 409 },
         )
       }
@@ -62,17 +72,22 @@ export async function POST(request: NextRequest) {
       // PENDING_FINANCE) — they explicitly confirmed in the UI. PAID is the
       // one we refuse to obliterate, since employees may have been notified
       // and money may have moved.
-      if (existing.status === 'PAID') {
+      if (existingRuns.some((r) => r.status === 'PAID')) {
         return NextResponse.json(
           { error: 'Cannot regenerate a payroll run that has already been marked PAID.' },
           { status: 409 },
         )
       }
-      // Wipe its payslips + approval rows first, then drop the run.
-      await prisma.payslip.deleteMany({ where: { payrollRunId: existing.id } })
-      await prisma.payrollRunApproval.deleteMany({ where: { runId: existing.id } }).catch(() => {})
-      await prisma.payrollRun.delete({ where: { id: existing.id } })
+      const runIds = existingRuns.map((r) => r.id)
+      await prisma.payrollRunApproval.deleteMany({ where: { runId: { in: runIds } } }).catch(() => {})
+      // Delete payslips by (month, year) — catches orphans not linked to any
+      // of the runs we found, which are what actually trip the unique index.
+      await prisma.payslip.deleteMany({ where: { month, year } })
+      await prisma.payrollRun.deleteMany({ where: { id: { in: runIds } } })
     }
+    // Belt-and-braces: clear any stray payslips for this month even when no
+    // run row was found (the source of the observed unique-constraint crash).
+    await prisma.payslip.deleteMany({ where: { month, year } })
 
     // ─── Resignation filter ─────────────────────────────────────────
     const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0)
