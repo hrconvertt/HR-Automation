@@ -17,7 +17,7 @@ export async function guardHrAction(request: NextRequest): Promise<
   | { ok: false; response: NextResponse }
 > {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return { ok: false, response: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   if (!hasRole(payload, 'HR_ADMIN')) {
     return { ok: false, response: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }

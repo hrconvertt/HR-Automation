@@ -16,7 +16,7 @@ import { verifyToken } from '@/lib/auth'
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload || !['HR_ADMIN', 'MANAGER'].includes(payload.role)) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }

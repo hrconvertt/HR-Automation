@@ -20,7 +20,6 @@ import EmployeePoliciesView from './_views/employee-policies-view'
 export default async function PoliciesPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 

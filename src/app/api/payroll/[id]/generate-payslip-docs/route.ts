@@ -30,7 +30,7 @@ export async function POST(
 ) {
   const { id } = await params
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({

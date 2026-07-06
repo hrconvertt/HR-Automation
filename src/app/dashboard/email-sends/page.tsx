@@ -7,7 +7,7 @@ import EmailSendsClient from './email-sends-client'
 export default async function EmailSendsPage() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })

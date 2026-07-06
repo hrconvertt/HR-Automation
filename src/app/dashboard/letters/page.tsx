@@ -11,7 +11,6 @@ type Role = 'HR_ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'EXECUTIVE'
 export default async function LettersPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 

@@ -8,7 +8,7 @@ import { triggerEmail, employeeVars } from '@/lib/email-triggers'
 // the manager must acknowledge before HR opens an ExitClearance.
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const user = await prisma.user.findUnique({
@@ -74,7 +74,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Returns ALL pending resignations for HR/Manager workspace; for an EMPLOYEE returns only theirs.

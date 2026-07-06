@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 async function getMe() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) return null
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },

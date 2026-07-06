@@ -6,7 +6,7 @@ import { notify } from '@/lib/notifications'
 export async function POST(request: NextRequest, ctx: { params: Promise<{ employeeId: string }> }) {
   const { employeeId } = await ctx.params
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload || !hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const checklist = await prisma.onboardingChecklist.findUnique({

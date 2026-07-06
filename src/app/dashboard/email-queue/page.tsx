@@ -7,7 +7,6 @@ import EmailQueueClient from './email-queue-client'
 export default async function EmailQueuePage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 

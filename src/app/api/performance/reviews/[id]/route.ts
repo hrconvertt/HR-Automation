@@ -8,7 +8,7 @@ interface RouteParams { params: Promise<{ id: string }> }
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return null
   const user = await prisma.user.findUnique({
     where: { id: payload.userId },

@@ -21,7 +21,6 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
   const { id } = await params
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 

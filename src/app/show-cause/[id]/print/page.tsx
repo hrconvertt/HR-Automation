@@ -24,7 +24,6 @@ export default async function PrintShowCausePage({ params }: PageProps) {
   const { id } = await params
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const tokenPayload = await verifyToken(token)
   if (!tokenPayload) redirect('/login')
 

@@ -12,7 +12,7 @@ import { verifyToken } from '@/lib/auth'
 
 async function resolveCaller(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return { error: 'Unauthorized' as const, status: 401 }
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },

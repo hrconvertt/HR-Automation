@@ -5,7 +5,7 @@ import { notify } from '@/lib/notifications'
 
 async function load(request: NextRequest, id: string) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return null
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
@@ -69,7 +69,7 @@ export async function PATCH(request: NextRequest, ctx: { params: Promise<{ id: s
 export async function DELETE(request: NextRequest, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload || !hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   await prisma.onboardingTask.delete({ where: { id } })
   return NextResponse.json({ ok: true })

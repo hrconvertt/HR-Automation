@@ -17,7 +17,7 @@ async function getOrCreate() {
 
 async function requireHR(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return null
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
   if (!user || user.role !== 'HR_ADMIN') return null

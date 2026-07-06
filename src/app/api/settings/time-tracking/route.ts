@@ -11,7 +11,7 @@ const DEFAULT_CATEGORIES = 'Dev\nQA\nMeetings\nAdmin'
 async function authHR() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) return null
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
   if (!user || user.role !== 'HR_ADMIN') return null
@@ -21,7 +21,7 @@ async function authHR() {
 export async function GET() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const modeRow = await prisma.config.findUnique({ where: { key: 'timeTrackingMode' } })

@@ -10,7 +10,6 @@ import TrustedDevicesPanel from '@/components/attendance/trusted-devices-panel'
 export default async function AttendanceSecurityPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 

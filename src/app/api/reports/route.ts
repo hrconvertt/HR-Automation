@@ -5,7 +5,7 @@ import { canSeeAggregateSalary } from '@/lib/can-see-salary'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   // Determine effective role for salary gating on the payroll_summary report.

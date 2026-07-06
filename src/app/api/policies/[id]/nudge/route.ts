@@ -21,7 +21,7 @@ const NUDGE_THROTTLE_MS = 24 * 60 * 60 * 1000 // 24 h
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasAnyRole(payload, ['HR_ADMIN', 'MANAGER'])) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })

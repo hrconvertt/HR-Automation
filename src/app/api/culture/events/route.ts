@@ -14,7 +14,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({

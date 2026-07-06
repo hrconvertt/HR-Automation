@@ -6,7 +6,7 @@ import { verifyToken } from '@/lib/auth'
 async function getRole() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) return null
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })
   if (!me) return null

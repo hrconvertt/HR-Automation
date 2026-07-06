@@ -11,7 +11,7 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
   const sp = (await searchParams) ?? {}
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({

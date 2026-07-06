@@ -6,7 +6,7 @@ import { notify } from '@/lib/notifications'
 // Initiate promotion (Manager or HR). Flow: PENDING_HR -> PENDING_CEO -> APPROVED.
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const me = await prisma.user.findUnique({
@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const list = await prisma.promotionRequest.findMany({
     include: { employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } } },

@@ -14,7 +14,6 @@ import AdminTimeView from '@/app/dashboard/attendance/_views/admin-time-view'
 export default async function MonthlyReportPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 

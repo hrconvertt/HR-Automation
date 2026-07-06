@@ -55,3 +55,6 @@ prisma/*.db-wal
 
 .vercel
 .env*
+
+# Local-only PII files (never commit)
+*.local.json

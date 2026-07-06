@@ -22,7 +22,7 @@ const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'war
 export default async function OffersPage() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) redirect('/login')
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },

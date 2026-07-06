@@ -14,7 +14,7 @@ const LIFECYCLE_TYPES = new Set([
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({

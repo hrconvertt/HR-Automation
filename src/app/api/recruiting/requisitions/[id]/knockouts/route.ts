@@ -14,7 +14,7 @@ const VALID_TYPES = new Set(['WORK_AUTH', 'LOCATION', 'SKILL', 'MIN_YEARS', 'MIN
 
 async function requireHR(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { id: true, role: true } })
   if (!me || me.role !== 'HR_ADMIN') {

@@ -54,7 +54,6 @@ export default async function PrintIncrementLetterPage({ params }: PageProps) {
   const { salaryHistoryId } = await params
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const tokenPayload = await verifyToken(token)
   if (!tokenPayload) redirect('/login')
 

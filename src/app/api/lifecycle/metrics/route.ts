@@ -6,7 +6,7 @@ import { verifyToken, hasAnyRole } from '@/lib/auth'
 // attrition by phase (last 12 months).
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   if (!hasAnyRole(payload, ['HR_ADMIN', 'EXECUTIVE'])) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 

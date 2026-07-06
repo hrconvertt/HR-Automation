@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth'
 
 async function authorize(request: NextRequest, employeeId: string) {
   const token = request.cookies.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
   if (!payload) return null
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },

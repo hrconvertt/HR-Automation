@@ -14,7 +14,6 @@ import { ClipboardCheck, ArrowRight } from 'lucide-react'
 export async function PoliciesPendingReview() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) return null
   const payload = await verifyToken(token)
   if (!payload) return null
 

@@ -15,7 +15,6 @@ import { TimesheetPanel } from '../_components/timesheet-panel'
 export default async function MyTimePage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 

@@ -6,7 +6,6 @@ import ExitClearanceClient from './_client'
 export default async function ExitClearancePage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 

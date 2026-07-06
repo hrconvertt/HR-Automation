@@ -25,7 +25,7 @@ const roleStyles: Record<string, string> = {
 export default async function PayrollLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  const payload = token ? await verifyToken(token) : null
+  const payload = await verifyToken(token)
 
   let effectiveRole = 'EMPLOYEE'
   if (payload) {

@@ -7,7 +7,7 @@ import { TimeTrackingSettings } from './settings-client'
 export default async function TimeTrackingSettingsPage() {
   const c = await cookies()
   const tok = c.get('hr_token')?.value
-  const payload = tok ? await verifyToken(tok) : null
+  const payload = await verifyToken(tok)
   if (!payload) redirect('/login')
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
   if (!user || user.role !== 'HR_ADMIN') redirect('/dashboard')

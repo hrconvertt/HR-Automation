@@ -11,7 +11,6 @@ import { verifyToken } from '@/lib/auth'
 export default async function LeaveIndexPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
-  if (!token) redirect('/login')
   const payload = await verifyToken(token)
   if (!payload) redirect('/login')
 
