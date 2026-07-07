@@ -22,6 +22,7 @@ import {
   Download, Wallet, Banknote, Landmark, ShieldCheck,
   AlertTriangle, CheckCircle2, RefreshCw, Sparkles, Pencil,
   Send, FileCheck, Undo2, FileSpreadsheet, BadgeCheck, FileText,
+  PlusCircle, BookOpen, CalendarClock, TrendingUp, X,
 } from 'lucide-react'
 import { safeFetch } from '@/lib/safe-fetch'
 import { AdjustPayslipDialog, type AdjustablePayslip } from '@/components/payroll/adjust-payslip-dialog'
@@ -72,6 +73,7 @@ interface PayrollRun {
   month: number
   year: number
   status: string
+  runType?: string
   totalGross: number
   totalNet: number
   totalEOBI: number
@@ -79,6 +81,41 @@ interface PayrollRun {
   payslips: Payslip[]
   approvals?: ApprovalRow[]
   sendBackReason?: string | null
+}
+
+/** Lightweight run summary from listPayrollRuns (run switcher). */
+interface RunSummary {
+  id: string
+  month: number
+  year: number
+  status: string
+  runType: string
+  totalGross: number
+  totalNet: number
+  createdAt: string
+  _count?: { payslips: number }
+}
+
+interface RetroSuggestion {
+  employeeId: string
+  name: string
+  employeeCode: string
+  months: string[]
+  totalArrears: number
+  currentGross: number
+}
+
+interface PayrollCalendar {
+  payrollCutoffDay: number
+  payrollReviewDays: number
+  payrollDisburseDay: number
+}
+
+const OFF_CYCLE_LABEL: Record<string, string> = {
+  BONUS: 'Bonus',
+  ARREARS: 'Arrears',
+  FINAL_SETTLEMENT: 'Final Settlement',
+  REGULAR: 'Regular',
 }
 
 interface Anomaly {
@@ -137,8 +174,11 @@ export interface HRPayrollInitialData {
   month: number
   year: number
   run: PayrollRun | null
+  runs?: RunSummary[]
   anomalies: AnomaliesResponse | null
   me: MeResponse
+  calendar?: PayrollCalendar
+  todayISO?: string
 }
 
 export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialData }) {
@@ -146,6 +186,9 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
   const [month, setMonth] = useState(initialData?.month ?? now.getMonth() + 1)
   const [year, setYear] = useState(initialData?.year ?? now.getFullYear())
   const [payrollRun, setPayrollRun] = useState<PayrollRun | null>(initialData?.run ?? null)
+  const [runs, setRuns] = useState<RunSummary[]>(initialData?.runs ?? [])
+  // When set, we view a specific (usually off-cycle) run instead of the REGULAR one.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(initialData?.run?.id ?? null)
   const [anomalies, setAnomalies] = useState<AnomaliesResponse | null>(initialData?.anomalies ?? null)
   const [me, setMe] = useState<MeResponse | null>(initialData?.me ?? null)
   const [loading, setLoading] = useState(!initialData)
@@ -160,25 +203,56 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
   const [genVisible, setGenVisible] = useState(true)
   const [genNotify, setGenNotify] = useState(true)
   const [genBusy, setGenBusy] = useState(false)
+  // Off-cycle run dialog + retro suggestions
+  const [offCycleOpen, setOffCycleOpen] = useState(false)
+  const [retro, setRetro] = useState<RetroSuggestion[] | null>(null)
+  const [retroBusy, setRetroBusy] = useState(false)
+  const calendar = initialData?.calendar
+  const todayISO = initialData?.todayISO
 
   const fetchMe = useCallback(async () => {
     const r = await safeFetch<MeResponse>('/api/auth/me')
     if (r.ok) setMe(r.data)
   }, [])
 
-  const fetchPayroll = useCallback(async () => {
+  // selectedRunId lives in a ref for fetchPayroll so the callback identity only
+  // depends on month/year — the auto-effect must NOT re-fire on run switches
+  // (those call fetchPayroll directly), otherwise setSelectedRunId would loop.
+  const selectedRunIdRef = useRef<string | null>(initialData?.run?.id ?? null)
+  const fetchPayroll = useCallback(async (runIdOverride?: string | null) => {
     setLoading(true)
-    const r = await safeFetch<{ payrollRun: PayrollRun | null }>(`/api/payroll?month=${month}&year=${year}`)
+    const rid = runIdOverride !== undefined ? runIdOverride : selectedRunIdRef.current
+    const qs = `month=${month}&year=${year}${rid ? `&runId=${rid}` : ''}`
+    const r = await safeFetch<{ payrollRun: PayrollRun | null; runs?: RunSummary[] }>(`/api/payroll?${qs}`)
     const run = r.ok ? (r.data?.payrollRun ?? null) : null
+    const runList = r.ok ? (r.data?.runs ?? []) : []
     setPayrollRun(run)
+    setRuns(runList)
+    setSelectedRunId(run?.id ?? null)
+    selectedRunIdRef.current = run?.id ?? null
     if (run) {
       const a = await safeFetch<AnomaliesResponse>(`/api/payroll/${run.id}/anomalies`)
       setAnomalies(a.ok ? a.data : null)
+      // Retro suggestions only make sense on the REGULAR run.
+      if ((run.runType ?? 'REGULAR') === 'REGULAR') {
+        const s = await safeFetch<{ suggestions: RetroSuggestion[] }>(`/api/payroll/retro-suggestions?month=${month}&year=${year}`)
+        setRetro(s.ok ? (s.data?.suggestions ?? []) : null)
+      } else {
+        setRetro(null)
+      }
     } else {
       setAnomalies(null)
+      setRetro(null)
     }
     setLoading(false)
   }, [month, year])
+
+  // Explicit run switch — reset the ref then refetch that run.
+  const switchRun = useCallback((runId: string) => {
+    selectedRunIdRef.current = runId
+    setSelectedRunId(runId)
+    fetchPayroll(runId)
+  }, [fetchPayroll])
 
   useEffect(() => {
     if (initialData?.me) return
@@ -187,10 +261,18 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
   useEffect(() => {
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false
+      // Server rendered the REGULAR run but not retro suggestions — fetch once.
+      if ((initialData?.run?.runType ?? 'REGULAR') === 'REGULAR' && initialData?.run) {
+        safeFetch<{ suggestions: RetroSuggestion[] }>(
+          `/api/payroll/retro-suggestions?month=${initialData.month}&year=${initialData.year}`,
+        ).then((s) => setRetro(s.ok ? (s.data?.suggestions ?? []) : null))
+      }
       return
     }
-    fetchPayroll()
-  }, [fetchPayroll])
+    // Month/year changed → default back to the REGULAR run for the new period.
+    selectedRunIdRef.current = null
+    fetchPayroll(null)
+  }, [fetchPayroll, initialData])
 
   const roles = me?.roles ?? []
   const isHR = roles.includes('HR_ADMIN')
@@ -295,9 +377,48 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
     alert(`Generated ${created} payslip PDF${created === 1 ? '' : 's'}.${skipped ? ` Skipped ${skipped} existing.` : ''}${notified ? ` Notified ${notified} employee${notified === 1 ? '' : 's'}.` : ''}`)
   }
 
+  // F2 — apply retro-pay suggestions to the current REGULAR run's arrears field
+  // by PATCHing each affected employee's payslip via the bulk-update route.
+  async function handleApplyRetro() {
+    if (!payrollRun || !retro || retro.length === 0) return
+    if (!confirm(`Add arrears to ${retro.length} payslip${retro.length === 1 ? '' : 's'} on this run?`)) return
+    setRetroBusy(true)
+    // Map employeeId → payslipId for rows present on this run.
+    const slipByEmp = new Map(payrollRun.payslips.map((p) => [p.employeeId, p]))
+    const updates = retro
+      .map((s) => {
+        const slip = slipByEmp.get(s.employeeId)
+        if (!slip) return null
+        // Add suggested arrears on top of existing arrears; bump gross + net.
+        const arrears = slip.arrears + s.totalArrears
+        return {
+          payslipId: slip.id,
+          arrears,
+          grossSalary: slip.grossSalary + s.totalArrears,
+          netSalary: slip.netSalary + s.totalArrears,
+        }
+      })
+      .filter((u): u is NonNullable<typeof u> => u !== null)
+    if (updates.length === 0) {
+      setRetroBusy(false)
+      alert('None of the affected employees have a payslip on this run.')
+      return
+    }
+    const r = await safeFetch(`/api/payroll/${payrollRun.id}/bulk-update`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ updates }),
+    })
+    setRetroBusy(false)
+    if (!r.ok) { alert(r.error ?? 'Failed to apply arrears'); return }
+    fetchPayroll()
+  }
+
   const canSendBack = payrollRun
     ? sendBackAllowedRoles(status).some((r) => roles.includes(r))
     : false
+  const runType = payrollRun?.runType ?? 'REGULAR'
+  const isRegular = runType === 'REGULAR'
 
   return (
     <div className="space-y-6">
@@ -314,9 +435,16 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
             </p>
           </div>
           {payrollRun && (
-            <Badge className="text-sm px-3 py-1 inline-flex items-center gap-1.5">
-              {stageLabel(status)}
-            </Badge>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!isRegular && (
+                <Badge variant="warning" className="text-sm px-3 py-1 inline-flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5" /> Off-cycle: {OFF_CYCLE_LABEL[runType] ?? runType}
+                </Badge>
+              )}
+              <Badge className="text-sm px-3 py-1 inline-flex items-center gap-1.5">
+                {stageLabel(status)}
+              </Badge>
+            </div>
           )}
         </div>
       </div>
@@ -353,6 +481,23 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
             >
               {[2024, 2025, 2026].map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
+
+            {/* Run switcher — appears when the period has >1 run (REGULAR + off-cycle) */}
+            {runs.length > 1 && (
+              <select
+                value={selectedRunId ?? ''}
+                onChange={(e) => switchRun(e.target.value)}
+                title="Switch between the regular run and off-cycle runs for this period"
+                className="h-10 px-3 rounded-xl border border-slate-300 text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-700"
+              >
+                {runs.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {OFF_CYCLE_LABEL[r.runType] ?? r.runType} — {stageLabel(r.status)}
+                    {r._count ? ` (${r._count.payslips})` : ''}
+                  </option>
+                ))}
+              </select>
+            )}
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Generate / Regenerate — ALWAYS visible to HR_ADMIN, even after
@@ -381,6 +526,26 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
                 {busy ? 'Generating…' : payrollRun ? `Regenerate ${months[month - 1]}` : `Generate ${months[month - 1]} ${year}`}
               </Button>
             )}
+
+            {/* F1 — Off-cycle run (bonus / arrears / final settlement) */}
+            {isHR && (
+              <Button
+                onClick={() => setOffCycleOpen(true)}
+                variant="outline"
+                title="Create a bonus, arrears, or final-settlement run for this period"
+              >
+                <PlusCircle className="w-4 h-4 mr-1.5" /> New Off-Cycle Run
+              </Button>
+            )}
+
+            {/* F3 — Register / GL page */}
+            <a
+              href={`/dashboard/payroll/register?month=${month}&year=${year}`}
+              className="inline-flex items-center h-10 px-4 rounded-xl border border-slate-300 text-sm text-slate-700 hover:bg-slate-50"
+              title="Full-company payroll register + GL summary"
+            >
+              <BookOpen className="w-4 h-4 mr-1.5" /> Register / GL
+            </a>
 
             {/* Stage-specific actions */}
             {payrollRun && status === 'DRAFT' && isHR && (
@@ -556,8 +721,21 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
         </div>
       )}
 
-      {/* Anomalies — only when in DRAFT */}
-      {payrollRun && status === 'DRAFT' && anomalies && (
+      {/* F1 — Off-cycle run dialog */}
+      {offCycleOpen && (
+        <OffCycleDialog
+          month={month}
+          year={year}
+          onClose={() => setOffCycleOpen(false)}
+          onCreated={(runId) => {
+            setOffCycleOpen(false)
+            switchRun(runId)
+          }}
+        />
+      )}
+
+      {/* Anomalies — only when in DRAFT on the REGULAR run */}
+      {payrollRun && isRegular && status === 'DRAFT' && anomalies && (
         <Card className="rounded-2xl">
           <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
@@ -613,6 +791,49 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
           <KpiCard label="Total EOBI" value={formatCurrency(payrollRun.totalEOBI ?? 0)} Icon={ShieldCheck} color="bg-slate-50 text-slate-700" />
           <KpiCard label="Total Income Tax" value={formatCurrency(payrollRun.totalTax ?? 0)} Icon={Landmark} color="bg-slate-50 text-slate-700" />
         </div>
+      )}
+
+      {/* F4 — Payroll calendar card (always visible to HR) */}
+      {isHR && calendar && (
+        <PayrollCalendarCard initial={calendar} todayISO={todayISO} />
+      )}
+
+      {/* F2 — Retro-pay / arrears suggestion card (REGULAR run only, DRAFT/editable) */}
+      {payrollRun && isRegular && retro && retro.length > 0 && (
+        <Card className="rounded-2xl border-amber-200">
+          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-amber-600" />
+              <p className="text-sm font-semibold text-slate-900">
+                {retro.length} employee{retro.length === 1 ? '' : 's'} {retro.length === 1 ? 'has' : 'have'} retroactive salary changes — {formatCurrency(retro.reduce((s, r) => s + r.totalArrears, 0))} total arrears
+              </p>
+            </div>
+            {canEdit && (
+              <Button
+                onClick={handleApplyRetro}
+                disabled={retroBusy}
+                variant="outline"
+                className="text-amber-700 border-amber-200 hover:bg-amber-50"
+              >
+                {retroBusy ? 'Applying…' : 'Add to this run’s arrears'}
+              </Button>
+            )}
+          </div>
+          <ul className="divide-y divide-slate-100">
+            {retro.map((s) => (
+              <li key={s.employeeId} className="px-5 py-2.5 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{s.name} <span className="text-[10px] text-slate-400 font-mono">{s.employeeCode}</span></p>
+                  <p className="text-xs text-slate-500">Underpaid: {s.months.join(', ')}</p>
+                </div>
+                <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0">{formatCurrency(s.totalArrears)}</span>
+              </li>
+            ))}
+          </ul>
+          {!canEdit && (
+            <p className="px-5 py-2 text-xs text-slate-400">Arrears can be added while the run is editable (DRAFT / HR final).</p>
+          )}
+        </Card>
       )}
 
       {/* Spreadsheet Grid Editor — Excel-like inline editing */}
@@ -912,6 +1133,248 @@ function gridRoleFor(status: string, roles: string[]): GridRole {
   if (roles.includes('EXECUTIVE') && status === 'PENDING_CEO') return 'CEO'
   if ((roles.includes('FINANCE') || roles.includes('HR_ADMIN')) && status === 'PENDING_FINANCE') return 'FINANCE'
   return 'READONLY'
+}
+
+// ─── F1: Off-cycle run dialog ────────────────────────────────────────────────
+
+interface EmpOption { id: string; fullName: string; employeeCode: string; designation?: string }
+
+function OffCycleDialog({
+  month, year, onClose, onCreated,
+}: {
+  month: number; year: number
+  onClose: () => void
+  onCreated: (runId: string) => void
+}) {
+  const [runType, setRunType] = useState<'BONUS' | 'ARREARS' | 'FINAL_SETTLEMENT'>('BONUS')
+  const [employees, setEmployees] = useState<EmpOption[]>([])
+  const [search, setSearch] = useState('')
+  const [selected, setSelected] = useState<Record<string, { amount: string; note: string }>>({})
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    safeFetch<{ employees: EmpOption[] }>('/api/employees?status=ACTIVE&limit=500').then((r) => {
+      if (r.ok) setEmployees(r.data?.employees ?? [])
+    })
+  }, [])
+
+  const filtered = employees.filter((e) => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return e.fullName.toLowerCase().includes(q) || e.employeeCode.toLowerCase().includes(q)
+  })
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = { ...prev }
+      if (next[id]) delete next[id]
+      else next[id] = { amount: '', note: '' }
+      return next
+    })
+  }
+
+  async function submit() {
+    const entries = Object.entries(selected)
+      .map(([employeeId, v]) => ({ employeeId, amount: Number(v.amount), note: v.note.trim() || undefined }))
+      .filter((e) => Number.isFinite(e.amount) && e.amount > 0)
+    if (entries.length === 0) { alert('Select at least one employee and enter a positive amount.'); return }
+    setBusy(true)
+    const r = await safeFetch<{ payrollRun: { id: string } }>('/api/payroll/off-cycle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ month, year, runType, entries }),
+    })
+    setBusy(false)
+    if (!r.ok || !r.data?.payrollRun?.id) { alert(r.error ?? 'Failed to create off-cycle run'); return }
+    onCreated(r.data.payrollRun.id)
+  }
+
+  const selectedCount = Object.keys(selected).length
+  const total = Object.values(selected).reduce((s, v) => s + (Number(v.amount) || 0), 0)
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => !busy && onClose()}>
+      <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <PlusCircle className="w-5 h-5 text-slate-700" /> New Off-Cycle Run — {months[month - 1]} {year}
+          </h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-700"><X className="w-5 h-5" /></button>
+        </div>
+
+        <div className="p-5 space-y-4 overflow-y-auto">
+          {/* Run type radios */}
+          <div className="flex items-center gap-4 flex-wrap">
+            {(['BONUS', 'ARREARS', 'FINAL_SETTLEMENT'] as const).map((t) => (
+              <label key={t} className="flex items-center gap-2 text-sm cursor-pointer">
+                <input type="radio" name="runType" checked={runType === t} onChange={() => setRunType(t)} className="w-4 h-4" />
+                {OFF_CYCLE_LABEL[t]}
+              </label>
+            ))}
+          </div>
+
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search employees…"
+            className="w-full h-10 px-3 rounded-xl border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+          />
+
+          <div className="border border-slate-100 rounded-xl divide-y divide-slate-100 max-h-72 overflow-y-auto">
+            {filtered.length === 0 ? (
+              <p className="p-4 text-sm text-slate-400 text-center">No employees.</p>
+            ) : filtered.map((e) => {
+              const sel = selected[e.id]
+              return (
+                <div key={e.id} className="px-3 py-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={!!sel} onChange={() => toggle(e.id)} className="w-4 h-4" />
+                    <span className="text-sm text-slate-900 flex-1">{e.fullName}</span>
+                    <span className="text-[10px] text-slate-400 font-mono">{e.employeeCode}</span>
+                  </label>
+                  {sel && (
+                    <div className="flex items-center gap-2 mt-2 pl-6">
+                      <input
+                        type="number" min="0" value={sel.amount}
+                        onChange={(ev) => setSelected((p) => ({ ...p, [e.id]: { ...p[e.id], amount: ev.target.value } }))}
+                        placeholder="Amount (PKR)"
+                        className="w-36 h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+                      />
+                      <input
+                        value={sel.note}
+                        onChange={(ev) => setSelected((p) => ({ ...p, [e.id]: { ...p[e.id], note: ev.target.value } }))}
+                        placeholder="Note (optional)"
+                        className="flex-1 h-9 px-3 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+                      />
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between gap-2 p-5 border-t border-slate-100">
+          <p className="text-sm text-slate-500">
+            {selectedCount} selected · {formatCurrency(total)}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={onClose} disabled={busy}>Cancel</Button>
+            <Button onClick={submit} disabled={busy || selectedCount === 0} className="bg-slate-900 hover:bg-slate-800 text-white">
+              {busy ? 'Creating…' : `Create ${OFF_CYCLE_LABEL[runType]} Run`}
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── F4: Payroll calendar card ───────────────────────────────────────────────
+
+function PayrollCalendarCard({ initial, todayISO }: { initial: PayrollCalendar; todayISO?: string }) {
+  const [cfg, setCfg] = useState(initial)
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(initial)
+  const [busy, setBusy] = useState(false)
+
+  // Countdown to cutoff — computed from server-provided todayISO (no Date.now
+  // in render, so SSR and client agree).
+  const daysToCutoff = (() => {
+    if (!todayISO) return null
+    const [y, m, d] = todayISO.split('-').map(Number)
+    if (!y || !m || !d) return null
+    const today = d
+    // Days until this month's cutoff; if already past, roll to next month.
+    const daysInMonth = new Date(y, m, 0).getDate()
+    let diff = cfg.payrollCutoffDay - today
+    if (diff < 0) diff += daysInMonth
+    return diff
+  })()
+
+  async function save() {
+    setBusy(true)
+    const r = await safeFetch<PayrollCalendar>('/api/payroll/config', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(draft),
+    })
+    setBusy(false)
+    if (!r.ok || !r.data) { alert(r.error ?? 'Failed to save'); return }
+    setCfg(r.data)
+    setEditing(false)
+  }
+
+  return (
+    <Card className="rounded-2xl">
+      <div className="px-5 py-4">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <h3 className="text-sm font-semibold text-slate-900 flex items-center gap-2">
+            <CalendarClock className="w-4 h-4 text-slate-700" /> Payroll Calendar
+          </h3>
+          {!editing ? (
+            <button onClick={() => { setDraft(cfg); setEditing(true) }} className="text-xs text-slate-500 hover:text-slate-700 inline-flex items-center gap-1">
+              <Pencil className="w-3 h-3" /> Edit
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button onClick={() => setEditing(false)} className="text-xs text-slate-500 hover:text-slate-700">Cancel</button>
+              <button onClick={save} disabled={busy} className="text-xs font-medium text-slate-900 hover:underline">{busy ? 'Saving…' : 'Save'}</button>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-4">
+          <CalItem label="Cutoff day" editing={editing}
+            value={cfg.payrollCutoffDay} draft={draft.payrollCutoffDay}
+            onChange={(v) => setDraft((d) => ({ ...d, payrollCutoffDay: v }))}
+            suffix={ordinal(cfg.payrollCutoffDay)} />
+          <CalItem label="CEO review window" editing={editing}
+            value={cfg.payrollReviewDays} draft={draft.payrollReviewDays}
+            onChange={(v) => setDraft((d) => ({ ...d, payrollReviewDays: v }))}
+            suffix={`${cfg.payrollReviewDays} day${cfg.payrollReviewDays === 1 ? '' : 's'}`} />
+          <CalItem label="Disbursement day" editing={editing}
+            value={cfg.payrollDisburseDay} draft={draft.payrollDisburseDay}
+            onChange={(v) => setDraft((d) => ({ ...d, payrollDisburseDay: v }))}
+            suffix={ordinal(cfg.payrollDisburseDay)} />
+        </div>
+
+        {daysToCutoff !== null && !editing && (
+          <p className="text-xs text-slate-500 mt-3">
+            {daysToCutoff === 0
+              ? 'Cutoff is today.'
+              : `${daysToCutoff} day${daysToCutoff === 1 ? '' : 's'} until cutoff.`}
+          </p>
+        )}
+      </div>
+    </Card>
+  )
+}
+
+function CalItem({ label, value, draft, editing, onChange, suffix }: {
+  label: string; value: number; draft: number; editing: boolean
+  onChange: (v: number) => void; suffix: string
+}) {
+  return (
+    <div>
+      <p className="text-xs text-slate-500">{label}</p>
+      {editing ? (
+        <input
+          type="number" min="0" max="31" value={draft}
+          onChange={(e) => onChange(Number(e.target.value))}
+          className="mt-1 w-20 h-9 px-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-slate-700"
+        />
+      ) : (
+        <p className="text-lg font-semibold text-slate-900 mt-0.5">{suffix}</p>
+      )}
+    </div>
+  )
+}
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] ?? s[v] ?? s[0])
 }
 
 function KpiCard({ label, value, Icon, color }: {

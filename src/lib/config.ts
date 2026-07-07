@@ -15,6 +15,10 @@ export interface PayrollConfig {
   eobiCap: number
   taxEnabled: boolean
   workingDays: string[]
+  // ── Payroll calendar (day-of-month) ──
+  payrollCutoffDay: number       // default 25 — last day to finalise inputs
+  payrollReviewDays: number      // default 2  — CEO review window (days)
+  payrollDisburseDay: number     // default 28 — day salaries hit accounts
 }
 
 const DEFAULTS: PayrollConfig = {
@@ -30,6 +34,9 @@ const DEFAULTS: PayrollConfig = {
   eobiCap: 470,
   taxEnabled: false,
   workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+  payrollCutoffDay: 25,
+  payrollReviewDays: 2,
+  payrollDisburseDay: 28,
 }
 
 export async function getPayrollConfig(): Promise<PayrollConfig> {
@@ -49,6 +56,9 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
           'eobiCap',
           'taxEnabled',
           'workingDays',
+          'payrollCutoffDay',
+          'payrollReviewDays',
+          'payrollDisburseDay',
         ],
       },
     },
@@ -69,6 +79,9 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
     eobiCap: map.eobiCap ? Number(map.eobiCap) : DEFAULTS.eobiCap,
     taxEnabled: map.taxEnabled ? map.taxEnabled === 'true' : DEFAULTS.taxEnabled,
     workingDays: map.workingDays ? JSON.parse(map.workingDays) : DEFAULTS.workingDays,
+    payrollCutoffDay: map.payrollCutoffDay ? Number(map.payrollCutoffDay) : DEFAULTS.payrollCutoffDay,
+    payrollReviewDays: map.payrollReviewDays ? Number(map.payrollReviewDays) : DEFAULTS.payrollReviewDays,
+    payrollDisburseDay: map.payrollDisburseDay ? Number(map.payrollDisburseDay) : DEFAULTS.payrollDisburseDay,
   }
 }
 

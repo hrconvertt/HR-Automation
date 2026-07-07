@@ -24,6 +24,7 @@ type UpdateField =
   | 'otherDeductions'
   | 'overtimePay'
   | 'lateDeduction'
+  | 'arrears'
   | 'transactionAmount'
   | 'netSalary'
   | 'payoutNotes'
@@ -40,12 +41,13 @@ const NUMERIC_FIELDS = new Set<UpdateField>([
   'otherDeductions',
   'overtimePay',
   'lateDeduction',
+  'arrears',
   'transactionAmount',
   'netSalary',
 ])
 
 const HR_ALLOWED_FIELDS = new Set<UpdateField>([
-  'grossSalary', 'otherDeductions', 'overtimePay', 'lateDeduction',
+  'grossSalary', 'otherDeductions', 'overtimePay', 'lateDeduction', 'arrears',
   'transactionAmount', 'netSalary', 'payoutNotes', 'status', 'ibanAccount',
 ])
 const CEO_ALLOWED_FIELDS = new Set<UpdateField>(['payoutNotes'])
