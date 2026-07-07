@@ -24,6 +24,8 @@ interface GridEmployee {
   photoUrl: string | null
   days: DayCell[]
   totals: { present: number; leave: number; wfh: number; hd: number; absent: number; holiday: number }
+  /** HR-only: ISO days with a PENDING correction request. */
+  pendingDays?: string[]
 }
 interface GridResponse {
   mode: 'grid'
@@ -405,6 +407,7 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                 {emp.days.map((d) => {
                   const iso = `${year}-${String(month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
                   const isFuture = iso > today
+                  const hasPendingCorrection = emp.pendingDays?.includes(iso) ?? false
                   // Blank dot: unmarked future days and pre-joining days. A
                   // future day WITH data (e.g. approved upcoming leave) still
                   // shows its status so HR can see who'll be out.
@@ -422,14 +425,21 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                             setEditing({ empId: emp.id, empName: emp.fullName, day: d.day, iso })
                           }
                         : undefined}
-                      className={`border-b border-slate-100 p-0.5 text-center ${
+                      className={`relative border-b border-slate-100 p-0.5 text-center ${
                         d.isWeekend ? 'bg-slate-50/40' : ''
                       } ${isEditable ? 'cursor-pointer hover:ring-1 hover:ring-slate-200 hover:bg-slate-50/60' : ''} ${
                         flashing ? 'bg-slate-100 transition-colors' : ''
                       }`}
-                      title={isEditable ? 'Click to edit (HR only)' : undefined}
+                      title={
+                        hasPendingCorrection
+                          ? 'Correction request pending — review in Corrections'
+                          : isEditable ? 'Click to edit (HR only)' : undefined
+                      }
                     >
                       <StatusBadge status={d.status} future={renderBlank} />
+                      {hasPendingCorrection && (
+                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-slate-900 ring-2 ring-white" />
+                      )}
                     </td>
                   )
                 })}

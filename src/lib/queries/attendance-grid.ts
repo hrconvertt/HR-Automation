@@ -346,6 +346,8 @@ export interface GridEmployeeRow {
   totals: { present: number; leave: number; wfh: number; hd: number; absent: number; holiday: number }
   /** HR-only: late clock-ins this month; null = no clock-in data recorded. Omitted for other roles. */
   lateCount?: number | null
+  /** HR-only: ISO days with a PENDING correction request (dotted in the grid). */
+  pendingDays?: string[]
 }
 export interface GridPayload {
   mode: 'grid'
@@ -512,6 +514,20 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
 
   const buckets = await loadRangeBuckets(empIds, mStart, mEnd, recordClockIn)
 
+  // HR-only: pending correction requests this month → indicator dots.
+  const pendingByEmp = new Map<string, string[]>()
+  if (trackLate) {
+    const pending = await prisma.attendanceCorrection.findMany({
+      where: { employeeId: { in: empIds }, status: 'PENDING', date: { gte: mStart, lte: mEnd } },
+      select: { employeeId: true, date: true },
+    })
+    for (const p of pending) {
+      const arr = pendingByEmp.get(p.employeeId) ?? []
+      arr.push(dayKey(p.date))
+      pendingByEmp.set(p.employeeId, arr)
+    }
+  }
+
   const rows: GridEmployeeRow[] = employees.map((emp) => {
     const { days, totals } = computeEmployeeMonth(
       empMonthCtx(emp.id, emp.joiningDate, buckets, year, month, today),
@@ -534,6 +550,8 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
     if (trackLate) {
       const lk = `${year}-${String(month).padStart(2, '0')}|${emp.id}`
       row.lateCount = lateBucket.has(lk) ? lateBucket.get(lk)! : null
+      const pend = pendingByEmp.get(emp.id)
+      if (pend?.length) row.pendingDays = pend
     }
     return row
   })
