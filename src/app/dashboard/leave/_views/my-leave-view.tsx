@@ -73,6 +73,38 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
     reason: '',
   })
 
+  // ── Live impact preview: chargeable days + overlap + balance-after ──────
+  type Preview = {
+    chargeableDays: number
+    dayMarks: { date: string; mark: 'L' | 'HD' | 'WE' | 'HOLIDAY' }[]
+    overlap: { leaveType: string; status: string; range: string } | null
+    balance: { remaining: number; afterApproval: number } | null
+  }
+  const [preview, setPreview] = useState<Preview | null>(null)
+  useEffect(() => {
+    if (!applyOpen || !form.startDate || !form.endDate || form.endDate < form.startDate) {
+      setPreview(null)
+      return
+    }
+    const isHalf = form.leaveType === 'HALF_DAY'
+    const realType = isHalf ? 'CASUAL' : form.leaveType
+    const controller = new AbortController()
+    const t = setTimeout(async () => {
+      try {
+        const params = new URLSearchParams({
+          start: form.startDate,
+          end: form.endDate,
+          leaveType: realType,
+          ...(isHalf ? { firstDayHalf: '1' } : {}),
+        })
+        const res = await fetch(`/api/leave/preview?${params}`, { signal: controller.signal })
+        if (res.ok) setPreview(await res.json())
+        else setPreview(null)
+      } catch { /* aborted or offline — preview is best-effort */ }
+    }, 350)
+    return () => { clearTimeout(t); controller.abort() }
+  }, [applyOpen, form.startDate, form.endDate, form.leaveType])
+
   const fetchLeave = useCallback(async (force = false) => {
     setLoading(true)
     try {
@@ -291,11 +323,14 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
                     )}
                   </div>
                   <Badge variant={STATUS_TONE[r.status] ?? 'secondary'}>{(r as unknown as { statusLabel?: string }).statusLabel ?? STATUS_LABEL[r.status] ?? r.status}</Badge>
-                  {(r.status === 'PENDING' || r.status === 'PENDING_HR') && (
+                  {(r.status === 'PENDING' || r.status === 'PENDING_HR' ||
+                    (r.status === 'APPROVED' && new Date(r.fromDate) >= new Date(new Date().toDateString()))) && (
                     <button
                       onClick={() => handleCancel(r.id)}
                       className="text-xs text-slate-400 hover:text-slate-700"
-                      title="Cancel request"
+                      title={r.status === 'APPROVED'
+                        ? 'Cancel this approved leave — your balance will be restored'
+                        : 'Cancel request'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -348,6 +383,42 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
                 placeholder="Brief reason — helps your manager approve faster."
               />
             </div>
+            {/* Live impact preview — days charged + attendance cells + balance after */}
+            {preview && (
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-1.5 text-xs text-slate-700">
+                <p>
+                  <strong className="tabular-nums">{formatDays(preview.chargeableDays)}</strong> will be charged.
+                  {(() => {
+                    const marked = preview.dayMarks.filter((m) => m.mark === 'L' || m.mark === 'HD')
+                    const we = preview.dayMarks.filter((m) => m.mark === 'WE').length
+                    const hol = preview.dayMarks.filter((m) => m.mark === 'HOLIDAY').length
+                    const fmtD = (iso: string) => new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                    const days = marked.slice(0, 6).map((m) => `${fmtD(m.date)} (${m.mark})`).join(', ')
+                    const extra = marked.length > 6 ? ` +${marked.length - 6} more` : ''
+                    const skips = [
+                      we > 0 ? `${we} weekend day${we > 1 ? 's' : ''}` : null,
+                      hol > 0 ? `${hol} public holiday${hol > 1 ? 's' : ''}` : null,
+                    ].filter(Boolean).join(' + ')
+                    return marked.length > 0
+                      ? <> Attendance will show {days}{extra}{skips ? <> — skips {skips}</> : null}.</>
+                      : <> No working days in this range{skips ? ` (${skips})` : ''}.</>
+                  })()}
+                </p>
+                {preview.balance && (
+                  <p className={preview.balance.afterApproval < 0 ? 'text-red-700 font-medium' : ''}>
+                    Balance: {preview.balance.remaining} day{preview.balance.remaining === 1 ? '' : 's'} left
+                    {' → '}{preview.balance.afterApproval} after this request
+                    {preview.balance.afterApproval < 0 && ' — not enough balance.'}
+                  </p>
+                )}
+                {preview.overlap && (
+                  <p className="text-amber-800 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    Overlaps your {preview.overlap.status === 'APPROVED' ? 'approved' : 'pending'} {LEAVE_TYPE_LABELS[preview.overlap.leaveType] ?? preview.overlap.leaveType} leave ({preview.overlap.range}) — this will be refused.
+                  </p>
+                )}
+              </div>
+            )}
             {formError && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{formError}</p>}
           </div>
           <DialogFooter>

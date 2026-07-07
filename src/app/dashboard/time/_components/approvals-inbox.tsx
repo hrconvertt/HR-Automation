@@ -11,7 +11,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { CheckCircle2, XCircle, Inbox, Clock, Plane, Wallet } from 'lucide-react'
+import { CheckCircle2, XCircle, Inbox, Clock, Plane, Wallet, CalendarCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -271,6 +271,27 @@ function OTRow({ item, acting, onApprove, onReject }: {
   )
 }
 
+type LeavePreview = {
+  chargeableDays: number
+  dayMarks: { date: string; mark: 'L' | 'HD' | 'WE' | 'HOLIDAY' }[]
+}
+
+/** "will mark L on 8, 9, 10 Jul (skips Sat/Sun + 1 holiday)" */
+function impactSentence(p: LeavePreview): string {
+  const marked = p.dayMarks.filter((m) => m.mark === 'L' || m.mark === 'HD')
+  if (marked.length === 0) return 'No working days affected.'
+  const fmtDay = (iso: string) =>
+    new Date(iso + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+  const parts = marked.slice(0, 6).map((m) => `${m.mark} on ${fmtDay(m.date)}`)
+  const extra = marked.length > 6 ? ` +${marked.length - 6} more` : ''
+  const skippedWE = p.dayMarks.filter((m) => m.mark === 'WE').length
+  const skippedHol = p.dayMarks.filter((m) => m.mark === 'HOLIDAY').length
+  const skips: string[] = []
+  if (skippedWE > 0) skips.push(`${skippedWE} weekend day${skippedWE > 1 ? 's' : ''}`)
+  if (skippedHol > 0) skips.push(`${skippedHol} holiday${skippedHol > 1 ? 's' : ''}`)
+  return `Will mark ${parts.join(', ')}${extra}${skips.length ? ` (skips ${skips.join(' + ')})` : ''}`
+}
+
 function LeaveRow({ item, role, acting, onApprove, onReject }: {
   item: LeaveItem; role: string; acting: boolean; onApprove: () => void; onReject: () => void
 }) {
@@ -279,6 +300,16 @@ function LeaveRow({ item, role, acting, onApprove, onReject }: {
   const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
   const stageLabel = LEAVE_STATUS_LABELS[item.stage] ?? item.stage
   const isHRSignOff = item.stage === 'PENDING_HR'
+
+  // Attendance-impact preview — which cells this approval will write
+  const [preview, setPreview] = useState<LeavePreview | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    safeFetch<LeavePreview>(`/api/leave/preview?leaveId=${item.id}`).then((r) => {
+      if (!cancelled && r.ok && r.data) setPreview(r.data)
+    })
+    return () => { cancelled = true }
+  }, [item.id])
 
   const after = item.requesterBalance ? item.requesterBalance.remaining - item.days : null
   const insufficient = after !== null && after < 0
@@ -307,6 +338,12 @@ function LeaveRow({ item, role, acting, onApprove, onReject }: {
           </p>
         )}
         {item.reason && <p className="text-xs text-slate-600 mt-1 italic">&quot;{item.reason}&quot;</p>}
+        {preview && (
+          <p className="text-[11px] text-slate-600 mt-1 flex items-center gap-1.5">
+            <CalendarCheck className="w-3 h-3 shrink-0" />
+            {impactSentence(preview)}
+          </p>
+        )}
       </div>
       <div className="flex gap-1.5 shrink-0">
         <Button size="sm" onClick={onApprove} disabled={acting} className="bg-slate-700 hover:bg-slate-700 text-white">
