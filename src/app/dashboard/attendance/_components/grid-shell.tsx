@@ -10,9 +10,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Download, CalendarDays, ArrowRight, LayoutGrid, LayoutList, X } from 'lucide-react'
+import { Search, Download, CalendarDays, ArrowRight, LayoutGrid, LayoutList, X, Sun } from 'lucide-react'
 import { StatusBadge, StatusLegend, type Status } from '@/components/attendance/status-badge'
 import { getInitials } from '@/lib/utils'
+import { TodayBoard } from './today-board'
 
 interface DayCell { day: number; status: Status; isWeekend: boolean }
 interface GridEmployee {
@@ -61,21 +62,28 @@ interface SummaryResponse {
   role: string
 }
 
-const REPORTING_MONTHS = [
-  { key: '2025-11', label: 'Nov 2025' },
-  { key: '2025-12', label: 'Dec 2025' },
-  { key: '2026-01', label: 'Jan 2026' },
-  { key: '2026-02', label: 'Feb 2026' },
-  { key: '2026-03', label: 'Mar 2026' },
-  { key: '2026-04', label: 'Apr 2026' },
-  { key: '2026-05', label: 'May 2026' },
-  { key: '2026-06', label: 'Jun 2026' },
-]
+// Reporting window: Nov 2025 (first tracked month) through the CURRENT month —
+// computed, not hardcoded, so HR can always record the month we're actually in.
+// Mirrors reportingMonths() in src/lib/queries/attendance-grid.ts.
+const REPORTING_MONTHS: { key: string; label: string }[] = (() => {
+  const list: { key: string; label: string }[] = []
+  const now = new Date()
+  let y = 2025, m = 11
+  while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+    list.push({
+      key: `${y}-${String(m).padStart(2, '0')}`,
+      label: new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+    })
+    m++
+    if (m > 12) { m = 1; y++ }
+  }
+  return list
+})()
 
 function currentReportingMonth(): string {
   const now = new Date()
   const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  return REPORTING_MONTHS.find((m) => m.key === key)?.key ?? '2026-06'
+  return REPORTING_MONTHS.find((m) => m.key === key)?.key ?? REPORTING_MONTHS[REPORTING_MONTHS.length - 1].key
 }
 
 interface ShellProps {
@@ -87,7 +95,9 @@ interface ShellProps {
 }
 
 export function AttendanceGridShell({ role, departments, initialGrid }: ShellProps) {
-  const [view, setView] = useState<'grid' | 'summary'>('grid')
+  // HR lands on the operational "Today" board; the month grid stays one click
+  // away. Other roles (Executive/Manager/Lead) land on the grid as before.
+  const [view, setView] = useState<'today' | 'grid' | 'summary'>(role === 'HR_ADMIN' ? 'today' : 'grid')
   const [month, setMonth] = useState<string>(currentReportingMonth())
   const [department, setDepartment] = useState<string>('')
   const [search, setSearch] = useState<string>('')
@@ -107,6 +117,8 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
 
   // Fetch on dependency change
   useEffect(() => {
+    // The Today board owns its own fetching + auto-refresh.
+    if (view === 'today') return
     // First run with server-rendered data for the same month: nothing to fetch.
     if (skipFirstFetch.current) {
       skipFirstFetch.current = false
@@ -172,6 +184,16 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
 
       {/* View tabs */}
       <div className="inline-flex bg-slate-100 p-1 rounded-lg">
+        {role === 'HR_ADMIN' && (
+          <button
+            onClick={() => setView('today')}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition ${
+              view === 'today' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Sun className="w-4 h-4" /> Today
+          </button>
+        )}
         <button
           onClick={() => setView('grid')}
           className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition ${
@@ -190,7 +212,11 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
         </button>
       </div>
 
+      {/* TODAY BOARD (HR only — server re-verifies role on every call) */}
+      {view === 'today' && role === 'HR_ADMIN' && <TodayBoard canMark />}
+
       {/* Filter bar */}
+      {view !== 'today' && (
       <div className="flex items-center gap-2 flex-wrap bg-white border border-slate-200 rounded-lg px-3 py-2">
         {view === 'grid' && (
           <select
@@ -231,6 +257,7 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
           </button>
         )}
       </div>
+      )}
 
       {error && (
         <div className="bg-slate-50 border border-slate-100 text-slate-900 text-sm rounded-md px-3 py-2">

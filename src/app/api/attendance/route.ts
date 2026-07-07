@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { getPayrollConfig } from '@/lib/config'
 import { dayKey } from '@/lib/date-utils'
+import { parseShiftStart } from '@/lib/queries/attendance-grid'
 import {
   scoreClockIn,
   ensureDeviceRecord,
@@ -47,16 +48,16 @@ export async function GET(request: NextRequest) {
   const effectiveRole = previewRole ?? user.role
   const myEmpId = user.employee?.id ?? null
 
-  // Build employee-scope filter for this role
-  // EMPLOYEE: only self
-  // MANAGER: self + direct reports
-  // HR / EXECUTIVE: everyone
+  // Build employee-scope filter for this role.
+  // Full-company visibility is an explicit allowlist (HR / EXECUTIVE) — any
+  // other role (FINANCE, future roles) defaults to self-only, never "everyone".
   const employeeScope = (): Record<string, unknown> => {
-    if (effectiveRole === 'EMPLOYEE' && myEmpId) return { id: myEmpId }
-    if (effectiveRole === 'MANAGER' && myEmpId) {
+    if (effectiveRole === 'HR_ADMIN' || effectiveRole === 'EXECUTIVE') return {}
+    if ((effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') && myEmpId) {
       return { OR: [{ id: myEmpId }, { reportingManagerId: myEmpId }] }
     }
-    return {} // HR / EXECUTIVE see all
+    if (myEmpId) return { id: myEmpId }
+    return { id: '__none__' }
   }
   const empFilter = employeeScope()
 
@@ -80,13 +81,13 @@ export async function GET(request: NextRequest) {
     // Holiday today?
     const holidayToday = await prisma.holiday.findFirst({
       where: { date: { gte: todayStart, lte: todayEnd }, type: 'PUBLIC' },
-      select: { id: true },
+      select: { id: true, name: true },
     })
 
-    const [activeEmps, todayLogs, todayPunches] = await Promise.all([
+    const [activeEmps, todayLogs, todayPunches, loasToday, leavesToday] = await Promise.all([
       prisma.employee.findMany({
         where: { status: 'ACTIVE', ...empFilter },
-        select: { id: true, employeeCode: true, fullName: true, department: { select: { name: true } } },
+        select: { id: true, employeeCode: true, fullName: true, timings: true, department: { select: { name: true } } },
         orderBy: { fullName: 'asc' },
       }),
       prisma.attendanceLog.findMany({
@@ -100,7 +101,33 @@ export async function GET(request: NextRequest) {
         where: { date: { gte: todayStart, lte: todayEnd } },
         orderBy: { timestamp: 'asc' },
       }),
+      // Employees currently on a Leave of Absence (long leave, distinct from PTO)
+      prisma.leaveOfAbsence.findMany({
+        where: {
+          status: { in: ['ACTIVE', 'EXTENDED'] },
+          startDate: { lte: todayEnd },
+          employee: empFilter,
+        },
+        select: { employeeId: true, type: true, expectedReturn: true, actualReturn: true },
+      }),
+      // Approved leave covering today — catches leaves whose AttendanceLog
+      // writeback is missing so the board never shows them as unmarked.
+      prisma.leaveRequest.findMany({
+        where: {
+          status: 'APPROVED',
+          fromDate: { lte: todayEnd },
+          toDate: { gte: todayStart },
+          employee: empFilter,
+        },
+        select: { employeeId: true },
+      }),
     ])
+    const loaByEmp = new Map(
+      loasToday
+        .filter((l) => (l.actualReturn ?? l.expectedReturn) > todayStart)
+        .map((l) => [l.employeeId, l.type]),
+    )
+    const onApprovedLeave = new Set(leavesToday.map((l) => l.employeeId))
 
     const logMap = new Map(todayLogs.map(l => [l.employeeId, l]))
     const punchesByEmp = new Map<string, { type: string; timestamp: Date; workType: string | null }[]>()
@@ -120,16 +147,36 @@ export async function GET(request: NextRequest) {
       // Derive an effective status, applying the auto-Absent rule for today:
       //   - If explicit log status is set, use it.
       //   - Else if employee has punches, they're PRESENT.
+      //   - Else if on LOA / approved leave, surface that instead of "unmarked".
       //   - Else (no log, no punches): NOT_IN during the workday, ABSENT after EOD.
       //   - Holidays and weekends are excluded from the auto-Absent flip.
+      const loaType = loaByEmp.get(emp.id) ?? null
       let effectiveStatus = log?.status ?? 'NOT_IN'
       if (!log?.status && punches.length === 0) {
-        if (isAfterEOD && !isWeekendToday && !holidayToday) {
+        if (loaType) effectiveStatus = 'LOA'
+        else if (onApprovedLeave.has(emp.id)) effectiveStatus = 'LEAVE'
+        else if (isAfterEOD && !isWeekendToday && !holidayToday) {
           effectiveStatus = 'ABSENT'
         }
       }
 
+      // Late arrival: first clock-in after shift start + grace (per-employee
+      // shift parsed from Employee.timings; falls back to config threshold).
+      const clockInAt = log?.clockIn ?? punches.find((p) => p.type === 'IN')?.timestamp ?? null
+      let lateMinutes = 0
+      if (clockInAt) {
+        const shift = parseShiftStart(emp.timings)
+        const startMins = shift
+          ? shift.hour * 60 + shift.minute + cfg.lateThresholdMinute
+          : cfg.lateThresholdHour * 60 + cfg.lateThresholdMinute
+        const inMins = new Date(clockInAt).getHours() * 60 + new Date(clockInAt).getMinutes()
+        lateMinutes = Math.max(0, inMins - startMins)
+      }
+
       return {
+        isLate: lateMinutes > 0,
+        lateMinutes,
+        loaType,
         employeeId: emp.id,
         employeeCode: emp.employeeCode,
         fullName: emp.fullName,
@@ -149,15 +196,25 @@ export async function GET(request: NextRequest) {
 
     const todayStats = {
       present: allRecords.filter(r => r.status === 'PRESENT' || r.status === 'LATE').length,
-      late: 0, // deprecated â€” no longer surfaced to UI
+      late: allRecords.filter(r => r.isLate).length,
       absent: allRecords.filter(r => r.status === 'ABSENT').length,
       notYetIn: allRecords.filter(r => r.status === 'NOT_IN').length,
       wfh: allRecords.filter(r => r.workType === 'WFH' && r.clockIn).length,
       leave: allRecords.filter(r => r.status === 'LEAVE').length,
+      loa: allRecords.filter(r => r.status === 'LOA').length,
       total: allRecords.length,
     }
 
-    return NextResponse.json({ todayStats, logs: allRecords })
+    return NextResponse.json({
+      todayStats,
+      logs: allRecords,
+      meta: {
+        date: dayKey(todayStart),
+        isWeekend: isWeekendToday,
+        holidayName: holidayToday?.name ?? null,
+        afterEndOfDay: isAfterEOD,
+      },
+    })
   }
 
   const startDate = new Date(year, month - 1, 1)
