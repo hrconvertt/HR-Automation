@@ -2,81 +2,12 @@
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
-import { parseLocalDate, dayKey, isSameDay } from '@/lib/date-utils'
+import { parseLocalDate, dayKey } from '@/lib/date-utils'
+import { countWorkingDays } from '@/lib/leave-days'
 import { getStageOneApprover, isSeniorStaffRole, isCoFounderDesignation } from '@/lib/leave-approver'
 
-/**
- * Count chargeable leave days between two dates (inclusive), applying:
- *   1. Weekend rule           â€” Sat/Sun skipped by default
- *   2. Sandwich rule          â€” if the same request brackets a weekend (covers
- *                               BOTH the preceding Friday AND following Monday),
- *                               the Sat+Sun in between count.
- *   3. Public-holiday rule    â€” days marked as `Holiday(type='PUBLIC')` are
- *                               always free (paid holiday â€” no balance deducted).
- *   4. Half-day flags         â€” firstDayHalf / lastDayHalf each subtract 0.5.
- *
- * Examples (chargeable days):
- *   - Mon â†’ Wed                     â†’ 3
- *   - Mon â†’ Fri (Wed is holiday)    â†’ 4
- *   - Fri only                      â†’ 1
- *   - Fri â†’ Mon  (sandwich)         â†’ 4  (Fri + Sat + Sun + Mon)
- *   - Mon â†’ Tue, firstDayHalf=true  â†’ 1.5
- *   - Mon â†’ Mon, firstDayHalf=true  â†’ 0.5  (single-day half)
- */
-function countWorkingDays(
-  start: Date,
-  end: Date,
-  opts: { firstDayHalf?: boolean; lastDayHalf?: boolean; holidayDates?: Set<string> } = {},
-): number {
-  const { firstDayHalf = false, lastDayHalf = false, holidayDates = new Set<string>() } = opts
-  const s = new Date(start); s.setHours(0, 0, 0, 0)
-  const e = new Date(end); e.setHours(23, 59, 59, 999)
-
-  let count = 0
-  const cur = new Date(s)
-  while (cur <= e) {
-    const day = cur.getDay()
-    const key = dayKey(cur)
-    const isHoliday = holidayDates.has(key)
-    if (isHoliday) {
-      // Public holiday â€” always free, doesn't charge balance
-    } else if (day !== 0 && day !== 6) {
-      count++
-    } else {
-      // Sandwich check
-      const friBefore = new Date(cur)
-      const monAfter = new Date(cur)
-      if (day === 6) {
-        friBefore.setDate(cur.getDate() - 1)
-        monAfter.setDate(cur.getDate() + 2)
-      } else {
-        friBefore.setDate(cur.getDate() - 2)
-        monAfter.setDate(cur.getDate() + 1)
-      }
-      friBefore.setHours(0, 0, 0, 0)
-      monAfter.setHours(0, 0, 0, 0)
-      if (friBefore >= s && monAfter <= e) count++
-    }
-    cur.setDate(cur.getDate() + 1)
-  }
-
-  // Apply half-day reductions. Single-day request with either flag = 0.5 total.
-  // Multi-day with firstDayHalf and/or lastDayHalf each shaves 0.5.
-  if (count > 0) {
-    const sameDay = isSameDay(start, end)
-
-    if (firstDayHalf) count -= 0.5
-    // For a single-day request, lastDayHalf alone (without firstDayHalf) should
-    // still shave 0.5. We only skip the shave to prevent double-shaving the
-    // same single day when BOTH flags are set.
-    if (lastDayHalf && !(sameDay && firstDayHalf)) {
-      count -= 0.5
-    }
-  }
-  return Math.max(0, count)
-}
-
-// (was: isoKey â€” now provided by `dayKey` in @/lib/date-utils)
+// Day-counting math lives in @/lib/leave-days (shared with the preview
+// endpoint so the form preview can never disagree with what's charged).
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -314,17 +245,39 @@ export async function POST(request: NextRequest) {
       }, { status: 400 })
     }
 
-    // Check leave balance
+    // Check leave balance — for the year the leave STARTS in (matches the
+    // year the approve endpoint deducts from), not the submission year.
     const balance = await prisma.leaveBalance.findFirst({
       where: {
         employeeId: empId,
         leaveType,
-        year: new Date().getFullYear(),
+        year: start.getFullYear(),
       },
     })
 
-    if (balance && balance.remaining < totalDays) {
-      return NextResponse.json({ error: `Insufficient ${leaveType} balance. Available: ${balance.remaining} days` }, { status: 400 })
+    // Days already promised in OTHER pending requests of the same type count
+    // against the balance too — otherwise two pending requests could each
+    // pass the check individually but overdraw once both are approved.
+    const otherPending = await prisma.leaveRequest.aggregate({
+      where: {
+        employeeId: empId,
+        leaveType,
+        status: { in: ['PENDING', 'PENDING_HR'] },
+        fromDate: {
+          gte: new Date(start.getFullYear(), 0, 1),
+          lt: new Date(start.getFullYear() + 1, 0, 1),
+        },
+      },
+      _sum: { days: true },
+    })
+    const pendingDays = otherPending._sum.days ?? 0
+
+    if (balance && balance.remaining - pendingDays < totalDays) {
+      return NextResponse.json({
+        error: pendingDays > 0
+          ? `Insufficient ${leaveType} balance. Available: ${balance.remaining} days, of which ${pendingDays} are already tied up in pending requests.`
+          : `Insufficient ${leaveType} balance. Available: ${balance.remaining} days`,
+      }, { status: 400 })
     }
 
     // ── Resolve the stage-1 approver (Co-Founder for seniors, manager

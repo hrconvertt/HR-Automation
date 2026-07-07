@@ -48,11 +48,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Request is no longer pending.' }, { status: 400 })
   }
 
-  // ── Manager guardrails ───────────────────────────────────────────────
-  if (payload.role === 'MANAGER') {
+  // ── Stage-1 guardrails (mirror of the approve route) ──────────────────
+  // Non-HR approvers (MANAGER + EXECUTIVE Co-Founder) may reject only at
+  // PENDING, never their own request, and only if they're the assigned
+  // stage-1 approver (stageOneApproverId; falls back to reportingManager
+  // for legacy rows submitted before the field existed).
+  if (payload.role !== 'HR_ADMIN') {
     if (leaveRequest.status === 'PENDING_HR') {
       return NextResponse.json({
-        error: 'This request is past the manager stage. Only HR can act on it now.',
+        error: 'This request is past the first-stage approval. Only HR can act on it now.',
       }, { status: 400 })
     }
     if (myEmpId && leaveRequest.employee.id === myEmpId) {
@@ -60,9 +64,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         error: 'You cannot reject your own leave. Your leave is reviewed by HR.',
       }, { status: 403 })
     }
-    if (leaveRequest.employee.reportingManagerId !== myEmpId) {
+    const stageOne = leaveRequest.stageOneApproverId ?? leaveRequest.employee.reportingManagerId
+    if (stageOne !== myEmpId) {
       return NextResponse.json({
-        error: 'You can only reject leave for your direct reports.',
+        error: 'Only the assigned approver or HR can reject at stage 1.',
       }, { status: 403 })
     }
   }
