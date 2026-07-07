@@ -21,6 +21,14 @@ interface Props {
   year: number
   totalNet: number
   totalGross: number
+  /** PayrollRun.runType — REGULAR | BONUS | ARREARS | FINAL_SETTLEMENT */
+  runType?: string
+}
+
+const OFF_CYCLE_LABEL: Record<string, string> = {
+  BONUS: 'Off-cycle: Bonus',
+  ARREARS: 'Off-cycle: Arrears',
+  FINAL_SETTLEMENT: 'Off-cycle: Final Settlement',
 }
 
 interface RawPayslip {
@@ -53,20 +61,23 @@ interface RunPayload {
   } | null
 }
 
-export function CeoReviewPanel({ runId, month, year, totalNet, totalGross }: Props) {
+export function CeoReviewPanel({ runId, month, year, totalNet, totalGross, runType }: Props) {
   const [payslips, setPayslips] = useState<RawPayslip[]>([])
   const [status, setStatus] = useState<string>('PENDING_CEO')
   const [loading, setLoading] = useState(true)
 
   const fetchRun = useCallback(async () => {
     setLoading(true)
-    const r = await safeFetch<RunPayload>(`/api/payroll?month=${month}&year=${year}`)
+    // Pass runId explicitly — without it the API prefers the REGULAR run for
+    // the period, so a CEO reviewing an off-cycle run would see (and think
+    // they're approving) the wrong run's payslips.
+    const r = await safeFetch<RunPayload>(`/api/payroll?month=${month}&year=${year}&runId=${runId}`)
     if (r.ok && r.data?.payrollRun) {
       setPayslips(r.data.payrollRun.payslips)
       setStatus(r.data.payrollRun.status)
     }
     setLoading(false)
-  }, [month, year])
+  }, [month, year, runId])
 
   useEffect(() => { fetchRun() }, [fetchRun])
 
@@ -101,6 +112,11 @@ export function CeoReviewPanel({ runId, month, year, totalNet, totalGross }: Pro
               <FileText className="w-5 h-5 text-slate-700" />
               <h3 className="text-base font-bold text-slate-900">
                 Payroll awaiting your review — {MONTHS[month - 1]} {year}
+                {runType && runType !== 'REGULAR' && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-0.5 align-middle">
+                    {OFF_CYCLE_LABEL[runType] ?? runType}
+                  </span>
+                )}
               </h3>
             </div>
             <p className="text-sm text-slate-900 mt-1">

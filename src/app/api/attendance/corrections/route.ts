@@ -91,6 +91,17 @@ export async function POST(request: NextRequest) {
   if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { user } = session
 
+  // Preview mode is read-only: an HR admin previewing as another role must
+  // not create real correction requests while exploring that experience.
+  const previewRole =
+    user.role === 'HR_ADMIN' ? request.cookies.get('hr_preview_role')?.value : undefined
+  if (previewRole && previewRole !== 'HR_ADMIN') {
+    return NextResponse.json(
+      { error: 'Switch back to your HR view to submit a correction request' },
+      { status: 403 },
+    )
+  }
+
   // Self-only: the correction always targets the caller's OWN employee record.
   const myEmpId = user.employee?.id
   if (!myEmpId) {

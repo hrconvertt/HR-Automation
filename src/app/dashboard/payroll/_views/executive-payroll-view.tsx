@@ -14,15 +14,18 @@ async function getExecutivePayrollData() {
   const year = now.getFullYear()
   const currentYear = year
 
-  // Find a payroll run currently awaiting CEO review (any month).
-  const pendingCeoRun = await prisma.payrollRun.findFirst({
+  // ALL runs currently awaiting CEO review (any month) — off-cycle runs share
+  // a month with the REGULAR run, so there can legitimately be more than one.
+  const pendingCeoRuns = await prisma.payrollRun.findMany({
     where: { status: 'PENDING_CEO' },
-    select: { id: true, month: true, year: true, totalNet: true, totalGross: true },
-    orderBy: [{ year: 'desc' }, { month: 'desc' }],
+    select: { id: true, month: true, year: true, totalNet: true, totalGross: true, runType: true },
+    orderBy: [{ year: 'desc' }, { month: 'desc' }, { createdAt: 'asc' }],
   })
 
-  const [currentRun, last12Runs, ytdRuns, headcount, deptPayslips] = await Promise.all([
-    prisma.payrollRun.findFirst({
+  const [currentMonthRuns, last12Runs, ytdRuns, headcount, deptPayslips] = await Promise.all([
+    // Sum across ALL runs in the period (REGULAR + off-cycle) so the "Current
+    // Month Cost" KPI can't land on an arbitrary off-cycle run.
+    prisma.payrollRun.findMany({
       where: { month, year },
       select: { totalGross: true, totalNet: true, totalEOBI: true, totalTax: true },
     }),
@@ -36,6 +39,7 @@ async function getExecutivePayrollData() {
         totalNet: true,
         totalGross: true,
         status: true,
+        runType: true,
       },
     }),
     prisma.payrollRun.findMany({
@@ -68,7 +72,7 @@ async function getExecutivePayrollData() {
   const ytdEobi = ytdRuns.reduce((s, r) => s + r.totalEOBI, 0)
   const ytdTax = ytdRuns.reduce((s, r) => s + r.totalTax, 0)
 
-  const currentMonthCost = currentRun?.totalNet ?? 0
+  const currentMonthCost = currentMonthRuns.reduce((s, r) => s + r.totalNet, 0)
   const avgPerEmployee = headcount > 0 ? currentMonthCost / headcount : 0
 
   // Group by department
@@ -95,8 +99,14 @@ async function getExecutivePayrollData() {
     last12Runs,
     deptCosts,
     maxDept,
-    pendingCeoRun,
+    pendingCeoRuns,
   }
+}
+
+const RUN_TYPE_LABEL: Record<string, string> = {
+  BONUS: 'Bonus',
+  ARREARS: 'Arrears',
+  FINAL_SETTLEMENT: 'Final Settlement',
 }
 
 export async function ExecutivePayrollView() {
@@ -112,16 +122,19 @@ export async function ExecutivePayrollView() {
         </p>
       </div>
 
-      {/* CEO action panel — only shows when a run is awaiting CEO review */}
-      {data.pendingCeoRun && (
+      {/* CEO action panels — one per run awaiting CEO review (a REGULAR run
+          and one or more off-cycle runs can be pending simultaneously) */}
+      {data.pendingCeoRuns.map((run) => (
         <CeoReviewPanel
-          runId={data.pendingCeoRun.id}
-          month={data.pendingCeoRun.month}
-          year={data.pendingCeoRun.year}
-          totalNet={data.pendingCeoRun.totalNet}
-          totalGross={data.pendingCeoRun.totalGross}
+          key={run.id}
+          runId={run.id}
+          month={run.month}
+          year={run.year}
+          totalNet={run.totalNet}
+          totalGross={run.totalGross}
+          runType={run.runType}
         />
-      )}
+      ))}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -176,6 +189,11 @@ export async function ExecutivePayrollView() {
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-900">
                           {monthName(r.month)} {r.year}
+                          {r.runType !== 'REGULAR' && (
+                            <span className="ml-2 text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                              {RUN_TYPE_LABEL[r.runType] ?? r.runType}
+                            </span>
+                          )}
                         </p>
                         <p className="text-xs text-slate-500">
                           Gross: {formatCurrency(r.totalGross)}

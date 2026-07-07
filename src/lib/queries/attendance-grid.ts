@@ -5,10 +5,11 @@
  *
  * Role gating is applied via the caller-supplied effectiveRole + myEmpId
  * (both derived server-side from the verified session, never from input):
- *   HR_ADMIN  — all employees
- *   EXECUTIVE — all employees, no export
- *   MANAGER   — self + direct reports
- *   EMPLOYEE  — self only
+ *   HR_ADMIN       — all employees
+ *   EXECUTIVE      — all employees, no export
+ *   MANAGER / LEAD — self + direct reports
+ *   everyone else  — self only (explicit allowlist; unknown roles never
+ *                    default to full-company visibility)
  */
 import { prisma } from '@/lib/prisma'
 import { dayKey } from '@/lib/date-utils'
@@ -152,11 +153,14 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
   const search = (opts.search ?? '').trim()
 
   const empFilter: Record<string, unknown> = (() => {
-    if (effectiveRole === 'EMPLOYEE' && myEmpId) return { id: myEmpId }
-    if (effectiveRole === 'MANAGER' && myEmpId) {
+    // Full-company visibility is an explicit allowlist — any other role
+    // (FINANCE, future roles) defaults to self-only, never to "everyone".
+    if (effectiveRole === 'HR_ADMIN' || effectiveRole === 'EXECUTIVE') return {}
+    if ((effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') && myEmpId) {
       return { OR: [{ id: myEmpId }, { reportingManagerId: myEmpId }] }
     }
-    return {}
+    if (myEmpId) return { id: myEmpId }
+    return { id: '__none__' }
   })()
 
   // Department + search filters layered on top of role filter

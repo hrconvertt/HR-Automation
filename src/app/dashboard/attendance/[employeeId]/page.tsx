@@ -6,8 +6,8 @@
  *
  * Access control:
  *   HR_ADMIN / EXECUTIVE — any employee
- *   MANAGER              — self + direct reports only
- *   EMPLOYEE             — self only
+ *   MANAGER / LEAD       — self + direct reports only
+ *   everyone else        — self only
  * Enforced via 404 (not 403) to avoid leaking existence of other records.
  */
 
@@ -64,10 +64,12 @@ export default async function EmployeeAttendanceDetailPage({ params }: PageProps
   })
   if (!employee) notFound()
 
-  // Role gate
-  if (effectiveRole === 'EMPLOYEE' && employee.id !== myEmpId) notFound()
-  if (effectiveRole === 'MANAGER' && employee.id !== myEmpId && employee.reportingManagerId !== myEmpId) {
-    notFound()
+  // Role gate — explicit allowlist: HR/Exec any employee, Manager/Lead their
+  // team, everyone else (Employee, Finance, unknown roles) self only.
+  if (effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') {
+    if (employee.id !== myEmpId && employee.reportingManagerId !== myEmpId) notFound()
+  } else if (effectiveRole !== 'HR_ADMIN' && effectiveRole !== 'EXECUTIVE') {
+    if (employee.id !== myEmpId) notFound()
   }
 
   // Fetch logs + approved leaves across the full reporting window
