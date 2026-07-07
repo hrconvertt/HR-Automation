@@ -60,14 +60,20 @@ export async function GET(request: NextRequest) {
   const daysInMonth = new Date(year, month, 0).getDate()
   const today = new Date(); today.setHours(0, 0, 0, 0)
 
-  // Resolve employee scope
-  let employeeFilter: Record<string, unknown> = {}
-  if (effectiveRole === 'EMPLOYEE' && myEmpId) {
-    employeeFilter = { id: myEmpId }
-  } else if (effectiveRole === 'MANAGER' && myEmpId) {
+  // Resolve employee scope. Company-wide visibility is an explicit allowlist
+  // (HR / EXECUTIVE only) — any other role defaults to a narrow scope, never
+  // "everyone". This mirrors /api/attendance so LEAD / FINANCE (and any future
+  // role) can't accidentally pull the whole company's calendar.
+  let employeeFilter: Record<string, unknown>
+  if (effectiveRole === 'HR_ADMIN' || effectiveRole === 'EXECUTIVE') {
+    employeeFilter = {} // company-wide
+  } else if ((effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') && myEmpId) {
     employeeFilter = { OR: [{ id: myEmpId }, { reportingManagerId: myEmpId }] }
+  } else if (myEmpId) {
+    employeeFilter = { id: myEmpId } // EMPLOYEE / FINANCE / fallback — self only
+  } else {
+    employeeFilter = { id: '__none__' }
   }
-  // HR / EXECUTIVE â€” no filter
 
   const [employees, logs, leaves, holidays] = await Promise.all([
     prisma.employee.findMany({

@@ -454,16 +454,33 @@ export async function POST(request: NextRequest) {
         },
       })
 
+      // Look up any existing day summary so we can decide whether clocking in
+      // is allowed to change the status. A day already marked as leave/holiday
+      // must NOT be silently flipped to PRESENT by a punch — that overwrite is
+      // exactly the discrepancy the /dashboard/time/conflicts list surfaces.
+      const existingLog = await prisma.attendanceLog.findUnique({
+        where: { employeeId_date: { employeeId: empId, date: logDate } },
+        select: { status: true },
+      })
+      // Statuses that represent an approved non-working day. If the cell is one
+      // of these, we still log the punch (step 1 above) so the conflict is
+      // visible, but we preserve the status — resolving it goes through the
+      // correction / conflicts flow, not a silent overwrite.
+      const PROTECTED_STATUSES = ['LEAVE', 'HALF_DAY', 'HOLIDAY', 'LOA', 'WEEKEND']
+      const isProtected = !!existingLog && PROTECTED_STATUSES.includes(existingLog.status)
+
       // 2) Upsert the day summary row. On RESUME, keep original clockIn + clear clockOut.
       const log = await prisma.attendanceLog.upsert({
         where: { employeeId_date: { employeeId: empId, date: logDate } },
         update: {
           // Re-opening the day after a break â€” clockOut becomes null again so UI shows "clocked in"
           clockOut: null,
-          // Self-heal: if the day was marked ABSENT (e.g. HR manual entry or
-          // auto-absent flip after EOD) but the employee actually clocked back
-          // in, flip status back to PRESENT. Don't override LEAVE / HOLIDAY.
-          status: 'PRESENT',
+          // Self-heal: if the day was marked ABSENT / NOT_IN (auto-absent flip
+          // after EOD, or a stale manual entry) but the employee actually
+          // clocked in, flip status back to PRESENT. If the day is a protected
+          // leave/holiday cell, KEEP the existing status — the punch is still
+          // recorded and shows up as a conflict for HR to reconcile.
+          ...(isProtected ? {} : { status: 'PRESENT' }),
           // Keep original first-IN of the day in clockIn; just update fields on resume
           workType,
           clockOutIp: null,

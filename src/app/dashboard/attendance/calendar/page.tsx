@@ -66,13 +66,16 @@ export default async function TeamAbsenceCalendarPage({ searchParams }: PageProp
   const effectiveRole = previewRole ?? user.role
   const myEmpId = user.employee?.id ?? null
 
-  // Role scope — presence data only, no compensation involved.
+  // Role scope — presence data only, no compensation involved. Company-wide is
+  // an explicit allowlist (HR / EXECUTIVE); MANAGER / LEAD get their team; every
+  // other role (EMPLOYEE, FINANCE, future roles) is self-only. Never fall
+  // through to department-wide visibility — that leaked co-workers' attendance
+  // to FINANCE and anyone else without an explicit branch.
   const empFilter: Record<string, unknown> = (() => {
     if (effectiveRole === 'HR_ADMIN' || effectiveRole === 'EXECUTIVE') return {}
     if ((effectiveRole === 'MANAGER' || effectiveRole === 'LEAD') && myEmpId) {
       return { OR: [{ id: myEmpId }, { reportingManagerId: myEmpId }] }
     }
-    if (user.employee?.departmentId) return { departmentId: user.employee.departmentId }
     if (myEmpId) return { id: myEmpId }
     return { id: '__none__' }
   })()
