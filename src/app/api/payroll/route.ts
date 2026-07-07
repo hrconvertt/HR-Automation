@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth'
 import { calculatePayslip } from '@/lib/payroll'
 import { getPayrollConfig } from '@/lib/config'
 import { dayKey } from '@/lib/date-utils'
-import { getPayrollRun } from '@/lib/queries/payroll'
+import { getPayrollRun, listPayrollRuns } from '@/lib/queries/payroll'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -39,12 +39,18 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const month = parseInt(searchParams.get('month') ?? String(new Date().getMonth() + 1))
   const year = parseInt(searchParams.get('year') ?? String(new Date().getFullYear()))
+  const runId = searchParams.get('runId')
 
   // Query + role-scoped salary visibility live in src/lib/queries/payroll.ts
   // (shared with the /dashboard/payroll server component).
-  const mapped = await getPayrollRun({ effectiveRole, employeeId, month, year })
+  const mapped = await getPayrollRun({ effectiveRole, employeeId, month, year, runId })
 
-  return NextResponse.json({ payrollRun: mapped })
+  // Run switcher (REGULAR + off-cycle) — totals are salary data, so only
+  // roles with full payroll visibility get the list.
+  const canSeeAllRuns = ['HR_ADMIN', 'FINANCE', 'EXECUTIVE'].includes(effectiveRole)
+  const runs = canSeeAllRuns ? await listPayrollRuns(month, year) : undefined
+
+  return NextResponse.json({ payrollRun: mapped, runs })
 }
 
 export async function POST(request: NextRequest) {
@@ -73,7 +79,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'month and year are required' }, { status: 400 })
     }
 
-    const existing = await prisma.payrollRun.findFirst({ where: { month, year } })
+    const existing = await prisma.payrollRun.findFirst({ where: { month, year, runType: 'REGULAR' } })
     if (existing) {
       return NextResponse.json({ error: 'Payroll for this month already exists' }, { status: 409 })
     }

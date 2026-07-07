@@ -14,10 +14,32 @@ export interface GetPayrollRunOpts {
   employeeId: string | null
   month: number
   year: number
+  /**
+   * Optional: select a specific run (off-cycle runs share month/year with the
+   * REGULAR run). When omitted, the REGULAR run is preferred.
+   */
+  runId?: string | null
+}
+
+/**
+ * Lightweight list of ALL runs for a month (REGULAR + off-cycle) — used by
+ * the HR/Exec/Finance UI to render a run switcher. No payslip amounts.
+ */
+export async function listPayrollRuns(month: number, year: number) {
+  return prisma.payrollRun.findMany({
+    where: { month, year },
+    select: {
+      id: true, month: true, year: true, status: true, runType: true,
+      totalGross: true, totalNet: true, createdAt: true,
+      _count: { select: { payslips: true } },
+    },
+    // REGULAR first, then off-cycle in creation order
+    orderBy: [{ createdAt: 'asc' }],
+  })
 }
 
 export async function getPayrollRun(opts: GetPayrollRunOpts) {
-  const { effectiveRole, employeeId, month, year } = opts
+  const { effectiveRole, employeeId, month, year, runId } = opts
 
   // Scope payslip query by role.
   // SALARY VISIBILITY RULE (locked down): Manager + Lead do NOT see team
@@ -35,7 +57,7 @@ export async function getPayrollRun(opts: GetPayrollRunOpts) {
   // HR_ADMIN, EXECUTIVE, FINANCE: no extra filter (full payroll)
 
   const payrollRun = await prisma.payrollRun.findFirst({
-    where: { month, year },
+    where: runId ? { id: runId, month, year } : { month, year, runType: 'REGULAR' },
     include: {
       payslips: {
         where: payslipWhere,
@@ -111,12 +133,23 @@ export async function getPayrollAnomalies(runId: string): Promise<PayrollAnomali
   })
   if (!run) return null
 
+  // Off-cycle runs have no meaningful month-over-month comparison.
+  if (run.runType !== 'REGULAR') {
+    return {
+      run: { id: run.id, month: run.month, year: run.year, status: run.status },
+      anomalies: [],
+      clean: run.payslips.length,
+      total: run.payslips.length,
+      priorMonth: null,
+    }
+  }
+
   // Compute prior month range for comparison
   const priorMonth = run.month === 1 ? 12 : run.month - 1
   const priorYear  = run.month === 1 ? run.year - 1 : run.year
 
   const priorRun = await prisma.payrollRun.findFirst({
-    where: { month: priorMonth, year: priorYear },
+    where: { month: priorMonth, year: priorYear, runType: 'REGULAR' },
     include: { payslips: true },
   })
   const priorByEmp = new Map(

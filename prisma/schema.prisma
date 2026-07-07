@@ -268,10 +268,73 @@ model Employee {
   // Rehire / boomerang
   rehireDate          DateTime?
 
+  jobChanges          JobChange[]
+  leavesOfAbsence     LeaveOfAbsence[]
+
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
   @@map("employees")
+}
+
+// ─── JOB CHANGE (Workday's core transaction) ─────────────────────────────────
+// Promote / transfer / manager change / designation change with an effective
+// date and an approval flow:
+//   PENDING_APPROVAL — requested (HR or a manager for their own reports)
+//   APPROVED         — HR signed off; "Enact" unlocks once effectiveDate ≤ today
+//   ENACTED          — applied to the Employee row + RoleHistory/ManagerHistory
+//   REJECTED         — HR declined
+//   CANCELLED        — withdrawn by the requester / HR while pending
+model JobChange {
+  id               String   @id @default(cuid())
+  employeeId       String
+  employee         Employee @relation(fields: [employeeId], references: [id])
+  changeType       String   // PROMOTION | TRANSFER | MANAGER_CHANGE | DESIGNATION_CHANGE
+  effectiveDate    DateTime
+  // Before/after snapshot — from* captured at request time, to* is the target.
+  fromDesignation  String?
+  toDesignation    String?
+  fromDepartmentId String?
+  toDepartmentId   String?
+  fromManagerId    String?
+  toManagerId      String?
+  reason           String?
+  status           String   @default("PENDING_APPROVAL") // PENDING_APPROVAL | APPROVED | ENACTED | REJECTED | CANCELLED
+  requestedById    String   // User.id of requester (HR or manager)
+  approvedById     String?  // User.id of the HR admin who approved/rejected
+  decisionNote     String?  // HR's approval / rejection comment
+  enactedAt        DateTime?
+  enactedById      String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([employeeId, status])
+  @@index([status, effectiveDate])
+  @@map("job_changes")
+}
+
+// ─── LEAVE OF ABSENCE (long leave — distinct from PTO) ────────────────────────
+// HR-created. While ACTIVE the employee is flagged "On Leave of Absence" on
+// their profile and shown as LOA in the attendance grid; payroll generation
+// flags them for HR review (unpaid LOA days pro-rate the payslip).
+model LeaveOfAbsence {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id])
+  type           String   // MEDICAL | MATERNITY | PATERNITY | SABBATICAL | UNPAID_PERSONAL
+  startDate      DateTime
+  expectedReturn DateTime
+  actualReturn   DateTime?
+  paid           Boolean  @default(false)
+  notes          String?
+  status         String   @default("ACTIVE") // ACTIVE | RETURNED | EXTENDED
+  createdById    String   // User.id of HR admin
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([employeeId, status])
+  @@index([status, expectedReturn])
+  @@map("leaves_of_absence")
 }
 
 // ─── DOCUMENTS & LETTERS ──────────────────────────────────────────────────────
@@ -570,6 +633,11 @@ model PayrollRun {
   // completed/historical (effectively PAID) by the new UI. Migrate via
   // scripts/migrate-payroll-status.js.
   status        String    @default("DRAFT")
+  // Off-cycle runs (Workday "on-demand payments"):
+  //   REGULAR | BONUS | ARREARS | FINAL_SETTLEMENT
+  // Only ONE REGULAR run per month/year (enforced in code — the old
+  // @@unique([month, year]) was relaxed so multiple off-cycle runs can coexist).
+  runType       String    @default("REGULAR")
   totalGross    Float     @default(0)
   totalNet      Float     @default(0)
   totalEOBI     Float     @default(0)
@@ -605,7 +673,7 @@ model PayrollRun {
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 
-  @@unique([month, year])
+  @@index([month, year])
   @@map("payroll_runs")
 }
 
@@ -681,7 +749,12 @@ model Payslip {
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 
-  @@unique([employeeId, month, year])
+  // Relaxed from @@unique([employeeId, month, year]) so off-cycle runs
+  // (BONUS / ARREARS / FINAL_SETTLEMENT) can issue a second payslip for the
+  // same employee+month. payrollRunId is nullable (NULLs are distinct in PG);
+  // orphan/imported payslips are deduped in code before linking.
+  @@unique([employeeId, month, year, payrollRunId])
+  @@index([employeeId, year])
   @@map("payslips")
 }
 

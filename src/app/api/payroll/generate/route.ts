@@ -47,14 +47,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'month and year are required' }, { status: 400 })
     }
 
-    // There may be MORE than one run for a period (older duplicates from
-    // earlier code paths), and — critically — Payslip has a global unique
-    // constraint on (employeeId, month, year), so ANY leftover payslip for
-    // this month blocks a fresh generate even if its parent run was dropped.
-    // So we look at every run for the period, refuse if any is PAID, and
-    // otherwise wipe ALL runs + ALL payslips for the month before rebuilding.
+    // "Generate" only ever creates/replaces the ONE REGULAR run for a period.
+    // Off-cycle runs (BONUS / ARREARS / FINAL_SETTLEMENT) coexist for the same
+    // month and are never touched here. There can also be historical duplicate
+    // REGULAR runs from older code paths — handle all of them.
     const existingRuns = await prisma.payrollRun.findMany({
-      where: { month, year },
+      where: { month, year, runType: 'REGULAR' },
       select: { id: true, status: true },
     })
     if (existingRuns.length > 0) {
@@ -80,14 +78,14 @@ export async function POST(request: NextRequest) {
       }
       const runIds = existingRuns.map((r) => r.id)
       await prisma.payrollRunApproval.deleteMany({ where: { runId: { in: runIds } } }).catch(() => {})
-      // Delete payslips by (month, year) — catches orphans not linked to any
-      // of the runs we found, which are what actually trip the unique index.
-      await prisma.payslip.deleteMany({ where: { month, year } })
+      await prisma.payslip.deleteMany({ where: { payrollRunId: { in: runIds } } })
       await prisma.payrollRun.deleteMany({ where: { id: { in: runIds } } })
     }
-    // Belt-and-braces: clear any stray payslips for this month even when no
-    // run row was found (the source of the observed unique-constraint crash).
-    await prisma.payslip.deleteMany({ where: { month, year } })
+    // Belt-and-braces: clear ORPHAN payslips for this month (payrollRunId = null)
+    // — leftovers from the salary-slip import that trip Payslip's global unique
+    // index (employeeId, month, year). We must NOT touch payslips that belong to
+    // off-cycle runs, so scope strictly to run-less orphans.
+    await prisma.payslip.deleteMany({ where: { month, year, payrollRunId: null } })
 
     // ─── Resignation filter ─────────────────────────────────────────
     const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0)
@@ -303,6 +301,7 @@ export async function POST(request: NextRequest) {
         month,
         year,
         status: 'DRAFT',
+        runType: 'REGULAR',
         totalGross,
         totalNet,
         totalEOBI,

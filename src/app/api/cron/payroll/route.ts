@@ -23,12 +23,16 @@ export async function POST(req: NextRequest) {
   const month = now.getMonth() + 1
   const year = now.getFullYear()
 
-  // Create payroll run
-  const run = await prisma.payrollRun.upsert({
-    where: { month_year: { month, year } },
-    create: { month, year, status: 'DRAFT' },
-    update: {},
-  })
+  // Create (or reuse) the REGULAR payroll run for this month.
+  // month/year is no longer a unique key (off-cycle runs may coexist), so
+  // find-or-create scoped to runType REGULAR.
+  const run =
+    (await prisma.payrollRun.findFirst({
+      where: { month, year, runType: 'REGULAR' },
+    })) ??
+    (await prisma.payrollRun.create({
+      data: { month, year, status: 'DRAFT', runType: 'REGULAR' },
+    }))
 
   // Get all active employees with salary
   const employees = await prisma.employee.findMany({
@@ -83,7 +87,11 @@ export async function POST(req: NextRequest) {
     const netSalary = grossSalary - eobi - incomeTax
 
     await prisma.payslip.upsert({
-      where: { employeeId_month_year: { employeeId: emp.id, month, year } },
+      where: {
+        employeeId_month_year_payrollRunId: {
+          employeeId: emp.id, month, year, payrollRunId: run.id,
+        },
+      },
       create: {
         employeeId: emp.id,
         payrollRunId: run.id,
