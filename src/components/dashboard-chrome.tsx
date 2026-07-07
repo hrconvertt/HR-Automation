@@ -100,6 +100,8 @@ const FOCUS_PATHS = new Set([
   '/dashboard/settings/daily-logging',
   '/dashboard/time/me',
   '/dashboard/time/everyone',
+  '/dashboard/time/approvals',
+  '/dashboard/time/conflicts',
   '/dashboard/attendance/calendar',
   '/dashboard/attendance/corrections',
 ])
@@ -374,6 +376,18 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
           label: 'Everyone',
           icon: Users,
           roles: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'],
+        },
+        {
+          href: '/dashboard/time/approvals',
+          label: 'Approvals',
+          icon: Inbox,
+          roles: ['HR_ADMIN', 'MANAGER'],
+        },
+        {
+          href: '/dashboard/time/conflicts',
+          label: 'Conflicts',
+          icon: ShieldAlert,
+          roles: ['HR_ADMIN'],
         },
       ],
     },
