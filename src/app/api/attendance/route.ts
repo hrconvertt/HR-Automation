@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { getPayrollConfig } from '@/lib/config'
 import { dayKey } from '@/lib/date-utils'
-import { parseShiftStart } from '@/lib/queries/attendance-grid'
+import { parseShiftStart, buildAttendanceGrid, type GridPayload } from '@/lib/queries/attendance-grid'
 import {
   scoreClockIn,
   ensureDeviceRecord,
@@ -251,87 +251,49 @@ export async function GET(request: NextRequest) {
   }
 
   if (isSummary) {
-    const employees = await prisma.employee.findMany({
-      where: { status: 'ACTIVE', ...empFilter },
-      select: { id: true, employeeCode: true, fullName: true },
-      orderBy: { fullName: 'asc' },
+    // Derive from the SAME builder the attendance grid / CSV use so the
+    // Monthly Report can never disagree with the grid. (Replaces a bespoke
+    // counting path that inferred "auto-absent" days differently and skipped
+    // half-days entirely.) Present already includes LATE-status logs, so the
+    // separate `late` bucket is retired (kept as 0 for response-shape compat).
+    const grid = (await buildAttendanceGrid({
+      effectiveRole,
+      myEmpId,
+      month: `${year}-${String(month).padStart(2, '0')}`,
+    })) as GridPayload
+
+    const otLogs = await prisma.attendanceLog.findMany({
+      where: {
+        date: { gte: startDate, lte: endDate },
+        overtimeHours: { gt: 0 },
+        employee: empFilter,
+        ...(employeeId ? { employeeId } : {}),
+      },
+      select: { employeeId: true, overtimeHours: true, overtimeApproved: true },
     })
-
-    const [logs, holidays, leaveRequests] = await Promise.all([
-      prisma.attendanceLog.findMany({
-        where: {
-          date: { gte: startDate, lte: endDate },
-          employee: empFilter,
-          ...(employeeId ? { employeeId } : {}),
-        },
-      }),
-      prisma.holiday.findMany({
-        where: { type: 'PUBLIC', date: { gte: startDate, lte: endDate } },
-        select: { date: true },
-      }),
-      prisma.leaveRequest.findMany({
-        where: {
-          status: 'APPROVED',
-          fromDate: { lte: endDate },
-          toDate: { gte: startDate },
-          employee: empFilter,
-        },
-        select: { employeeId: true, fromDate: true, toDate: true },
-      }),
-    ])
-
-    const holidayKeys = new Set(holidays.map((h) => dayKey(h.date)))
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-
-    // Walk all weekdays in the period (up to yesterday â€” today doesn't auto-absent)
-    const weekdaysInPeriod: Date[] = []
-    {
-      const cur = new Date(startDate); cur.setHours(0,0,0,0)
-      while (cur <= endDate && cur < today) {
-        const d = cur.getDay()
-        if (d !== 0 && d !== 6 && !holidayKeys.has(dayKey(cur))) {
-          weekdaysInPeriod.push(new Date(cur))
-        }
-        cur.setDate(cur.getDate() + 1)
-      }
+    const ot = new Map<string, { total: number; approved: number }>()
+    for (const l of otLogs) {
+      const cur = ot.get(l.employeeId) ?? { total: 0, approved: 0 }
+      cur.total += l.overtimeHours
+      if (l.overtimeApproved) cur.approved += l.overtimeHours
+      ot.set(l.employeeId, cur)
     }
 
-    const summaryData = employees.map((emp) => {
-      const empLogs = logs.filter((l) => l.employeeId === emp.id)
-      const presentDays = new Set(
-        empLogs.filter((l) => l.status === 'PRESENT' || l.status === 'LATE').map((l) => dayKey(l.date)),
-      )
-      const explicitAbsentDays = new Set(
-        empLogs.filter((l) => l.status === 'ABSENT').map((l) => dayKey(l.date)),
-      )
-      // Build approved-leave date set for this emp
-      const leaveDays = new Set<string>()
-      for (const lv of leaveRequests.filter((l) => l.employeeId === emp.id)) {
-        const cur = new Date(lv.fromDate); cur.setHours(0,0,0,0)
-        const end = new Date(lv.toDate); end.setHours(0,0,0,0)
-        while (cur <= end) { leaveDays.add(dayKey(cur)); cur.setDate(cur.getDate() + 1) }
-      }
-      // Auto-absent = past weekday with no log AND not on leave
-      let autoAbsent = 0
-      for (const wd of weekdaysInPeriod) {
-        const k = dayKey(wd)
-        if (presentDays.has(k) || explicitAbsentDays.has(k) || leaveDays.has(k)) continue
-        autoAbsent++
-      }
-      const totalOT = empLogs.reduce((sum, l) => sum + (l.overtimeHours ?? 0), 0)
-      const approvedOT = empLogs.filter((l) => l.overtimeApproved).reduce((sum, l) => sum + (l.overtimeHours ?? 0), 0)
+    const rows = employeeId ? grid.employees.filter((e) => e.id === employeeId) : grid.employees
+    const summaryData = rows.map((e) => {
+      const o = ot.get(e.id) ?? { total: 0, approved: 0 }
       return {
-        employeeId: emp.id,
-        employeeCode: emp.employeeCode,
-        fullName: emp.fullName,
-        present: empLogs.filter((l) => l.status === 'PRESENT').length,
-        // Combined explicit + inferred absent so the Monthly Report aligns with the Calendar
-        absent: explicitAbsentDays.size + autoAbsent,
-        late: empLogs.filter((l) => l.status === 'LATE').length,
-        leave: empLogs.filter((l) => l.status === 'LEAVE').length,
-        totalOvertimeHours: totalOT,
-        approvedOvertimeHours: approvedOT,
-        pendingOvertimeHours: totalOT - approvedOT,
+        employeeId: e.id,
+        employeeCode: e.employeeCode,
+        fullName: e.fullName,
+        present: e.totals.present,
+        absent: e.totals.absent,
+        late: 0, // LATE-status days are Present; late-arrival tracking lives in the grid views
+        leave: e.totals.leave,
+        halfDay: e.totals.hd,
+        totalOvertimeHours: o.total,
+        approvedOvertimeHours: o.approved,
+        pendingOvertimeHours: o.total - o.approved,
       }
     })
 

@@ -12,11 +12,13 @@
  *   H   half day              split fill (left half charcoal, right half white)
  *   A   absent / blank        muted dash
  *   WE  weekend               diagonal stripe pattern
+ *   HO  public holiday        dotted outline, muted label
+ *   LOA leave of absence      solid mid-grey block
  */
 
 import { ReactElement } from 'react'
 
-export type Status = 'P' | 'L' | 'WFH' | 'H' | 'A' | 'WE'
+export type Status = 'P' | 'L' | 'WFH' | 'H' | 'A' | 'WE' | 'HO' | 'LOA'
 
 interface BadgeStyle {
   bg: string
@@ -39,6 +41,8 @@ const STATUS_STYLES: Record<Status, BadgeStyle> = {
          pattern: 'bg-[linear-gradient(to_right,#0A0A0A_50%,#FFFFFF_50%)]' },
   A:   { bg: 'bg-slate-100',    text: 'text-slate-400',   border: 'border border-slate-200', label: '—',   title: 'Absent / No Record', weight: 'font-medium' },
   WE:  { bg: 'bg-white',        text: 'text-slate-400',   border: 'border border-slate-100', label: '',    title: 'Weekend' },
+  HO:  { bg: 'bg-white',        text: 'text-slate-500',   border: 'border border-dotted border-slate-400', label: 'HOL', title: 'Public Holiday', weight: 'font-semibold' },
+  LOA: { bg: 'bg-slate-500',    text: 'text-white',       border: 'border border-slate-500', label: 'LOA', title: 'Leave of Absence', weight: 'font-semibold' },
 }
 
 interface StatusBadgeProps {
@@ -95,6 +99,8 @@ export function StatusLegend(): ReactElement {
     { status: 'H', label: 'Half Day' },
     { status: 'A', label: 'Absent' },
     { status: 'WE', label: 'Weekend' },
+    { status: 'HO', label: 'Holiday' },
+    { status: 'LOA', label: 'Leave of Absence' },
   ]
   return (
     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-600">

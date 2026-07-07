@@ -15,7 +15,7 @@ import { StatusBadge, StatusLegend, type Status } from '@/components/attendance/
 import { getInitials } from '@/lib/utils'
 import { TodayBoard } from './today-board'
 
-interface DayCell { day: number; status: Status; isWeekend: boolean }
+interface DayCell { day: number; status: Status; isWeekend: boolean; preJoin?: boolean }
 interface GridEmployee {
   id: string
   fullName: string
@@ -23,7 +23,7 @@ interface GridEmployee {
   department: string
   photoUrl: string | null
   days: DayCell[]
-  totals: { present: number; leave: number; wfh: number; hd: number; absent: number }
+  totals: { present: number; leave: number; wfh: number; hd: number; absent: number; holiday: number }
 }
 interface GridResponse {
   mode: 'grid'
@@ -404,11 +404,15 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                 </td>
                 {emp.days.map((d) => {
                   const iso = `${year}-${String(month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
-                  const isFuture = !d.isWeekend && iso > today
+                  const isFuture = iso > today
+                  // Blank dot: unmarked future days and pre-joining days. A
+                  // future day WITH data (e.g. approved upcoming leave) still
+                  // shows its status so HR can see who'll be out.
+                  const renderBlank = (isFuture && d.status === 'A') || !!d.preJoin
                   const cellKey = `${emp.id}|${d.day}`
                   const flashing = flashKey === cellKey
-                  // HR can edit any non-weekend, non-future cell
-                  const isEditable = canEdit && !d.isWeekend && !isFuture
+                  // HR can edit any non-weekend, non-future, post-joining cell
+                  const isEditable = canEdit && !d.isWeekend && !isFuture && !d.preJoin
                   return (
                     <td
                       key={d.day}
@@ -425,7 +429,7 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                       }`}
                       title={isEditable ? 'Click to edit (HR only)' : undefined}
                     >
-                      <StatusBadge status={d.status} future={isFuture} />
+                      <StatusBadge status={d.status} future={renderBlank} />
                     </td>
                   )
                 })}

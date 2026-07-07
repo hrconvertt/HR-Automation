@@ -1,7 +1,21 @@
 /**
- * Shared attendance grid/summary builder used by both:
+ * Shared attendance grid/summary builder used by:
  *   - GET /api/attendance/grid (client refetches on month/filter change)
  *   - /dashboard/attendance server component (initial render)
+ *   - /dashboard/attendance/[employeeId] detail page (per-employee months)
+ *   - GET /api/attendance?summary=true (legacy monthly report shape)
+ *   - buildAttendanceMonthCsv (HR export)
+ *
+ * ALL surfaces derive their per-day status + totals from the SAME two
+ * functions here — deriveDayStatus() and computeEmployeeMonth() — so no view
+ * can drift from another. Counting rules (single source of truth):
+ *   P    counts in Present
+ *   WFH  counts in Present AND WFH
+ *   L    counts in Leave only
+ *   H    counts in Half Day ONLY — half days never inflate the Leave column
+ *   A    counts in Absent (weekdays only; per policy there should be none)
+ *   WE / HO (public holiday) / LOA count in no attendance column
+ *   Days before the employee's joiningDate and future days count nowhere.
  *
  * Role gating is applied via the caller-supplied effectiveRole + myEmpId
  * (both derived server-side from the verified session, never from input):
@@ -15,7 +29,7 @@ import { prisma } from '@/lib/prisma'
 import { dayKey } from '@/lib/date-utils'
 import { getPayrollConfig } from '@/lib/config'
 
-export type CellStatus = 'P' | 'WFH' | 'L' | 'H' | 'A' | 'WE'
+export type CellStatus = 'P' | 'WFH' | 'L' | 'H' | 'A' | 'WE' | 'HO' | 'LOA'
 
 // ── Late-arrival tracking (HR-only) ─────────────────────────────────────────
 // Employee.timings stores the shift like "10:00 AM – 7:00 PM". A clock-in is
@@ -36,7 +50,7 @@ export function parseShiftStart(timings: string | null | undefined): { hour: num
   return { hour, minute }
 }
 
-function isLateClockIn(
+export function isLateClockIn(
   clockIn: Date,
   timings: string | null | undefined,
   cfg: { lateThresholdHour: number; lateThresholdMinute: number },
@@ -50,16 +64,21 @@ function isLateClockIn(
   return clockMins > cfg.lateThresholdHour * 60 + cfg.lateThresholdMinute
 }
 
-export const REPORTING_MONTHS: { month: number; year: number }[] = [
-  { month: 11, year: 2025 },
-  { month: 12, year: 2025 },
-  { month: 1, year: 2026 },
-  { month: 2, year: 2026 },
-  { month: 3, year: 2026 },
-  { month: 4, year: 2026 },
-  { month: 5, year: 2026 },
-  { month: 6, year: 2026 },
-]
+// ── Reporting window ─────────────────────────────────────────────────────────
+// Nov 2025 (first tracked month) through the CURRENT month — computed, never
+// hardcoded, so the month picker always includes the month HR is living in.
+export function reportingMonths(): { month: number; year: number }[] {
+  const list: { month: number; year: number }[] = []
+  const now = new Date()
+  let y = 2025
+  let m = 11
+  while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+    list.push({ month: m, year: y })
+    m++
+    if (m > 12) { m = 1; y++ }
+  }
+  return list
+}
 
 export function parseMonth(monthStr: string | null): { year: number; month: number } {
   if (monthStr && /^\d{4}-\d{2}$/.test(monthStr)) {
@@ -70,24 +89,240 @@ export function parseMonth(monthStr: string | null): { year: number; month: numb
   return { year: today.getFullYear(), month: today.getMonth() + 1 }
 }
 
-function deriveStatus(log: { status: string; workType: string } | undefined, isWeekend: boolean, isLeaveDay: boolean, isHalfDay: boolean): CellStatus {
-  // Check the actual logged status FIRST — if the employee was marked PRESENT
-  // on a Saturday (e.g. weekend on-call work), show "P", not "WE".
+// ── Shared per-day derivation + counting ────────────────────────────────────
+
+export interface DayContext {
+  log?: { status: string; workType: string }
+  isWeekend: boolean
+  isHoliday: boolean
+  onLOA: boolean
+  onLeave: boolean
+  halfDay: boolean
+}
+
+/**
+ * Single source of truth for what one day cell shows.
+ * Explicit log wins (a PRESENT log on a Saturday shows "P", weekend on-call);
+ * then weekend / public holiday / LOA / approved leave; else A (unmarked).
+ */
+export function deriveDayStatus(ctx: DayContext): CellStatus {
+  const { log } = ctx
   if (log) {
-    if (log.status === 'LEAVE') return isHalfDay ? 'H' : 'L'
+    if (log.status === 'LEAVE') return ctx.halfDay ? 'H' : 'L'
     if (log.status === 'HALF_DAY') return 'H'
     if (log.status === 'PRESENT' || log.status === 'LATE') {
       return log.workType === 'WFH' ? 'WFH' : 'P'
     }
     if (log.status === 'WEEKEND') return 'WE'
-    if (log.status === 'HOLIDAY') return 'WE'
+    if (log.status === 'HOLIDAY') return 'HO'
     if (log.status === 'ABSENT') return 'A'
   }
-  // No explicit log for this day — fall back to weekend / leave / absent.
-  if (isWeekend) return 'WE'
-  if (isLeaveDay) return isHalfDay ? 'H' : 'L'
+  if (ctx.isWeekend) return 'WE'
+  if (ctx.isHoliday) return 'HO'
+  if (ctx.onLOA) return 'LOA'
+  if (ctx.onLeave) return ctx.halfDay ? 'H' : 'L'
   return 'A'
 }
+
+export interface AttendanceTotals {
+  present: number
+  leave: number
+  wfh: number
+  hd: number
+  absent: number
+  /** Public-holiday days in the period (informational; not an attendance count). */
+  holiday: number
+}
+
+export function emptyTotals(): AttendanceTotals {
+  return { present: 0, leave: 0, wfh: 0, hd: 0, absent: 0, holiday: 0 }
+}
+
+/** Apply one counted day to the running totals. HD counts ONLY in hd. */
+export function tallyStatus(status: CellStatus, t: AttendanceTotals): void {
+  if (status === 'P') t.present++
+  else if (status === 'WFH') { t.present++; t.wfh++ }
+  else if (status === 'L') t.leave++
+  else if (status === 'H') t.hd++
+  else if (status === 'A') t.absent++
+  else if (status === 'HO') t.holiday++
+  // WE / LOA count in no column.
+}
+
+export interface ComputedDay {
+  day: number
+  iso: string
+  status: CellStatus
+  isWeekend: boolean
+  isFuture: boolean
+  /** Day precedes the employee's joiningDate — rendered blank, never counted. */
+  preJoin: boolean
+}
+
+export interface MonthComputeCtx {
+  year: number
+  month: number
+  /** Local-midnight "today" — future days render blank and never count. */
+  today: Date
+  joiningDate?: Date | null
+  getLog(iso: string): { status: string; workType: string } | undefined
+  /** Approved-leave lookup: undefined = not on leave; boolean = halfDay flag. */
+  getLeaveHalf(iso: string): boolean | undefined
+  isHoliday(iso: string): boolean
+  onLOA(iso: string): boolean
+}
+
+/**
+ * Walk one calendar month for one employee. Used by grid mode, summary mode,
+ * the CSV export and the employee detail page so every surface counts alike.
+ */
+export function computeEmployeeMonth(ctx: MonthComputeCtx): { days: ComputedDay[]; totals: AttendanceTotals } {
+  const { year, month } = ctx
+  const daysInMonth = new Date(year, month, 0).getDate()
+  const joinDay = ctx.joiningDate ? new Date(ctx.joiningDate) : null
+  if (joinDay) joinDay.setHours(0, 0, 0, 0)
+
+  const totals = emptyTotals()
+  const days: ComputedDay[] = []
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dt = new Date(year, month - 1, d)
+    const dow = dt.getDay()
+    const isWeekend = dow === 0 || dow === 6
+    const iso = dayKey(dt)
+    const isFuture = dt > ctx.today
+    const log = ctx.getLog(iso)
+    // A day before joining with an explicit log still renders/counts (data
+    // always wins); otherwise pre-join days are blank and skipped.
+    const preJoin = !log && joinDay != null && dt < joinDay
+    const leaveHalf = ctx.getLeaveHalf(iso)
+    const status: CellStatus = isFuture && !log
+      ? 'A' // future — client renders as blank dot
+      : deriveDayStatus({
+          log,
+          isWeekend,
+          isHoliday: ctx.isHoliday(iso),
+          onLOA: ctx.onLOA(iso),
+          onLeave: leaveHalf !== undefined,
+          halfDay: leaveHalf === true,
+        })
+    if (!isFuture && !preJoin) {
+      // Unmarked weekdays tally as A; weekend/holiday work (explicit P/WFH
+      // logs) DOES count — matches payroll's presentDays counting.
+      if (!(status === 'A' && isWeekend)) tallyStatus(status, totals)
+    }
+    days.push({ day: d, iso, status, isWeekend, isFuture, preJoin })
+  }
+  return { days, totals }
+}
+
+// ── Bulk range loaders (shared by grid + summary modes) ─────────────────────
+
+interface RangeBuckets {
+  /** `${empId}|${iso}` → log */
+  logBucket: Map<string, { status: string; workType: string }>
+  /** `${empId}|${iso}` → halfDay flag */
+  leaveDayBucket: Map<string, boolean>
+  /** iso → true for PUBLIC holidays */
+  holidaySet: Set<string>
+  /** `${empId}|${iso}` covered by an LOA (start → actual/expected return, exclusive) */
+  loaSet: Set<string>
+}
+
+async function loadRangeBuckets(
+  empIds: string[],
+  rangeStart: Date,
+  rangeEnd: Date,
+  recordClockIn?: (employeeId: string, date: Date, clockIn: Date | null) => void,
+): Promise<RangeBuckets> {
+  const [logs, leaves, holidays, loas] = await Promise.all([
+    prisma.attendanceLog.findMany({
+      where: { employeeId: { in: empIds }, date: { gte: rangeStart, lte: rangeEnd } },
+      select: { employeeId: true, date: true, status: true, workType: true, clockIn: true },
+    }),
+    prisma.leaveRequest.findMany({
+      where: {
+        employeeId: { in: empIds },
+        status: 'APPROVED',
+        fromDate: { lte: rangeEnd },
+        toDate: { gte: rangeStart },
+      },
+      select: { employeeId: true, fromDate: true, toDate: true, firstDayHalf: true, lastDayHalf: true },
+    }),
+    prisma.holiday.findMany({
+      where: { type: 'PUBLIC', date: { gte: rangeStart, lte: rangeEnd } },
+      select: { date: true },
+    }),
+    prisma.leaveOfAbsence.findMany({
+      where: {
+        employeeId: { in: empIds },
+        status: { in: ['ACTIVE', 'EXTENDED', 'RETURNED'] },
+        startDate: { lte: rangeEnd },
+      },
+      select: { employeeId: true, startDate: true, expectedReturn: true, actualReturn: true },
+    }),
+  ])
+
+  const logBucket = new Map<string, { status: string; workType: string }>()
+  for (const l of logs) {
+    logBucket.set(`${l.employeeId}|${dayKey(l.date)}`, { status: l.status, workType: l.workType })
+    recordClockIn?.(l.employeeId, l.date, l.clockIn)
+  }
+
+  const leaveDayBucket = new Map<string, boolean>()
+  for (const lv of leaves) {
+    const cur = new Date(lv.fromDate)
+    cur.setHours(0, 0, 0, 0)
+    const end = new Date(lv.toDate)
+    end.setHours(0, 0, 0, 0)
+    while (cur <= end) {
+      const isFirst = cur.getTime() === new Date(lv.fromDate).setHours(0, 0, 0, 0)
+      const isLast = cur.getTime() === new Date(lv.toDate).setHours(0, 0, 0, 0)
+      const half = (isFirst && lv.firstDayHalf) || (isLast && lv.lastDayHalf)
+      leaveDayBucket.set(`${lv.employeeId}|${dayKey(cur)}`, half)
+      cur.setDate(cur.getDate() + 1)
+    }
+  }
+
+  const holidaySet = new Set(holidays.map((h) => dayKey(h.date)))
+
+  const loaSet = new Set<string>()
+  for (const loa of loas) {
+    const cur = new Date(Math.max(loa.startDate.getTime(), rangeStart.getTime()))
+    cur.setHours(0, 0, 0, 0)
+    const ret = new Date(loa.actualReturn ?? loa.expectedReturn)
+    ret.setHours(0, 0, 0, 0)
+    // Return day itself is a working day again — LOA covers start → return-1.
+    while (cur < ret && cur <= rangeEnd) {
+      loaSet.add(`${loa.employeeId}|${dayKey(cur)}`)
+      cur.setDate(cur.getDate() + 1)
+    }
+  }
+
+  return { logBucket, leaveDayBucket, holidaySet, loaSet }
+}
+
+/** Build a MonthComputeCtx for one employee out of the bulk range buckets. */
+function empMonthCtx(
+  empId: string,
+  joiningDate: Date | null | undefined,
+  buckets: RangeBuckets,
+  year: number,
+  month: number,
+  today: Date,
+): MonthComputeCtx {
+  return {
+    year,
+    month,
+    today,
+    joiningDate,
+    getLog: (iso) => buckets.logBucket.get(`${empId}|${iso}`),
+    getLeaveHalf: (iso) => buckets.leaveDayBucket.get(`${empId}|${iso}`),
+    isHoliday: (iso) => buckets.holidaySet.has(iso),
+    onLOA: (iso) => buckets.loaSet.has(`${empId}|${iso}`),
+  }
+}
+
+// ── Payload types ────────────────────────────────────────────────────────────
 
 export interface GridQueryOpts {
   effectiveRole: string
@@ -99,15 +334,16 @@ export interface GridQueryOpts {
   month?: string | null
 }
 
-export interface GridDayCell { day: number; status: CellStatus; isWeekend: boolean }
+export interface GridDayCell { day: number; status: CellStatus; isWeekend: boolean; preJoin?: boolean }
 export interface GridEmployeeRow {
   id: string
+  employeeCode: string
   fullName: string
   designation: string | null
   department: string
   photoUrl: string | null
   days: GridDayCell[]
-  totals: { present: number; leave: number; wfh: number; hd: number; absent: number }
+  totals: { present: number; leave: number; wfh: number; hd: number; absent: number; holiday: number }
   /** HR-only: late clock-ins this month; null = no clock-in data recorded. Omitted for other roles. */
   lateCount?: number | null
 }
@@ -133,6 +369,7 @@ export interface SummaryMonthCell {
 }
 export interface SummaryEmployeeRow {
   id: string
+  employeeCode: string
   fullName: string
   designation: string | null
   department: string
@@ -146,6 +383,8 @@ export interface SummaryPayload {
   employees: SummaryEmployeeRow[]
   role: string
 }
+
+// ── Main builder ─────────────────────────────────────────────────────────────
 
 export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayload | SummaryPayload> {
   const { effectiveRole, myEmpId, summary = false } = opts
@@ -175,10 +414,12 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
     where: filters,
     select: {
       id: true,
+      employeeCode: true,
       fullName: true,
       designation: true,
       photoUrl: true,
       timings: true,
+      joiningDate: true,
       department: { select: { name: true } },
     },
     orderBy: { fullName: 'asc' },
@@ -196,89 +437,41 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
     lateBucket.set(key, prev + (late ? 1 : 0))
   }
 
+  const empIds = employees.map((e) => e.id)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const months = reportingMonths()
+
   // ── SUMMARY MODE ──────────────────────────────────────────────────────────
   if (summary) {
-    const firstMonth = REPORTING_MONTHS[0]
-    const lastMonth = REPORTING_MONTHS[REPORTING_MONTHS.length - 1]
+    const firstMonth = months[0]
+    const lastMonth = months[months.length - 1]
     const rangeStart = new Date(firstMonth.year, firstMonth.month - 1, 1)
     const rangeEnd = new Date(lastMonth.year, lastMonth.month, 0, 23, 59, 59)
 
-    const empIds = employees.map((e) => e.id)
-    const [logs, leaves] = await Promise.all([
-      prisma.attendanceLog.findMany({
-        where: { employeeId: { in: empIds }, date: { gte: rangeStart, lte: rangeEnd } },
-        select: { employeeId: true, date: true, status: true, workType: true, clockIn: true },
-      }),
-      prisma.leaveRequest.findMany({
-        where: {
-          employeeId: { in: empIds },
-          status: 'APPROVED',
-          fromDate: { lte: rangeEnd },
-          toDate: { gte: rangeStart },
-        },
-        select: { employeeId: true, fromDate: true, toDate: true, firstDayHalf: true, lastDayHalf: true },
-      }),
-    ])
-
-    // Pre-bucket logs by employee + month
-    const logBucket = new Map<string, { status: string; workType: string }>()
-    for (const l of logs) {
-      logBucket.set(`${l.employeeId}|${dayKey(l.date)}`, { status: l.status, workType: l.workType })
-      recordClockIn(l.employeeId, l.date, l.clockIn)
-    }
-    const leaveDayBucket = new Map<string, boolean /* halfDay */>()
-    for (const lv of leaves) {
-      const cur = new Date(lv.fromDate)
-      cur.setHours(0, 0, 0, 0)
-      const end = new Date(lv.toDate)
-      end.setHours(0, 0, 0, 0)
-      while (cur <= end) {
-        const isFirst = cur.getTime() === new Date(lv.fromDate).setHours(0, 0, 0, 0)
-        const isLast = cur.getTime() === new Date(lv.toDate).setHours(0, 0, 0, 0)
-        const half = (isFirst && lv.firstDayHalf) || (isLast && lv.lastDayHalf)
-        leaveDayBucket.set(`${lv.employeeId}|${dayKey(cur)}`, half)
-        cur.setDate(cur.getDate() + 1)
-      }
-    }
-
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const buckets = await loadRangeBuckets(empIds, rangeStart, rangeEnd, recordClockIn)
 
     const rows: SummaryEmployeeRow[] = employees.map((emp) => {
-      const months = REPORTING_MONTHS.map(({ year, month }) => {
-        const mStart = new Date(year, month - 1, 1)
-        const mEnd = new Date(year, month, 0)
-        let present = 0, leave = 0, wfh = 0, hd = 0, absent = 0
-        const cur = new Date(mStart)
-        while (cur <= mEnd) {
-          const dow = cur.getDay()
-          const isWeekend = dow === 0 || dow === 6
-          if (!isWeekend && cur <= today) {
-            const key = `${emp.id}|${dayKey(cur)}`
-            const log = logBucket.get(key)
-            const onLeave = leaveDayBucket.has(key)
-            const halfDay = leaveDayBucket.get(key) === true
-            const status = deriveStatus(log, false, onLeave, halfDay)
-            if (status === 'P') present++
-            else if (status === 'WFH') { present++; wfh++ }
-            else if (status === 'L') leave++
-            // Half-days count in the HD column only — they're not "full leave"
-            // days. Combining 0.5s into the L column was producing the Ali Hassan
-            // L=3-but-only-2-leave-cells bug.
-            else if (status === 'H') { hd++ }
-            else if (status === 'A') absent++
-          }
-          cur.setDate(cur.getDate() + 1)
-        }
+      const monthCells = months.map(({ year, month }) => {
+        const { totals } = computeEmployeeMonth(
+          empMonthCtx(emp.id, emp.joiningDate, buckets, year, month, today),
+        )
         const monthKey = `${year}-${String(month).padStart(2, '0')}`
-        const cell: SummaryMonthCell = { key: monthKey, present, leave, wfh, hd, absent }
+        const cell: SummaryMonthCell = {
+          key: monthKey,
+          present: totals.present,
+          leave: totals.leave,
+          wfh: totals.wfh,
+          hd: totals.hd,
+          absent: totals.absent,
+        }
         if (trackLate) {
           const lk = `${monthKey}|${emp.id}`
           cell.late = lateBucket.has(lk) ? lateBucket.get(lk)! : null
         }
         return cell
       })
-      const ytd = months.reduce(
+      const ytd = monthCells.reduce(
         (acc, m) => ({
           present: acc.present + m.present,
           leave: acc.leave + m.leave,
@@ -290,18 +483,19 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
       )
       return {
         id: emp.id,
+        employeeCode: emp.employeeCode,
         fullName: emp.fullName,
         designation: emp.designation,
         department: emp.department?.name ?? '—',
         photoUrl: emp.photoUrl,
-        months,
+        months: monthCells,
         ytd,
       }
     })
 
     return {
       mode: 'summary',
-      months: REPORTING_MONTHS.map(({ year, month }) => ({
+      months: months.map(({ year, month }) => ({
         key: `${year}-${String(month).padStart(2, '0')}`,
         label: new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'short', year: '2-digit' }),
       })),
@@ -313,81 +507,29 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
   // ── GRID MODE (per-day for one month) ─────────────────────────────────────
   const { year, month } = parseMonth(opts.month ?? null)
   const mStart = new Date(year, month - 1, 1)
-  const mEnd = new Date(year, month, 0)
-  const daysInMonth = mEnd.getDate()
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
+  const mEnd = new Date(year, month, 0, 23, 59, 59)
+  const daysInMonth = new Date(year, month, 0).getDate()
 
-  const empIds = employees.map((e) => e.id)
-  const [logs, leaves] = await Promise.all([
-    prisma.attendanceLog.findMany({
-      where: { employeeId: { in: empIds }, date: { gte: mStart, lte: mEnd } },
-      select: { employeeId: true, date: true, status: true, workType: true, clockIn: true },
-    }),
-    prisma.leaveRequest.findMany({
-      where: {
-        employeeId: { in: empIds },
-        status: 'APPROVED',
-        fromDate: { lte: mEnd },
-        toDate: { gte: mStart },
-      },
-      select: { employeeId: true, fromDate: true, toDate: true, firstDayHalf: true, lastDayHalf: true },
-    }),
-  ])
-
-  const logBucket = new Map<string, { status: string; workType: string }>()
-  for (const l of logs) {
-    logBucket.set(`${l.employeeId}|${dayKey(l.date)}`, { status: l.status, workType: l.workType })
-    recordClockIn(l.employeeId, l.date, l.clockIn)
-  }
-  const leaveDayBucket = new Map<string, boolean>()
-  for (const lv of leaves) {
-    const cur = new Date(lv.fromDate)
-    cur.setHours(0, 0, 0, 0)
-    const end = new Date(lv.toDate)
-    end.setHours(0, 0, 0, 0)
-    while (cur <= end) {
-      const isFirst = cur.getTime() === new Date(lv.fromDate).setHours(0, 0, 0, 0)
-      const isLast = cur.getTime() === new Date(lv.toDate).setHours(0, 0, 0, 0)
-      const half = (isFirst && lv.firstDayHalf) || (isLast && lv.lastDayHalf)
-      leaveDayBucket.set(`${lv.employeeId}|${dayKey(cur)}`, half)
-      cur.setDate(cur.getDate() + 1)
-    }
-  }
+  const buckets = await loadRangeBuckets(empIds, mStart, mEnd, recordClockIn)
 
   const rows: GridEmployeeRow[] = employees.map((emp) => {
-    let present = 0, leave = 0, wfh = 0, hd = 0, absent = 0
-    const days: GridDayCell[] = []
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dt = new Date(year, month - 1, d)
-      const dow = dt.getDay()
-      const isWeekend = dow === 0 || dow === 6
-      const key = `${emp.id}|${dayKey(dt)}`
-      const log = logBucket.get(key)
-      const onLeave = leaveDayBucket.has(key)
-      const halfDay = leaveDayBucket.get(key) === true
-      const status: CellStatus = isWeekend
-        ? 'WE'
-        : dt > today
-          ? 'A' // future days — render as blank; client maps 'A' for future to dash
-          : deriveStatus(log, false, onLeave, halfDay)
-      if (!isWeekend && dt <= today) {
-        if (status === 'P') present++
-        else if (status === 'WFH') { present++; wfh++ }
-        else if (status === 'L') leave++
-        else if (status === 'H') { hd++; leave += 0.5 }
-        else if (status === 'A') absent++
-      }
-      days.push({ day: d, status, isWeekend })
-    }
+    const { days, totals } = computeEmployeeMonth(
+      empMonthCtx(emp.id, emp.joiningDate, buckets, year, month, today),
+    )
     const row: GridEmployeeRow = {
       id: emp.id,
+      employeeCode: emp.employeeCode,
       fullName: emp.fullName,
       designation: emp.designation,
       department: emp.department?.name ?? '—',
       photoUrl: emp.photoUrl,
-      days,
-      totals: { present, leave, wfh, hd, absent },
+      days: days.map((d) => ({
+        day: d.day,
+        status: d.status,
+        isWeekend: d.isWeekend,
+        ...(d.preJoin ? { preJoin: true } : {}),
+      })),
+      totals,
     }
     if (trackLate) {
       const lk = `${year}-${String(month).padStart(2, '0')}|${emp.id}`
@@ -408,12 +550,79 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
   }
 }
 
+// ── Per-employee detail (all reporting months for one employee) ──────────────
+// Used by /dashboard/attendance/[employeeId] so the detail calendar derives
+// from EXACTLY the same logic as the grid/summary/CSV.
+
+export interface EmployeeMonthsResult {
+  months: {
+    key: string
+    label: string
+    firstDow: number
+    days: ComputedDay[]
+    totals: AttendanceTotals
+    /** Late clock-ins this month; null = no clock-in data recorded that month. */
+    late: number | null
+  }[]
+  ytd: AttendanceTotals
+}
+
+export async function buildEmployeeMonths(emp: {
+  id: string
+  joiningDate?: Date | null
+  timings?: string | null
+}): Promise<EmployeeMonthsResult> {
+  const months = reportingMonths()
+  const first = months[0]
+  const last = months[months.length - 1]
+  const rangeStart = new Date(first.year, first.month - 1, 1)
+  const rangeEnd = new Date(last.year, last.month, 0, 23, 59, 59)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const cfg = await getPayrollConfig()
+  const lateBucket = new Map<string, number>()
+  const recordClockIn = (_: string, date: Date, clockIn: Date | null) => {
+    if (!clockIn) return
+    const key = dayKey(date).slice(0, 7)
+    const prev = lateBucket.get(key) ?? 0
+    lateBucket.set(key, prev + (isLateClockIn(clockIn, emp.timings, cfg) ? 1 : 0))
+  }
+
+  const buckets = await loadRangeBuckets([emp.id], rangeStart, rangeEnd, recordClockIn)
+
+  const ytd = emptyTotals()
+  const monthBlocks = months.map(({ year, month }) => {
+    const { days, totals } = computeEmployeeMonth(
+      empMonthCtx(emp.id, emp.joiningDate, buckets, year, month, today),
+    )
+    ytd.present += totals.present
+    ytd.leave += totals.leave
+    ytd.wfh += totals.wfh
+    ytd.hd += totals.hd
+    ytd.absent += totals.absent
+    ytd.holiday += totals.holiday
+    const key = `${year}-${String(month).padStart(2, '0')}`
+    return {
+      key,
+      label: new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' }),
+      firstDow: new Date(year, month - 1, 1).getDay(),
+      days,
+      totals,
+      late: lateBucket.has(key) ? lateBucket.get(key)! : null,
+    }
+  })
+
+  return { months: monthBlocks, ytd }
+}
+
 // ── Month export (CSV, HR-only) ──────────────────────────────────────────────
-// One row per employee. The P/WFH/L/HD counts come straight from the grid
-// builder's totals so the export can NEVER drift from what the grid displays
-// (same deriveStatus + counting rules). Holiday count and approved OT hours
-// are read from the raw month logs; late count reuses the grid's HR-only
-// lateCount ("" when the employee has no clock-in data that month).
+// One row per employee. Every count comes straight from the grid builder's
+// totals so the export can NEVER drift from what the grid displays (same
+// deriveDayStatus + tallyStatus rules — including the holiday column, which
+// now counts derived HO days, not just explicit HOLIDAY logs). Approved OT
+// hours are read from the raw month logs; late count reuses the grid's
+// HR-only lateCount ("—" when the employee has no clock-in data that month).
 
 function csvEscape(v: string | number): string {
   const s = String(v)
@@ -440,12 +649,10 @@ export async function buildAttendanceMonthCsv(opts: {
 
   const logs = await prisma.attendanceLog.findMany({
     where: { employeeId: { in: grid.employees.map((e) => e.id) }, date: { gte: mStart, lte: mEnd } },
-    select: { employeeId: true, status: true, overtimeHours: true, overtimeApproved: true },
+    select: { employeeId: true, overtimeHours: true, overtimeApproved: true },
   })
-  const holidayByEmp = new Map<string, number>()
   const otByEmp = new Map<string, number>()
   for (const l of logs) {
-    if (l.status === 'HOLIDAY') holidayByEmp.set(l.employeeId, (holidayByEmp.get(l.employeeId) ?? 0) + 1)
     if (l.overtimeApproved && l.overtimeHours > 0) {
       otByEmp.set(l.employeeId, (otByEmp.get(l.employeeId) ?? 0) + l.overtimeHours)
     }
@@ -461,7 +668,7 @@ export async function buildAttendanceMonthCsv(opts: {
       emp.totals.wfh,
       emp.totals.leave,
       emp.totals.hd,
-      holidayByEmp.get(emp.id) ?? 0,
+      emp.totals.holiday,
       emp.lateCount == null ? '—' : emp.lateCount,
       Math.round((otByEmp.get(emp.id) ?? 0) * 100) / 100,
     ].join(','))

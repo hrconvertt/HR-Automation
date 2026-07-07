@@ -2,16 +2,22 @@
 
 import { useRouter } from 'next/navigation'
 
-const REPORTING_MONTHS = [
-  { key: '2025-11', label: 'Nov 2025' },
-  { key: '2025-12', label: 'Dec 2025' },
-  { key: '2026-01', label: 'Jan 2026' },
-  { key: '2026-02', label: 'Feb 2026' },
-  { key: '2026-03', label: 'Mar 2026' },
-  { key: '2026-04', label: 'Apr 2026' },
-  { key: '2026-05', label: 'May 2026' },
-  { key: '2026-06', label: 'Jun 2026' },
-]
+// Nov 2025 → current month, computed — mirrors reportingMonths() in
+// src/lib/queries/attendance-grid.ts so the picker always includes "now".
+const REPORTING_MONTHS: { key: string; label: string }[] = (() => {
+  const list: { key: string; label: string }[] = []
+  const now = new Date()
+  let y = 2025, m = 11
+  while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
+    list.push({
+      key: `${y}-${String(m).padStart(2, '0')}`,
+      label: new Date(y, m - 1, 1).toLocaleString('en-US', { month: 'short', year: 'numeric' }),
+    })
+    m++
+    if (m > 12) { m = 1; y++ }
+  }
+  return list
+})()
 
 export function CalendarMonthSelect({ month }: { month: string }) {
   const router = useRouter()

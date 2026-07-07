@@ -1,8 +1,13 @@
 /**
  * Per-employee attendance detail view.
  *
- * Renders 8 month-blocks (Nov 2025 → Jun 2026) as wall-calendar grids,
- * with YTD totals + recent leave requests side panel + Print button.
+ * Renders month-blocks (Nov 2025 → current month) as wall-calendar grids,
+ * with per-month stat chips, YTD totals + leave balance + recent leave
+ * requests side panel + Print button.
+ *
+ * All statuses/totals come from buildEmployeeMonths() — the SAME derivation
+ * and counting the HR grid, summary view and CSV export use, so this page
+ * can never drift from them.
  *
  * Access control:
  *   HR_ADMIN / EXECUTIVE — any employee
@@ -16,22 +21,12 @@ import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { dayKey } from '@/lib/date-utils'
+import { buildEmployeeMonths } from '@/lib/queries/attendance-grid'
 import { EmployeeDetailView } from './_view'
 
 interface PageProps {
   params: Promise<{ employeeId: string }>
 }
-
-const REPORTING_MONTHS: { month: number; year: number }[] = [
-  { month: 11, year: 2025 },
-  { month: 12, year: 2025 },
-  { month: 1, year: 2026 },
-  { month: 2, year: 2026 },
-  { month: 3, year: 2026 },
-  { month: 4, year: 2026 },
-  { month: 5, year: 2026 },
-  { month: 6, year: 2026 },
-]
 
 export default async function EmployeeAttendanceDetailPage({ params }: PageProps) {
   const { employeeId } = await params
@@ -59,6 +54,8 @@ export default async function EmployeeAttendanceDetailPage({ params }: PageProps
       designation: true,
       photoUrl: true,
       reportingManagerId: true,
+      joiningDate: true,
+      timings: true,
       department: { select: { name: true } },
     },
   })
@@ -72,24 +69,13 @@ export default async function EmployeeAttendanceDetailPage({ params }: PageProps
     if (employee.id !== myEmpId) notFound()
   }
 
-  // Fetch logs + approved leaves across the full reporting window
-  const rangeStart = new Date(REPORTING_MONTHS[0].year, REPORTING_MONTHS[0].month - 1, 1)
-  const lastM = REPORTING_MONTHS[REPORTING_MONTHS.length - 1]
-  const rangeEnd = new Date(lastM.year, lastM.month, 0, 23, 59, 59)
+  const isSelf = employee.id === myEmpId
 
-  const [logs, approvedLeaves, recentLeaves, leaveBalances] = await Promise.all([
-    prisma.attendanceLog.findMany({
-      where: { employeeId, date: { gte: rangeStart, lte: rangeEnd } },
-      select: { date: true, status: true, workType: true },
-    }),
-    prisma.leaveRequest.findMany({
-      where: {
-        employeeId,
-        status: 'APPROVED',
-        fromDate: { lte: rangeEnd },
-        toDate: { gte: rangeStart },
-      },
-      select: { fromDate: true, toDate: true, firstDayHalf: true, lastDayHalf: true },
+  const [{ months, ytd }, recentLeaves, leaveBalances, pendingCorrections] = await Promise.all([
+    buildEmployeeMonths({
+      id: employee.id,
+      joiningDate: employee.joiningDate,
+      timings: employee.timings,
     }),
     prisma.leaveRequest.findMany({
       where: { employeeId },
@@ -102,81 +88,16 @@ export default async function EmployeeAttendanceDetailPage({ params }: PageProps
       select: { leaveType: true, allocated: true, used: true, remaining: true, year: true },
       orderBy: { year: 'desc' },
     }).catch(() => [] as { leaveType: string; allocated: number; used: number; remaining: number; year: number }[]),
+    // Pending correction requests — used to dot the affected day cells.
+    prisma.attendanceCorrection.findMany({
+      where: { employeeId, status: 'PENDING' },
+      select: { date: true },
+    }),
   ])
 
-  // Build day-keyed lookups
-  const logMap = new Map<string, { status: string; workType: string }>()
-  for (const l of logs) logMap.set(dayKey(l.date), { status: l.status, workType: l.workType })
-  const leaveDayMap = new Map<string, boolean /* halfDay */>()
-  for (const lv of approvedLeaves) {
-    const cur = new Date(lv.fromDate); cur.setHours(0, 0, 0, 0)
-    const end = new Date(lv.toDate); end.setHours(0, 0, 0, 0)
-    while (cur <= end) {
-      const isFirst = cur.getTime() === new Date(lv.fromDate).setHours(0, 0, 0, 0)
-      const isLast = cur.getTime() === new Date(lv.toDate).setHours(0, 0, 0, 0)
-      const half = (isFirst && lv.firstDayHalf) || (isLast && lv.lastDayHalf)
-      leaveDayMap.set(dayKey(cur), half)
-      cur.setDate(cur.getDate() + 1)
-    }
-  }
-
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-
-  type Cell = { day: number; iso: string; status: 'P' | 'WFH' | 'L' | 'H' | 'A' | 'WE'; isWeekend: boolean; isFuture: boolean }
-  const months = REPORTING_MONTHS.map(({ year, month }) => {
-    const mStart = new Date(year, month - 1, 1)
-    const mEnd = new Date(year, month, 0)
-    const daysInMonth = mEnd.getDate()
-    const firstDow = mStart.getDay()
-    const cells: Cell[] = []
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dt = new Date(year, month - 1, d)
-      const dow = dt.getDay()
-      const isWeekend = dow === 0 || dow === 6
-      const iso = dayKey(dt)
-      const isFuture = dt > today
-      let status: Cell['status'] = 'A'
-      if (isWeekend) status = 'WE'
-      else if (isFuture) status = 'A'
-      else {
-        const log = logMap.get(iso)
-        const onLeave = leaveDayMap.has(iso)
-        const halfDay = leaveDayMap.get(iso) === true
-        if (log) {
-          if (log.status === 'LEAVE') status = halfDay ? 'H' : 'L'
-          else if (log.status === 'HALF_DAY') status = 'H'
-          else if (log.status === 'PRESENT' || log.status === 'LATE') status = log.workType === 'WFH' ? 'WFH' : 'P'
-          else if (log.status === 'HOLIDAY' || log.status === 'WEEKEND') status = 'WE'
-          else status = 'A'
-        } else if (onLeave) {
-          status = halfDay ? 'H' : 'L'
-        } else {
-          status = 'A'
-        }
-      }
-      cells.push({ day: d, iso, status, isWeekend, isFuture })
-    }
-    return {
-      key: `${year}-${String(month).padStart(2, '0')}`,
-      label: new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long', year: 'numeric' }),
-      firstDow,
-      cells,
-    }
-  })
-
-  // YTD totals
-  const ytd = { present: 0, leave: 0, wfh: 0, hd: 0, absent: 0 }
-  for (const m of months) {
-    for (const c of m.cells) {
-      if (c.isWeekend || c.isFuture) continue
-      if (c.status === 'P') ytd.present++
-      else if (c.status === 'WFH') { ytd.present++; ytd.wfh++ }
-      else if (c.status === 'L') ytd.leave++
-      else if (c.status === 'H') { ytd.hd++; ytd.leave += 0.5 }
-      else if (c.status === 'A') ytd.absent++
-    }
-  }
+  // Late counts are sensitive-ish operational data: show them to the employee
+  // themselves and to HR, not to managers/executives browsing the detail page.
+  const showLate = isSelf || effectiveRole === 'HR_ADMIN'
 
   return (
     <EmployeeDetailView
@@ -187,7 +108,21 @@ export default async function EmployeeAttendanceDetailPage({ params }: PageProps
         department: employee.department?.name ?? '—',
         photoUrl: employee.photoUrl,
       }}
-      months={months}
+      months={months.map((m) => ({
+        key: m.key,
+        label: m.label,
+        firstDow: m.firstDow,
+        cells: m.days.map((d) => ({
+          day: d.day,
+          iso: d.iso,
+          status: d.status,
+          isWeekend: d.isWeekend,
+          isFuture: d.isFuture,
+          preJoin: d.preJoin,
+        })),
+        totals: m.totals,
+        late: showLate ? m.late : null,
+      }))}
       ytd={ytd}
       recentLeaves={recentLeaves.map((l) => ({
         id: l.id,
@@ -199,8 +134,10 @@ export default async function EmployeeAttendanceDetailPage({ params }: PageProps
         reason: l.reason,
       }))}
       leaveBalances={leaveBalances.map((b) => ({ leaveType: b.leaveType, allocated: b.allocated, used: b.used, remaining: b.remaining, year: b.year }))}
+      pendingCorrectionDays={pendingCorrections.map((c) => dayKey(c.date))}
+      showLate={showLate}
       role={effectiveRole}
-      isSelf={employee.id === myEmpId}
+      isSelf={isSelf}
     />
   )
 }

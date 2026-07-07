@@ -62,6 +62,17 @@ interface Cell {
   status: Status
   isWeekend: boolean
   isFuture: boolean
+  /** Day precedes the employee's joining date — rendered blank. */
+  preJoin?: boolean
+}
+
+interface MonthTotals {
+  present: number
+  leave: number
+  wfh: number
+  hd: number
+  absent: number
+  holiday: number
 }
 
 interface MonthBlock {
@@ -69,6 +80,9 @@ interface MonthBlock {
   label: string
   firstDow: number
   cells: Cell[]
+  totals: MonthTotals
+  /** Late clock-ins this month; null = no clock-in data (or hidden for this viewer). */
+  late: number | null
 }
 
 interface LeaveRow {
@@ -101,6 +115,10 @@ interface Props {
   ytd: { present: number; leave: number; wfh: number; hd: number; absent: number }
   recentLeaves: LeaveRow[]
   leaveBalances: LeaveBalanceRow[]
+  /** ISO days (YYYY-MM-DD) with a PENDING correction request — dotted on the cell. */
+  pendingCorrectionDays?: string[]
+  /** Whether per-month late counts are shown (self or HR only; server-decided). */
+  showLate?: boolean
   role: string
   /** True when the viewer is looking at their OWN attendance — enables
    *  "Request correction" on past day cells. Server-enforced self-only. */
@@ -123,7 +141,8 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: 'text-slate-600 bg-slate-100',
 }
 
-export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveBalances, isSelf }: Props) {
+export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveBalances, pendingCorrectionDays, showLate, isSelf }: Props) {
+  const pendingDays = new Set(pendingCorrectionDays ?? [])
   // Filter balances to current/latest year
   const currentYear = leaveBalances[0]?.year ?? new Date().getFullYear()
   const currentBalances = leaveBalances.filter((b) => b.year === currentYear)
@@ -199,6 +218,8 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
                 key={m.key}
                 month={m}
                 filter={statusFilter}
+                pendingDays={pendingDays}
+                showLate={!!showLate}
                 onCellClick={isSelf ? (c) => setCorrecting(c) : undefined}
               />
             ))}
@@ -396,16 +417,23 @@ function Stat({ label, value, accent }: { label: string; value: number; accent: 
 function MonthCalendar({
   month,
   filter,
+  pendingDays,
+  showLate,
   onCellClick,
 }: {
   month: MonthBlock
   filter: Status | null
+  /** ISO days with a PENDING correction request — marked with a dot. */
+  pendingDays: Set<string>
+  showLate: boolean
   /** When set (own attendance), past non-weekend cells become clickable to
    *  request a correction. */
   onCellClick?: (c: Cell) => void
 }) {
   const blanks = Array.from({ length: month.firstDow }, (_, i) => i)
   const dowHeader = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
+  const t = month.totals
+  const hasData = t.present + t.leave + t.hd + t.absent > 0
   return (
     <div className="bg-white border border-slate-200 rounded-lg p-3">
       <h3 className="text-sm font-semibold text-slate-800 mb-2">{month.label}</h3>
@@ -417,26 +445,57 @@ function MonthCalendar({
       <div className="grid grid-cols-7 gap-1">
         {blanks.map((b) => <div key={`b${b}`} />)}
         {month.cells.map((c) => {
+          // Days before joining render as neutral blanks (never counted).
+          const blank = c.isFuture || !!c.preJoin
           // When a filter is active, dim every cell except matching ones.
-          // Weekends + future days always stay neutral (not part of the data set).
-          const dimmed =
-            filter !== null && !c.isFuture && c.status !== filter
-          const clickable = !!onCellClick && !c.isFuture && !c.isWeekend
+          // Weekends + blank days always stay neutral (not part of the data set).
+          const dimmed = filter !== null && !blank && c.status !== filter
+          const clickable = !!onCellClick && !blank && !c.isWeekend
+          const pending = pendingDays.has(c.iso)
           return (
             <div
               key={c.day}
               onClick={clickable ? () => onCellClick(c) : undefined}
-              title={clickable ? 'Request a correction for this day' : undefined}
-              className={`flex flex-col items-center gap-0.5 transition-opacity ${
+              title={
+                pending
+                  ? 'Correction request pending HR review'
+                  : clickable
+                    ? 'Request a correction for this day'
+                    : undefined
+              }
+              className={`relative flex flex-col items-center gap-0.5 transition-opacity ${
                 dimmed ? 'opacity-25' : 'opacity-100'
               } ${clickable ? 'cursor-pointer rounded hover:bg-slate-50 hover:ring-1 hover:ring-slate-200' : ''}`}
             >
               <div className="text-[9px] text-slate-400">{c.day}</div>
-              <StatusBadge status={c.status} future={c.isFuture} />
+              <StatusBadge status={c.status} future={blank} />
+              {pending && (
+                <span className="absolute top-3 right-0.5 w-1.5 h-1.5 rounded-full bg-slate-900 ring-2 ring-white" />
+              )}
             </div>
           )
         })}
       </div>
+      {/* Month summary strip — same counting as the HR grid (HD only in HD). */}
+      {hasData && (
+        <div className="flex flex-wrap items-center gap-1.5 mt-2 pt-2 border-t border-slate-100 text-[10px] text-slate-600">
+          <Chip label="P" value={t.present} />
+          <Chip label="WFH" value={t.wfh} />
+          <Chip label="L" value={t.leave} />
+          <Chip label="HD" value={t.hd} />
+          {t.holiday > 0 && <Chip label="HOL" value={t.holiday} />}
+          {showLate && month.late !== null && <Chip label="Late" value={month.late} />}
+        </div>
+      )}
     </div>
+  )
+}
+
+function Chip({ label, value }: { label: string; value: number }) {
+  return (
+    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-50 border border-slate-200">
+      <span className="font-semibold text-slate-500">{label}</span>
+      <span className="font-bold text-slate-900">{value}</span>
+    </span>
   )
 }

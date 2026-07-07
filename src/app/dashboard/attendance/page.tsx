@@ -15,17 +15,19 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { buildAttendanceGrid, REPORTING_MONTHS } from '@/lib/queries/attendance-grid'
+import { buildAttendanceGrid, reportingMonths } from '@/lib/queries/attendance-grid'
 import { AttendanceGridShell } from './_components/grid-shell'
 
 /** Default month for the initial server render — mirrors the client's
  *  currentReportingMonth() so the SSR payload matches the first fetch. */
 function defaultReportingMonth(): string {
+  const months = reportingMonths()
   const now = new Date()
   const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  return REPORTING_MONTHS.some((m) => `${m.year}-${String(m.month).padStart(2, '0')}` === key)
+  const last = months[months.length - 1]
+  return months.some((m) => `${m.year}-${String(m.month).padStart(2, '0')}` === key)
     ? key
-    : '2026-06'
+    : `${last.year}-${String(last.month).padStart(2, '0')}`
 }
 
 export default async function AttendanceGridPage() {

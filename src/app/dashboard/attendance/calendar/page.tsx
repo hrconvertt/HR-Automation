@@ -43,10 +43,9 @@ const KIND_CHIP: Record<OutKind, string> = {
 }
 
 function defaultMonth(): string {
+  // Current month — always within the computed reporting window (Nov 2025 → now).
   const now = new Date()
-  const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-  const valid = ['2025-11', '2025-12', '2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06']
-  return valid.includes(key) ? key : '2026-06'
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
 }
 
 export default async function TeamAbsenceCalendarPage({ searchParams }: PageProps) {
