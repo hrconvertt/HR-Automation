@@ -198,6 +198,7 @@ export default async function EmployeeAttendanceDetailPage({ params }: PageProps
       }))}
       leaveBalances={leaveBalances.map((b) => ({ leaveType: b.leaveType, allocated: b.allocated, used: b.used, remaining: b.remaining, year: b.year }))}
       role={effectiveRole}
+      isSelf={employee.id === myEmpId}
     />
   )
 }

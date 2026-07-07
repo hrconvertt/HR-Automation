@@ -23,7 +23,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
-import { buildAttendanceGrid } from '@/lib/queries/attendance-grid'
+import { buildAttendanceGrid, buildAttendanceMonthCsv } from '@/lib/queries/attendance-grid'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -41,6 +41,25 @@ export async function GET(request: NextRequest) {
   const myEmpId = user.employee?.id ?? null
 
   const { searchParams } = new URL(request.url)
+
+  // ── Month export (?format=csv) — server-generated, HR-only ────────────────
+  if (searchParams.get('format') === 'csv') {
+    if (effectiveRole !== 'HR_ADMIN') {
+      return NextResponse.json({ error: 'Only HR can export attendance' }, { status: 403 })
+    }
+    const { csv, monthKey } = await buildAttendanceMonthCsv({
+      month: searchParams.get('month'),
+      department: searchParams.get('department') ?? '',
+      search: searchParams.get('search') ?? '',
+    })
+    return new NextResponse(csv, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/csv; charset=utf-8',
+        'Content-Disposition': `attachment; filename="attendance-${monthKey}.csv"`,
+      },
+    })
+  }
 
   const data = await buildAttendanceGrid({
     effectiveRole,

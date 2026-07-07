@@ -102,6 +102,9 @@ interface Props {
   recentLeaves: LeaveRow[]
   leaveBalances: LeaveBalanceRow[]
   role: string
+  /** True when the viewer is looking at their OWN attendance — enables
+   *  "Request correction" on past day cells. Server-enforced self-only. */
+  isSelf?: boolean
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -120,7 +123,7 @@ const STATUS_COLOR: Record<string, string> = {
   CANCELLED: 'text-slate-600 bg-slate-100',
 }
 
-export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveBalances }: Props) {
+export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveBalances, isSelf }: Props) {
   // Filter balances to current/latest year
   const currentYear = leaveBalances[0]?.year ?? new Date().getFullYear()
   const currentBalances = leaveBalances.filter((b) => b.year === currentYear)
@@ -131,6 +134,10 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
   const handleToggleFilter = (s: Status) => {
     setStatusFilter((cur) => (cur === s ? null : s))
   }
+
+  // Correction request dialog (own attendance only)
+  const [correcting, setCorrecting] = useState<Cell | null>(null)
+  const [correctionToast, setCorrectionToast] = useState<string | null>(null)
 
   return (
     <div className="space-y-5">
@@ -176,8 +183,25 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
           <div className="print:hidden">
             <FilterableLegend active={statusFilter} onToggle={handleToggleFilter} />
           </div>
+          {isSelf && (
+            <p className="text-xs text-slate-500 print:hidden">
+              Something look wrong? Click any past day to request a correction — HR will review it.
+            </p>
+          )}
+          {correctionToast && (
+            <div className="print:hidden bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-md px-3 py-2">
+              {correctionToast}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {months.map((m) => <MonthCalendar key={m.key} month={m} filter={statusFilter} />)}
+            {months.map((m) => (
+              <MonthCalendar
+                key={m.key}
+                month={m}
+                filter={statusFilter}
+                onCellClick={isSelf ? (c) => setCorrecting(c) : undefined}
+              />
+            ))}
           </div>
         </div>
 
@@ -242,6 +266,120 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
           </div>
         </aside>
       </div>
+
+      {correcting && (
+        <CorrectionRequestDialog
+          cell={correcting}
+          onClose={() => setCorrecting(null)}
+          onSubmitted={(msg) => {
+            setCorrecting(null)
+            setCorrectionToast(msg)
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+const CORRECTION_OPTIONS: { value: 'PRESENT' | 'WFH' | 'HALF_DAY' | 'LEAVE'; label: string; badge: Status }[] = [
+  { value: 'PRESENT',  label: 'Present',         badge: 'P' },
+  { value: 'WFH',      label: 'Work From Home',  badge: 'WFH' },
+  { value: 'HALF_DAY', label: 'Half Day',        badge: 'H' },
+  { value: 'LEAVE',    label: 'Leave (Full Day)', badge: 'L' },
+]
+
+function CorrectionRequestDialog({
+  cell,
+  onClose,
+  onSubmitted,
+}: {
+  cell: Cell
+  onClose: () => void
+  onSubmitted: (message: string) => void
+}) {
+  const [requested, setRequested] = useState<typeof CORRECTION_OPTIONS[number]['value']>('PRESENT')
+  const [reason, setReason] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function submit() {
+    setSaving(true)
+    setErr(null)
+    try {
+      const res = await fetch('/api/attendance/corrections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: cell.iso, requestedStatus: requested, reason }),
+      })
+      if (!res.ok) {
+        const j = await res.json().catch(() => ({}))
+        throw new Error(j.error ?? 'Request failed')
+      }
+      onSubmitted(`Correction request for ${cell.iso} submitted — HR will review it.`)
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Request failed')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white rounded-lg shadow-xl border border-slate-200 w-full max-w-sm p-4"
+        role="dialog"
+        aria-label="Request attendance correction"
+      >
+        <h3 className="text-sm font-semibold text-slate-900">Request correction</h3>
+        <p className="text-xs text-slate-500 mt-0.5 mb-3">
+          {cell.iso} — currently shown as{' '}
+          <span className="inline-flex align-middle"><StatusBadge status={cell.status} /></span>
+        </p>
+
+        <label className="block text-xs font-medium text-slate-700 mb-1">It should be</label>
+        <select
+          value={requested}
+          onChange={(e) => setRequested(e.target.value as typeof requested)}
+          className="w-full text-sm border border-slate-300 rounded-md px-2 py-1.5 bg-white mb-3"
+        >
+          {CORRECTION_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+
+        <label className="block text-xs font-medium text-slate-700 mb-1">Reason</label>
+        <textarea
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          rows={3}
+          maxLength={1000}
+          placeholder="Explain what actually happened that day (required)"
+          className="w-full text-sm border border-slate-300 rounded-md px-2 py-1.5 bg-white"
+        />
+
+        {err && (
+          <div className="mt-3 bg-slate-50 border border-slate-200 text-slate-900 text-xs rounded-md px-2 py-1.5">
+            {err}
+          </div>
+        )}
+
+        <div className="flex justify-end gap-2 mt-4">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-100 rounded-md"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={submit}
+            disabled={saving || !reason.trim()}
+            className="px-3 py-1.5 text-xs font-medium text-white bg-slate-700 hover:bg-slate-800 disabled:opacity-50 rounded-md"
+          >
+            {saving ? 'Submitting…' : 'Submit request'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -255,7 +393,17 @@ function Stat({ label, value, accent }: { label: string; value: number; accent: 
   )
 }
 
-function MonthCalendar({ month, filter }: { month: MonthBlock; filter: Status | null }) {
+function MonthCalendar({
+  month,
+  filter,
+  onCellClick,
+}: {
+  month: MonthBlock
+  filter: Status | null
+  /** When set (own attendance), past non-weekend cells become clickable to
+   *  request a correction. */
+  onCellClick?: (c: Cell) => void
+}) {
   const blanks = Array.from({ length: month.firstDow }, (_, i) => i)
   const dowHeader = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
   return (
@@ -273,12 +421,15 @@ function MonthCalendar({ month, filter }: { month: MonthBlock; filter: Status | 
           // Weekends + future days always stay neutral (not part of the data set).
           const dimmed =
             filter !== null && !c.isFuture && c.status !== filter
+          const clickable = !!onCellClick && !c.isFuture && !c.isWeekend
           return (
             <div
               key={c.day}
+              onClick={clickable ? () => onCellClick(c) : undefined}
+              title={clickable ? 'Request a correction for this day' : undefined}
               className={`flex flex-col items-center gap-0.5 transition-opacity ${
                 dimmed ? 'opacity-25' : 'opacity-100'
-              }`}
+              } ${clickable ? 'cursor-pointer rounded hover:bg-slate-50 hover:ring-1 hover:ring-slate-200' : ''}`}
             >
               <div className="text-[9px] text-slate-400">{c.day}</div>
               <StatusBadge status={c.status} future={c.isFuture} />

@@ -17,6 +17,8 @@ export type NotificationType =
   | 'PIP_CREATED'          // PIP started → notify employee
   | 'PIP_UPDATED'          // check-in added → notify employee
   | 'TICKET_UPDATE'        // helpdesk ticket update
+  | 'ATTENDANCE_CORRECTION_APPROVED' // HR approved an attendance correction → notify employee
+  | 'ATTENDANCE_CORRECTION_REJECTED' // HR rejected an attendance correction → notify employee
   | 'GOAL_ASSIGNED'        // a manager/HR created a goal for an employee
   | 'GOAL_COMMENT'         // a manager commented on a goal
   | 'ANOMALY'              // attendance or other anomaly

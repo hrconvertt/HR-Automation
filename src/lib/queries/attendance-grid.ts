@@ -12,8 +12,42 @@
  */
 import { prisma } from '@/lib/prisma'
 import { dayKey } from '@/lib/date-utils'
+import { getPayrollConfig } from '@/lib/config'
 
 export type CellStatus = 'P' | 'WFH' | 'L' | 'H' | 'A' | 'WE'
+
+// ── Late-arrival tracking (HR-only) ─────────────────────────────────────────
+// Employee.timings stores the shift like "10:00 AM – 7:00 PM". A clock-in is
+// "late" when it lands after shift start + grace. The grace period comes from
+// the payroll config's lateThresholdMinute (the config threshold 10:15 is
+// "standard 10:00 start + 15 min grace"). If the timings string can't be
+// parsed, fall back to the absolute config threshold (lateThresholdHour:Minute).
+
+/** Parse the shift start out of a timings string like "10:00 AM – 7:00 PM". */
+export function parseShiftStart(timings: string | null | undefined): { hour: number; minute: number } | null {
+  if (!timings) return null
+  const m = timings.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i)
+  if (!m) return null
+  let hour = Number(m[1]) % 12
+  if (m[3].toUpperCase() === 'PM') hour += 12
+  const minute = Number(m[2])
+  if (hour > 23 || minute > 59) return null
+  return { hour, minute }
+}
+
+function isLateClockIn(
+  clockIn: Date,
+  timings: string | null | undefined,
+  cfg: { lateThresholdHour: number; lateThresholdMinute: number },
+): boolean {
+  const shift = parseShiftStart(timings)
+  const clockMins = clockIn.getHours() * 60 + clockIn.getMinutes()
+  if (shift) {
+    return clockMins > shift.hour * 60 + shift.minute + cfg.lateThresholdMinute
+  }
+  // No parseable shift — use the absolute config threshold (default 10:15).
+  return clockMins > cfg.lateThresholdHour * 60 + cfg.lateThresholdMinute
+}
 
 export const REPORTING_MONTHS: { month: number; year: number }[] = [
   { month: 11, year: 2025 },
@@ -73,6 +107,8 @@ export interface GridEmployeeRow {
   photoUrl: string | null
   days: GridDayCell[]
   totals: { present: number; leave: number; wfh: number; hd: number; absent: number }
+  /** HR-only: late clock-ins this month; null = no clock-in data recorded. Omitted for other roles. */
+  lateCount?: number | null
 }
 export interface GridPayload {
   mode: 'grid'
@@ -84,7 +120,16 @@ export interface GridPayload {
   role: string
   canExport: boolean
 }
-export interface SummaryMonthCell { key: string; present: number; leave: number; wfh: number; hd: number; absent: number }
+export interface SummaryMonthCell {
+  key: string
+  present: number
+  leave: number
+  wfh: number
+  hd: number
+  absent: number
+  /** HR-only: late clock-ins this month; null = no clock-in data recorded. Omitted for other roles. */
+  late?: number | null
+}
 export interface SummaryEmployeeRow {
   id: string
   fullName: string
@@ -119,6 +164,9 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
   if (department) filters.department = { name: department }
   if (search) filters.fullName = { contains: search, mode: 'insensitive' }
 
+  // Late tracking is HR-only — never computed (or sent) for other roles.
+  const trackLate = effectiveRole === 'HR_ADMIN'
+
   const employees = await prisma.employee.findMany({
     where: filters,
     select: {
@@ -126,10 +174,23 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
       fullName: true,
       designation: true,
       photoUrl: true,
+      timings: true,
       department: { select: { name: true } },
     },
     orderBy: { fullName: 'asc' },
   })
+  const timingsByEmp = new Map(employees.map((e) => [e.id, e.timings]))
+  const cfg = trackLate ? await getPayrollConfig() : null
+
+  /** monthKey(YYYY-MM)|empId → late count; presence of key = clock-in data exists. */
+  const lateBucket = new Map<string, number>()
+  function recordClockIn(employeeId: string, date: Date, clockIn: Date | null) {
+    if (!cfg || !clockIn) return
+    const key = `${dayKey(date).slice(0, 7)}|${employeeId}`
+    const prev = lateBucket.get(key) ?? 0
+    const late = isLateClockIn(clockIn, timingsByEmp.get(employeeId), cfg)
+    lateBucket.set(key, prev + (late ? 1 : 0))
+  }
 
   // ── SUMMARY MODE ──────────────────────────────────────────────────────────
   if (summary) {
@@ -142,7 +203,7 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
     const [logs, leaves] = await Promise.all([
       prisma.attendanceLog.findMany({
         where: { employeeId: { in: empIds }, date: { gte: rangeStart, lte: rangeEnd } },
-        select: { employeeId: true, date: true, status: true, workType: true },
+        select: { employeeId: true, date: true, status: true, workType: true, clockIn: true },
       }),
       prisma.leaveRequest.findMany({
         where: {
@@ -159,6 +220,7 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
     const logBucket = new Map<string, { status: string; workType: string }>()
     for (const l of logs) {
       logBucket.set(`${l.employeeId}|${dayKey(l.date)}`, { status: l.status, workType: l.workType })
+      recordClockIn(l.employeeId, l.date, l.clockIn)
     }
     const leaveDayBucket = new Map<string, boolean /* halfDay */>()
     for (const lv of leaves) {
@@ -204,7 +266,13 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
           }
           cur.setDate(cur.getDate() + 1)
         }
-        return { key: `${year}-${String(month).padStart(2, '0')}`, present, leave, wfh, hd, absent }
+        const monthKey = `${year}-${String(month).padStart(2, '0')}`
+        const cell: SummaryMonthCell = { key: monthKey, present, leave, wfh, hd, absent }
+        if (trackLate) {
+          const lk = `${monthKey}|${emp.id}`
+          cell.late = lateBucket.has(lk) ? lateBucket.get(lk)! : null
+        }
+        return cell
       })
       const ytd = months.reduce(
         (acc, m) => ({
@@ -250,7 +318,7 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
   const [logs, leaves] = await Promise.all([
     prisma.attendanceLog.findMany({
       where: { employeeId: { in: empIds }, date: { gte: mStart, lte: mEnd } },
-      select: { employeeId: true, date: true, status: true, workType: true },
+      select: { employeeId: true, date: true, status: true, workType: true, clockIn: true },
     }),
     prisma.leaveRequest.findMany({
       where: {
@@ -266,6 +334,7 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
   const logBucket = new Map<string, { status: string; workType: string }>()
   for (const l of logs) {
     logBucket.set(`${l.employeeId}|${dayKey(l.date)}`, { status: l.status, workType: l.workType })
+    recordClockIn(l.employeeId, l.date, l.clockIn)
   }
   const leaveDayBucket = new Map<string, boolean>()
   for (const lv of leaves) {
@@ -307,7 +376,7 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
       }
       days.push({ day: d, status, isWeekend })
     }
-    return {
+    const row: GridEmployeeRow = {
       id: emp.id,
       fullName: emp.fullName,
       designation: emp.designation,
@@ -316,6 +385,11 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
       days,
       totals: { present, leave, wfh, hd, absent },
     }
+    if (trackLate) {
+      const lk = `${year}-${String(month).padStart(2, '0')}|${emp.id}`
+      row.lateCount = lateBucket.has(lk) ? lateBucket.get(lk)! : null
+    }
+    return row
   })
 
   return {
@@ -328,4 +402,65 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
     role: effectiveRole,
     canExport: effectiveRole === 'HR_ADMIN',
   }
+}
+
+// ── Month export (CSV, HR-only) ──────────────────────────────────────────────
+// One row per employee. The P/WFH/L/HD counts come straight from the grid
+// builder's totals so the export can NEVER drift from what the grid displays
+// (same deriveStatus + counting rules). Holiday count and approved OT hours
+// are read from the raw month logs; late count reuses the grid's HR-only
+// lateCount ("" when the employee has no clock-in data that month).
+
+function csvEscape(v: string | number): string {
+  const s = String(v)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+export async function buildAttendanceMonthCsv(opts: {
+  month?: string | null
+  department?: string
+  search?: string
+}): Promise<{ csv: string; monthKey: string }> {
+  // Caller (API route) must already have verified the requester is HR_ADMIN.
+  const grid = (await buildAttendanceGrid({
+    effectiveRole: 'HR_ADMIN',
+    myEmpId: null,
+    month: opts.month,
+    department: opts.department,
+    search: opts.search,
+  })) as GridPayload
+
+  const { year, month } = parseMonth(grid.month)
+  const mStart = new Date(year, month - 1, 1)
+  const mEnd = new Date(year, month, 0, 23, 59, 59)
+
+  const logs = await prisma.attendanceLog.findMany({
+    where: { employeeId: { in: grid.employees.map((e) => e.id) }, date: { gte: mStart, lte: mEnd } },
+    select: { employeeId: true, status: true, overtimeHours: true, overtimeApproved: true },
+  })
+  const holidayByEmp = new Map<string, number>()
+  const otByEmp = new Map<string, number>()
+  for (const l of logs) {
+    if (l.status === 'HOLIDAY') holidayByEmp.set(l.employeeId, (holidayByEmp.get(l.employeeId) ?? 0) + 1)
+    if (l.overtimeApproved && l.overtimeHours > 0) {
+      otByEmp.set(l.employeeId, (otByEmp.get(l.employeeId) ?? 0) + l.overtimeHours)
+    }
+  }
+
+  const header = ['Employee', 'Department', 'Present', 'WFH', 'Leave', 'Half Day', 'Holiday', 'Late', 'Approved OT Hours']
+  const lines = [header.join(',')]
+  for (const emp of grid.employees) {
+    lines.push([
+      csvEscape(emp.fullName),
+      csvEscape(emp.department),
+      emp.totals.present,
+      emp.totals.wfh,
+      emp.totals.leave,
+      emp.totals.hd,
+      holidayByEmp.get(emp.id) ?? 0,
+      emp.lateCount == null ? '—' : emp.lateCount,
+      Math.round((otByEmp.get(emp.id) ?? 0) * 100) / 100,
+    ].join(','))
+  }
+  return { csv: lines.join('\n'), monthKey: grid.month }
 }

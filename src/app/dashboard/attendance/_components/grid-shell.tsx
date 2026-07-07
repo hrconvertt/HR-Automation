@@ -35,7 +35,16 @@ interface GridResponse {
   canExport: boolean
 }
 
-interface SummaryMonth { key: string; present: number; leave: number; wfh: number; hd: number; absent: number }
+interface SummaryMonth {
+  key: string
+  present: number
+  leave: number
+  wfh: number
+  hd: number
+  absent: number
+  /** HR-only late clock-in count; null = no clock-in data that month; absent for other roles. */
+  late?: number | null
+}
 interface SummaryEmployee {
   id: string
   fullName: string
@@ -132,23 +141,14 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   }, [])
 
+  // Server-generated month export (HR-only, gated again server-side).
+  // Counts match the grid exactly + holiday / late / approved-OT columns.
   function exportCsv() {
-    if (!gridData || !canExport) return
-    const headers = ['Employee', 'Department', ...Array.from({ length: gridData.daysInMonth }, (_, i) => String(i + 1)), 'Present', 'Leave', 'WFH', 'HalfDay', 'Absent']
-    const rows = gridData.employees.map((e) => [
-      JSON.stringify(e.fullName),
-      JSON.stringify(e.department),
-      ...e.days.map((d) => d.status),
-      e.totals.present, e.totals.leave, e.totals.wfh, e.totals.hd, e.totals.absent,
-    ].join(','))
-    const csv = [headers.join(','), ...rows].join('\n')
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `attendance-${gridData.month}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    if (!canExport) return
+    const params = new URLSearchParams({ format: 'csv', month })
+    if (department) params.set('department', department)
+    if (debouncedSearch) params.set('search', debouncedSearch)
+    window.location.href = `/api/attendance/grid?${params.toString()}`
   }
 
   return (
@@ -612,6 +612,12 @@ function SummaryTable({ data, onRowClick }: { data: SummaryResponse; onRowClick:
                         <span className="text-slate-700">WFH:{m.wfh}</span>{' '}
                         <span className="text-slate-700">HD:{m.hd}</span>
                       </span>
+                      {/* HR-only late-arrival count — "—" when no clock-in data that month */}
+                      {m.late !== undefined && (
+                        <span className="text-slate-500" title="Clock-ins after shift start + grace (HR only)">
+                          Late:{m.late === null ? '—' : m.late}
+                        </span>
+                      )}
                     </div>
                   </td>
                 ))}

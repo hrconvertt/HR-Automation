@@ -100,6 +100,8 @@ const FOCUS_PATHS = new Set([
   '/dashboard/settings/daily-logging',
   '/dashboard/time/me',
   '/dashboard/time/everyone',
+  '/dashboard/attendance/calendar',
+  '/dashboard/attendance/corrections',
 ])
 
 function applyFocus(groups: NavGroup[]): NavGroup[] {
@@ -352,6 +354,13 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/attendance?view=grid', label: 'Grid View', icon: CalendarCheck },
         { href: '/dashboard/attendance?view=summary', label: 'Summary View', icon: BarChart3 },
+        { href: '/dashboard/attendance/calendar', label: 'Calendar', icon: CalendarDays },
+        {
+          href: '/dashboard/attendance/corrections',
+          label: 'Corrections',
+          icon: Inbox,
+          roles: ['HR_ADMIN'],
+        },
       ],
     },
   ],

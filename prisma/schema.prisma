@@ -270,6 +270,7 @@ model Employee {
 
   jobChanges          JobChange[]
   leavesOfAbsence     LeaveOfAbsence[]
+  attendanceCorrections AttendanceCorrection[]
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -311,6 +312,30 @@ model JobChange {
   @@index([employeeId, status])
   @@index([status, effectiveDate])
   @@map("job_changes")
+}
+
+// ─── ATTENDANCE CORRECTION (employee-initiated, HR-approved) ─────────────────
+// An employee disputes what the attendance grid shows for one of their own
+// past days ("I was actually WFH on the 3rd"). HR approves (which upserts the
+// AttendanceLog row) or rejects with a comment. Requests are blocked once the
+// month's REGULAR payroll run is PAID.
+model AttendanceCorrection {
+  id              String   @id @default(cuid())
+  employeeId      String
+  employee        Employee @relation(fields: [employeeId], references: [id])
+  date            DateTime
+  currentStatus   String   // what the grid showed at request time (P/WFH/L/H/A/WE)
+  requestedStatus String   // PRESENT | WFH | HALF_DAY | LEAVE
+  reason          String
+  status          String   @default("PENDING") // PENDING | APPROVED | REJECTED
+  reviewedById    String?  // User.id of the HR reviewer
+  reviewComment   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([status, createdAt])
+  @@index([employeeId, date])
+  @@map("attendance_corrections")
 }
 
 // ─── LEAVE OF ABSENCE (long leave — distinct from PTO) ────────────────────────
