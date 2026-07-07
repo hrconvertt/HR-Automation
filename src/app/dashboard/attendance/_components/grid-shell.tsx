@@ -472,6 +472,28 @@ const API_TO_BADGE: Record<string, Status> = {
   PRESENT: 'P', WFH: 'WFH', LEAVE: 'L', HALF_DAY: 'H', ABSENT: 'A',
 }
 
+interface HistoryEntry {
+  id: string
+  at: string
+  by: string
+  source: string
+  from: { status?: string; workType?: string } | null
+  to: { status?: string; workType?: string } | null
+  note: string | null
+}
+
+/** "PRESENT + WFH" → the short badge label used in the grid. */
+function historyLabel(v: { status?: string; workType?: string } | null): string {
+  if (!v?.status) return '—'
+  if (v.status === 'PRESENT' || v.status === 'LATE') return v.workType === 'WFH' ? 'WFH' : 'P'
+  if (v.status === 'HALF_DAY') return 'HD'
+  if (v.status === 'LEAVE') return 'L'
+  if (v.status === 'HOLIDAY') return 'Holiday'
+  if (v.status === 'WEEKEND') return 'Weekend'
+  if (v.status === 'ABSENT') return 'A'
+  return v.status
+}
+
 function CellEditPopover({
   employeeId,
   employeeName,
@@ -491,6 +513,7 @@ function CellEditPopover({
   const [note, setNote] = useState('')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  const [history, setHistory] = useState<HistoryEntry[] | null>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -500,6 +523,16 @@ function CellEditPopover({
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  // Audit history for this cell (manual edits / corrections / leave writebacks)
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/attendance/${employeeId}/${iso}`)
+      .then((r) => (r.ok ? r.json() : { history: [] }))
+      .then((d) => { if (!cancelled) setHistory(d.history ?? []) })
+      .catch(() => { if (!cancelled) setHistory([]) })
+    return () => { cancelled = true }
+  }, [employeeId, iso])
 
   async function save() {
     setSaving(true)
@@ -576,6 +609,32 @@ function CellEditPopover({
             {err}
           </div>
         )}
+
+        {/* Audit history — chronological trail of changes to this cell */}
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <h4 className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">History</h4>
+          {history === null ? (
+            <p className="text-xs text-slate-400">Loading history…</p>
+          ) : history.length === 0 ? (
+            <p className="text-xs text-slate-400">No recorded changes for this day.</p>
+          ) : (
+            <ul className="space-y-1.5 max-h-36 overflow-y-auto pr-1">
+              {history.map((h) => (
+                <li key={h.id} className="text-xs text-slate-600 leading-snug">
+                  <span className="font-semibold text-slate-900">
+                    {h.from ? `${historyLabel(h.from)} → ` : ''}{historyLabel(h.to)}
+                  </span>{' '}
+                  · {h.source} by {h.by}
+                  <span className="text-slate-400">
+                    {' '}· {new Date(h.at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}{' '}
+                    {new Date(h.at).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                  {h.note && <div className="text-slate-400 truncate" title={h.note}>“{h.note}”</div>}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <div className="flex justify-end gap-2 mt-4">
           <button

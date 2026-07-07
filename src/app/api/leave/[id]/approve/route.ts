@@ -191,20 +191,46 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const status = isHalf ? 'HALF_DAY' : 'LEAVE'
           const hoursWorked = isHalf ? 4 : 0
           const dayDate = new Date(cursor)
-          await tx.attendanceLog.upsert({
+          const notes = `Auto-written from approved leave (${leaveRequest.leaveType})`
+          const existingLog = await tx.attendanceLog.findUnique({
             where: { employeeId_date: { employeeId: leaveRequest.employeeId, date: dayDate } },
-            create: {
+            select: { id: true, status: true, workType: true, hoursWorked: true },
+          })
+          const savedLog = existingLog
+            ? await tx.attendanceLog.update({
+                where: { id: existingLog.id },
+                data: { status, hoursWorked, notes },
+              })
+            : await tx.attendanceLog.create({
+                data: {
+                  employeeId: leaveRequest.employeeId,
+                  date: dayDate,
+                  workType: 'ONSITE',
+                  status,
+                  hoursWorked,
+                  notes,
+                },
+              })
+          // Audit trail — the attendance cell history (grid popover) shows
+          // this as "Leave approval", alongside manual edits + corrections.
+          await tx.auditLog.create({
+            data: {
+              userId: payload.userId,
               employeeId: leaveRequest.employeeId,
-              date: dayDate,
-              workType: 'ONSITE',
-              status,
-              hoursWorked,
-              notes: `Auto-written from approved leave (${leaveRequest.leaveType})`,
-            },
-            update: {
-              status,
-              hoursWorked,
-              notes: `Auto-written from approved leave (${leaveRequest.leaveType})`,
+              action: 'UPDATE',
+              entity: 'AttendanceLog',
+              entityId: savedLog.id,
+              oldValue: existingLog
+                ? JSON.stringify({ status: existingLog.status, workType: existingLog.workType, hoursWorked: existingLog.hoursWorked })
+                : null,
+              newValue: JSON.stringify({
+                status,
+                workType: 'ONSITE',
+                hoursWorked,
+                date: k,
+                via: 'LeaveApproval',
+                leaveRequestId: leaveRequest.id,
+              }),
             },
           })
         }
