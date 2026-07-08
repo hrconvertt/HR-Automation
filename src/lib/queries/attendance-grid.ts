@@ -107,6 +107,15 @@ export interface DayContext {
  */
 export function deriveDayStatus(ctx: DayContext): CellStatus {
   const { log } = ctx
+  // Calendar structure wins first. Convertt is strictly Mon–Fri and observes
+  // public holidays; nobody is scheduled on weekends. A stray PRESENT/LATE log
+  // on a Saturday, Sunday, or public holiday (e.g. from a bad import) must NOT
+  // override the day type — the cell shows WE / HOL regardless.
+  //   Weekend  → always WE
+  //   Holiday  → always HO
+  // Deliberate HR decisions still show through on working days below.
+  if (ctx.isWeekend) return 'WE'
+  if (ctx.isHoliday) return 'HO'
   if (log) {
     if (log.status === 'LEAVE') return ctx.halfDay ? 'H' : 'L'
     if (log.status === 'HALF_DAY') return 'H'
@@ -117,8 +126,6 @@ export function deriveDayStatus(ctx: DayContext): CellStatus {
     if (log.status === 'HOLIDAY') return 'HO'
     if (log.status === 'ABSENT') return 'A'
   }
-  if (ctx.isWeekend) return 'WE'
-  if (ctx.isHoliday) return 'HO'
   if (ctx.onLOA) return 'LOA'
   if (ctx.onLeave) return ctx.halfDay ? 'H' : 'L'
   return 'A'
