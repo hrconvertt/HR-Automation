@@ -404,8 +404,10 @@ export async function buildAttendanceGrid(opts: GridQueryOpts): Promise<GridPayl
     return { id: '__none__' }
   })()
 
-  // Department + search filters layered on top of role filter
-  const filters: Record<string, unknown> = { status: 'ACTIVE', ...empFilter }
+  // Department + search filters layered on top of role filter.
+  // attendanceExempt employees (founders/owners) never appear on attendance
+  // surfaces — grid or Today board.
+  const filters: Record<string, unknown> = { status: 'ACTIVE', attendanceExempt: false, ...empFilter }
   if (department) filters.department = { name: department }
   if (search) filters.fullName = { contains: search, mode: 'insensitive' }
 

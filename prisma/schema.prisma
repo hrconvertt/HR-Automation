@@ -268,6 +268,12 @@ model Employee {
   // Rehire / boomerang
   rehireDate          DateTime?
 
+  // Owners / founders / executives not on the daily attendance system
+  // (not clocked in, skipped by attendance boards). They stay in org chart,
+  // directory and approval chains. Payroll already skips anyone with no
+  // salary row, so unpaid founders need no separate payroll flag.
+  attendanceExempt    Boolean  @default(false)
+
   jobChanges          JobChange[]
   leavesOfAbsence     LeaveOfAbsence[]
   attendanceCorrections AttendanceCorrection[]
