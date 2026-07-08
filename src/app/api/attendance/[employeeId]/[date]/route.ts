@@ -17,16 +17,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { parseLocalDate, endOfDay } from '@/lib/date-utils'
-
-type CellStatus = 'PRESENT' | 'LEAVE' | 'WFH' | 'HALF_DAY' | 'ABSENT'
-
-const CELL_DEFAULTS: Record<CellStatus, { status: string; workType: string; hoursWorked: number }> = {
-  PRESENT:  { status: 'PRESENT',  workType: 'ONSITE', hoursWorked: 8 },
-  WFH:      { status: 'PRESENT',  workType: 'WFH',    hoursWorked: 8 },
-  LEAVE:    { status: 'LEAVE',    workType: 'ONSITE', hoursWorked: 0 },
-  HALF_DAY: { status: 'HALF_DAY', workType: 'ONSITE', hoursWorked: 4 },
-  ABSENT:   { status: 'ABSENT',   workType: 'ONSITE', hoursWorked: 0 },
-}
+import { CELL_DEFAULTS, type CellStatus } from '@/lib/attendance-cell'
 
 function parseDate(s: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null

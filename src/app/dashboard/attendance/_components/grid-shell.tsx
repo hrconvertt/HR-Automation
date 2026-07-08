@@ -10,10 +10,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Search, Download, CalendarDays, ArrowRight, LayoutGrid, LayoutList, X, Sun } from 'lucide-react'
+import { Search, Download, CalendarDays, ArrowRight, LayoutGrid, LayoutList, X, Sun, Rows3, Rows4 } from 'lucide-react'
 import { StatusBadge, StatusLegend, type Status } from '@/components/attendance/status-badge'
 import { getInitials } from '@/lib/utils'
 import { TodayBoard } from './today-board'
+import { MonthEditorDrawer } from './month-editor'
 
 interface DayCell { day: number; status: Status; isWeekend: boolean; preJoin?: boolean }
 interface GridEmployee {
@@ -108,8 +109,14 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
   const [summaryData, setSummaryData] = useState<SummaryResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [density, setDensity] = useState<'comfortable' | 'compact'>('comfortable')
+  // Month bulk editor (HR only) — opened from an employee-name click.
+  const [editor, setEditor] = useState<{ id: string; name: string } | null>(null)
   const skipFirstFetch = useRef(!!initialGrid && initialGrid.month === currentReportingMonth())
   const router = useRouter()
+
+  // Force a grid refetch (used after the month editor saves).
+  const [refetchNonce, setRefetchNonce] = useState(0)
 
   // Debounce search
   useEffect(() => {
@@ -147,7 +154,7 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
       .catch((e: Error) => { if (!cancelled) setError(e.message) })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [view, month, department, debouncedSearch])
+  }, [view, month, department, debouncedSearch, refetchNonce])
 
   const canExport = role === 'HR_ADMIN'
   const today = useMemo(() => {
@@ -249,6 +256,26 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
           />
         </div>
         <div className="flex-1" />
+        {view === 'grid' && (
+          <div className="inline-flex bg-slate-100 rounded-md p-0.5" role="group" aria-label="Row density">
+            <button
+              onClick={() => setDensity('comfortable')}
+              title="Comfortable rows"
+              aria-pressed={density === 'comfortable'}
+              className={`inline-flex items-center justify-center w-7 h-7 rounded ${density === 'comfortable' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              <Rows3 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={() => setDensity('compact')}
+              title="Compact rows"
+              aria-pressed={density === 'compact'}
+              className={`inline-flex items-center justify-center w-7 h-7 rounded ${density === 'compact' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+            >
+              <Rows4 className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        )}
         <StatusLegend />
         {canExport && view === 'grid' && (
           <button
@@ -281,10 +308,18 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
 
       {/* GRID VIEW */}
       {view === 'grid' && gridData && !loading && (
+        <>
+        <SummaryBar data={gridData} />
         <GridTable
           data={gridData}
           today={today}
+          density={density}
           canEdit={role === 'HR_ADMIN'}
+          onNameClick={
+            role === 'HR_ADMIN'
+              ? (id, name) => setEditor({ id, name })
+              : (id) => router.push(`/dashboard/attendance/${id}`)
+          }
           onRowClick={(id) => router.push(`/dashboard/attendance/${id}`)}
           onCellSaved={(empId, day, status) => {
             setGridData((prev) => {
@@ -303,6 +338,7 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
             })
           }}
         />
+        </>
       )}
 
       {/* SUMMARY VIEW */}
@@ -312,8 +348,73 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
 
       <p className="text-xs text-slate-400 flex items-center gap-1.5">
         <CalendarDays className="w-3.5 h-3.5" />
-        Click any employee row to open their detailed 8-month calendar.
+        {role === 'HR_ADMIN'
+          ? 'Click a name to bulk-edit their month · click elsewhere in a row to open the detailed calendar.'
+          : 'Click any employee row to open their detailed 8-month calendar.'}
       </p>
+
+      {/* Month bulk editor (HR only) */}
+      {editor && (
+        <MonthEditorDrawer
+          employeeId={editor.id}
+          employeeName={editor.name}
+          month={month}
+          onClose={() => setEditor(null)}
+          onSaved={() => setRefetchNonce((n) => n + 1)}
+        />
+      )}
+    </div>
+  )
+}
+
+// Company-wide stat chips for the visible month (derived from the same grid
+// rows so counts never drift). Monochrome slate.
+function SummaryBar({ data }: { data: GridResponse }) {
+  const s = useMemo(() => {
+    let present = 0, wfh = 0, leave = 0, hd = 0, onLeaveToday = 0, unmarkedToday = 0
+    const todayDay = data.today.startsWith(data.month) ? Number(data.today.slice(8, 10)) : null
+    for (const emp of data.employees) {
+      present += emp.totals.present
+      wfh += emp.totals.wfh
+      leave += emp.totals.leave
+      hd += emp.totals.hd
+      if (todayDay != null) {
+        const cell = emp.days.find((d) => d.day === todayDay)
+        if (cell) {
+          if (cell.status === 'L' || cell.status === 'H' || cell.status === 'LOA') onLeaveToday++
+          else if (cell.status === 'A') unmarkedToday++
+        }
+      }
+    }
+    // Attendance %: present-or-wfh working-day cells over all counted working
+    // cells (P+WFH already inside present; L/HD/A are the shortfall).
+    const counted = present + leave + hd
+    const attendancePct = counted > 0 ? Math.round((present / counted) * 100) : 0
+    return { present, wfh, leave, hd, onLeaveToday, unmarkedToday, attendancePct, showToday: todayDay != null }
+  }, [data])
+
+  const chips: { label: string; value: string | number }[] = [
+    { label: 'Avg attendance', value: `${s.attendancePct}%` },
+    { label: 'Present', value: s.present },
+    { label: 'WFH', value: s.wfh },
+    { label: 'Leave', value: s.leave },
+    { label: 'Half days', value: s.hd },
+    ...(s.showToday
+      ? [
+          { label: 'On leave today', value: s.onLeaveToday },
+          { label: 'Unmarked today', value: s.unmarkedToday },
+        ]
+      : []),
+  ]
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
+      {chips.map((c) => (
+        <div key={c.label} className="bg-white border border-slate-200 rounded-lg px-3 py-2">
+          <div className="text-lg font-semibold text-slate-900 leading-tight">{c.value}</div>
+          <div className="text-[11px] text-slate-500 truncate">{c.label}</div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -324,11 +425,19 @@ interface GridTableProps {
   data: GridResponse
   today: string
   canEdit: boolean
+  density: 'comfortable' | 'compact'
+  /** Click on the employee NAME — HR opens the month editor, others open detail. */
+  onNameClick: (id: string, name: string) => void
   onRowClick: (id: string) => void
   onCellSaved: (employeeId: string, day: number, status: Status) => void
 }
 
-function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableProps) {
+const STATUS_TITLE: Record<Status, string> = {
+  P: 'Present', WFH: 'Work from home', L: 'Leave', H: 'Half day',
+  A: 'Unmarked', WE: 'Weekend', HO: 'Public holiday', LOA: 'Leave of absence',
+}
+
+function GridTable({ data, today, canEdit, density, onNameClick, onRowClick, onCellSaved }: GridTableProps) {
   // Parse month-year for weekday header row
   const [year, month] = data.month.split('-').map(Number)
   const days = Array.from({ length: data.daysInMonth }, (_, i) => {
@@ -340,6 +449,8 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
     const isToday = iso === today
     return { day: i + 1, dowLabel, isWeekend, isToday }
   })
+  const rowPad = density === 'compact' ? 'py-0.5' : 'py-1.5'
+  const namePad = density === 'compact' ? 'py-1' : 'py-1.5'
 
   const [editing, setEditing] = useState<{ empId: string; empName: string; day: number; iso: string } | null>(null)
   const [flashKey, setFlashKey] = useState<string | null>(null)
@@ -349,21 +460,30 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
     return () => clearTimeout(t)
   }, [flashKey])
 
+  // Sticky right-hand totals: 4 columns, right-anchored so they ride along on
+  // horizontal scroll. Widths kept in sync between header + body.
+  const totalCols: { key: 'present' | 'leave' | 'wfh' | 'hd'; label: string; right: string }[] = [
+    { key: 'present', label: 'P', right: 'right-[126px]' },
+    { key: 'leave', label: 'L', right: 'right-[84px]' },
+    { key: 'wfh', label: 'WFH', right: 'right-[42px]' },
+    { key: 'hd', label: 'HD', right: 'right-0' },
+  ]
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
         <table className="text-xs border-collapse">
-          <thead className="bg-slate-50">
+          <thead>
             <tr>
-              <th className="sticky left-0 z-20 bg-slate-50 border-b border-r border-slate-200 px-3 py-2 text-left font-semibold text-slate-700 min-w-[220px]">
+              <th className="sticky left-0 top-0 z-40 bg-slate-50 border-b border-r border-slate-200 px-3 py-2 text-left font-semibold text-slate-700 min-w-[220px]">
                 Employee
               </th>
               {days.map((d) => (
                 <th
                   key={d.day}
-                  className={`border-b border-slate-200 px-1 py-1 text-center font-medium text-slate-600 ${
-                    d.isWeekend ? 'bg-slate-100/70 text-slate-400' : ''
-                  } ${d.isToday ? 'bg-slate-50 text-slate-700' : ''}`}
+                  className={`sticky top-0 z-20 border-b border-slate-200 px-1 py-1 text-center font-medium ${
+                    d.isWeekend ? 'bg-slate-100 text-slate-300' : 'bg-slate-50 text-slate-600'
+                  } ${d.isToday ? 'bg-slate-200 text-slate-900 ring-1 ring-inset ring-slate-300' : ''}`}
                 >
                   <div className="leading-tight">
                     <div className="text-[10px] uppercase">{d.dowLabel}</div>
@@ -371,10 +491,14 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                   </div>
                 </th>
               ))}
-              <th className="border-b border-l border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-50/40">P</th>
-              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-50/40">L</th>
-              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-50/40">WFH</th>
-              <th className="border-b border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-50/40">HD</th>
+              {totalCols.map((c, i) => (
+                <th
+                  key={c.key}
+                  className={`sticky ${c.right} top-0 z-30 border-b ${i === 0 ? 'border-l' : ''} border-slate-200 px-2 py-1 text-center font-semibold text-slate-700 bg-slate-100 w-[42px]`}
+                >
+                  {c.label}
+                </th>
+              ))}
             </tr>
           </thead>
           <tbody>
@@ -391,22 +515,41 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                 className="hover:bg-slate-50/40 transition group"
               >
                 <td
-                  onClick={() => onRowClick(emp.id)}
-                  className="sticky left-0 z-30 bg-white group-hover:bg-slate-50 border-b border-r border-slate-200 px-3 py-1.5 cursor-pointer shadow-[1px_0_0_0_rgb(226_232_240)]"
+                  className={`sticky left-0 z-20 bg-white group-hover:bg-slate-50 border-b border-r border-slate-200 px-3 ${namePad} shadow-[1px_0_0_0_rgb(226_232_240)]`}
                 >
                   <div className="flex items-center gap-2">
-                    <div className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => onNameClick(emp.id, emp.fullName)}
+                      title={canEdit ? 'Edit this month' : 'Open calendar'}
+                      className="w-7 h-7 rounded-full bg-slate-100 text-slate-700 text-[10px] font-bold flex items-center justify-center flex-shrink-0 hover:bg-slate-900 hover:text-white transition"
+                    >
                       {getInitials(emp.fullName)}
-                    </div>
+                    </button>
                     <div className="min-w-0">
-                      <div className="text-[12px] font-medium text-slate-900 truncate">{emp.fullName}</div>
-                      <div className="text-[10px] text-slate-500 truncate">{emp.department}</div>
+                      <button
+                        type="button"
+                        onClick={() => onNameClick(emp.id, emp.fullName)}
+                        title={canEdit ? 'Edit this month' : 'Open calendar'}
+                        className="text-[12px] font-medium text-slate-900 truncate hover:underline text-left block max-w-full"
+                      >
+                        {emp.fullName}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onRowClick(emp.id)}
+                        className="text-[10px] text-slate-500 truncate hover:text-slate-700 text-left block max-w-full"
+                        title="Open detailed calendar"
+                      >
+                        {emp.department}
+                      </button>
                     </div>
                   </div>
                 </td>
                 {emp.days.map((d) => {
                   const iso = `${year}-${String(month).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`
                   const isFuture = iso > today
+                  const isToday = iso === today
                   const hasPendingCorrection = emp.pendingDays?.includes(iso) ?? false
                   // Blank dot: unmarked future days and pre-joining days. A
                   // future day WITH data (e.g. approved upcoming leave) still
@@ -414,8 +557,12 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                   const renderBlank = (isFuture && d.status === 'A') || !!d.preJoin
                   const cellKey = `${emp.id}|${d.day}`
                   const flashing = flashKey === cellKey
-                  // HR can edit any non-weekend, non-future, post-joining cell
-                  const isEditable = canEdit && !d.isWeekend && !isFuture && !d.preJoin
+                  // HR can edit any non-weekend, non-holiday, non-future, post-joining cell
+                  const isEditable = canEdit && !d.isWeekend && d.status !== 'HO' && !isFuture && !d.preJoin
+                  const recede = d.isWeekend || d.status === 'HO'
+                  const tip = hasPendingCorrection
+                    ? 'Correction request pending — review in Corrections'
+                    : `${STATUS_TITLE[d.status] ?? d.status} · ${iso}`
                   return (
                     <td
                       key={d.day}
@@ -426,15 +573,11 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                           }
                         : undefined}
                       className={`relative border-b border-slate-100 p-0.5 text-center ${
-                        d.isWeekend ? 'bg-slate-50/40' : ''
-                      } ${isEditable ? 'cursor-pointer hover:ring-1 hover:ring-slate-200 hover:bg-slate-50/60' : ''} ${
-                        flashing ? 'bg-slate-100 transition-colors' : ''
-                      }`}
-                      title={
-                        hasPendingCorrection
-                          ? 'Correction request pending — review in Corrections'
-                          : isEditable ? 'Click to edit (HR only)' : undefined
-                      }
+                        recede ? 'bg-slate-50' : ''
+                      } ${isToday ? 'bg-slate-100/70 ring-1 ring-inset ring-slate-200' : ''} ${
+                        isEditable ? 'cursor-pointer hover:ring-1 hover:ring-slate-300 hover:bg-slate-50/60' : ''
+                      } ${flashing ? 'bg-slate-200 transition-colors' : ''}`}
+                      title={tip}
                     >
                       <StatusBadge status={d.status} future={renderBlank} />
                       {hasPendingCorrection && (
@@ -443,10 +586,14 @@ function GridTable({ data, today, canEdit, onRowClick, onCellSaved }: GridTableP
                     </td>
                   )
                 })}
-                <td className="border-b border-l border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">{emp.totals.present}</td>
-                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">{emp.totals.leave}</td>
-                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">{emp.totals.wfh}</td>
-                <td className="border-b border-slate-200 px-2 py-1.5 text-center font-semibold text-slate-700">{emp.totals.hd}</td>
+                {totalCols.map((c, i) => (
+                  <td
+                    key={c.key}
+                    className={`sticky ${c.right} z-10 bg-white group-hover:bg-slate-50 border-b ${i === 0 ? 'border-l' : ''} border-slate-200 px-2 ${rowPad} text-center font-semibold text-slate-700 w-[42px]`}
+                  >
+                    {emp.totals[c.key]}
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>
