@@ -10,6 +10,10 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  // Direct (non-pooled) connection for schema ops (prisma db push during the
+  // Vercel build). Supabase's transaction pooler (:6543) can't run DDL —
+  // runtime queries use the pooled url above, DDL goes through directUrl.
+  directUrl = env("DIRECT_URL")
 }
 
 // ─── AUTH ────────────────────────────────────────────────────────────────────
