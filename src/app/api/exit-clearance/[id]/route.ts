@@ -63,6 +63,12 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   })
   if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Writes are blocked while an HR admin previews another role.
+  const previewRole = request.cookies.get('hr_preview_role')?.value
+  if (previewRole && previewRole !== 'HR_ADMIN') {
+    return NextResponse.json({ error: 'View-only while previewing role' }, { status: 403 })
+  }
+
   const clearance = await prisma.exitClearance.findUnique({ where: { id } })
   if (!clearance) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -203,6 +209,21 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       where: { id },
       data: { status: 'COMPLETED', completedAt: now },
     })
+
+    // Close out the originating Termination workflow (if any) so it doesn't
+    // sit in IN_EXIT_CLEARANCE forever after clearance is done.
+    if (clearance.terminationId) {
+      const term = await prisma.termination.findUnique({ where: { id: clearance.terminationId }, select: { activityLog: true, status: true } })
+      if (term && term.status === 'IN_EXIT_CLEARANCE') {
+        let log: unknown[] = []
+        try { const parsed = JSON.parse(term.activityLog ?? '[]'); if (Array.isArray(parsed)) log = parsed } catch { /* ignore */ }
+        log.push({ at: now.toISOString(), by: 'System', action: 'COMPLETED', note: 'Exit clearance completed — workflow closed' })
+        await prisma.termination.update({
+          where: { id: clearance.terminationId },
+          data: { status: 'COMPLETED', activityLog: JSON.stringify(log) },
+        }).catch(() => {})
+      }
+    }
     const emp = await prisma.employee.findUnique({
       where: { id: clearance.employeeId },
       select: {

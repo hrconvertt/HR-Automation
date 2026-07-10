@@ -17,7 +17,34 @@ interface Clearance {
   financeCleared: boolean
   adminCleared: boolean
   hrCleared: boolean
+  duesCleared: boolean
+  employeeAcknowledged: boolean
+  hrCertifiedAt: string | null
+  interviewCompletedAt: string | null
+  handoverSignedAt: string | null
+  handoverSignedByMgr: boolean
+  triggerType: string
+  terminationId: string | null
   employee: { id: string; fullName: string; employeeCode: string; designation: string; status: string }
+}
+
+const TRIGGER_LABEL: Record<string, string> = {
+  RESIGNATION: 'Resignation',
+  TERMINATION: 'Termination',
+  LAYOFF: 'Layoff',
+  OTHER: 'Other',
+}
+
+// Same 6 completion gates the detail page (and the COMPLETE API action) use.
+function sectionsDone(c: Clearance): number {
+  return [
+    c.itCleared && c.financeCleared && c.adminCleared && c.hrCleared,
+    c.duesCleared,
+    c.employeeAcknowledged,
+    !!c.hrCertifiedAt,
+    !!c.interviewCompletedAt,
+    !!c.handoverSignedAt && c.handoverSignedByMgr,
+  ].filter(Boolean).length
 }
 
 export default function ExitClearanceClient() {
@@ -30,6 +57,17 @@ export default function ExitClearanceClient() {
       .then((d) => { setClearances(d.clearances ?? []); setLoading(false) })
       .catch(() => setLoading(false))
   }, [])
+
+  const now = Date.now()
+  const sorted = [...clearances].sort((a, b) => {
+    // In-progress first (oldest initiation first — most aged on top), completed last.
+    const rank = (c: Clearance) => (c.status === 'COMPLETED' ? 1 : 0)
+    const r = rank(a) - rank(b)
+    if (r !== 0) return r
+    return rank(a) === 0
+      ? new Date(a.initiatedAt).getTime() - new Date(b.initiatedAt).getTime()
+      : new Date(b.initiatedAt).getTime() - new Date(a.initiatedAt).getTime()
+  })
 
   return (
     <div className="space-y-4">
@@ -44,16 +82,14 @@ export default function ExitClearanceClient() {
           <div className="flex items-start gap-2 mt-2 rounded-md bg-slate-50 border border-slate-100 px-3 py-2 text-xs text-slate-900">
             <Info className="w-3.5 h-3.5 mt-0.5 shrink-0" />
             <p>
-              Employees appear here automatically when their status changes to{' '}
-              <span className="font-medium">Resigned</span>, <span className="font-medium">Terminated</span>, or{' '}
-              <span className="font-medium">Laid Off</span>. Update status from the{' '}
-              <Link href="/dashboard/employees" className="underline font-medium">People module</Link>.
+              Clearances open automatically from a resignation or a termination handoff. Click a row to work through the
+              7-section checklist — departmental sign-offs, settlement, acknowledgment, certification, exit interview and handover.
             </p>
           </div>
         </CardHeader>
         {loading ? (
           <CardContent className="py-8 text-center text-slate-400">Loading…</CardContent>
-        ) : clearances.length === 0 ? (
+        ) : sorted.length === 0 ? (
           <CardContent className="py-10 text-center text-slate-400">
             <DoorOpen className="w-8 h-8 mx-auto mb-2 opacity-30" />
             No exit clearances in progress.
@@ -63,28 +99,56 @@ export default function ExitClearanceClient() {
             <TableHeader>
               <TableRow>
                 <TableHead>Employee</TableHead>
+                <TableHead>Trigger</TableHead>
                 <TableHead>Last Working Day</TableHead>
-                <TableHead>Clearances</TableHead>
+                <TableHead>Progress</TableHead>
+                <TableHead>Aging</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {clearances.map((c) => {
-                const totalClear = [c.itCleared, c.financeCleared, c.adminCleared, c.hrCleared].filter(Boolean).length
+              {sorted.map((c) => {
+                const done = sectionsDone(c)
+                const agingDays = Math.floor((now - new Date(c.initiatedAt).getTime()) / 86400000)
+                const isAged = c.status !== 'COMPLETED' && agingDays > 14
                 return (
                   <TableRow key={c.id}>
                     <TableCell>
-                      <p className="font-medium">{c.employee.fullName}</p>
+                      <Link href={`/dashboard/lifecycle/exit/${c.id}`} className="font-medium text-slate-900 hover:text-slate-700 hover:underline">
+                        {c.employee.fullName}
+                      </Link>
                       <p className="text-xs text-slate-500">{c.employee.employeeCode} · {c.employee.designation}</p>
                     </TableCell>
+                    <TableCell className="text-xs text-slate-600">
+                      {TRIGGER_LABEL[c.triggerType] ?? c.triggerType}
+                      {c.terminationId && (
+                        <div>
+                          <Link href={`/dashboard/lifecycle/termination/${c.terminationId}`} className="text-[11px] underline underline-offset-2 text-slate-500 hover:text-slate-800" title="Open the originating termination workflow">
+                            view termination
+                          </Link>
+                        </div>
+                      )}
+                    </TableCell>
                     <TableCell>{c.lastWorkingDay ? formatDate(c.lastWorkingDay) : '—'}</TableCell>
-                    <TableCell>{totalClear}/4 cleared</TableCell>
                     <TableCell>
-                      <Badge variant={c.status === 'COMPLETED' ? 'success' : 'default'}>{c.status}</Badge>
+                      <div className="flex items-center gap-2">
+                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                          <div className="h-full bg-slate-600 rounded-full" style={{ width: `${(done / 6) * 100}%` }} />
+                        </div>
+                        <span className="text-xs text-slate-600 tabular-nums">{done}/6</span>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      <Link href={`/dashboard/employees/${c.employee.id}`} className="text-slate-700 hover:underline text-sm font-medium">
+                      <span className={`text-xs tabular-nums ${isAged ? 'font-semibold text-slate-800' : 'text-slate-500'}`} title={`Initiated ${formatDate(c.initiatedAt)}`}>
+                        {c.status === 'COMPLETED' ? '—' : agingDays === 0 ? 'Today' : `${agingDays}d${isAged ? ' · aging' : ''}`}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={c.status === 'COMPLETED' ? 'success' : 'default'}>{c.status.replace('_', ' ')}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Link href={`/dashboard/lifecycle/exit/${c.id}`} className="text-slate-700 hover:underline text-sm font-medium" title="Open the clearance checklist">
                         Open →
                       </Link>
                     </TableCell>
