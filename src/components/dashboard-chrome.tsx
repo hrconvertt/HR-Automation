@@ -134,7 +134,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/performance', label: 'Performance', icon: TrendingUp },
         { href: '/dashboard/lifecycle', label: 'Employee Lifecycle', icon: UserPlus },
-        { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
         { href: '/dashboard/learning', label: 'Learning & Dev', icon: GraduationCap },
         { href: '/dashboard/org-chart', label: 'Org Chart', icon: Network },
@@ -334,8 +333,10 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/lifecycle', label: 'Overview', icon: Users },
         { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
-        // Probation is its own top-level module (Talent → Probation) — not
-        // duplicated here per HR's instruction.
+        // Probation lives INSIDE the lifecycle (its natural stage position).
+        // The top-level HR nav entry was removed so it isn't duplicated;
+        // Managers keep their top-level Probation entry (no lifecycle nav).
+        { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
         { href: '/dashboard/lifecycle/job-changes', label: 'Job Changes', icon: TrendingUp },
         { href: '/dashboard/lifecycle/loa', label: 'Leave of Absence', icon: PlaneIcon },
         { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert },
