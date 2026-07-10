@@ -279,6 +279,11 @@ function StageActionCard({ t, canAct, busy, onAction }: {
       <Card>
         <CardContent className="p-4 space-y-3">
           <h3 className="font-semibold text-slate-900 flex items-center gap-2"><Calendar className="w-4 h-4" /> Meeting</h3>
+          {t.meetingScheduledAt && new Date(t.meetingScheduledAt).getTime() < Date.now() && (
+            <p className="text-xs font-semibold text-slate-800 bg-slate-50 border border-slate-200 rounded px-2 py-1.5">
+              The scheduled meeting time has passed — record the outcome below to keep the workflow moving.
+            </p>
+          )}
           <div className="text-sm">
             <p><strong>Scheduled for:</strong> {t.meetingScheduledAt && new Date(t.meetingScheduledAt).toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}</p>
             {t.meetingLocation && <p><strong>Location:</strong> {t.meetingLocation}</p>}
@@ -364,7 +369,9 @@ function StageActionCard({ t, canAct, busy, onAction }: {
             The Exit Clearance module now owns the remainder of this offboarding. Once clearance completes, this workflow moves to Completed.
           </p>
           {t.exitClearanceId && (
-            <Link href={`/dashboard/lifecycle/exit`} className="text-sm underline underline-offset-2 text-slate-800">Open Exit Clearance →</Link>
+            <Link href={`/dashboard/lifecycle/exit/${t.exitClearanceId}`} className="text-sm underline underline-offset-2 text-slate-800 font-medium" title="Open the exit clearance record created from this termination">
+              Open Exit Clearance →
+            </Link>
           )}
         </CardContent>
       </Card>
@@ -379,6 +386,11 @@ function StageActionCard({ t, canAct, busy, onAction }: {
           <p className="text-sm text-slate-700">
             Termination workflow closed. Employee exit date on record: {t.employee ? new Date(t.lastWorkingDay).toLocaleDateString('en-GB', { dateStyle: 'long' }) : '—'}.
           </p>
+          {t.exitClearanceId && (
+            <Link href={`/dashboard/lifecycle/exit/${t.exitClearanceId}`} className="text-sm underline underline-offset-2 text-slate-800 font-medium" title="Open the exit clearance record created from this termination">
+              View Exit Clearance record →
+            </Link>
+          )}
         </CardContent>
       </Card>
     )
