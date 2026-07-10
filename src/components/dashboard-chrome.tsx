@@ -332,8 +332,8 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/lifecycle', label: 'Overview', icon: Users },
         { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
-        { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
-        { href: '/dashboard/employees', label: 'Active', icon: Users },
+        // Probation is its own top-level module (Talent → Probation) — not
+        // duplicated here per HR's instruction.
         { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert },
         { href: '/dashboard/lifecycle/exit', label: 'Exit Clearance', icon: LogOut },
       ],
