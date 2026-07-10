@@ -93,6 +93,8 @@ const FOCUS_PATHS = new Set([
   '/dashboard/culture/birthdays',
   '/dashboard/culture/anniversaries',
   '/dashboard/lifecycle/exit',
+  '/dashboard/lifecycle/job-changes',
+  '/dashboard/lifecycle/loa',
   '/dashboard/calendar',
   '/dashboard/org-chart',
   '/dashboard/settings/roles',
@@ -334,6 +336,8 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
         { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
         // Probation is its own top-level module (Talent → Probation) — not
         // duplicated here per HR's instruction.
+        { href: '/dashboard/lifecycle/job-changes', label: 'Job Changes', icon: TrendingUp },
+        { href: '/dashboard/lifecycle/loa', label: 'Leave of Absence', icon: PlaneIcon },
         { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert },
         { href: '/dashboard/lifecycle/exit', label: 'Exit Clearance', icon: LogOut },
       ],
