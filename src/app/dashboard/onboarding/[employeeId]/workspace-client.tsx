@@ -182,6 +182,18 @@ export function OnboardingWorkspace(props: Props) {
     startTransition(() => router.refresh())
   }
 
+  async function applyStandardChecklist() {
+    if (!confirm('Apply the standard Convertt onboarding checklist to this employee?')) return
+    setBusyTaskId('__template__')
+    const res = await fetch(`/api/onboarding/${props.employeeId}/apply-template`, { method: 'POST' })
+    if (!res.ok) {
+      const { error } = await res.json().catch(() => ({ error: 'Failed' }))
+      alert(error || 'Failed to apply checklist')
+    }
+    setBusyTaskId(null)
+    startTransition(() => router.refresh())
+  }
+
   const grouped = CATEGORY_ORDER.map((cat) => ({
     cat,
     items: tasks.filter((t) => t.category === cat).sort((a, b) => a.orderIndex - b.orderIndex),
@@ -229,6 +241,24 @@ export function OnboardingWorkspace(props: Props) {
         )}
       </Card>
 
+      {/* Empty workspace — offer the standard template (HR only) */}
+      {tasks.length === 0 && (
+        <Card className="rounded-xl border-slate-200 border-dashed p-8 text-center">
+          <p className="text-sm text-slate-600 font-medium">No onboarding tasks yet.</p>
+          <p className="text-xs text-slate-500 mt-1">This checklist was created before per-hire task seeding. Apply the standard 17-item Convertt checklist to get started.</p>
+          {props.canEdit && (
+            <Button
+              className="mt-4"
+              disabled={busyTaskId === '__template__' || pending}
+              onClick={applyStandardChecklist}
+              title="Seed the standard Convertt onboarding checklist for this employee"
+            >
+              {busyTaskId === '__template__' ? 'Applying…' : 'Apply Standard Checklist'}
+            </Button>
+          )}
+        </Card>
+      )}
+
       {/* Task groups */}
       {grouped.map(({ cat, items }) => {
         const completedCount = items.filter((i) => i.status === 'COMPLETED' || i.status === 'NOT_REQUIRED' || i.isComplete).length
@@ -265,10 +295,22 @@ export function OnboardingWorkspace(props: Props) {
                 return (
                   <div key={t.id} className={`rounded-lg p-3 border ${isDone ? 'bg-slate-50 border-slate-100' : isSkipped ? 'bg-slate-50/60 border-slate-100' : 'bg-white border-slate-200'}`}>
                     <div className="flex items-start gap-3">
-                      <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-slate-700 border-slate-700 text-white' : isSkipped ? 'bg-slate-200 border-slate-200 text-slate-500' : 'border-slate-300 bg-white'}`}>
-                        {isDone && <Check className="w-3 h-3" />}
-                        {isSkipped && <X className="w-3 h-3" />}
-                      </div>
+                      {canAct && !isSkipped ? (
+                        <button
+                          type="button"
+                          disabled={rowBusy}
+                          onClick={() => (isDone ? undoTask(t) : markComplete(t))}
+                          title={isDone ? 'Undo — mark as pending' : 'Mark done'}
+                          className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:opacity-50 ${isDone ? 'bg-slate-700 border-slate-700 text-white hover:bg-slate-600' : 'border-slate-300 bg-white hover:border-slate-500 hover:bg-slate-50'}`}
+                        >
+                          {isDone && <Check className="w-3 h-3" />}
+                        </button>
+                      ) : (
+                        <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-slate-700 border-slate-700 text-white' : isSkipped ? 'bg-slate-200 border-slate-200 text-slate-500' : 'border-slate-300 bg-white'}`} title={isSkipped ? 'Marked not required' : isDone ? 'Completed' : 'Pending'}>
+                          {isDone && <Check className="w-3 h-3" />}
+                          {isSkipped && <X className="w-3 h-3" />}
+                        </div>
+                      )}
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm ${isDone ? 'line-through text-slate-500' : isSkipped ? 'text-slate-500' : 'text-slate-900'}`}>{t.title}</p>
                         {t.description && <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>}
@@ -299,7 +341,7 @@ export function OnboardingWorkspace(props: Props) {
                           <div className="mt-2 flex flex-wrap items-center gap-2">
                             {isPendingState && (
                               <>
-                                <Button size="sm" variant="outline" disabled={rowBusy} onClick={() => markComplete(t)}>
+                                <Button size="sm" variant="outline" disabled={rowBusy} onClick={() => markComplete(t)} title="Mark this task as completed">
                                   <Check className="w-3 h-3 mr-1" /> Mark Done
                                 </Button>
                                 {isDocTask && (
@@ -320,6 +362,7 @@ export function OnboardingWorkspace(props: Props) {
                                       variant="outline"
                                       disabled={rowBusy}
                                       onClick={() => fileInputs.current[t.id]?.click()}
+                                      title="Attach a document (PDF, image, or Word) — completes the task"
                                     >
                                       <Upload className="w-3 h-3 mr-1" /> Upload
                                     </Button>
@@ -331,6 +374,7 @@ export function OnboardingWorkspace(props: Props) {
                                     variant="ghost"
                                     disabled={rowBusy}
                                     onClick={() => setNotRequiredFor(t)}
+                                    title="Skip this task with a reason — counts as resolved"
                                   >
                                     <X className="w-3 h-3 mr-1" /> Not Required
                                   </Button>
@@ -338,7 +382,7 @@ export function OnboardingWorkspace(props: Props) {
                               </>
                             )}
                             {(isDone || isSkipped) && (
-                              <Button size="sm" variant="ghost" disabled={rowBusy} onClick={() => undoTask(t)}>
+                              <Button size="sm" variant="ghost" disabled={rowBusy} onClick={() => undoTask(t)} title={isSkipped ? 'Move this task back to pending' : 'Undo completion — move back to pending'}>
                                 <RotateCcw className="w-3 h-3 mr-1" /> {isSkipped ? 'Reactivate' : 'Undo'}
                               </Button>
                             )}
