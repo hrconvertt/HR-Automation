@@ -24,6 +24,10 @@ import EmployeeLifecycleTab from '@/components/employee-lifecycle-tab'
 import { ResignationBanner } from '@/components/resignation-banner'
 import EmployeeSelfUploadCard from '@/components/employee-self-upload-card'
 import AddAssetDialog from '@/components/add-asset-dialog'
+import ChangeJobButton from '@/components/change-job-button'
+import RehireButton from '@/components/rehire-button'
+import { JOB_CHANGE_TYPE_LABEL, type JobChangeType } from '@/lib/job-changes'
+import { LOA_TYPE_LABEL, type LoaType } from '@/lib/loa'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -231,6 +235,21 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
       })
     : null
 
+  // Lifecycle banners (HR-only): open job change + active leave of absence
+  const [openJobChange, activeLoa] = isHR
+    ? await Promise.all([
+        prisma.jobChange.findFirst({
+          where: { employeeId: employee.id, status: { in: ['PENDING_APPROVAL', 'APPROVED'] } },
+          orderBy: { createdAt: 'desc' },
+          select: { changeType: true, toDesignation: true, toDepartmentId: true, effectiveDate: true, status: true },
+        }),
+        prisma.leaveOfAbsence.findFirst({
+          where: { employeeId: employee.id, status: { in: ['ACTIVE', 'EXTENDED'] } },
+          select: { type: true, expectedReturn: true },
+        }),
+      ])
+    : [null, null]
+
   // Lifecycle tab visibility per role (see brief T5)
   const showLifecycleTab = isHR || isExec || isViewingOwn || (isManager && isMyTeamMember)
   const lifecycleShowsComp = isHR || isViewingOwn
@@ -263,6 +282,31 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
           clearanceSections={latestClearance ? sectionsComplete(latestClearance) : null}
         />
       )}
+      {/* HR-only lifecycle banners: open job change / active LOA */}
+      {(openJobChange || activeLoa) && (
+        <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-1">
+          {openJobChange && (
+            <p className="text-sm text-slate-800">
+              <span className="font-semibold">
+                {JOB_CHANGE_TYPE_LABEL[openJobChange.changeType as JobChangeType] ?? openJobChange.changeType}
+                {openJobChange.toDesignation ? ` to ${openJobChange.toDesignation}` : ''}
+              </span>
+              {' — effective '}{formatDate(openJobChange.effectiveDate)},{' '}
+              {openJobChange.status === 'PENDING_APPROVAL' ? 'pending approval' : 'approved (awaiting enactment)'}.{' '}
+              <Link href="/dashboard/lifecycle/job-changes" className="underline hover:text-slate-900">Job Changes →</Link>
+            </p>
+          )}
+          {activeLoa && (
+            <p className="text-sm text-slate-800">
+              <span className="font-semibold">
+                On {LOA_TYPE_LABEL[activeLoa.type as LoaType]?.toLowerCase() ?? activeLoa.type.toLowerCase()} leave of absence
+              </span>
+              {' — expected back '}{formatDate(activeLoa.expectedReturn)}.{' '}
+              <Link href="/dashboard/lifecycle/loa" className="underline hover:text-slate-900">Leave of Absence →</Link>
+            </p>
+          )}
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <div className="flex items-start gap-5">
@@ -283,6 +327,18 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                 </Badge>
                 {isViewingOwn && employee.status === 'ACTIVE' && !employee.resignation && (
                   <ResignationButton employeeType={employee.employeeType} />
+                )}
+                {canEditFull && employee.status === 'ACTIVE' && (
+                  <ChangeJobButton employeeId={employee.id} />
+                )}
+                {canEditFull &&
+                  ['RESIGNED', 'TERMINATED', 'LAYOFF', 'INACTIVE'].includes(employee.status) && (
+                  <RehireButton
+                    employeeId={employee.id}
+                    employeeName={employee.fullName}
+                    currentDesignation={employee.designation}
+                    currentDepartmentId={employee.departmentId}
+                  />
                 )}
                 {canEditFull && (
                   <DeleteEmployeeButton
