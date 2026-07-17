@@ -5,23 +5,28 @@
 <title>Convertt — Org Hierarchy Editor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-  /* ─── Base Reset & Vars ─── */
+  /* ─── BLACK THEME ─── */
   :root {
-    --ink: #111613;
-    --ink-2: #2A3330;
-    --line: #DDE3E0;
-    --bg: #f0f4f8;
-    --warn: #C24F2D;
-    --warn-soft: #FBEDE6;
-    --muted: #6B7773;
+    --bg: #0a0a0a;
+    --bg-card: #141414;
+    --bg-card-hover: #1a1a1a;
+    --bg-elevated: #1e1e1e;
+    --border: #2a2a2a;
+    --border-hover: #3a3a3a;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --text-muted: #666666;
+    --accent: #ffffff;
+    --warn: #ff4444;
+    --warn-bg: #1a0a0a;
+    --warn-border: #3a1515;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea11 0%, #764ba211 25%, #f093fb11 50%, #4facfe11 75%, #00f2fe11 100%),
-                linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    color: var(--ink);
+    background: var(--bg);
+    color: var(--text-primary);
     font-size: 14px;
     line-height: 1.45;
     min-height: 100vh;
@@ -29,15 +34,13 @@
 
   /* ─── Topbar ─── */
   header.topbar {
-    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
+    background: #111111;
     color: #fff;
     padding: 14px 24px;
     display: flex;
     align-items: center;
     gap: 16px;
-    border-bottom: 4px solid;
-    border-image: linear-gradient(90deg, #F59E0B, #EF4444, #EC4899, #8B5CF6, #06B6D4, #10B981) 1;
-    box-shadow: 0 4px 20px rgba(15, 52, 96, 0.3);
+    border-bottom: 1px solid var(--border);
   }
   header .logo {
     display: inline-flex;
@@ -48,23 +51,22 @@
   }
   header .logo .dot {
     width: 24px; height: 24px;
-    background: linear-gradient(135deg, #F59E0B, #EC4899);
-    border-radius: 8px;
+    background: #ffffff;
+    border-radius: 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #fff;
+    color: #000000;
     font-size: 13px;
     font-weight: 800;
-    box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
   }
-  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; color: var(--text-primary); }
   header .right { margin-left: auto; display: flex; gap: 8px; }
 
   /* ─── Buttons ─── */
   button {
     appearance: none;
-    border: 1px solid transparent;
+    border: 1px solid var(--border);
     border-radius: 8px;
     padding: 7px 12px;
     font-size: 12.5px;
@@ -72,36 +74,35 @@
     cursor: pointer;
     transition: all 150ms ease;
     background: transparent;
-    color: inherit;
+    color: var(--text-primary);
     line-height: 1;
   }
   button.primary {
-    background: linear-gradient(135deg, #06B6D4, #3B82F6);
-    color: #fff;
-    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+    background: #ffffff;
+    color: #000000;
+    border-color: #ffffff;
   }
   button.primary:hover {
-    background: linear-gradient(135deg, #0891B2, #2563EB);
-    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
-    transform: translateY(-1px);
+    background: #e0e0e0;
   }
   button.ghost {
     background: transparent;
-    color: #fff;
-    border-color: rgba(255,255,255,0.25);
+    color: var(--text-secondary);
+    border-color: var(--border);
   }
-  button.ghost:hover { background: rgba(255,255,255,0.08); }
+  button.ghost:hover { background: rgba(255,255,255,0.05); color: #fff; }
   button.small {
-    background: rgba(255,255,255,0.12);
-    color: #fff;
+    background: var(--bg-card);
+    color: var(--text-secondary);
     padding: 5px 9px;
     font-size: 11.5px;
-    border: 1px solid rgba(255,255,255,0.2);
+    border: 1px solid var(--border);
   }
-  button.small:hover { background: rgba(255,255,255,0.2); }
+  button.small:hover { background: var(--bg-elevated); color: #fff; border-color: var(--border-hover); }
   button.danger {
-    background: var(--warn-soft);
+    background: var(--warn-bg);
     color: var(--warn);
+    border-color: var(--warn-border);
   }
   button.danger:hover { background: var(--warn); color: #fff; }
   button.icon {
@@ -111,27 +112,26 @@
     align-items: center;
     justify-content: center;
     background: transparent;
-    color: var(--muted);
-    border: 1px solid var(--line);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
     border-radius: 6px;
   }
-  button.icon:hover { color: var(--ink); border-color: var(--ink-2); }
+  button.icon:hover { color: #fff; border-color: var(--border-hover); }
 
   /* ─── Toolbar ─── */
   .toolbar {
-    background: #fff;
-    border-bottom: 1px solid var(--line);
+    background: #111111;
+    border-bottom: 1px solid var(--border);
     padding: 12px 24px;
     display: flex;
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   }
   .toolbar .group {
     display: flex; gap: 6px;
     padding-right: 12px;
-    border-right: 1px solid var(--line);
+    border-right: 1px solid var(--border);
   }
   .toolbar .group:last-child { border-right: none; }
   .toolbar input[type=file] { display: none; }
@@ -139,7 +139,7 @@
     margin-left: auto;
     display: flex;
     gap: 16px;
-    color: var(--muted);
+    color: var(--text-muted);
     font-size: 12px;
     align-items: center;
   }
@@ -147,14 +147,15 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: #f0f0f0;
+    background: var(--bg-card);
     padding: 4px 10px;
     border-radius: 999px;
     font-weight: 600;
-    color: var(--ink-2);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
   }
-  .toolbar .stat .pill.warn { background: var(--warn-soft); color: var(--warn); }
-  .toolbar .stat .pill.green { background: #ecfdf5; color: #059669; }
+  .toolbar .stat .pill.warn { background: var(--warn-bg); color: var(--warn); border-color: var(--warn-border); }
+  .toolbar .stat .pill.green { background: #0a1a0f; color: #4ade80; border-color: #1a3a1f; }
 
   /* ─── Tree ─── */
   .tree-container {
@@ -167,7 +168,7 @@
   }
   .tree ul {
     margin-left: 32px;
-    border-left: 2px solid #e2e8f0;
+    border-left: 1px solid var(--border);
     padding-left: 20px;
     margin-top: 8px;
   }
@@ -176,60 +177,51 @@
     margin: 10px 0;
   }
 
-  /* ─── Node Card (the star of the show) ─── */
+  /* ─── Node Card ─── */
   .node {
     display: inline-flex;
     align-items: center;
     gap: 12px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    border-left: 5px solid #94a3b8;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 12px 16px;
     min-width: 300px;
     max-width: 400px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
     transition: all 200ms ease;
     cursor: grab;
     position: relative;
-    overflow: hidden;
-  }
-  .node::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0;
-    width: 5px; height: 100%;
-    border-radius: 12px 0 0 12px;
-    /* This is overridden by JS with department color */
   }
   .node:hover {
-    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
-    transform: translateY(-2px);
+    background: var(--bg-card-hover);
+    border-color: var(--border-hover);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    transform: translateY(-1px);
   }
   .node.dragging { opacity: 0.45; cursor: grabbing; transform: scale(0.98); }
   .node.drop-target {
-    border-color: #06B6D4;
-    background: #ecfeff;
-    box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2);
+    border-color: #ffffff;
+    background: rgba(255,255,255,0.03);
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1);
   }
 
   /* Placeholder / Vacant */
   .node.placeholder, .node.vacant {
     border-style: dashed;
-    border-color: #94a3b8 !important;
-    background: #f8fafc;
-    opacity: 0.85;
+    border-color: var(--text-muted) !important;
+    background: var(--bg);
+    opacity: 0.7;
   }
   .node.placeholder .nm, .node.vacant .nm {
-    color: var(--muted);
+    color: var(--text-muted);
     font-style: italic;
   }
 
-  /* Conflict — pulsing red */
+  /* Conflict */
   .node.conflict {
-    border-color: #EF4444 !important;
-    border-left-color: #EF4444 !important;
-    background: linear-gradient(135deg, #fef2f2, #fee2e2);
+    border-color: var(--warn) !important;
+    background: var(--warn-bg);
     animation: conflictPulse 2s ease-in-out infinite;
   }
   .node.conflict::after {
@@ -237,60 +229,55 @@
     font-size: 9px;
     font-weight: 800;
     letter-spacing: 0.5px;
-    color: #EF4444;
-    background: #fff;
-    border: 1px solid #FCA5A5;
+    color: var(--warn);
+    background: #111;
+    border: 1px solid var(--warn-border);
     padding: 2px 8px;
     border-radius: 4px;
     margin-left: 6px;
-    box-shadow: 0 1px 3px rgba(239,68,68,0.15);
   }
   @keyframes conflictPulse {
-    0%, 100% { box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1); }
-    50% { box-shadow: 0 2px 16px rgba(239, 68, 68, 0.3); }
+    0%, 100% { box-shadow: 0 2px 8px rgba(255, 68, 68, 0.1); }
+    50% { box-shadow: 0 2px 20px rgba(255, 68, 68, 0.25); }
   }
 
   /* ─── Avatar ─── */
   .node .avatar {
     width: 40px; height: 40px;
     border-radius: 50%;
-    background: #94a3b8;
-    color: #fff;
+    background: #ffffff;
+    color: #000000;
     font-weight: 700;
     font-size: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4);
     letter-spacing: 0.5px;
     transition: transform 200ms ease;
   }
-  .node:hover .avatar {
-    transform: scale(1.08);
-  }
+  .node:hover .avatar { transform: scale(1.05); }
   .node.placeholder .avatar, .node.vacant .avatar {
-    background: #cbd5e1;
-    color: #fff;
+    background: #333333;
+    color: #666666;
   }
   .node.conflict .avatar {
-    background: linear-gradient(135deg, #EF4444, #DC2626) !important;
+    background: var(--warn) !important;
+    color: #fff !important;
   }
 
   /* ─── Node Body ─── */
-  .node .body {
-    flex: 1;
-    min-width: 0;
-  }
+  .node .body { flex: 1; min-width: 0; }
   .node .nm {
     font-weight: 700;
-    color: var(--ink);
+    color: #ffffff;
     font-size: 13.5px;
     line-height: 1.15;
     margin-bottom: 2px;
   }
   .node .ttl {
-    color: var(--ink-2);
+    color: var(--text-secondary);
     font-size: 12px;
     line-height: 1.2;
     margin-bottom: 3px;
@@ -303,8 +290,9 @@
     font-weight: 700;
     padding: 2px 8px;
     border-radius: 999px;
-    background: #f1f5f9;
-    color: #64748b;
+    background: rgba(255,255,255,0.06);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
   }
   .node .actions {
     display: flex;
@@ -317,9 +305,9 @@
   /* ─── Toggle ─── */
   .toggle {
     position: relative;
-    background: #fff;
-    border: 2px solid var(--line);
-    color: var(--muted);
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    color: var(--text-muted);
     border-radius: 50%;
     width: 20px; height: 20px;
     display: inline-flex;
@@ -332,19 +320,19 @@
     user-select: none;
     transition: all 150ms ease;
   }
-  .toggle:hover { border-color: #06B6D4; color: #06B6D4; }
-  .toggle.collapsed { background: linear-gradient(135deg, #6366F1, #8B5CF6); color: #fff; border-color: transparent; }
+  .toggle:hover { border-color: var(--text-muted); color: #fff; }
+  .toggle.collapsed { background: #ffffff; color: #000000; border-color: #ffffff; }
   .toggle.leaf { visibility: hidden; }
 
   li.collapsed > ul { display: none; }
 
-  /* ─── Note chip ─── */
+  /* ─── Note ─── */
   .note {
     margin-left: 8px;
     font-size: 10px;
-    background: #FEF3C7;
-    color: #92400E;
-    border: 1px solid #FDE68A;
+    background: #1a1a0a;
+    color: #bbaa44;
+    border: 1px solid #2a2a15;
     border-radius: 4px;
     padding: 2px 6px;
     cursor: help;
@@ -356,11 +344,11 @@
     position: fixed;
     bottom: 16px;
     right: 16px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 12px;
     padding: 14px 18px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     z-index: 999;
     max-height: 340px;
     overflow-y: auto;
@@ -371,7 +359,7 @@
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 1px;
-    color: #64748b;
+    color: var(--text-muted);
     margin-bottom: 10px;
     font-weight: 700;
   }
@@ -385,27 +373,26 @@
     width: 14px; height: 14px;
     border-radius: 4px;
     flex-shrink: 0;
+    background: #333;
+    border: 1px solid #444;
   }
-  .dept-legend .dept-name {
-    color: #334155;
-    font-weight: 500;
-  }
+  .dept-legend .dept-name { color: var(--text-secondary); font-weight: 500; }
   .dept-legend .dept-toggle {
     font-size: 10px;
-    color: #94a3b8;
+    color: var(--text-muted);
     cursor: pointer;
     margin-bottom: 8px;
     border: none;
     background: none;
     padding: 2px 0;
   }
-  .dept-legend .dept-toggle:hover { color: #64748b; }
+  .dept-legend .dept-toggle:hover { color: #fff; }
   .dept-legend.collapsed .dept-rows { display: none; }
 
   /* ─── Modal ─── */
   .modal-bg {
     position: fixed; inset: 0;
-    background: rgba(17, 22, 19, 0.6);
+    background: rgba(0, 0, 0, 0.8);
     display: none;
     align-items: center;
     justify-content: center;
@@ -413,33 +400,27 @@
   }
   .modal-bg.open { display: flex; }
   .modal {
-    background: #fff;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
     border-radius: 14px;
     padding: 0;
     width: 100%;
     max-width: 500px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
     overflow: hidden;
   }
   .modal .modal-header {
-    background: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4);
+    background: #1a1a1a;
     padding: 16px 24px;
-    color: #fff;
+    border-bottom: 1px solid var(--border);
   }
-  .modal .modal-header h2 {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 700;
-    color: #fff;
-  }
-  .modal .modal-body {
-    padding: 24px;
-  }
+  .modal .modal-header h2 { margin: 0; font-size: 16px; font-weight: 700; color: #fff; }
+  .modal .modal-body { padding: 24px; }
   .modal .modal-body label {
     display: block;
     font-size: 11px;
     font-weight: 700;
-    color: var(--muted);
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
     margin-bottom: 4px;
@@ -450,46 +431,45 @@
     width: 100%;
     padding: 8px 10px;
     border-radius: 7px;
-    border: 1px solid var(--line);
+    border: 1px solid var(--border);
     font-size: 13px;
     font-family: inherit;
-    color: var(--ink);
-    background: #fff;
+    color: #fff;
+    background: var(--bg);
   }
   .modal .modal-body textarea { min-height: 60px; resize: vertical; font-family: inherit; }
   .modal .modal-body input:focus, .modal .modal-body select:focus, .modal .modal-body textarea:focus {
     outline: none;
-    border-color: #8B5CF6;
-    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
+    border-color: var(--text-muted);
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
   }
   .modal .modal-body .row { display: flex; gap: 10px; }
   .modal .modal-body .row > div { flex: 1; }
   .modal .modal-footer {
-    display: flex; gap: 8px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid #f1f5f9; }
+    display: flex; gap: 8px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid var(--border); }
   .modal .modal-footer button { padding: 9px 16px; font-size: 13px; }
   .modal .modal-footer .secondary {
     background: transparent;
-    color: var(--ink-2);
-    border: 1px solid var(--line);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
   }
 
   /* ─── JSON Panel ─── */
   .json-panel {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: #0f172a;
-    color: #e2e8f0;
+    background: #000000;
+    color: #888888;
     font-family: 'SF Mono', Menlo, Consolas, monospace;
     font-size: 11.5px;
     max-height: 0;
     overflow: hidden;
     transition: max-height 300ms ease;
-    border-top: 4px solid;
-    border-image: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4, #10B981) 1;
+    border-top: 1px solid var(--border);
   }
   .json-panel.open { max-height: 50vh; }
   .json-panel header {
-    background: #1e293b;
+    background: #111111;
     padding: 8px 14px;
     display: flex;
     align-items: center;
@@ -498,9 +478,7 @@
   }
   .json-panel header span {
     font-weight: 700;
-    background: linear-gradient(90deg, #06B6D4, #8B5CF6);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
+    color: var(--text-secondary);
     letter-spacing: 0.4px;
     text-transform: uppercase;
     font-size: 11px;
@@ -508,7 +486,7 @@
   .json-panel header .close {
     margin-left: auto;
     background: transparent;
-    color: #e2e8f0;
+    color: var(--text-muted);
     border: none;
     cursor: pointer;
     font-size: 16px;
@@ -527,7 +505,7 @@
     position: fixed;
     top: 84px;
     right: 24px;
-    background: #0f172a;
+    background: #1a1a1a;
     color: #fff;
     padding: 11px 16px;
     border-radius: 10px;
@@ -537,12 +515,13 @@
     transform: translateX(20px);
     transition: opacity 180ms ease, transform 180ms ease;
     z-index: 2000;
-    border-left: 4px solid #10B981;
+    border: 1px solid var(--border);
+    border-left: 4px solid #ffffff;
     pointer-events: none;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   }
   .toast.show { opacity: 1; transform: translateX(0); }
-  .toast.warn { border-left-color: #EF4444; }
+  .toast.warn { border-left-color: var(--warn); }
 
   /* ─── Responsive ─── */
   @media (max-width: 768px) {
@@ -596,7 +575,7 @@
 
 <!-- ─── Department Legend ─── -->
 <div class="dept-legend" id="deptLegend">
-  <h3>🎨 Departments</h3>
+  <h3>Departments</h3>
   <button class="dept-toggle" id="legendToggle">Hide</button>
   <div class="dept-rows" id="legendRows"></div>
 </div>
@@ -630,7 +609,7 @@
       <label>Note (optional)</label>
       <textarea id="m_note" placeholder="Reason for placeholder, conflict notes, etc."></textarea>
       <div style="margin-top:12px;">
-        <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-2);font-size:13px;">
+        <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--text-secondary);font-size:13px;">
           <input type="checkbox" id="m_conflict" style="width:auto;" /> Flag as conflict (duplicate/ambiguous role)
         </label>
       </div>
@@ -656,80 +635,8 @@
 
 <script>
 /* ============================================================
-   Convertt Org Editor — Colorful Edition
+   Convertt Org Editor — All Black Theme
    ============================================================ */
-
-// ─── Department Colors ───
-const DEPT_COLORS = {
-  'Executive': {
-    primary: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A',
-    text: '#92400E', avatar: '#D97706', light: '#FEF3C7'
-  },
-  'Admin & Support': {
-    primary: '#64748B', bg: '#F8FAFC', border: '#CBD5E1',
-    text: '#334155', avatar: '#475569', light: '#F1F5F9'
-  },
-  'Finance': {
-    primary: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE',
-    text: '#1E40AF', avatar: '#2563EB', light: '#DBEAFE'
-  },
-  'Human Resource': {
-    primary: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE',
-    text: '#5B21B6', avatar: '#7C3AED', light: '#EDE9FE'
-  },
-  'Business Development & Marketing': {
-    primary: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4',
-    text: '#0F766E', avatar: '#0D9488', light: '#CCFBF1'
-  },
-  'Marketing & Media Team': {
-    primary: '#EC4899', bg: '#FDF2F8', border: '#FBCFE8',
-    text: '#9D174D', avatar: '#DB2777', light: '#FCE7F3'
-  },
-  'UI/UX': {
-    primary: '#F97316', bg: '#FFF7ED', border: '#FED7AA',
-    text: '#9A3412', avatar: '#EA580C', light: '#FFEDD5'
-  },
-  'Web - Shopify Development': {
-    primary: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC',
-    text: '#155E75', avatar: '#0891B2', light: '#CFFAFE'
-  },
-  'Web - WordPress': {
-    primary: '#6366F1', bg: '#EEF2FF', border: '#C7D2FE',
-    text: '#3730A3', avatar: '#4F46E5', light: '#E0E7FF'
-  },
-  'Operations / Client Servicing': {
-    primary: '#EF4444', bg: '#FEF2F2', border: '#FECACA',
-    text: '#991B1B', avatar: '#DC2626', light: '#FEE2E2'
-  },
-  'Engineering': {
-    primary: '#10B981', bg: '#ECFDF5', border: '#A7F3D0',
-    text: '#065F46', avatar: '#059669', light: '#D1FAE5'
-  }
-};
-const DEFAULT_DEPT_COLOR = {
-  primary: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB',
-  text: '#374151', avatar: '#4B5563', light: '#F3F4F6'
-};
-
-function getDeptColor(dept) {
-  return DEPT_COLORS[dept] || DEFAULT_DEPT_COLOR;
-}
-
-// ─── Build Legend ───
-(function buildLegend() {
-  const rows = document.getElementById('legendRows');
-  for (const [name, colors] of Object.entries(DEPT_COLORS)) {
-    const row = document.createElement('div');
-    row.className = 'dept-row';
-    row.innerHTML = `<div class="dept-dot" style="background:${colors.primary}"></div><span class="dept-name">${name}</span>`;
-    rows.appendChild(row);
-  }
-})();
-document.getElementById('legendToggle').addEventListener('click', function() {
-  const legend = document.getElementById('deptLegend');
-  legend.classList.toggle('collapsed');
-  this.textContent = legend.classList.contains('collapsed') ? 'Show' : 'Hide';
-});
 
 // ─── Initial data ───
 const INITIAL_DATA = {
@@ -845,6 +752,25 @@ function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]))
 }
 
+// ─── Build Legend ───
+(function buildLegend() {
+  const depts = new Set()
+  function walk(n) { if (n && n.id && n.department) { depts.add(n.department); (n.children || []).forEach(walk) } }
+  walk(TREE)
+  const rows = document.getElementById('legendRows')
+  for (const name of [...depts].sort()) {
+    const row = document.createElement('div')
+    row.className = 'dept-row'
+    row.innerHTML = `<div class="dept-dot"></div><span class="dept-name">${escapeHtml(name)}</span>`
+    rows.appendChild(row)
+  }
+})();
+document.getElementById('legendToggle').addEventListener('click', function() {
+  const legend = document.getElementById('deptLegend')
+  legend.classList.toggle('collapsed')
+  this.textContent = legend.classList.contains('collapsed') ? 'Show' : 'Hide'
+});
+
 // ─── Stats ───
 function countAll() {
   let total = 0, ph = 0, conflict = 0
@@ -893,12 +819,8 @@ function renderNode(node) {
   if (node.conflict) card.classList.add('conflict')
   card.draggable = true
   card.dataset.id = node.id
-
-  // Get department colors
-  const dc = getDeptColor(node.department)
   const isRoot = (node.id === TREE.id)
 
-  // Build inner HTML with dept-colored department badge
   card.innerHTML = `
     <div class="avatar">${escapeHtml(initials(node.name || '?'))}</div>
     <div class="body">
@@ -913,43 +835,18 @@ function renderNode(node) {
     </div>
   `
 
-  // ─── Apply department colors ───
-  if (!node.conflict) {
-    // Card background
-    card.style.background = dc.bg
-    // Thick left border in department color
-    card.style.borderLeftColor = dc.primary
-    card.style.borderLeftWidth = '5px'
-    // Subtle top-right border accent
-    card.style.borderTopColor = dc.border
-    card.style.borderRightColor = dc.border
-    card.style.borderBottomColor = dc.border
-  }
-
-  // Avatar
-  const avatarEl = card.querySelector('.avatar')
-  if (avatarEl) {
-    if (isRoot) {
-      avatarEl.style.background = 'linear-gradient(135deg, #F59E0B, #EAB308)'
-      avatarEl.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.4)'
-      avatarEl.style.width = '46px'
-      avatarEl.style.height = '46px'
-      avatarEl.style.fontSize = '16px'
-    } else if (!node.conflict) {
-      avatarEl.style.background = `linear-gradient(135deg, ${dc.primary}, ${dc.avatar})`
-      avatarEl.style.boxShadow = `0 2px 8px ${dc.primary}33`
+  // CEO gets a white-on-black larger avatar
+  if (isRoot) {
+    const avatarEl = card.querySelector('.avatar')
+    if (avatarEl) {
+      avatarEl.style.width = '48px'
+      avatarEl.style.height = '48px'
+      avatarEl.style.fontSize = '18px'
+      avatarEl.style.background = '#ffffff'
+      avatarEl.style.color = '#000000'
     }
   }
 
-  // Department badge pill
-  const deptEl = card.querySelector('.dept')
-  if (deptEl && !node.conflict) {
-    deptEl.style.background = dc.light
-    deptEl.style.color = dc.text
-    deptEl.style.border = `1px solid ${dc.border}`
-  }
-
-  // Note
   if (node.note) {
     const nt = document.createElement('span')
     nt.className = 'note'
@@ -958,7 +855,6 @@ function renderNode(node) {
     card.appendChild(nt)
   }
 
-  // Action buttons
   card.querySelectorAll('button.icon').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation()
@@ -969,7 +865,6 @@ function renderNode(node) {
     })
   })
 
-  // Drag
   card.addEventListener('dragstart', (e) => {
     e.dataTransfer.effectAllowed = 'move'
     e.dataTransfer.setData('text/plain', node.id)
@@ -989,7 +884,6 @@ function renderNode(node) {
     if (!draggedId || draggedId === node.id) return
     reparent(draggedId, node.id)
   })
-
   card.addEventListener('dblclick', () => openModalEdit(node.id))
 
   li.appendChild(toggle)
@@ -1057,7 +951,6 @@ function addChild(parentId, data) {
 
 // ─── Modal ───
 function openModalAdd(parentId) {
-  const m = document.getElementById('modalBg')
   document.getElementById('modalTitle').textContent = 'Add report'
   editingId = null
   document.getElementById('m_id').value = ''
@@ -1069,7 +962,7 @@ function openModalAdd(parentId) {
   document.getElementById('m_conflict').checked = false
   document.getElementById('m_delete').style.display = 'none'
   document.getElementById('m_id').dataset.parentId = parentId
-  m.classList.add('open')
+  document.getElementById('modalBg').classList.add('open')
 }
 function openModalEdit(id) {
   const node = findNode(id)
@@ -1130,7 +1023,6 @@ document.getElementById('btnAddPlaceholder').addEventListener('click', () => {
   if (!findNode(id)) return alert('No node with that id.')
   addChild(id, { name: 'VACANT', title: 'New Placeholder', department: '', status: 'placeholder', note: 'Created from editor' })
 })
-
 document.getElementById('btnExport').addEventListener('click', () => {
   const json = JSON.stringify(stripUiState(TREE), null, 2)
   const blob = new Blob([json], { type: 'application/json' })
@@ -1143,10 +1035,8 @@ document.getElementById('btnExport').addEventListener('click', () => {
 })
 document.getElementById('btnCopy').addEventListener('click', async () => {
   const json = JSON.stringify(stripUiState(TREE), null, 2)
-  try {
-    await navigator.clipboard.writeText(json)
-    toast('Copied to clipboard')
-  } catch (e) {
+  try { await navigator.clipboard.writeText(json); toast('Copied to clipboard') }
+  catch (e) {
     const ta = document.createElement('textarea')
     ta.value = json; document.body.appendChild(ta); ta.select()
     document.execCommand('copy'); ta.remove()
@@ -1155,58 +1045,40 @@ document.getElementById('btnCopy').addEventListener('click', async () => {
 })
 document.getElementById('btnImport').addEventListener('click', () => document.getElementById('fileImport').click())
 document.getElementById('fileImport').addEventListener('change', (e) => {
-  const f = e.target.files[0]
-  if (!f) return
+  const f = e.target.files[0]; if (!f) return
   const r = new FileReader()
   r.onload = () => {
     try {
       const data = JSON.parse(r.result)
       if (!data.id) throw new Error('Missing root id')
-      TREE = data
-      collapsed.clear()
-      render()
-      toast(`Imported ${f.name}`)
-    } catch (err) {
-      alert('Invalid JSON: ' + err.message)
-    }
+      TREE = data; collapsed.clear(); render(); toast(`Imported ${f.name}`)
+    } catch (err) { alert('Invalid JSON: ' + err.message) }
   }
-  r.readAsText(f)
-  e.target.value = ''
+  r.readAsText(f); e.target.value = ''
 })
 document.getElementById('btnExpandAll').addEventListener('click', () => { collapsed.clear(); render() })
 document.getElementById('btnCollapseAll').addEventListener('click', () => {
   collapsed.clear()
   function walk(n) {
-    if ((n.children || []).length) {
-      if (n.id !== TREE.id) collapsed.add(n.id)
-      n.children.forEach(walk)
-    }
+    if ((n.children || []).length) { if (n.id !== TREE.id) collapsed.add(n.id); n.children.forEach(walk) }
   }
-  walk(TREE)
-  render()
+  walk(TREE); render()
 })
 document.getElementById('btnViewJson').addEventListener('click', () => {
-  const panel = document.getElementById('jsonPanel')
-  panel.classList.toggle('open')
+  document.getElementById('jsonPanel').classList.toggle('open')
   refreshJsonPanel()
 })
 document.getElementById('jsonClose').addEventListener('click', () => document.getElementById('jsonPanel').classList.remove('open'))
 function refreshJsonPanel() {
   document.getElementById('jsonText').textContent = JSON.stringify(stripUiState(TREE), null, 2)
 }
-function stripUiState(node) {
-  return JSON.parse(JSON.stringify(node))
-}
+function stripUiState(node) { return JSON.parse(JSON.stringify(node)) }
 
 // ─── Push to Websocket stub ───
 function pushToSocket(data, url) {
-  if (!url) {
-    console.warn('[pushToSocket] No URL configured.')
-    return
-  }
+  if (!url) { console.warn('[pushToSocket] No URL configured.'); return }
   console.log('[pushToSocket STUB] Would push to', url, data)
 }
-
 function flattenForSocket(node, acc = []) {
   if (!node || !node.id) return acc
   const { children, ...rest } = node
@@ -1214,15 +1086,10 @@ function flattenForSocket(node, acc = []) {
   ;(children || []).forEach(c => flattenForSocket(c, acc))
   return acc
 }
-
 document.getElementById('btnPushSocket').addEventListener('click', () => {
   const url = ''
-  if (!url) {
-    toast('No websocket URL configured. Edit pushToSocket() in the file.', true)
-    return
-  }
-  pushToSocket(stripUiState(TREE), url)
-  toast('Pushed to ' + url)
+  if (!url) { toast('No websocket URL configured.', true); return }
+  pushToSocket(stripUiState(TREE), url); toast('Pushed to ' + url)
 })
 
 // ─── Toast ───
@@ -1236,9 +1103,7 @@ function toast(msg, isWarn = false) {
   toastTimer = setTimeout(() => el.classList.remove('show'), 2400)
 }
 
-// Initial render
 render()
 </script>
-
 </body>
 </html>
