@@ -5,39 +5,39 @@
 <title>Convertt — Org Hierarchy Editor</title>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
-  /* ─── Brand: Convertt green #1FA463, near-black #111613 ─── */
+  /* ─── Base Reset & Vars ─── */
   :root {
-    --green: #1FA463;
-    --green-soft: #E8F6EE;
-    --green-dark: #178050;
     --ink: #111613;
     --ink-2: #2A3330;
     --line: #DDE3E0;
-    --line-2: #EEF1EF;
-    --bg: #FAFBFB;
+    --bg: #f0f4f8;
     --warn: #C24F2D;
     --warn-soft: #FBEDE6;
     --muted: #6B7773;
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #f0f4f8 0%, #e8f0fe 50%, #f5f0ff 100%);
+    background: linear-gradient(135deg, #667eea11 0%, #764ba211 25%, #f093fb11 50%, #4facfe11 75%, #00f2fe11 100%),
+                linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     color: var(--ink);
     font-size: 14px;
     line-height: 1.45;
     min-height: 100vh;
   }
+
+  /* ─── Topbar ─── */
   header.topbar {
-    background: linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 40%, #0f3460 100%);
     color: #fff;
     padding: 14px 24px;
     display: flex;
     align-items: center;
     gap: 16px;
-    border-bottom: 3px solid;
-    border-image: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4) 1;
+    border-bottom: 4px solid;
+    border-image: linear-gradient(90deg, #F59E0B, #EF4444, #EC4899, #8B5CF6, #06B6D4, #10B981) 1;
+    box-shadow: 0 4px 20px rgba(15, 52, 96, 0.3);
   }
   header .logo {
     display: inline-flex;
@@ -47,19 +47,21 @@
     letter-spacing: 0.3px;
   }
   header .logo .dot {
-    width: 22px; height: 22px;
+    width: 24px; height: 24px;
     background: linear-gradient(135deg, #F59E0B, #EC4899);
-    border-radius: 6px;
+    border-radius: 8px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #fff;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 800;
+    box-shadow: 0 2px 8px rgba(236, 72, 153, 0.4);
   }
-  header h1 { font-size: 15px; margin: 0; font-weight: 600; }
+  header h1 { font-size: 16px; margin: 0; font-weight: 600; }
   header .right { margin-left: auto; display: flex; gap: 8px; }
 
+  /* ─── Buttons ─── */
   button {
     appearance: none;
     border: 1px solid transparent;
@@ -68,16 +70,21 @@
     font-size: 12.5px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 120ms ease;
+    transition: all 150ms ease;
     background: transparent;
     color: inherit;
     line-height: 1;
   }
   button.primary {
-    background: var(--green);
+    background: linear-gradient(135deg, #06B6D4, #3B82F6);
     color: #fff;
+    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
   }
-  button.primary:hover { background: var(--green-dark); }
+  button.primary:hover {
+    background: linear-gradient(135deg, #0891B2, #2563EB);
+    box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4);
+    transform: translateY(-1px);
+  }
   button.ghost {
     background: transparent;
     color: #fff;
@@ -85,12 +92,13 @@
   }
   button.ghost:hover { background: rgba(255,255,255,0.08); }
   button.small {
-    background: var(--green-soft);
-    color: var(--green-dark);
+    background: rgba(255,255,255,0.12);
+    color: #fff;
     padding: 5px 9px;
     font-size: 11.5px;
+    border: 1px solid rgba(255,255,255,0.2);
   }
-  button.small:hover { background: var(--green); color: #fff; }
+  button.small:hover { background: rgba(255,255,255,0.2); }
   button.danger {
     background: var(--warn-soft);
     color: var(--warn);
@@ -118,7 +126,7 @@
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
   }
   .toolbar .group {
     display: flex; gap: 6px;
@@ -139,18 +147,18 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: var(--line-2);
+    background: #f0f0f0;
     padding: 4px 10px;
     border-radius: 999px;
     font-weight: 600;
     color: var(--ink-2);
   }
   .toolbar .stat .pill.warn { background: var(--warn-soft); color: var(--warn); }
-  .toolbar .stat .pill.green { background: var(--green-soft); color: var(--green-dark); }
+  .toolbar .stat .pill.green { background: #ecfdf5; color: #059669; }
 
   /* ─── Tree ─── */
   .tree-container {
-    padding: 32px 24px 80px;
+    padding: 32px 24px 120px;
   }
   .tree, .tree ul {
     list-style: none;
@@ -159,121 +167,117 @@
   }
   .tree ul {
     margin-left: 32px;
-    border-left: 2px solid #c5ddd0;
+    border-left: 2px solid #e2e8f0;
     padding-left: 20px;
     margin-top: 8px;
   }
-  .tree ul ul {
-    border-left-color: #b8cfe4;
-  }
-  .tree ul ul ul {
-    border-left-color: #d4c5e8;
-  }
-  .tree ul ul ul ul {
-    border-left-color: #c5e8e0;
-  }
-  .tree ul ul ul ul ul {
-    border-left-color: #e8d5c5;
-  }
   .tree li {
     position: relative;
-    margin: 8px 0;
+    margin: 10px 0;
   }
 
-  /* Node card */
+  /* ─── Node Card (the star of the show) ─── */
   .node {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     background: #fff;
-    border: 1.5px solid var(--line);
-    border-left: 4px solid var(--line);
-    border-radius: 10px;
-    padding: 10px 14px;
-    min-width: 280px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
+    border: 1px solid #e2e8f0;
+    border-left: 5px solid #94a3b8;
+    border-radius: 12px;
+    padding: 12px 16px;
+    min-width: 300px;
+    max-width: 400px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+    transition: all 200ms ease;
     cursor: grab;
     position: relative;
     overflow: hidden;
   }
   .node::before {
-    position: absolute;
-    left: 0;
-    top: 0;
-    bottom: 0;
-    width: 4px;
     content: '';
-    border-radius: 10px 0 0 10px;
+    position: absolute;
+    top: 0; left: 0;
+    width: 5px; height: 100%;
+    border-radius: 12px 0 0 12px;
+    /* This is overridden by JS with department color */
   }
   .node:hover {
-    border-color: var(--ink-2);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
-    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
   }
-  .node.dragging { opacity: 0.45; cursor: grabbing; }
+  .node.dragging { opacity: 0.45; cursor: grabbing; transform: scale(0.98); }
   .node.drop-target {
-    border-color: var(--green);
-    background: var(--green-soft);
-    box-shadow: 0 0 0 3px rgba(31,164,99,0.18);
+    border-color: #06B6D4;
+    background: #ecfeff;
+    box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2);
   }
+
+  /* Placeholder / Vacant */
   .node.placeholder, .node.vacant {
     border-style: dashed;
-    border-color: var(--muted);
-    background: repeating-linear-gradient(
-      -45deg,
-      #FBFCFB,
-      #FBFCFB 8px,
-      #f6f8f6 8px,
-      #f6f8f6 16px
-    );
+    border-color: #94a3b8 !important;
+    background: #f8fafc;
+    opacity: 0.85;
   }
   .node.placeholder .nm, .node.vacant .nm {
     color: var(--muted);
     font-style: italic;
   }
+
+  /* Conflict — pulsing red */
   .node.conflict {
-    border-color: var(--warn);
-    background: var(--warn-soft);
+    border-color: #EF4444 !important;
+    border-left-color: #EF4444 !important;
+    background: linear-gradient(135deg, #fef2f2, #fee2e2);
     animation: conflictPulse 2s ease-in-out infinite;
   }
   .node.conflict::after {
     content: '⚠ DUPLICATE';
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 800;
     letter-spacing: 0.5px;
-    color: var(--warn);
+    color: #EF4444;
     background: #fff;
-    border: 1px solid var(--warn);
-    padding: 2px 6px;
+    border: 1px solid #FCA5A5;
+    padding: 2px 8px;
     border-radius: 4px;
     margin-left: 6px;
+    box-shadow: 0 1px 3px rgba(239,68,68,0.15);
   }
-
   @keyframes conflictPulse {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-    50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15); }
+    0%, 100% { box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1); }
+    50% { box-shadow: 0 2px 16px rgba(239, 68, 68, 0.3); }
   }
 
+  /* ─── Avatar ─── */
   .node .avatar {
-    width: 32px; height: 32px;
+    width: 40px; height: 40px;
     border-radius: 50%;
-    background: var(--green);
+    background: #94a3b8;
     color: #fff;
     font-weight: 700;
-    font-size: 12px;
+    font-size: 14px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    letter-spacing: 0.5px;
+    transition: transform 200ms ease;
+  }
+  .node:hover .avatar {
+    transform: scale(1.08);
   }
   .node.placeholder .avatar, .node.vacant .avatar {
-    background: var(--muted);
+    background: #cbd5e1;
     color: #fff;
   }
   .node.conflict .avatar {
-    background: var(--warn);
+    background: linear-gradient(135deg, #EF4444, #DC2626) !important;
   }
+
+  /* ─── Node Body ─── */
   .node .body {
     flex: 1;
     min-width: 0;
@@ -281,7 +285,7 @@
   .node .nm {
     font-weight: 700;
     color: var(--ink);
-    font-size: 13px;
+    font-size: 13.5px;
     line-height: 1.15;
     margin-bottom: 2px;
   }
@@ -289,54 +293,114 @@
     color: var(--ink-2);
     font-size: 12px;
     line-height: 1.2;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
   }
   .node .dept {
-    color: var(--muted);
-    font-size: 11px;
+    display: inline-block;
+    font-size: 10px;
     text-transform: uppercase;
-    letter-spacing: 0.4px;
-    font-weight: 600;
+    letter-spacing: 0.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: #f1f5f9;
+    color: #64748b;
   }
   .node .actions {
     display: flex;
     gap: 4px;
     opacity: 0;
-    transition: opacity 120ms ease;
+    transition: opacity 150ms ease;
   }
   .node:hover .actions { opacity: 1; }
 
+  /* ─── Toggle ─── */
   .toggle {
     position: relative;
     background: #fff;
-    border: 1px solid var(--line);
+    border: 2px solid var(--line);
     color: var(--muted);
     border-radius: 50%;
-    width: 18px; height: 18px;
+    width: 20px; height: 20px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: 12px;
+    font-weight: 700;
     margin-right: 6px;
     cursor: pointer;
     user-select: none;
+    transition: all 150ms ease;
   }
-  .toggle.collapsed { background: var(--ink); color: #fff; border-color: var(--ink); }
+  .toggle:hover { border-color: #06B6D4; color: #06B6D4; }
+  .toggle.collapsed { background: linear-gradient(135deg, #6366F1, #8B5CF6); color: #fff; border-color: transparent; }
   .toggle.leaf { visibility: hidden; }
 
-  /* Hidden when parent is collapsed */
   li.collapsed > ul { display: none; }
 
+  /* ─── Note chip ─── */
   .note {
     margin-left: 8px;
-    color: var(--warn);
-    font-size: 11px;
-    background: #fff;
-    border: 1px solid var(--warn-soft);
+    font-size: 10px;
+    background: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
     border-radius: 4px;
     padding: 2px 6px;
     cursor: help;
+    font-weight: 500;
   }
+
+  /* ─── Department Legend ─── */
+  .dept-legend {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    z-index: 999;
+    max-height: 340px;
+    overflow-y: auto;
+    font-size: 12px;
+    min-width: 220px;
+  }
+  .dept-legend h3 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #64748b;
+    margin-bottom: 10px;
+    font-weight: 700;
+  }
+  .dept-legend .dept-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+  }
+  .dept-legend .dept-dot {
+    width: 14px; height: 14px;
+    border-radius: 4px;
+    flex-shrink: 0;
+  }
+  .dept-legend .dept-name {
+    color: #334155;
+    font-weight: 500;
+  }
+  .dept-legend .dept-toggle {
+    font-size: 10px;
+    color: #94a3b8;
+    cursor: pointer;
+    margin-bottom: 8px;
+    border: none;
+    background: none;
+    padding: 2px 0;
+  }
+  .dept-legend .dept-toggle:hover { color: #64748b; }
+  .dept-legend.collapsed .dept-rows { display: none; }
 
   /* ─── Modal ─── */
   .modal-bg {
@@ -350,29 +414,28 @@
   .modal-bg.open { display: flex; }
   .modal {
     background: #fff;
-    border-radius: 12px;
-    overflow: hidden;
+    border-radius: 14px;
+    padding: 0;
     width: 100%;
-    max-width: 480px;
-    box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    overflow: hidden;
   }
-  .modal::before {
-    content: '';
-    display: block;
-    height: 4px;
+  .modal .modal-header {
     background: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4);
+    padding: 16px 24px;
+    color: #fff;
   }
-  .modal > * {
-    padding-left: 24px;
-    padding-right: 24px;
-  }
-  .modal h2 {
-    margin: 0 0 14px;
+  .modal .modal-header h2 {
+    margin: 0;
     font-size: 16px;
-    color: var(--ink);
-    padding-top: 20px;
+    font-weight: 700;
+    color: #fff;
   }
-  .modal label {
+  .modal .modal-body {
+    padding: 24px;
+  }
+  .modal .modal-body label {
     display: block;
     font-size: 11px;
     font-weight: 700;
@@ -382,7 +445,8 @@
     margin-bottom: 4px;
     margin-top: 12px;
   }
-  .modal input, .modal select, .modal textarea {
+  .modal .modal-body label:first-child { margin-top: 0; }
+  .modal .modal-body input, .modal .modal-body select, .modal .modal-body textarea {
     width: 100%;
     padding: 8px 10px;
     border-radius: 7px;
@@ -392,40 +456,40 @@
     color: var(--ink);
     background: #fff;
   }
-  .modal textarea { min-height: 60px; resize: vertical; font-family: inherit; }
-  .modal input:focus, .modal select:focus, .modal textarea:focus {
+  .modal .modal-body textarea { min-height: 60px; resize: vertical; font-family: inherit; }
+  .modal .modal-body input:focus, .modal .modal-body select:focus, .modal .modal-body textarea:focus {
     outline: none;
-    border-color: var(--green);
-    box-shadow: 0 0 0 3px rgba(31,164,99,0.15);
+    border-color: #8B5CF6;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15);
   }
-  .modal .row { display: flex; gap: 10px; }
-  .modal .row > div { flex: 1; }
-  .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-bottom: 24px !important; }
-  .modal .actions button { padding: 9px 16px; font-size: 13px; }
-  .modal .actions .secondary {
+  .modal .modal-body .row { display: flex; gap: 10px; }
+  .modal .modal-body .row > div { flex: 1; }
+  .modal .modal-footer {
+    display: flex; gap: 8px; justify-content: flex-end; padding: 16px 24px; border-top: 1px solid #f1f5f9; }
+  .modal .modal-footer button { padding: 9px 16px; font-size: 13px; }
+  .modal .modal-footer .secondary {
     background: transparent;
     color: var(--ink-2);
     border: 1px solid var(--line);
   }
 
-  /* JSON peek panel */
+  /* ─── JSON Panel ─── */
   .json-panel {
     position: fixed;
     bottom: 0; left: 0; right: 0;
-    background: var(--ink);
-    color: #DCE5E0;
+    background: #0f172a;
+    color: #e2e8f0;
     font-family: 'SF Mono', Menlo, Consolas, monospace;
     font-size: 11.5px;
     max-height: 0;
     overflow: hidden;
-    transition: max-height 220ms ease;
-    border-top: 3px solid;
-    border-image: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4) 1;
-    z-index: 900;
+    transition: max-height 300ms ease;
+    border-top: 4px solid;
+    border-image: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4, #10B981) 1;
   }
   .json-panel.open { max-height: 50vh; }
   .json-panel header {
-    background: var(--ink-2);
+    background: #1e293b;
     padding: 8px 14px;
     display: flex;
     align-items: center;
@@ -434,7 +498,9 @@
   }
   .json-panel header span {
     font-weight: 700;
-    color: var(--green);
+    background: linear-gradient(90deg, #06B6D4, #8B5CF6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     letter-spacing: 0.4px;
     text-transform: uppercase;
     font-size: 11px;
@@ -442,7 +508,7 @@
   .json-panel header .close {
     margin-left: auto;
     background: transparent;
-    color: #DCE5E0;
+    color: #e2e8f0;
     border: none;
     cursor: pointer;
     font-size: 16px;
@@ -456,64 +522,33 @@
     word-break: break-word;
   }
 
-  /* Toast */
+  /* ─── Toast ─── */
   .toast {
     position: fixed;
     top: 84px;
     right: 24px;
-    background: var(--ink);
+    background: #0f172a;
     color: #fff;
     padding: 11px 16px;
-    border-radius: 8px;
+    border-radius: 10px;
     font-weight: 600;
     font-size: 13px;
     opacity: 0;
     transform: translateX(20px);
     transition: opacity 180ms ease, transform 180ms ease;
     z-index: 2000;
-    border-left: 3px solid var(--green);
+    border-left: 4px solid #10B981;
     pointer-events: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.2);
   }
   .toast.show { opacity: 1; transform: translateX(0); }
-  .toast.warn { border-left-color: var(--warn); }
+  .toast.warn { border-left-color: #EF4444; }
 
-  /* ─── Department Legend ─── */
-  .dept-legend {
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #fff;
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    padding: 14px 18px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
-    z-index: 800;
-    max-height: 340px;
-    overflow-y: auto;
-    min-width: 220px;
-    transition: opacity 180ms ease, transform 180ms ease;
-  }
-  .dept-legend h4 {
-    margin: 0 0 10px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--muted);
-  }
-  .dept-legend .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 3px 0;
-    font-size: 12px;
-    color: var(--ink-2);
-  }
-  .dept-legend .legend-dot {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    flex-shrink: 0;
+  /* ─── Responsive ─── */
+  @media (max-width: 768px) {
+    .dept-legend { display: none; }
+    .node { min-width: 260px; max-width: 340px; padding: 10px 12px; }
+    .tree ul { margin-left: 20px; padding-left: 14px; }
   }
 </style>
 </head>
@@ -559,39 +594,50 @@
   <ul class="tree" id="tree"></ul>
 </div>
 
+<!-- ─── Department Legend ─── -->
+<div class="dept-legend" id="deptLegend">
+  <h3>🎨 Departments</h3>
+  <button class="dept-toggle" id="legendToggle">Hide</button>
+  <div class="dept-rows" id="legendRows"></div>
+</div>
+
 <!-- ─── Modal ─── -->
 <div class="modal-bg" id="modalBg">
   <div class="modal">
-    <h2 id="modalTitle">Edit person</h2>
-    <input type="hidden" id="m_id" />
-    <div class="row">
-      <div>
-        <label>Name</label>
-        <input id="m_name" placeholder="Full name (or VACANT)" />
+    <div class="modal-header">
+      <h2 id="modalTitle">Edit person</h2>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="m_id" />
+      <div class="row">
+        <div>
+          <label>Name</label>
+          <input id="m_name" placeholder="Full name (or VACANT)" />
+        </div>
+        <div>
+          <label>Status</label>
+          <select id="m_status">
+            <option value="active">Active</option>
+            <option value="placeholder">Placeholder</option>
+            <option value="vacant">Vacant</option>
+          </select>
+        </div>
       </div>
-      <div>
-        <label>Status</label>
-        <select id="m_status">
-          <option value="active">Active</option>
-          <option value="placeholder">Placeholder</option>
-          <option value="vacant">Vacant</option>
-        </select>
+      <label>Title</label>
+      <input id="m_title" placeholder="e.g. Head of Engineering" />
+      <label>Department</label>
+      <input id="m_department" placeholder="e.g. Engineering" />
+      <label>Note (optional)</label>
+      <textarea id="m_note" placeholder="Reason for placeholder, conflict notes, etc."></textarea>
+      <div style="margin-top:12px;">
+        <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-2);font-size:13px;">
+          <input type="checkbox" id="m_conflict" style="width:auto;" /> Flag as conflict (duplicate/ambiguous role)
+        </label>
       </div>
     </div>
-    <label>Title</label>
-    <input id="m_title" placeholder="e.g. Head of Engineering" />
-    <label>Department</label>
-    <input id="m_department" placeholder="e.g. Engineering" />
-    <label>Note (optional)</label>
-    <textarea id="m_note" placeholder="Reason for placeholder, conflict notes, etc."></textarea>
-    <div style="margin-top:12px;">
-      <label style="display:inline-flex;align-items:center;gap:6px;text-transform:none;letter-spacing:0;font-weight:500;color:var(--ink-2);font-size:13px;">
-        <input type="checkbox" id="m_conflict" style="width:auto;" /> Flag as conflict (duplicate/ambiguous role)
-      </label>
-    </div>
-    <div class="actions">
-      <button class="secondary" id="m_cancel">Cancel</button>
+    <div class="modal-footer">
       <button class="danger" id="m_delete" style="margin-right:auto;">Delete</button>
+      <button class="secondary" id="m_cancel">Cancel</button>
       <button class="primary" id="m_save">Save</button>
     </div>
   </div>
@@ -608,56 +654,88 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- ─── Department Legend ─── -->
-<div class="dept-legend" id="deptLegend">
-  <h4>Departments</h4>
-</div>
-
 <script>
 /* ============================================================
-   Convertt Org Editor
-   - In-memory state, no localStorage
-   - Import/Export JSON
-   - Drag-to-reparent
-   - Visual gap (placeholder) + conflict flags
+   Convertt Org Editor — Colorful Edition
    ============================================================ */
 
-// ─── Department Color Map ───
+// ─── Department Colors ───
 const DEPT_COLORS = {
-  'Executive':              { primary: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A', text: '#92400E', avatar: '#D97706' },
-  'Admin & Support':        { primary: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', text: '#334155', avatar: '#475569' },
-  'Finance':                { primary: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', avatar: '#2563EB' },
-  'Human Resource':         { primary: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE', text: '#5B21B6', avatar: '#7C3AED' },
-  'Business Development & Marketing': { primary: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', avatar: '#0D9488' },
-  'Marketing & Media Team': { primary: '#EC4899', bg: '#FDF2F8', border: '#FBCFE8', text: '#9D174D', avatar: '#DB2777' },
-  'UI/UX':                  { primary: '#F97316', bg: '#FFF7ED', border: '#FED7AA', text: '#9A3412', avatar: '#EA580C' },
-  'Web - Shopify Development': { primary: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC', text: '#155E75', avatar: '#0891B2' },
-  'Web - WordPress':        { primary: '#6366F1', bg: '#EEF2FF', border: '#C7D2FE', text: '#3730A3', avatar: '#4F46E5' },
-  'Operations / Client Servicing': { primary: '#EF4444', bg: '#FEF2F2', border: '#FECACA', text: '#991B1B', avatar: '#DC2626' },
-  'Engineering':            { primary: '#10B981', bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46', avatar: '#059669' },
+  'Executive': {
+    primary: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A',
+    text: '#92400E', avatar: '#D97706', light: '#FEF3C7'
+  },
+  'Admin & Support': {
+    primary: '#64748B', bg: '#F8FAFC', border: '#CBD5E1',
+    text: '#334155', avatar: '#475569', light: '#F1F5F9'
+  },
+  'Finance': {
+    primary: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE',
+    text: '#1E40AF', avatar: '#2563EB', light: '#DBEAFE'
+  },
+  'Human Resource': {
+    primary: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE',
+    text: '#5B21B6', avatar: '#7C3AED', light: '#EDE9FE'
+  },
+  'Business Development & Marketing': {
+    primary: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4',
+    text: '#0F766E', avatar: '#0D9488', light: '#CCFBF1'
+  },
+  'Marketing & Media Team': {
+    primary: '#EC4899', bg: '#FDF2F8', border: '#FBCFE8',
+    text: '#9D174D', avatar: '#DB2777', light: '#FCE7F3'
+  },
+  'UI/UX': {
+    primary: '#F97316', bg: '#FFF7ED', border: '#FED7AA',
+    text: '#9A3412', avatar: '#EA580C', light: '#FFEDD5'
+  },
+  'Web - Shopify Development': {
+    primary: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC',
+    text: '#155E75', avatar: '#0891B2', light: '#CFFAFE'
+  },
+  'Web - WordPress': {
+    primary: '#6366F1', bg: '#EEF2FF', border: '#C7D2FE',
+    text: '#3730A3', avatar: '#4F46E5', light: '#E0E7FF'
+  },
+  'Operations / Client Servicing': {
+    primary: '#EF4444', bg: '#FEF2F2', border: '#FECACA',
+    text: '#991B1B', avatar: '#DC2626', light: '#FEE2E2'
+  },
+  'Engineering': {
+    primary: '#10B981', bg: '#ECFDF5', border: '#A7F3D0',
+    text: '#065F46', avatar: '#059669', light: '#D1FAE5'
+  }
 };
-const DEFAULT_DEPT_COLOR = { primary: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB', text: '#374151', avatar: '#4B5563' };
+const DEFAULT_DEPT_COLOR = {
+  primary: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB',
+  text: '#374151', avatar: '#4B5563', light: '#F3F4F6'
+};
 
 function getDeptColor(dept) {
   return DEPT_COLORS[dept] || DEFAULT_DEPT_COLOR;
 }
 
-// ─── Build Department Legend ───
+// ─── Build Legend ───
 (function buildLegend() {
-  const container = document.getElementById('deptLegend');
+  const rows = document.getElementById('legendRows');
   for (const [name, colors] of Object.entries(DEPT_COLORS)) {
-    const item = document.createElement('div');
-    item.className = 'legend-item';
-    item.innerHTML = '<span class="legend-dot" style="background:' + colors.primary + '"></span>' + name;
-    container.appendChild(item);
+    const row = document.createElement('div');
+    row.className = 'dept-row';
+    row.innerHTML = `<div class="dept-dot" style="background:${colors.primary}"></div><span class="dept-name">${name}</span>`;
+    rows.appendChild(row);
   }
 })();
+document.getElementById('legendToggle').addEventListener('click', function() {
+  const legend = document.getElementById('deptLegend');
+  legend.classList.toggle('collapsed');
+  this.textContent = legend.classList.contains('collapsed') ? 'Show' : 'Hide';
+});
 
-// ─── Initial data (paste of org-data.json — same canonical structure) ───
+// ─── Initial data ───
 const INITIAL_DATA = {
   "_schema": {
-    "description": "Convertt org hierarchy. Root = CEO, parentId null. Each node has children[] for nested rendering. To flatten for websocket: walk tree, emit each node WITHOUT children[], retaining parentId.",
-    "websocketContract": "On change: send full tree OR delta of {id, parentId, name, title, department, status, conflict, note}. Consumer should treat parentId as the single source of truth for reporting line.",
+    "description": "Convertt org hierarchy. Root = CEO, parentId null. Each node has children[] for nested rendering.",
+    "websocketContract": "On change: send full tree OR delta of {id, parentId, name, title, department, status, conflict, note}.",
     "version": "1.0.0",
     "generatedAt": "2026-06-11"
   },
@@ -702,7 +780,7 @@ const INITIAL_DATA = {
       ]}
     ]},
     { "id": "head-tech-vacant", "name": "VACANT", "title": "CTO / Head of Engineering", "department": "Engineering", "status": "placeholder", "conflict": false, "note": "No tech head exists above Shopify, WordPress, and Client-Servicing dept heads.", "parentId": "ceo", "children": [
-      { "id": "atta", "name": "Atta Ur Rehman", "title": "Head of Client Servicing & Operations", "department": "Web - Shopify Development", "status": "active", "conflict": true, "note": "DUPLICATE title with Waqas Fareed. Resolve in editor.", "parentId": "head-tech-vacant", "children": [
+      { "id": "atta", "name": "Atta Ur Rehman", "title": "Head of Client Servicing & Operations", "department": "Web - Shopify Development", "status": "active", "conflict": true, "note": "DUPLICATE title with Waqas Fareed.", "parentId": "head-tech-vacant", "children": [
         { "id": "momna", "name": "Momna Waryam Khan", "title": "Lead Senior Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "atta", "children": [
           { "id": "muzaffar", "name": "Muzaffar Jamil", "title": "Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] },
           { "id": "ahsan", "name": "Muhammad Ahsan", "title": "Shopify Developer", "department": "Web - Shopify Development", "status": "active", "conflict": false, "parentId": "momna", "children": [] },
@@ -714,14 +792,14 @@ const INITIAL_DATA = {
         ]}
       ]},
       { "id": "aqib", "name": "Aqib Aslam", "title": "Senior WordPress Developer", "department": "Web - WordPress", "status": "active", "conflict": false, "note": "Only person in WordPress dept; acting as de facto lead.", "parentId": "head-tech-vacant", "children": [] },
-      { "id": "waqas", "name": "Muhammad Waqas Fareed", "title": "Head of Client Servicing & Operations", "department": "Operations / Client Servicing", "status": "active", "conflict": true, "note": "DUPLICATE title with Atta Ur Rehman. Resolve in editor.", "parentId": "head-tech-vacant", "children": [] }
+      { "id": "waqas", "name": "Muhammad Waqas Fareed", "title": "Head of Client Servicing & Operations", "department": "Operations / Client Servicing", "status": "active", "conflict": true, "note": "DUPLICATE title with Atta Ur Rehman.", "parentId": "head-tech-vacant", "children": [] }
     ]}
   ]
 }
 
 // ─── State ───
 let TREE = JSON.parse(JSON.stringify(INITIAL_DATA))
-const collapsed = new Set() // ids currently collapsed
+const collapsed = new Set()
 let editingId = null
 
 // ─── Utilities ───
@@ -815,6 +893,12 @@ function renderNode(node) {
   if (node.conflict) card.classList.add('conflict')
   card.draggable = true
   card.dataset.id = node.id
+
+  // Get department colors
+  const dc = getDeptColor(node.department)
+  const isRoot = (node.id === TREE.id)
+
+  // Build inner HTML with dept-colored department badge
   card.innerHTML = `
     <div class="avatar">${escapeHtml(initials(node.name || '?'))}</div>
     <div class="body">
@@ -825,23 +909,47 @@ function renderNode(node) {
     <div class="actions">
       <button class="icon" data-act="add" title="Add report">＋</button>
       <button class="icon" data-act="edit" title="Edit">✎</button>
-      ${node.id === TREE.id ? '' : '<button class="icon" data-act="del" title="Delete">✕</button>'}
+      ${isRoot ? '' : '<button class="icon" data-act="del" title="Delete">✕</button>'}
     </div>
   `
 
-  // Apply department colors
-  const dc = getDeptColor(node.department)
-  card.style.borderLeftColor = dc.primary
-  card.style.background = dc.bg
-  // Style ::before pseudo via CSS custom property
-  card.style.setProperty('--dept-primary', dc.primary)
-  const beforeStyle = document.createElement('style')
-  // We'll set inline style on the pseudo via a data attribute approach instead
-  // Actually, let's just use the border-left which is already visible
-  card.querySelector('.dept').style.color = dc.text
-  const avatarEl = card.querySelector('.avatar')
-  if (avatarEl) avatarEl.style.background = (node.id === TREE.id) ? 'linear-gradient(135deg, #F59E0B, #EAB308)' : dc.avatar
+  // ─── Apply department colors ───
+  if (!node.conflict) {
+    // Card background
+    card.style.background = dc.bg
+    // Thick left border in department color
+    card.style.borderLeftColor = dc.primary
+    card.style.borderLeftWidth = '5px'
+    // Subtle top-right border accent
+    card.style.borderTopColor = dc.border
+    card.style.borderRightColor = dc.border
+    card.style.borderBottomColor = dc.border
+  }
 
+  // Avatar
+  const avatarEl = card.querySelector('.avatar')
+  if (avatarEl) {
+    if (isRoot) {
+      avatarEl.style.background = 'linear-gradient(135deg, #F59E0B, #EAB308)'
+      avatarEl.style.boxShadow = '0 2px 8px rgba(245, 158, 11, 0.4)'
+      avatarEl.style.width = '46px'
+      avatarEl.style.height = '46px'
+      avatarEl.style.fontSize = '16px'
+    } else if (!node.conflict) {
+      avatarEl.style.background = `linear-gradient(135deg, ${dc.primary}, ${dc.avatar})`
+      avatarEl.style.boxShadow = `0 2px 8px ${dc.primary}33`
+    }
+  }
+
+  // Department badge pill
+  const deptEl = card.querySelector('.dept')
+  if (deptEl && !node.conflict) {
+    deptEl.style.background = dc.light
+    deptEl.style.color = dc.text
+    deptEl.style.border = `1px solid ${dc.border}`
+  }
+
+  // Note
   if (node.note) {
     const nt = document.createElement('span')
     nt.className = 'note'
@@ -882,7 +990,6 @@ function renderNode(node) {
     reparent(draggedId, node.id)
   })
 
-  // Click row to edit
   card.addEventListener('dblclick', () => openModalEdit(node.id))
 
   li.appendChild(toggle)
@@ -902,10 +1009,8 @@ function reparent(childId, newParentId) {
   if (isDescendant(childId, newParentId)) { toast('Cannot move a node into its own descendant', true); return }
   const child = findNode(childId)
   if (!child) return
-  // detach
   const oldP = findParent(childId)
   oldP.children = oldP.children.filter(c => c.id !== childId)
-  // attach
   const newP = findNode(newParentId)
   newP.children = newP.children || []
   child.parentId = newParentId
@@ -1031,8 +1136,7 @@ document.getElementById('btnExport').addEventListener('click', () => {
   const blob = new Blob([json], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
-  a.href = url
-  a.download = 'org-data.json'
+  a.href = url; a.download = 'org-data.json'
   document.body.appendChild(a); a.click(); a.remove()
   URL.revokeObjectURL(url)
   toast('Downloaded org-data.json')
@@ -1043,7 +1147,6 @@ document.getElementById('btnCopy').addEventListener('click', async () => {
     await navigator.clipboard.writeText(json)
     toast('Copied to clipboard')
   } catch (e) {
-    // fallback
     const ta = document.createElement('textarea')
     ta.value = json; document.body.appendChild(ta); ta.select()
     document.execCommand('copy'); ta.remove()
@@ -1068,14 +1171,14 @@ document.getElementById('fileImport').addEventListener('change', (e) => {
     }
   }
   r.readAsText(f)
-  e.target.value = '' // allow re-import same file
+  e.target.value = ''
 })
 document.getElementById('btnExpandAll').addEventListener('click', () => { collapsed.clear(); render() })
 document.getElementById('btnCollapseAll').addEventListener('click', () => {
   collapsed.clear()
   function walk(n) {
     if ((n.children || []).length) {
-      if (n.id !== TREE.id) collapsed.add(n.id) // keep root visible
+      if (n.id !== TREE.id) collapsed.add(n.id)
       n.children.forEach(walk)
     }
   }
@@ -1092,53 +1195,18 @@ function refreshJsonPanel() {
   document.getElementById('jsonText').textContent = JSON.stringify(stripUiState(TREE), null, 2)
 }
 function stripUiState(node) {
-  // Remove any ui-only state from the export. Currently nothing to strip,
-  // but kept as a hook for the future.
   return JSON.parse(JSON.stringify(node))
 }
 
-// ─── Push to Websocket — wire your endpoint here ───
-/**
- * Stub for sending the current tree to your company websocket / endpoint.
- *
- * Usage: edit `url` below (or pass it in) and call from anywhere.
- *
- * @param {object} data  The full tree (TREE)
- * @param {string} url   Your websocket / HTTP endpoint
- *
- * Example wiring:
- *   const url = 'wss://yourdomain.com/ws/org'  // OR 'https://yourdomain.com/api/org/sync'
- *   const ws = new WebSocket(url)
- *   ws.onopen = () => ws.send(JSON.stringify(data))
- *
- * Or HTTP POST:
- *   fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
- *
- * The data shape matches org-data.json. To flatten to {id,parentId} pairs for a
- * relational consumer, call flattenForSocket(TREE).
- */
+// ─── Push to Websocket stub ───
 function pushToSocket(data, url) {
   if (!url) {
-    console.warn('[pushToSocket] No URL configured. Edit pushToSocket() to wire your endpoint.')
+    console.warn('[pushToSocket] No URL configured.')
     return
   }
-  // === REPLACE THIS STUB with your transport ===
-  // Example (HTTP POST):
-  // return fetch(url, {
-  //   method: 'POST',
-  //   headers: { 'Content-Type': 'application/json' },
-  //   body: JSON.stringify(data),
-  // })
-  // Example (WebSocket):
-  // const ws = new WebSocket(url)
-  // return new Promise((resolve, reject) => {
-  //   ws.onopen = () => { ws.send(JSON.stringify(data)); ws.close(); resolve() }
-  //   ws.onerror = reject
-  // })
   console.log('[pushToSocket STUB] Would push to', url, data)
 }
 
-/** Flatten nested tree into rows of {id, parentId, name, title, ...} (no children[]). */
 function flattenForSocket(node, acc = []) {
   if (!node || !node.id) return acc
   const { children, ...rest } = node
@@ -1148,10 +1216,9 @@ function flattenForSocket(node, acc = []) {
 }
 
 document.getElementById('btnPushSocket').addEventListener('click', () => {
-  const url = '' // ← fill in your endpoint here
+  const url = ''
   if (!url) {
     toast('No websocket URL configured. Edit pushToSocket() in the file.', true)
-    console.warn('Flat payload preview:', flattenForSocket(TREE))
     return
   }
   pushToSocket(stripUiState(TREE), url)
