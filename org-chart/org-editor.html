@@ -23,20 +23,21 @@
   html, body { margin: 0; padding: 0; }
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: var(--bg);
+    background: linear-gradient(135deg, #f0f4f8 0%, #e8f0fe 50%, #f5f0ff 100%);
     color: var(--ink);
     font-size: 14px;
     line-height: 1.45;
     min-height: 100vh;
   }
   header.topbar {
-    background: var(--ink);
+    background: linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
     color: #fff;
     padding: 14px 24px;
     display: flex;
     align-items: center;
     gap: 16px;
-    border-bottom: 3px solid var(--green);
+    border-bottom: 3px solid;
+    border-image: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4) 1;
   }
   header .logo {
     display: inline-flex;
@@ -47,12 +48,12 @@
   }
   header .logo .dot {
     width: 22px; height: 22px;
-    background: var(--green);
+    background: linear-gradient(135deg, #F59E0B, #EC4899);
     border-radius: 6px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: var(--ink);
+    color: #fff;
     font-size: 12px;
     font-weight: 800;
   }
@@ -117,6 +118,7 @@
     gap: 8px;
     align-items: center;
     flex-wrap: wrap;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
   .toolbar .group {
     display: flex; gap: 6px;
@@ -157,9 +159,21 @@
   }
   .tree ul {
     margin-left: 32px;
-    border-left: 1px dashed var(--line);
+    border-left: 2px solid #c5ddd0;
     padding-left: 20px;
     margin-top: 8px;
+  }
+  .tree ul ul {
+    border-left-color: #b8cfe4;
+  }
+  .tree ul ul ul {
+    border-left-color: #d4c5e8;
+  }
+  .tree ul ul ul ul {
+    border-left-color: #c5e8e0;
+  }
+  .tree ul ul ul ul ul {
+    border-left-color: #e8d5c5;
   }
   .tree li {
     position: relative;
@@ -173,16 +187,29 @@
     gap: 10px;
     background: #fff;
     border: 1.5px solid var(--line);
+    border-left: 4px solid var(--line);
     border-radius: 10px;
     padding: 10px 14px;
     min-width: 280px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.04);
-    transition: border-color 120ms ease, box-shadow 120ms ease;
+    transition: border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
     cursor: grab;
+    position: relative;
+    overflow: hidden;
+  }
+  .node::before {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    content: '';
+    border-radius: 10px 0 0 10px;
   }
   .node:hover {
     border-color: var(--ink-2);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.10);
+    transform: translateY(-1px);
   }
   .node.dragging { opacity: 0.45; cursor: grabbing; }
   .node.drop-target {
@@ -193,7 +220,13 @@
   .node.placeholder, .node.vacant {
     border-style: dashed;
     border-color: var(--muted);
-    background: #FBFCFB;
+    background: repeating-linear-gradient(
+      -45deg,
+      #FBFCFB,
+      #FBFCFB 8px,
+      #f6f8f6 8px,
+      #f6f8f6 16px
+    );
   }
   .node.placeholder .nm, .node.vacant .nm {
     color: var(--muted);
@@ -202,6 +235,7 @@
   .node.conflict {
     border-color: var(--warn);
     background: var(--warn-soft);
+    animation: conflictPulse 2s ease-in-out infinite;
   }
   .node.conflict::after {
     content: '⚠ DUPLICATE';
@@ -214,6 +248,11 @@
     padding: 2px 6px;
     border-radius: 4px;
     margin-left: 6px;
+  }
+
+  @keyframes conflictPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    50% { box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15); }
   }
 
   .node .avatar {
@@ -312,15 +351,26 @@
   .modal {
     background: #fff;
     border-radius: 12px;
-    padding: 24px;
+    overflow: hidden;
     width: 100%;
     max-width: 480px;
     box-shadow: 0 12px 36px rgba(0,0,0,0.18);
+  }
+  .modal::before {
+    content: '';
+    display: block;
+    height: 4px;
+    background: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4);
+  }
+  .modal > * {
+    padding-left: 24px;
+    padding-right: 24px;
   }
   .modal h2 {
     margin: 0 0 14px;
     font-size: 16px;
     color: var(--ink);
+    padding-top: 20px;
   }
   .modal label {
     display: block;
@@ -350,7 +400,7 @@
   }
   .modal .row { display: flex; gap: 10px; }
   .modal .row > div { flex: 1; }
-  .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; }
+  .modal .actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-bottom: 24px !important; }
   .modal .actions button { padding: 9px 16px; font-size: 13px; }
   .modal .actions .secondary {
     background: transparent;
@@ -369,7 +419,9 @@
     max-height: 0;
     overflow: hidden;
     transition: max-height 220ms ease;
-    border-top: 3px solid var(--green);
+    border-top: 3px solid;
+    border-image: linear-gradient(90deg, #F59E0B, #EC4899, #8B5CF6, #06B6D4) 1;
+    z-index: 900;
   }
   .json-panel.open { max-height: 50vh; }
   .json-panel header {
@@ -424,6 +476,45 @@
   }
   .toast.show { opacity: 1; transform: translateX(0); }
   .toast.warn { border-left-color: var(--warn); }
+
+  /* ─── Department Legend ─── */
+  .dept-legend {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 14px 18px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.10);
+    z-index: 800;
+    max-height: 340px;
+    overflow-y: auto;
+    min-width: 220px;
+    transition: opacity 180ms ease, transform 180ms ease;
+  }
+  .dept-legend h4 {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--muted);
+  }
+  .dept-legend .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 12px;
+    color: var(--ink-2);
+  }
+  .dept-legend .legend-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -517,6 +608,11 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- ─── Department Legend ─── -->
+<div class="dept-legend" id="deptLegend">
+  <h4>Departments</h4>
+</div>
+
 <script>
 /* ============================================================
    Convertt Org Editor
@@ -525,6 +621,37 @@
    - Drag-to-reparent
    - Visual gap (placeholder) + conflict flags
    ============================================================ */
+
+// ─── Department Color Map ───
+const DEPT_COLORS = {
+  'Executive':              { primary: '#F59E0B', bg: '#FFFBEB', border: '#FDE68A', text: '#92400E', avatar: '#D97706' },
+  'Admin & Support':        { primary: '#64748B', bg: '#F8FAFC', border: '#CBD5E1', text: '#334155', avatar: '#475569' },
+  'Finance':                { primary: '#3B82F6', bg: '#EFF6FF', border: '#BFDBFE', text: '#1E40AF', avatar: '#2563EB' },
+  'Human Resource':         { primary: '#8B5CF6', bg: '#F5F3FF', border: '#DDD6FE', text: '#5B21B6', avatar: '#7C3AED' },
+  'Business Development & Marketing': { primary: '#14B8A6', bg: '#F0FDFA', border: '#99F6E4', text: '#0F766E', avatar: '#0D9488' },
+  'Marketing & Media Team': { primary: '#EC4899', bg: '#FDF2F8', border: '#FBCFE8', text: '#9D174D', avatar: '#DB2777' },
+  'UI/UX':                  { primary: '#F97316', bg: '#FFF7ED', border: '#FED7AA', text: '#9A3412', avatar: '#EA580C' },
+  'Web - Shopify Development': { primary: '#06B6D4', bg: '#ECFEFF', border: '#A5F3FC', text: '#155E75', avatar: '#0891B2' },
+  'Web - WordPress':        { primary: '#6366F1', bg: '#EEF2FF', border: '#C7D2FE', text: '#3730A3', avatar: '#4F46E5' },
+  'Operations / Client Servicing': { primary: '#EF4444', bg: '#FEF2F2', border: '#FECACA', text: '#991B1B', avatar: '#DC2626' },
+  'Engineering':            { primary: '#10B981', bg: '#ECFDF5', border: '#A7F3D0', text: '#065F46', avatar: '#059669' },
+};
+const DEFAULT_DEPT_COLOR = { primary: '#6B7280', bg: '#F9FAFB', border: '#E5E7EB', text: '#374151', avatar: '#4B5563' };
+
+function getDeptColor(dept) {
+  return DEPT_COLORS[dept] || DEFAULT_DEPT_COLOR;
+}
+
+// ─── Build Department Legend ───
+(function buildLegend() {
+  const container = document.getElementById('deptLegend');
+  for (const [name, colors] of Object.entries(DEPT_COLORS)) {
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+    item.innerHTML = '<span class="legend-dot" style="background:' + colors.primary + '"></span>' + name;
+    container.appendChild(item);
+  }
+})();
 
 // ─── Initial data (paste of org-data.json — same canonical structure) ───
 const INITIAL_DATA = {
@@ -701,6 +828,20 @@ function renderNode(node) {
       ${node.id === TREE.id ? '' : '<button class="icon" data-act="del" title="Delete">✕</button>'}
     </div>
   `
+
+  // Apply department colors
+  const dc = getDeptColor(node.department)
+  card.style.borderLeftColor = dc.primary
+  card.style.background = dc.bg
+  // Style ::before pseudo via CSS custom property
+  card.style.setProperty('--dept-primary', dc.primary)
+  const beforeStyle = document.createElement('style')
+  // We'll set inline style on the pseudo via a data attribute approach instead
+  // Actually, let's just use the border-left which is already visible
+  card.querySelector('.dept').style.color = dc.text
+  const avatarEl = card.querySelector('.avatar')
+  if (avatarEl) avatarEl.style.background = (node.id === TREE.id) ? 'linear-gradient(135deg, #F59E0B, #EAB308)' : dc.avatar
+
   if (node.note) {
     const nt = document.createElement('span')
     nt.className = 'note'
