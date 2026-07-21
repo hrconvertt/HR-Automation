@@ -2,7 +2,6 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import OrgTree from '@/components/org-chart/org-tree'
-import { DepartmentBreakdown } from '@/components/org-chart/department-breakdown'
 
 export default async function OrgChartPage() {
   const cookieStore = await cookies()
@@ -27,11 +26,6 @@ export default async function OrgChartPage() {
             : 'Read-only view of the company hierarchy.'}
         </p>
       </div>
-
-      {/* Department Breakdown — collapsible panel above the tree. Complements
-          the tree: tree shows reporting structure; this shows ownership +
-          headcount by department. */}
-      <DepartmentBreakdown canEdit={canEdit} />
 
       <OrgTree canEdit={canEdit} />
     </div>
