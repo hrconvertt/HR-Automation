@@ -281,6 +281,8 @@ model Employee {
   jobChanges          JobChange[]
   leavesOfAbsence     LeaveOfAbsence[]
   attendanceCorrections AttendanceCorrection[]
+  interviewSlots     InterviewSlot[]    @relation("InterviewSlots")
+  interviewScorecards Scorecard[]       @relation("InterviewScorecards")
 
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
@@ -1281,6 +1283,8 @@ model JobRequisition {
   // this number qualify for auto talent-pool inclusion. Default 60.
   scoreThreshold Int        @default(60)
 
+  postings        JobPosting[]
+  rubrics         InterviewRubric[]
   candidates     Candidate[]
   knockoutCriteria KnockoutCriterion[]
   isDemo         Boolean    @default(false)
@@ -1357,6 +1361,8 @@ model Candidate {
   skills            String?  // JSON array of strings
   languages         String?  // JSON array of strings
 
+  resumeParse     ResumeParse?
+  nurtureLogs     NurtureLog[]     @relation("CandidateNurtures")
   interviews      Interview[]
   offer           JobOffer?
   isDemo          Boolean        @default(false)
@@ -1380,6 +1386,7 @@ model Interview {
   feedback      String?
   rating        Float?
   result        String?   // PASS | FAIL | HOLD
+  scorecards      Scorecard[]
   createdAt     DateTime  @default(now())
 
   @@map("interviews")
@@ -1402,6 +1409,151 @@ model JobOffer {
   createdAt    DateTime  @default(now())
 
   @@map("job_offers")
+}
+
+// ─── ATS ENHANCEMENTS ─────────────────────────────────────────────────────
+
+// Job Distribution / Multi-Platform Posting Tracker
+model JobPosting {
+  id                String    @id @default(cuid())
+  requisitionId     String
+  requisition       JobRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  platform          String    // LINKEDIN | INDEED | ZIPRECRUITER | CAREERS_PAGE | OTHER
+  externalId        String?   // posting ID returned by the job board API
+  trackingToken     String    @unique  // unique token for source attribution (e.g. "LN-2026-07-001")
+  postedAt          DateTime
+  expiresAt         DateTime?
+  cost              Float?    // cost per posting (USD)
+  status            String    @default("ACTIVE") // ACTIVE | PAUSED | EXPIRED | CLOSED
+  impressions        Int       @default(0)
+  clicks            Int       @default(0)
+  applications      Int       @default(0)
+  lastSyncedAt      DateTime?
+  notes             String?
+  postedBy          String?   // User.id who triggered the posting
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([requisitionId])
+  @@index([platform])
+  @@map("job_postings")
+}
+
+// Resume Parse Results — structured output from PDF/DOCX parsing
+model ResumeParse {
+  id                String    @id @default(cuid())
+  candidateId       String    @unique
+  candidate         Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  rawText           String?   // full extracted text
+  parsedData        String?   // full JSON of structured fields
+  skills            String?   // JSON array of extracted skills
+  education         String?   // JSON array of {institution, degree, field, year}
+  workHistory       String?   // JSON array of {company, role, duration, highlights[]}
+  certifications    String?   // JSON array of {name, issuer, year}
+  languages         String?   // JSON array of strings
+  totalExperience   Float?    // calculated total years
+  confidence        Float?    // parser confidence 0-1
+  parserVersion     String    @default("1.0")
+  createdAt         DateTime  @default(now())
+
+  @@map("resume_parses")
+}
+
+// Interview Scorecard — rubric-based evaluation per interviewer
+model Scorecard {
+  id              String    @id @default(cuid())
+  interviewId     String
+  interview       Interview @relation(fields: [interviewId], references: [id], onDelete: Cascade)
+  interviewerId   String    // Employee.id
+  interviewer     Employee  @relation("InterviewScorecards", fields: [interviewerId], references: [id])
+  rubricAnswers   String    // JSON: [{skillId, skillName, rating, notes}]
+  overallRating   Float?    // 1-5
+  recommendation String?   // STRONG_HIRE | HIRE | NO_HIRE | STRONG_NO_HIRE
+  strengths       String?   // JSON array of strength strings
+  concerns        String?   // JSON array of concern strings
+  submittedAt      DateTime?
+  slaDueAt         DateTime  // 24 hours after interview end
+  slaNudgedAt      DateTime? // when the reminder was last sent
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([interviewId])
+  @@index([interviewerId])
+  @@map("scorecards")
+}
+
+// Interview Rubric — auto-generated from JD core skills
+model InterviewRubric {
+  id              String    @id @default(cuid())
+  requisitionId   String
+  requisition     JobRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  skillName       String
+  skillCategory   String    // TECHNICAL | SOFT_SKILL | CULTURE_FIT | DOMAIN
+  weight          Float     @default(1.0) // relative weight in overall score
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  @@index([requisitionId])
+  @@map("interview_rubrics")
+}
+
+// Automated Email / Nurture Sequences
+model NurtureSequence {
+  id              String    @id @default(cuid())
+  name            String
+  type            String    // STAGE_GATE | SILVER_MEDALIST | REJECTION | ONBOARDING | GENERAL
+  description     String?
+  isActive        Boolean   @default(true)
+  triggerStage    String?   // APPLIED | SCREENING | INTERVIEW | OFFER | REJECTED — for STAGE_GATE
+  delayHours      Int       @default(0)  // hours after trigger to send
+  emailSubject    String
+  emailBodyHtml   String    // template with {{variables}}
+  emailBodyText   String?   // plain text fallback
+  variables       String?   // JSON array of variable names used in templates
+  logs            NurtureLog[]
+  sortOrder       Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("nurture_sequences")
+}
+
+// Per-candidate nurture log
+model NurtureLog {
+  id              String    @id @default(cuid())
+  candidateId     String
+  candidate       Candidate @relation("CandidateNurtures", fields: [candidateId], references: [id], onDelete: Cascade)
+  sequenceId      String?
+  sequence        NurtureSequence? @relation(fields: [sequenceId], references: [id])
+  triggerStage    String?
+  subject         String
+  bodyHtml        String
+  sentAt          DateTime
+  openedAt        DateTime?  // track email opens
+  clickedAt       DateTime?  // track link clicks
+  status          String    @default("SENT") // SENT | OPENED | CLICKED | BOUNCED
+  createdAt       DateTime  @default(now())
+
+  @@index([candidateId])
+  @@map("nurture_logs")
+}
+
+// Interview Availability Slots
+model InterviewSlot {
+  id              String    @id @default(cuid())
+  interviewerId   String    // Employee.id
+  interviewer     Employee  @relation("InterviewSlots", fields: [interviewerId], references: [id])
+  date            DateTime
+  startTime       DateTime
+  endTime         DateTime
+  timezone        String    @default("Asia/Karachi")
+  isBooked        Boolean   @default(false)
+  interviewId     String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([interviewerId, date])
+  @@map("interview_slots")
 }
 
 // ─── LEARNING & DEVELOPMENT ───────────────────────────────────────────────────
