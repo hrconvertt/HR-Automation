@@ -22,32 +22,32 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const slaDueAt = new Date(interview.scheduledAt)
     slaDueAt.setHours(slaDueAt.getHours() + 24)
 
-    const scorecard = await prisma.scorecard.upsert({
-      where: {
-        interviewId_interviewerId: { interviewId: id, interviewerId },
-      },
-      update: {
-        rubricAnswers: JSON.stringify(rubricAnswers || []),
-        overallRating,
-        recommendation: recommendation || null,
-        strengths: JSON.stringify(strengths || []),
-        concerns: JSON.stringify(concerns || []),
-        submittedAt: new Date(),
-        slaDueAt,
-        slaNudgedAt: null,
-      },
-      create: {
-        interviewId: id,
-        interviewerId,
-        rubricAnswers: JSON.stringify(rubricAnswers || []),
-        overallRating,
-        recommendation: recommendation || null,
-        strengths: JSON.stringify(strengths || []),
-        concerns: JSON.stringify(concerns || []),
-        submittedAt: new Date(),
-        slaDueAt,
-      },
+    const existing = await prisma.scorecard.findFirst({
+      where: { interviewId: id, interviewerId },
     })
+
+    const commonData = {
+      rubricAnswers: JSON.stringify(rubricAnswers || []),
+      overallRating,
+      recommendation: recommendation || null,
+      strengths: JSON.stringify(strengths || []),
+      concerns: JSON.stringify(concerns || []),
+      submittedAt: new Date(),
+      slaDueAt,
+    }
+
+    const scorecard = existing
+      ? await prisma.scorecard.update({
+          where: { id: existing.id },
+          data: { ...commonData, slaNudgedAt: null },
+        })
+      : await prisma.scorecard.create({
+          data: {
+            interviewId: id,
+            interviewerId,
+            ...commonData,
+          },
+        })
 
     return NextResponse.json(scorecard, { status: 201 })
   } catch (error) {
