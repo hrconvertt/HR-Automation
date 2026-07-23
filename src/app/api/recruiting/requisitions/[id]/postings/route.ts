@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         expiresAt: expiresAt ? new Date(expiresAt) : null,
         cost: cost ?? null,
         notes: notes ?? null,
-        postedBy: payload.userId || payload.sub,
+        postedBy: payload.userId,
       },
     })
 
