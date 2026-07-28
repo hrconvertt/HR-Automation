@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { ZAI } from 'z-ai-web-dev-sdk'
+import ZAI from 'z-ai-web-dev-sdk'
 
 export const runtime = 'nodejs'
 
@@ -57,7 +57,7 @@ async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<
 }
 
 async function scoreCandidateWithAI(resumeText: string, jdContent: string): Promise<Record<string, unknown>> {
-  const zai = await ZAI.create()
+  const zai: any = await (ZAI as any).create()
   const jdCtx = jdContent.length > 4000 ? jdContent.slice(0, 4000) + '\n[TRUNCATED]' : jdContent
   const resCtx = resumeText.length > 8000 ? resumeText.slice(0, 8000) + '\n[TRUNCATED]' : resumeText
 
