@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
-import { ZAI } from 'z-ai-web-dev-sdk'
+import ZAI from 'z-ai-web-dev-sdk'
 
 export const runtime = 'nodejs'
 
@@ -76,7 +76,7 @@ async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<
 }
 
 async function parseJDWithAI(rawText: string): Promise<Record<string, unknown>> {
-  const zai = await ZAI.create()
+  const zai: any = await (ZAI as any).create()
   const response = await zai.chat.completions.create({
     model: 'glm-4-flash',
     messages: [
