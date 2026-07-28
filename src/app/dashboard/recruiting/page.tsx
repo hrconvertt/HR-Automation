@@ -20,6 +20,8 @@ import { TalentPoolView } from '@/components/recruiting/talent-pool-view'
 import { KnockoutEditorButton } from '@/components/recruiting/knockout-editor-button'
 import { KnockoutOverrideButton } from '@/components/recruiting/knockout-override-button'
 import { BulkPipelineActions } from '@/components/recruiting/bulk-pipeline-actions'
+import { BulkJDUpload } from '@/components/recruiting/bulk-jd-upload'
+import { BulkResumeUpload } from '@/components/recruiting/bulk-resume-upload'
 
 const AVATAR_PALETTE = [
   'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
@@ -307,7 +309,13 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           />
         </div>
         {(isHR || isManager) && (
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 flex items-center gap-2">
+            <BulkJDUpload />
+            <BulkResumeUpload
+              openRequisitions={requisitions
+                .filter((r) => r.status === 'OPEN')
+                .map((r) => ({ id: r.id, title: r.title }))}
+            />
             <RequestToHireButton role={isHR ? 'HR_ADMIN' : 'MANAGER'} />
           </div>
         )}
