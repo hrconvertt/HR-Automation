@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
         reason: reason ?? '',
         status: initialStatus,
         stageOneApproverId,
-        attachmentBytes: attachmentBytes ?? undefined,
+        attachmentBytes: attachmentBytes ? Buffer.from(attachmentBytes) : undefined,
         attachmentMime: safeMime ?? undefined,
         attachmentName: safeName ?? undefined,
       },
