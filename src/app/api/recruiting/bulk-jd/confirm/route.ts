@@ -131,6 +131,9 @@ export async function POST(request: NextRequest) {
             data: jd.interviewRubrics.map((r) => ({
               requisitionId: requisition.id,
               skillName: r.skillName,
+              // Required on InterviewRubric. The extractor doesn't classify the
+              // skill, so default to TECHNICAL rather than dropping the rubric.
+              skillCategory: 'TECHNICAL',
               description: r.description || null,
             })),
           })

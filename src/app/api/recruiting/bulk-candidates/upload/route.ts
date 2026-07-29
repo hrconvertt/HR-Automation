@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import ZAI from 'z-ai-web-dev-sdk'
+import Anthropic from '@anthropic-ai/sdk'
 
 export const runtime = 'nodejs'
 
@@ -43,8 +43,10 @@ async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<
   const ext = filename.toLowerCase().split('.').pop()
   if (ext === 'txt' || ext === 'md') return buffer.toString('utf-8')
   if (ext === 'pdf') {
-    const pdfParse = (await import('pdf-parse')).default
-    const data = await pdfParse(buffer)
+    // pdf-parse v2 exports a PDFParse class — there is no default export.
+    const { PDFParse } = await import('pdf-parse')
+    const parser = new PDFParse({ data: new Uint8Array(buffer) })
+    const data = await parser.getText()
     return data.text
   }
   if (ext === 'docx') {
@@ -56,21 +58,57 @@ async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<
   return buffer.toString('utf-8')
 }
 
-async function scoreCandidateWithAI(resumeText: string, jdContent: string): Promise<Record<string, unknown>> {
-  const zai: any = await (ZAI as any).create()
+/**
+ * The previous implementation imported `z-ai-web-dev-sdk`, which is not a
+ * resolvable package — it failed every production build from 2026-07-27
+ * onward. `@anthropic-ai/sdk` is already a dependency.
+ *
+ * No `temperature` here: sampling parameters are rejected with a 400 on
+ * Claude Opus 5. The prompt and its JSON schema carry that job instead.
+ */
+/**
+ * Shape Claude is asked to return (see RESUME_EXTRACTION_PROMPT). Everything is
+ * optional — a model response is not a contract, and each field is guarded at
+ * the point of use. Typing it is what lets the parsed values be assigned to
+ * Prisma columns; an untyped `Record<string, unknown>` degrades to `{}` and
+ * fails to type-check against `string` / `number`.
+ */
+interface ParsedResume {
+  fullName?: string
+  email?: string
+  phone?: string
+  location?: string
+  currentCompany?: string
+  currentRole?: string
+  totalExperienceYears?: number
+  education?: string
+  skills?: string[]
+  matchScore?: number
+  scoreBreakdown?: Record<string, unknown>
+  knockoutEvaluation?: { passed?: boolean; failures?: string[]; details?: string }
+  recommendation?: string
+  summary?: string
+}
+
+async function scoreCandidateWithAI(resumeText: string, jdContent: string): Promise<ParsedResume> {
+  const client = new Anthropic()
   const jdCtx = jdContent.length > 4000 ? jdContent.slice(0, 4000) + '\n[TRUNCATED]' : jdContent
   const resCtx = resumeText.length > 8000 ? resumeText.slice(0, 8000) + '\n[TRUNCATED]' : resumeText
 
-  const response = await zai.chat.completions.create({
-    model: 'glm-4-flash',
+  const message = await client.messages.create({
+    model: 'claude-opus-5',
+    max_tokens: 16000,
+    system: RESUME_EXTRACTION_PROMPT,
     messages: [
-      { role: 'system', content: RESUME_EXTRACTION_PROMPT },
       { role: 'user', content: '=== JOB DESCRIPTION ===\n' + jdCtx + '\n\n=== CANDIDATE RESUME ===\n' + resCtx },
     ],
-    temperature: 0.1,
   })
 
-  const content = response.choices[0]?.message?.content ?? ''
+  // `content` is a discriminated union — keep only the text blocks.
+  const content = message.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
   const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/)
   const jsonStr = jsonMatch ? jsonMatch[1] : content
   try {

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
-import ZAI from 'z-ai-web-dev-sdk'
+import Anthropic from '@anthropic-ai/sdk'
 
 export const runtime = 'nodejs'
 
@@ -62,8 +62,10 @@ async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<
   const ext = filename.toLowerCase().split('.').pop()
   if (ext === 'txt' || ext === 'md') return buffer.toString('utf-8')
   if (ext === 'pdf') {
-    const pdfParse = (await import('pdf-parse')).default
-    const data = await pdfParse(buffer)
+    // pdf-parse v2 exports a PDFParse class — there is no default export.
+    const { PDFParse } = await import('pdf-parse')
+    const parser = new PDFParse({ data: new Uint8Array(buffer) })
+    const data = await parser.getText()
     return data.text
   }
   if (ext === 'docx') {
@@ -75,17 +77,29 @@ async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<
   return buffer.toString('utf-8')
 }
 
+/**
+ * The previous implementation imported `z-ai-web-dev-sdk`, which is not a
+ * resolvable package — it failed every production build from 2026-07-27
+ * onward. `@anthropic-ai/sdk` is already a dependency.
+ *
+ * No `temperature` here: sampling parameters are rejected with a 400 on
+ * Claude Opus 5. The prompt and its JSON schema carry that job instead.
+ */
 async function parseJDWithAI(rawText: string): Promise<Record<string, unknown>> {
-  const zai: any = await (ZAI as any).create()
-  const response = await zai.chat.completions.create({
-    model: 'glm-4-flash',
+  const client = new Anthropic()
+  const message = await client.messages.create({
+    model: 'claude-opus-5',
+    max_tokens: 16000,
+    system: JD_EXTRACTION_PROMPT,
     messages: [
-      { role: 'system', content: JD_EXTRACTION_PROMPT },
       { role: 'user', content: rawText.length > 12000 ? rawText.slice(0, 12000) + '\n[TRUNCATED]' : rawText },
     ],
-    temperature: 0.1,
   })
-  const content = response.choices[0]?.message?.content ?? ''
+  // `content` is a discriminated union — keep only the text blocks.
+  const content = message.content
+    .filter((b): b is Anthropic.TextBlock => b.type === 'text')
+    .map((b) => b.text)
+    .join('')
   const jsonMatch = content.match(/```json\s*([\s\S]*?)\s*```/) || content.match(/```\s*([\s\S]*?)\s*```/)
   const jsonStr = jsonMatch ? jsonMatch[1] : content
   try {

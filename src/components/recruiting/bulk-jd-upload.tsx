@@ -295,7 +295,7 @@ export function BulkJDUpload() {
                         )}
                       </button>
 
-                      {expandedIdx === idx && (
+                      {expandedIdx === idx && r.jd && (
                         <div className="border-t border-slate-100 p-4 bg-slate-50/50 space-y-3">
                           {/* Editable fields */}
                           <div className="grid grid-cols-2 gap-3">
@@ -303,7 +303,7 @@ export function BulkJDUpload() {
                               <label className="text-[11px] text-slate-500 font-medium">Title</label>
                               <Input
                                 value={r.jd.title}
-                                onChange={(e) => { r.jd.title = e.target.value }}
+                                onChange={(e) => { r.jd!.title = e.target.value }}
                                 className="h-8 text-sm"
                               />
                             </div>
@@ -311,7 +311,7 @@ export function BulkJDUpload() {
                               <label className="text-[11px] text-slate-500 font-medium">Department</label>
                               <Input
                                 value={r.jd.department || ''}
-                                onChange={(e) => { r.jd.department = e.target.value }}
+                                onChange={(e) => { r.jd!.department = e.target.value }}
                                 className="h-8 text-sm"
                               />
                             </div>
@@ -319,7 +319,7 @@ export function BulkJDUpload() {
                               <label className="text-[11px] text-slate-500 font-medium">Level</label>
                               <Input
                                 value={r.jd.positionLevel || ''}
-                                onChange={(e) => { r.jd.positionLevel = e.target.value }}
+                                onChange={(e) => { r.jd!.positionLevel = e.target.value }}
                                 className="h-8 text-sm"
                               />
                             </div>
@@ -329,8 +329,8 @@ export function BulkJDUpload() {
                                 value={r.jd.salaryMin != null ? `${r.jd.salaryCurrency || 'PKR'} ${r.jd.salaryMin?.toLocaleString()} - ${r.jd.salaryMax?.toLocaleString()}` : ''}
                                 onChange={(e) => {
                                   const match = e.target.value.match(/[\d,.]+/g)
-                                  if (match?.[0]) r.jd.salaryMin = parseFloat(match[0].replace(/,/g, ''))
-                                  if (match?.[1]) r.jd.salaryMax = parseFloat(match[1].replace(/,/g, ''))
+                                  if (match?.[0]) r.jd!.salaryMin = parseFloat(match[0].replace(/,/g, ''))
+                                  if (match?.[1]) r.jd!.salaryMax = parseFloat(match[1].replace(/,/g, ''))
                                 }}
                                 className="h-8 text-sm"
                               />

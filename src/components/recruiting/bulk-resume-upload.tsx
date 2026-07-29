@@ -371,8 +371,8 @@ export function BulkResumeUpload({ openRequisitions }: { openRequisitions: Requi
                             {/* Score breakdown */}
                             {r.candidate.scoreBreakdown && (
                               <div className="grid grid-cols-4 gap-1">
-                                {['experienceMatch', 'skillsMatch', 'educationMatch', 'locationMatch'].map((key) => {
-                                  const val = r.candidate.scoreBreakdown?.[key]
+                                {(['experienceMatch', 'skillsMatch', 'educationMatch', 'locationMatch'] as const).map((key) => {
+                                  const val = r.candidate?.scoreBreakdown?.[key]
                                   return (
                                     <div key={key} className="text-center">
                                       <div className="h-1.5 bg-slate-200 rounded-full overflow-hidden">
