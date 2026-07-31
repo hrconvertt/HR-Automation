@@ -1,12 +1,13 @@
 'use client'
 
 /**
- * Spreadsheet-style payroll editor.
+ * Payroll detail editor (spreadsheet-style).
  *
- *   Each row = one Payslip. Columns mirror the bank IBFT/IFT export format
- *   plus payroll detail (Gross, Deductions, OT, Late, Status). Click a cell
- *   to edit; blur saves to local state. Edited cells get a yellow tint until
- *   "Save Changes" runs.
+ *   Each row = one Payslip: earnings and deductions only. The account number,
+ *   payout amount, reference and note live in the Bank Transfer File table
+ *   above this one — no column appears in both, so the page never shows the
+ *   same figure twice. Click a cell to edit; blur saves to local state. Edited
+ *   cells get a yellow tint until "Save Changes" runs.
  *
  *   Two top-level actions (rendered in the parent view):
  *     - Save Changes  → POST /api/payroll/[id]/bulk-update
@@ -21,7 +22,7 @@ import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { bankCodeFromIban } from '@/lib/bank-codes'
 import {
-  Save, Send, Undo2, FileSpreadsheet, FileText, Pencil, AlertCircle, CheckCircle2,
+  Save, Send, Undo2, FileSpreadsheet, Pencil, AlertCircle, CheckCircle2,
 } from 'lucide-react'
 import { safeFetch } from '@/lib/safe-fetch'
 
@@ -201,7 +202,7 @@ export function PayrollGridEditor({
         <div className="flex items-center gap-2">
           <FileSpreadsheet className="w-4 h-4 text-slate-700" />
           <h3 className="text-sm font-semibold text-slate-900">
-            Spreadsheet Editor — {monthsShort[month - 1]} {year}
+            Payroll Detail — {monthsShort[month - 1]} {year}
           </h3>
           {dirty && (
             <Badge variant="warning" className="text-[10px]">
@@ -215,14 +216,9 @@ export function PayrollGridEditor({
           )}
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Button onClick={() => download('IFT')} variant="outline" size="sm">
-            <FileText className="w-3.5 h-3.5 mr-1.5" /> IFT (Faysal)
-          </Button>
-          <Button onClick={() => download('IBFT')} variant="outline" size="sm">
-            <FileText className="w-3.5 h-3.5 mr-1.5" /> IBFT (Others)
-          </Button>
-          <Button onClick={() => download('BOTH')} variant="outline" size="sm">
-            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Combined
+          <Button onClick={() => download('BOTH')} variant="outline" size="sm" disabled={runStatus === 'DRAFT'}
+            title={runStatus === 'DRAFT' ? 'Available once the run leaves DRAFT' : 'IFT + IBFT in one workbook'}>
+            <FileSpreadsheet className="w-3.5 h-3.5 mr-1.5" /> Combined bank file
           </Button>
           {editable.size > 0 && (
             <Button
@@ -275,15 +271,11 @@ export function PayrollGridEditor({
           <thead className="bg-slate-50 text-slate-600">
             <tr>
               <Th>Employee</Th>
-              <Th>IBAN</Th>
-              <Th>Bank</Th>
               <Th right>Gross</Th>
               <Th right>Deductions</Th>
               <Th right>Overtime / Bonus</Th>
               <Th right>Late / Leave Ded.</Th>
-              <Th right>Net (Txn Amt)</Th>
-              <Th>Reference</Th>
-              <Th>Notes</Th>
+              <Th right>Net Pay</Th>
               <Th>Status</Th>
               <Th></Th>
             </tr>
@@ -291,10 +283,9 @@ export function PayrollGridEditor({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={12} className="py-8 text-center text-slate-400">No payslips.</td>
+                <td colSpan={8} className="py-8 text-center text-slate-400">No payslips.</td>
               </tr>
             ) : rows.map((r) => {
-              const reference = `Salary ${['January','February','March','April','May','June','July','August','September','October','November','December'][month - 1]} ${year}`
               return (
                 <tr key={r.p.id} className="border-t border-slate-100 hover:bg-slate-50/50">
                   <td className="px-2 py-1.5 align-top max-w-[180px]">
@@ -308,14 +299,6 @@ export function PayrollGridEditor({
                       )}
                     </div>
                   </td>
-                  <EditableCell
-                    value={r.iban}
-                    editable={editable.has('ibanAccount')}
-                    edited={r.editedFields.has('ibanAccount')}
-                    onChange={(v) => setCell(r.p.id, 'ibanAccount', String(v), r.p.employee.ibanAccount ?? r.p.employee.bankAccount ?? '')}
-                    mono
-                  />
-                  <td className="px-2 py-1.5 text-slate-700">{r.bank || '—'}</td>
                   <EditableCell
                     value={r.grossSalary}
                     editable={editable.has('grossSalary')}
@@ -357,13 +340,6 @@ export function PayrollGridEditor({
                     right
                     bold
                   />
-                  <td className="px-2 py-1.5 text-slate-500 text-[11px]">{reference}</td>
-                  <EditableCell
-                    value={r.payoutNotes}
-                    editable={editable.has('payoutNotes')}
-                    edited={r.editedFields.has('payoutNotes')}
-                    onChange={(v) => setCell(r.p.id, 'payoutNotes', String(v), r.p.payoutNotes ?? '')}
-                  />
                   <td className="px-2 py-1.5">
                     {editable.has('status') ? (
                       <select
@@ -399,13 +375,13 @@ export function PayrollGridEditor({
           {rows.length > 0 && (
             <tfoot className="bg-slate-50 font-semibold text-slate-700">
               <tr className="border-t-2 border-slate-200">
-                <td colSpan={3} className="px-2 py-2 text-right">Totals</td>
+                <td className="px-2 py-2 text-right">Totals</td>
                 <td className="px-2 py-2 text-right">{formatCurrency(rows.reduce((s, r) => s + r.grossSalary, 0))}</td>
                 <td className="px-2 py-2 text-right">{formatCurrency(rows.reduce((s, r) => s + r.otherDeductions, 0))}</td>
                 <td className="px-2 py-2 text-right">{formatCurrency(rows.reduce((s, r) => s + r.overtimePay, 0))}</td>
                 <td className="px-2 py-2 text-right">{formatCurrency(rows.reduce((s, r) => s + r.lateDeduction, 0))}</td>
                 <td className="px-2 py-2 text-right">{formatCurrency(rows.reduce((s, r) => s + r.transactionAmount, 0))}</td>
-                <td colSpan={4}></td>
+                <td colSpan={2}></td>
               </tr>
             </tfoot>
           )}

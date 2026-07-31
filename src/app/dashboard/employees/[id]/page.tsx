@@ -4,15 +4,14 @@ import { notFound, redirect } from 'next/navigation'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Avatar } from '@/components/ui/avatar'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { verifyToken } from '@/lib/auth'
 import EditEmployeeButton from '@/components/edit-employee-button'
 import DeleteEmployeeButton from '@/components/delete-employee-button'
 import UploadDocumentButton from '@/components/upload-document-button'
-import DeleteDocumentButton from '@/components/delete-document-button'
-import DocumentVisibilityToggle from '@/components/document-visibility-toggle'
+import EmployeeDocumentRow from '@/components/employee-document-row'
+import ProfilePhotoAvatar from '@/components/profile-photo-avatar'
 import Link from 'next/link'
 import { ExternalLink } from 'lucide-react'
 import CompensationPanel from '@/components/compensation-panel'
@@ -79,7 +78,16 @@ async function getEmployee(id: string) {
       compensationHistory: { orderBy: { effectiveDate: 'desc' }, take: 10 },
       leaveBalances: true,
       leaveRequests: { orderBy: { createdAt: 'desc' }, take: 10 },
-      documents: { orderBy: { createdAt: 'desc' } },
+      // Explicit select: without it Prisma returns every scalar, and that
+      // includes the `fileBlob` BYTEA — every CNIC scan and CV on the profile
+      // was being pulled into memory just to render a table of filenames.
+      documents: {
+        orderBy: { createdAt: 'desc' },
+        select: {
+          id: true, name: true, type: true, url: true, createdAt: true,
+          expiryDate: true, signedAt: true, visibleToEmployee: true, fileSize: true,
+        },
+      },
       performanceReviews: { orderBy: { createdAt: 'desc' }, take: 5 },
       assets: {
         where: { returnedDate: null },
@@ -310,7 +318,12 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
       {/* Header */}
       <div className="bg-white border border-gray-200 rounded-xl p-6">
         <div className="flex items-start gap-5">
-          <Avatar name={employee.fullName} src={employee.photoUrl} size="lg" />
+          <ProfilePhotoAvatar
+            employeeId={employee.id}
+            fullName={employee.fullName}
+            photoUrl={employee.photoUrl}
+            canEdit={canEditFull || canEditOwn}
+          />
           <div className="flex-1 min-w-0">
             <div className="flex flex-wrap items-start gap-3 justify-between">
               <div className="min-w-0 flex-1">
@@ -440,20 +453,21 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                     ['Emergency Relation', employee.emergencyRelation],
                     ['Emergency Phone', employee.emergencyPhone],
                     ['Emergency Email', employee.emergencyEmail],
-                  ] as [string, string | null | undefined][]).map(([label, value]) => value ? (
+                  ] as [string, string | null | undefined][]).map(([label, value]) => (
                     <div key={label} className="flex gap-3">
                       <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
-                      <dd className="text-gray-900">{value}</dd>
+                      <dd className={value ? 'text-gray-900' : 'text-slate-300'}>{value || '—'}</dd>
                     </div>
-                  ) : null)}
+                  ))}
                 </dl>
               </CardContent>
             </Card>
 
-            {/* Identity card — surfaces enriched CNIC + family info */}
-            {(employee.fatherOrHusbandName || employee.mothersMaidenName ||
-              employee.cnicIssuedOn || employee.cnicExpiresOn ||
-              employee.placeOfBirth || employee.cityOfBirth || employee.cnic) && (
+            {/* Identity card — surfaces enriched CNIC + family info.
+                Shown for everyone, empty or not: a card that disappears when
+                unpopulated makes each profile a different shape and hides the
+                fact that the details are still missing. */}
+            {(
               <Card>
                 <CardHeader><CardTitle>Identity &amp; CNIC</CardTitle></CardHeader>
                 <CardContent>
@@ -468,12 +482,12 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                       ['CNIC Expires On', employee.cnicExpiresOn ? formatDate(employee.cnicExpiresOn) : null],
                       ['Place of Issuance', employee.placeOfIssuance],
                       ['CNIC Birth Date', employee.cnicBirthDate ? formatDate(employee.cnicBirthDate) : null],
-                    ] as [string, string | null | undefined][]).map(([label, value]) => value ? (
+                    ] as [string, string | null | undefined][]).map(([label, value]) => (
                       <div key={label} className="flex gap-3">
                         <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
-                        <dd className="text-gray-900">{value}</dd>
+                        <dd className={value ? 'text-gray-900' : 'text-slate-300'}>{value || '—'}</dd>
                       </div>
-                    ) : null)}
+                    ))}
                   </dl>
                 </CardContent>
               </Card>
@@ -484,7 +498,9 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
               viewerRole: effectiveRole,
               viewerEmployeeId: myEmpId,
               targetEmployeeId: employee.id,
-            }) && (employee.bankAccountName || employee.bankName || employee.bankAccount || employee.ibanAccount) && (
+              // Permission still gates this card; emptiness does not. Payroll
+              // needs to see at a glance which accounts are still unfilled.
+            }) && (
               <Card>
                 <CardHeader><CardTitle>Banking</CardTitle></CardHeader>
                 <CardContent>
@@ -496,12 +512,12 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                       ['Account #', employee.bankAccount],
                       ['IBAN', employee.ibanAccount],
                       ['Branch', employee.bankBranch],
-                    ] as [string, string | null | undefined][]).map(([label, value]) => value ? (
+                    ] as [string, string | null | undefined][]).map(([label, value]) => (
                       <div key={label} className="flex gap-3">
                         <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
-                        <dd className="text-gray-900">{value}</dd>
+                        <dd className={value ? 'text-gray-900' : 'text-slate-300'}>{value || '—'}</dd>
                       </div>
-                    ) : null)}
+                    ))}
                   </dl>
                 </CardContent>
               </Card>
@@ -523,12 +539,12 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                     ['Work Schedule', employee.workDays.replace(/,/g, ' · ')],
                     ['Joining Date', formatDate(employee.joiningDate)],
                     ['Confirmation Date', employee.confirmationDate ? formatDate(employee.confirmationDate) : null],
-                  ] as [string, string | null | undefined][]).map(([label, value]) => value ? (
+                  ] as [string, string | null | undefined][]).map(([label, value]) => (
                     <div key={label} className="flex gap-3">
                       <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
-                      <dd className="text-gray-900">{value}</dd>
+                      <dd className={value ? 'text-gray-900' : 'text-slate-300'}>{value || '—'}</dd>
                     </div>
-                  ) : null)}
+                  ))}
                 </dl>
               </CardContent>
             </Card>
@@ -716,41 +732,27 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                   {documentsForViewer.length === 0 ? (
                     <TableRow><TableCell colSpan={4} className="text-center text-gray-400">No documents.</TableCell></TableRow>
                   ) : (
-                    documentsForViewer.map((doc) => {
-                      // Salary slips link straight to the printable route
-                      // (lazy-rendered — no blob to stream).
-                      const viewHref = doc.type === 'SALARY_SLIP' && doc.url
-                        ? doc.url
-                        : `/api/documents/${doc.id}/download`
-                      return (
-                        <TableRow key={doc.id}>
-                          <TableCell>{doc.name}</TableCell>
-                          <TableCell><Badge variant="secondary">{doc.type}</Badge></TableCell>
-                          <TableCell>{formatDate(doc.createdAt)}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-3">
-                              <a
-                                href={viewHref}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-slate-700 text-xs hover:underline"
-                              >View</a>
-                              {/* HR-only visibility toggle */}
-                              {canEditFull && (
-                                <DocumentVisibilityToggle
-                                  documentId={doc.id}
-                                  initialVisible={doc.visibleToEmployee}
-                                />
-                              )}
-                              {/* HR-only delete; canEditFull = HR_ADMIN + not in preview */}
-                              {canEditFull && (
-                                <DeleteDocumentButton documentId={doc.id} documentName={doc.name} />
-                              )}
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    })
+                    documentsForViewer.map((doc) => (
+                      <EmployeeDocumentRow
+                        key={doc.id}
+                        canEdit={canEditFull}
+                        formatDate={formatDate(doc.createdAt)}
+                        doc={{
+                          id: doc.id,
+                          name: doc.name,
+                          type: doc.type,
+                          url: doc.url,
+                          createdAt: doc.createdAt.toISOString(),
+                          expiryDate: doc.expiryDate?.toISOString() ?? null,
+                          visibleToEmployee: doc.visibleToEmployee,
+                          // Link-only rows (imported Drive URLs, lazily-rendered
+                          // salary slips) hold no bytes, so there is nothing to
+                          // read. Anything else stays enabled and lets the API
+                          // give the precise reason if it can't be read.
+                          hasFile: !(doc.url && !doc.fileSize),
+                        }}
+                      />
+                    ))
                   )}
                 </TableBody>
               </Table>

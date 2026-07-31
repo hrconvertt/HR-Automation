@@ -1,4 +1,4 @@
-﻿import { cookies } from 'next/headers'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -13,7 +13,7 @@ const roleLabels: Record<string, string> = {
 }
 
 /**
- * Recruiting module layout â€” same flat Workday-style header as People/Payroll.
+ * Recruiting module layout — same flat Workday-style header as People/Payroll.
  * Title + breadcrumb on the left, role chip on the right, no decorative tile.
  */
 export default async function RecruitingLayout({ children }: { children: React.ReactNode }) {
@@ -34,7 +34,7 @@ export default async function RecruitingLayout({ children }: { children: React.R
   return (
     <div className="-m-4 lg:-m-6 min-h-full bg-slate-50">
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-baseline gap-3 min-w-0">
             <h1 className="text-lg font-semibold text-slate-900 leading-none">Recruiting</h1>
             <nav className="text-xs text-slate-400 truncate">
@@ -48,7 +48,7 @@ export default async function RecruitingLayout({ children }: { children: React.R
           </span>
         </div>
       </div>
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-5">{children}</div>
+      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-5">{children}</div>
     </div>
   )
 }

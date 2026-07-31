@@ -7,7 +7,10 @@ import { verifyToken } from '@/lib/auth'
 // retype "Sr. Software Engineer" / "Senior Software Engineer" / etc.
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
-  if (!token || !await verifyToken(token)) {
+  // verifyToken() resolves the Clerk session first and only falls back to
+  // the hr_token cookie, so gating on that cookie 401s every Clerk-signed-in
+  // user before the check even runs. Ask verifyToken directly.
+  if (!await verifyToken(token)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

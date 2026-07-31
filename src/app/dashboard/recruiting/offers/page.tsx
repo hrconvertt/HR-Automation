@@ -1,4 +1,4 @@
-﻿import { cookies } from 'next/headers'
+import { cookies } from 'next/headers'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -56,7 +56,7 @@ export default async function OffersPage() {
       <div>
         <h1 className="text-xl font-bold text-slate-900">Job Offers</h1>
         <p className="text-sm text-slate-500 mt-1">
-          <span className="font-semibold text-slate-900">{pending.length}</span> pending Â·
+          <span className="font-semibold text-slate-900">{pending.length}</span> pending ·
           {' '}<span className="font-semibold text-slate-900">{offers.length}</span> total
         </p>
       </div>
@@ -89,20 +89,20 @@ export default async function OffersPage() {
                     <p className="text-[11px] text-slate-500">{o.candidate.email}</p>
                   </TableCell>
                   <TableCell className="text-slate-700 text-sm">
-                    {o.candidate.requisition?.title ?? 'â€”'}
+                    {o.candidate.requisition?.title ?? '—'}
                   </TableCell>
                   <TableCell className="tabular-nums text-slate-900">
                     {formatCurrency(o.salary)}
                   </TableCell>
                   <TableCell className="text-slate-500 text-sm">
-                    {o.joiningDate ? formatDate(o.joiningDate) : 'â€”'}
+                    {o.joiningDate ? formatDate(o.joiningDate) : '—'}
                   </TableCell>
                   <TableCell className="text-slate-500 text-sm">{formatDate(o.offerDate)}</TableCell>
                   <TableCell>
                     <Badge variant={STATUS_TONE[o.status] ?? 'secondary'}>{o.status}</Badge>
                     {o.status === 'REJECTED' && o.rejectionReason && (
                       <p className="text-[11px] text-slate-700 mt-0.5 max-w-[200px] line-clamp-2">
-                        â€œ{o.rejectionReason}â€
+                        €œ{o.rejectionReason}€
                       </p>
                     )}
                     {o.statusChangedAt && o.status !== 'PENDING' && (
@@ -122,7 +122,7 @@ export default async function OffersPage() {
                         {o.employee.employeeCode}
                       </Link>
                     ) : (
-                      <span className="text-xs text-slate-400">â€”</span>
+                      <span className="text-xs text-slate-400">—</span>
                     )}
                   </TableCell>
                 </TableRow>

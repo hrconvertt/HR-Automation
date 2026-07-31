@@ -1,7 +1,8 @@
-﻿import { cookies } from 'next/headers'
+import { cookies } from 'next/headers'
+import { RecruitingModuleNav } from './_components/module-nav'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
@@ -52,7 +53,7 @@ async function getRecruitingKpis() {
   const TARGET_TTF_DAYS = 30
   const TARGET_OFFER_ACCEPT_PCT = 80
 
-  // â”€â”€ Time-to-Fill: createdAt of requisition â†’ first HIRED candidate.
+  // — Time-to-Fill: createdAt of requisition → first HIRED candidate.
   const filledReqs = await prisma.jobRequisition.findMany({
     where: { status: 'FILLED' },
     select: { createdAt: true, updatedAt: true },
@@ -70,7 +71,7 @@ async function getRecruitingKpis() {
       ? `Faster than ${TARGET_TTF_DAYS}-day target`
       : `${(avgTtfDays - TARGET_TTF_DAYS).toFixed(0)}d above ${TARGET_TTF_DAYS}-day target`
 
-  // â”€â”€ Offer Acceptance Rate (last 10 closed offers)
+  // — Offer Acceptance Rate (last 10 closed offers)
   const closedOffers = await prisma.jobOffer.findMany({
     where: { status: { in: ['ACCEPTED', 'REJECTED', 'EXPIRED'] } },
     orderBy: { createdAt: 'desc' },
@@ -82,10 +83,10 @@ async function getRecruitingKpis() {
   const offerLabel = offerAcceptPct == null
     ? 'No closed offers yet'
     : offerAcceptPct >= TARGET_OFFER_ACCEPT_PCT
-      ? `On target (â‰¥${TARGET_OFFER_ACCEPT_PCT}%)`
+      ? `On target (≥${TARGET_OFFER_ACCEPT_PCT}%)`
       : `Below ${TARGET_OFFER_ACCEPT_PCT}% target`
 
-  // â”€â”€ Pipeline Velocity: avg days a candidate spends in each stage today.
+  // — Pipeline Velocity: avg days a candidate spends in each stage today.
   //    Use createdAt vs updatedAt as proxy (we don't yet track stage history).
   const activeCands = await prisma.candidate.findMany({
     where: { stage: { in: ['APPLIED', 'SCREENING', 'INTERVIEW', 'OFFER'] } },
@@ -108,7 +109,7 @@ async function getRecruitingKpis() {
     ? `${worstStage.toLowerCase()} is slowest (${worstAvg.toFixed(1)}d avg)`
     : 'No active candidates'
 
-  // â”€â”€ Source Quality: avg score by source.
+  // — Source Quality: avg score by source.
   const scoredCands = await prisma.candidate.findMany({
     where: { matchScore: { not: null }, source: { not: null } },
     select: { source: true, matchScore: true },
@@ -164,7 +165,7 @@ async function getPipelineHealth() {
     avgScreenDays = total / screening.length / 86_400_000
   }
 
-  // Avg time-to-hire from last 10 HIRED candidates (createdAt â†’ updatedAt as proxy for HIRED transition)
+  // Avg time-to-hire from last 10 HIRED candidates (createdAt → updatedAt as proxy for HIRED transition)
   const hired = await prisma.candidate.findMany({
     where: { stage: 'HIRED' },
     orderBy: { updatedAt: 'desc' },
@@ -255,9 +256,9 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   const isManager = role === 'MANAGER'
 
   // Requests tab scoping:
-  //   HR_ADMIN â†’ sees all PENDING/REJECTED requests (decision queue)
-  //   MANAGER  â†’ sees only their own (privacy + clutter)
-  //   Others   â†’ see nothing here (the tab is hidden anyway)
+  //   HR_ADMIN → sees all PENDING/REJECTED requests (decision queue)
+  //   MANAGER  → sees only their own (privacy + clutter)
+  //   Others   → see nothing here (the tab is hidden anyway)
   const requestsVisible = isHR
     ? requisitions
     : isManager && myEmployeeId
@@ -274,35 +275,45 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   const upcoming       = interviews.filter((i) => !i.result).length
   const pendingOffers  = offers.filter((o) => o.status === 'PENDING').length
 
+  // Which view the sidebar highlights and the shell renders. Resolved on the
+  // server from the URL, so no Client Component needs `useSearchParams`.
+  const VIEWS = ['requests', 'requisitions', 'pipeline', 'knockouts', 'pool', 'schedule']
+  const activeView =
+    sp.tab && VIEWS.includes(sp.tab)
+      ? sp.tab
+      : sp.stage
+        ? 'pipeline'
+        : (isHR && pendingRequests.length > 0 ? 'requests' : 'pipeline')
+
   return (
     <div className="space-y-5">
-      {/* Toolbar â€” KPIs on left, primary action on right */}
+      {/* Toolbar — KPIs on left, primary action on right */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 flex-1 min-w-0">
           <Kpi
             label="Time-to-Fill"
-            value={kpis.avgTtfDays != null ? `${kpis.avgTtfDays.toFixed(0)}d` : 'â€”'}
+            value={kpis.avgTtfDays != null ? `${kpis.avgTtfDays.toFixed(0)}d` : '—'}
             sub={kpis.ttfLabel}
             Icon={Timer}
             tone="bg-slate-50 text-slate-700"
           />
           <Kpi
             label="Offer Acceptance"
-            value={kpis.offerAcceptPct != null ? `${kpis.offerAcceptPct.toFixed(0)}%` : 'â€”'}
+            value={kpis.offerAcceptPct != null ? `${kpis.offerAcceptPct.toFixed(0)}%` : '—'}
             sub={kpis.offerLabel}
             Icon={FileText}
             tone="bg-slate-50 text-slate-700"
           />
           <Kpi
             label="Pipeline Velocity"
-            value={kpis.worstStage ? kpis.worstStage : 'â€”'}
+            value={kpis.worstStage ? kpis.worstStage : '—'}
             sub={kpis.velocityLabel}
             Icon={Activity}
             tone="bg-slate-50 text-slate-700"
           />
           <Kpi
             label="Source Quality"
-            value={kpis.topSource ?? 'â€”'}
+            value={kpis.topSource ?? '—'}
             sub={kpis.sourceLabel}
             Icon={TrendingUp}
             tone="bg-slate-50 text-slate-700"
@@ -321,7 +332,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
         )}
       </div>
 
-      {/* Pipeline Health â€” server-computed flow metrics */}
+      {/* Pipeline Health — server-computed flow metrics */}
       {(isHR || isManager) && (
         <Card className="rounded-xl border-slate-200 shadow-sm p-4">
           <div className="flex items-center justify-between mb-3">
@@ -329,7 +340,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
               <Activity className="w-4 h-4 text-slate-500" />
               <h2 className="text-sm font-semibold text-slate-900">Pipeline Health</h2>
             </div>
-            <p className="text-[11px] text-slate-500">Last 7 days Â· sample {health.hiredSampleSize}/10</p>
+            <p className="text-[11px] text-slate-500">Last 7 days · sample {health.hiredSampleSize}/10</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div className="rounded-lg border border-slate-200 bg-white p-3">
@@ -346,7 +357,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                 <Timer className="w-4 h-4 text-slate-500" />
               </div>
               <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-                {health.avgScreenDays != null ? `${health.avgScreenDays.toFixed(1)}d` : 'â€”'}
+                {health.avgScreenDays != null ? `${health.avgScreenDays.toFixed(1)}d` : '—'}
               </p>
               <p className="text-[11px] text-slate-500 mt-0.5">Days in screening stage</p>
             </div>
@@ -356,53 +367,32 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                 <TrendingUp className="w-4 h-4 text-slate-500" />
               </div>
               <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
-                {health.avgTimeToHireDays != null ? `${health.avgTimeToHireDays.toFixed(1)}d` : 'â€”'}
+                {health.avgTimeToHireDays != null ? `${health.avgTimeToHireDays.toFixed(1)}d` : '—'}
               </p>
-              <p className="text-[11px] text-slate-500 mt-0.5">Apply â†’ hired, last 10</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">Apply → hired, last 10</p>
             </div>
           </div>
         </Card>
       )}
 
-      {/* Tabs ordered left-to-right by lifecycle:
-            Requests (manager â†’ HR) â†’ Requisitions (the live hiring board)
-            â†’ Pipeline (candidates flowing through stages) â†’ Interviews â†’ Offers.
-          Default tab is the earliest place that needs attention: Requests
-          if HR has pending ones, otherwise Pipeline. */}
-      <Tabs defaultValue={
-        sp.tab && ['requests','requisitions','pipeline','knockouts','pool','schedule'].includes(sp.tab)
-          ? sp.tab
-          : sp.stage
-            ? 'pipeline'
-            : (isHR && pendingRequests.length > 0 ? 'requests' : 'pipeline')
-      }>
-        <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex">
-          <TabsTrigger value="requests">
-            Requests
-            {pendingRequests.length > 0 && (
-              <span className="ml-1.5 text-[10px] font-bold bg-slate-100 text-slate-900 rounded-full px-1.5 py-0.5 tabular-nums">{pendingRequests.length}</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="requisitions">Job Requisitions</TabsTrigger>
-          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
-          {(isHR || isManager) && (
-            <TabsTrigger value="knockouts">
-              Knockouts
-              {knockedOut.length > 0 && (
-                <span className="ml-1.5 text-[10px] font-bold bg-slate-100 text-slate-700 rounded-full px-1.5 py-0.5 tabular-nums">{knockedOut.length}</span>
-              )}
-            </TabsTrigger>
-          )}
-          <TabsTrigger value="pool">
-            Talent Pool
-            {poolCandidates.length > 0 && (
-              <span className="ml-1.5 text-[10px] font-bold bg-slate-100 text-slate-700 rounded-full px-1.5 py-0.5 tabular-nums">{poolCandidates.length}</span>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="schedule">My Schedule</TabsTrigger>
-        </TabsList>
+      {/* Resolved once and shared by the sidebar and the content, so the
+          highlighted entry and the rendered view can never disagree. */}
+      {/* Workday-style module shell: views listed in a sidebar on the left,
+          the selected view rendered beside it. Order follows the lifecycle —
+          Requests (manager → HR) → Requisitions → Pipeline → Knockouts →
+          Talent Pool → Schedule. The landing view is the earliest place that
+          needs attention: Requests if HR has pending ones, else Pipeline. */}
+      <div className="flex flex-col lg:flex-row gap-5 items-start">
+      <RecruitingModuleNav
+        active={activeView}
+        counts={{ requests: pendingRequests.length, knockouts: knockedOut.length, pool: poolCandidates.length }}
+        canSeeKnockouts={isHR || isManager}
+      />
 
-        {/* Pipeline (kanban) â€” shortlist only (PASSED + OVERRIDDEN).
+      <Tabs className="flex-1 min-w-0" value={activeView}>
+        {/* View selection lives in the module sidebar (see _components/module-nav). */}
+
+        {/* Pipeline (kanban) — shortlist only (PASSED + OVERRIDDEN).
             Failed knockouts live in the Knockouts tab. */}
         <TabsContent value="pipeline" className="mt-4">
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
@@ -410,7 +400,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
               <p className="text-xs text-slate-500">
                 <span className="font-semibold text-slate-900">{shortlist.length}</span> shortlisted candidates across {requisitions.filter((r) => r.status === 'OPEN').length} open {requisitions.filter((r) => r.status === 'OPEN').length === 1 ? 'role' : 'roles'}
                 {knockedOut.length > 0 && (
-                  <span className="text-slate-700 ml-2">Â· {knockedOut.length} filtered out</span>
+                  <span className="text-slate-700 ml-2">· {knockedOut.length} filtered out</span>
                 )}
               </p>
               <div className="flex items-center gap-2 flex-wrap">
@@ -466,7 +456,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           </Card>
         </TabsContent>
 
-        {/* Knockouts â€” candidates that failed hard filters at intake.
+        {/* Knockouts — candidates that failed hard filters at intake.
             HR can override here; on override they get scored + move to kanban. */}
         {(isHR || isManager) && (
           <TabsContent value="knockouts" className="mt-4">
@@ -499,7 +489,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                             {reasons.length > 0 && (
                               <ul className="mt-1.5 space-y-0.5">
                                 {reasons.map((r, i) => (
-                                  <li key={i} className="text-[11px] text-slate-700">Â· {r.reason}</li>
+                                  <li key={i} className="text-[11px] text-slate-700">· {r.reason}</li>
                                 ))}
                               </ul>
                             )}
@@ -517,7 +507,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           </TabsContent>
         )}
 
-        {/* Requisitions â€” the active hiring board.
+        {/* Requisitions — the active hiring board.
             Excludes PENDING + REJECTED (those live in the Requests tab).
             Result: each row appears in exactly one tab, no double-counting. */}
         <TabsContent value="requisitions" className="mt-4">
@@ -562,7 +552,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                               </div>
                             </TableCell>
                           )}
-                          <TableCell className="text-slate-500">{r.closingDate ? formatDate(r.closingDate) : 'â€”'}</TableCell>
+                          <TableCell className="text-slate-500">{r.closingDate ? formatDate(r.closingDate) : '—'}</TableCell>
                           {isHR && (
                             <TableCell>
                               <RequisitionStatusMenu requisitionId={r.id} status={r.status} title={r.title} />
@@ -578,14 +568,14 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           })()}
         </TabsContent>
 
-        {/* Requests â€” manager-raised, awaiting HR decision */}
+        {/* Requests — manager-raised, awaiting HR decision */}
         <TabsContent value="requests" className="mt-4">
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b border-slate-100">
               <p className="text-xs text-slate-500">
-                {isManager && <span className="text-slate-400">Your requests Â· </span>}
+                {isManager && <span className="text-slate-400">Your requests · </span>}
                 <span className="font-semibold text-slate-900">{pendingRequests.length}</span> pending {pendingRequests.length === 1 ? 'request' : 'requests'}
-                {' Â· '}{requestsVisible.filter((r) => r.status === 'REJECTED').length} rejected (history)
+                {' · '}{requestsVisible.filter((r) => r.status === 'REJECTED').length} rejected (history)
               </p>
             </div>
             <Table>
@@ -613,11 +603,11 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                         <TableCell className="font-medium text-slate-900">
                           {r.title}
                           {r.requestNote && (
-                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">â€œ{r.requestNote}â€</p>
+                            <p className="text-[11px] text-slate-500 mt-0.5 line-clamp-1">€œ{r.requestNote}€</p>
                           )}
                         </TableCell>
                         {!isManager && (
-                          <TableCell className="text-slate-600 text-sm">{r.requestedBy?.fullName ?? 'â€”'}</TableCell>
+                          <TableCell className="text-slate-600 text-sm">{r.requestedBy?.fullName ?? '—'}</TableCell>
                         )}
                         <TableCell>
                           <Badge variant="secondary" className="text-[10px]">{(r.requestReason ?? 'OTHER').toString().replace('_', ' ')}</Badge>
@@ -631,7 +621,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                             <Badge variant="destructive">Rejected</Badge>
                           )}
                           {r.status === 'REJECTED' && r.decisionNote && (
-                            <p className="text-[11px] text-slate-700 mt-0.5 line-clamp-2">â€œ{r.decisionNote}â€</p>
+                            <p className="text-[11px] text-slate-700 mt-0.5 line-clamp-2">€œ{r.decisionNote}€</p>
                           )}
                         </TableCell>
                         {isHR && (
@@ -649,7 +639,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           </Card>
         </TabsContent>
 
-        {/* Talent Pool â€” pre-vetted candidates for urgent hires */}
+        {/* Talent Pool — pre-vetted candidates for urgent hires */}
         <TabsContent value="pool" className="mt-4">
           <TalentPoolView
             candidates={poolCandidates.map((c) => ({
@@ -673,7 +663,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           />
         </TabsContent>
 
-        {/* My Schedule â€” upcoming interviews this week.
+        {/* My Schedule — upcoming interviews this week.
             Interview + Offer management now lives inside the candidate
             detail panel (Workable-style), not as separate top-level tabs. */}
         <TabsContent value="schedule" className="mt-4">
@@ -736,6 +726,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           </Card>
         </TabsContent>
       </Tabs>
+      </div>
     </div>
   )
 }

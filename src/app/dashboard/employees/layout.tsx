@@ -35,7 +35,7 @@ export default async function EmployeesLayout({ children }: { children: React.Re
       {/* Flat module header â€” tight row, no decorative tile.
           Title + breadcrumb on left, role chip inline. Workday-style. */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-baseline gap-3 min-w-0">
             <h1 className="text-lg font-semibold text-slate-900 leading-none">People</h1>
             <nav className="text-xs text-slate-400 truncate">
@@ -51,7 +51,7 @@ export default async function EmployeesLayout({ children }: { children: React.Re
       </div>
 
       {/* Module Body */}
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-5">{children}</div>
+      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-5">{children}</div>
     </div>
   )
 }

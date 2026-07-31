@@ -315,6 +315,33 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
 
 // Nested sidebar groups — when the user is inside one of these paths,
 // the sidebar shows a focused nested menu with a "Back" link.
+/**
+ * Employee Lifecycle module menu.
+ *
+ * Hoisted so the module's own routes — /dashboard/onboarding and
+ * /dashboard/probation, which live outside the /dashboard/lifecycle path —
+ * can register the SAME menu. The lookup below is a `startsWith` on the key,
+ * so without their own entries those two pages matched no prefix, lost the
+ * module sidebar, and dropped the user back to the main nav mid-module.
+ */
+const LIFECYCLE_NAV: NavGroup[] = [
+  {
+    label: 'Employee Lifecycle',
+    items: [
+      { href: '/dashboard/lifecycle', label: 'Overview', icon: Users },
+      { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
+      // Probation lives INSIDE the lifecycle (its natural stage position).
+      // The top-level HR nav entry was removed so it isn't duplicated;
+      // Managers keep their top-level Probation entry (no lifecycle nav).
+      { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
+      { href: '/dashboard/lifecycle/job-changes', label: 'Job Changes', icon: TrendingUp },
+      { href: '/dashboard/lifecycle/loa', label: 'Leave of Absence', icon: PlaneIcon },
+      { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert },
+      { href: '/dashboard/lifecycle/exit', label: 'Exit Clearance', icon: LogOut },
+    ],
+  },
+]
+
 const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/performance': [
     {
@@ -327,23 +354,10 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       ],
     },
   ],
-  '/dashboard/lifecycle': [
-    {
-      label: 'Employee Lifecycle',
-      items: [
-        { href: '/dashboard/lifecycle', label: 'Overview', icon: Users },
-        { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
-        // Probation lives INSIDE the lifecycle (its natural stage position).
-        // The top-level HR nav entry was removed so it isn't duplicated;
-        // Managers keep their top-level Probation entry (no lifecycle nav).
-        { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
-        { href: '/dashboard/lifecycle/job-changes', label: 'Job Changes', icon: TrendingUp },
-        { href: '/dashboard/lifecycle/loa', label: 'Leave of Absence', icon: PlaneIcon },
-        { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert },
-        { href: '/dashboard/lifecycle/exit', label: 'Exit Clearance', icon: LogOut },
-      ],
-    },
-  ],
+  '/dashboard/lifecycle': LIFECYCLE_NAV,
+  // Same module, different path roots — keep the sidebar on screen.
+  '/dashboard/onboarding': LIFECYCLE_NAV,
+  '/dashboard/probation': LIFECYCLE_NAV,
   '/dashboard/culture': [
     {
       label: 'People & Culture',
@@ -926,7 +940,10 @@ export default function DashboardChrome({
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-6 lg:p-8">
-            <div className="max-w-7xl mx-auto">{children}</div>
+            {/* Use the width that exists. Capped well above a typical monitor so
+                ultrawide screens do not stretch prose to unreadable line lengths,
+                but a 1920px display no longer loses ~320px a side to margin. */}
+            <div className="w-full max-w-[1800px] mx-auto">{children}</div>
           </div>
         </main>
       </div>

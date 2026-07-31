@@ -44,7 +44,7 @@ export default async function PayrollLayout({ children }: { children: React.Reac
     <div className="-m-4 lg:-m-6 min-h-full bg-slate-50">
       {/* Module Header */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between gap-4 flex-wrap">
             <div className="flex items-center gap-4">
               <div className="p-3 rounded-2xl bg-gradient-to-br from-slate-500 to-slate-700 shadow-sm">
@@ -75,7 +75,7 @@ export default async function PayrollLayout({ children }: { children: React.Reac
       </div>
 
       {/* Module Body */}
-      <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-6">{children}</div>
+      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-6">{children}</div>
     </div>
   )
 }

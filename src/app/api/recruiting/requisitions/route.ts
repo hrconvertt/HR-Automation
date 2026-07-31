@@ -54,6 +54,15 @@ export async function POST(request: NextRequest) {
     ? Math.max(1, Math.min(100, Number(body.scoreThreshold) || 60))
     : 60
 
+  // Supplied by the JD Builder (/dashboard/recruiting/new-jd), which captures
+  // the description field by field and composes the finished JD itself. The
+  // quick "New Requisition" dialog omits them and keeps the generated draft.
+  const description  = body.description ? String(body.description).trim().slice(0, 8000) : null
+  const requirements = body.requirements ? String(body.requirements).trim().slice(0, 8000) : null
+  const salaryMin    = body.salaryMin != null && body.salaryMin !== '' ? Number(body.salaryMin) : null
+  const salaryMax    = body.salaryMax != null && body.salaryMax !== '' ? Number(body.salaryMax) : null
+  const jdContent    = body.jdContent ? String(body.jdContent).slice(0, 20000) : null
+
   if (!title) return NextResponse.json({ error: 'Job title is required' }, { status: 400 })
   if (isManager && !me.employee) {
     return NextResponse.json({ error: 'Your account has no employee record â€” contact HR' }, { status: 400 })
@@ -70,6 +79,9 @@ export async function POST(request: NextRequest) {
       requestReason, requestNote,
       closingDate,
       scoreThreshold,
+      description, requirements,
+      salaryMin: Number.isFinite(salaryMin as number) ? salaryMin : null,
+      salaryMax: Number.isFinite(salaryMax as number) ? salaryMax : null,
       status,
       postedDate: status === 'OPEN' ? new Date() : null,
     },
@@ -78,7 +90,12 @@ export async function POST(request: NextRequest) {
   // Auto-draft JD for HR-direct creates too (status===OPEN).
   // Manager-submitted requests get their JD draft when HR approves them,
   // handled in the [id]/route.ts decision path.
-  if (status === 'OPEN') {
+  if (status === 'OPEN' && jdContent) {
+    await prisma.jobRequisition.update({
+      where: { id: created.id },
+      data: { jdContent, jdStatus: 'DRAFT_JD', jdGeneratedAt: new Date() },
+    })
+  } else if (status === 'OPEN') {
     const dept = departmentId
       ? await prisma.department.findUnique({ where: { id: departmentId }, select: { name: true } })
       : null

@@ -10,23 +10,22 @@
  *   timeline reads from PayrollRunApproval rows.
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import {
-  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
-} from '@/components/ui/table'
 import { formatCurrency } from '@/lib/utils'
 import {
-  Download, Wallet, Banknote, Landmark, ShieldCheck,
-  AlertTriangle, CheckCircle2, RefreshCw, Sparkles, Pencil,
+  Wallet, Banknote, Landmark, ShieldCheck,
+  CheckCircle2, RefreshCw, Sparkles, Pencil,
   Send, FileCheck, Undo2, FileSpreadsheet, BadgeCheck, FileText,
-  PlusCircle, BookOpen, CalendarClock, TrendingUp, X,
+  PlusCircle, BookOpen, CalendarClock, X,
 } from 'lucide-react'
 import { safeFetch } from '@/lib/safe-fetch'
 import { AdjustPayslipDialog, type AdjustablePayslip } from '@/components/payroll/adjust-payslip-dialog'
-import { PayrollGridEditor, type GridPayslip, type GridRole } from '@/components/payroll/payroll-grid-editor'
+import type { GridPayslip, GridRole } from '@/components/payroll/payroll-grid-editor'
+import { BankTransferGrid } from '@/components/payroll/bank-transfer-grid'
+import { SalarySlipRegister, type SlipRow } from '@/components/payroll/salary-slip-register'
 import {
   PAYROLL_STAGES,
   stageIndex,
@@ -144,14 +143,6 @@ interface MeResponse {
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
-const KIND_META: Record<Anomaly['kind'], { label: string; icon: string }> = {
-  SALARY_CHANGED: { label: 'Salary changed',  icon: '💰' },
-  NET_DELTA:      { label: 'Net pay differs', icon: '📊' },
-  HIGH_OT:        { label: 'High overtime',   icon: '⏱' },
-  NEW_EMPLOYEE:   { label: 'New employee',    icon: '🆕' },
-  NO_PRIOR:       { label: 'No comparison',   icon: 'ℹ️' },
-}
-
 const ACTION_LABEL: Record<string, string> = {
   SUBMIT_TO_CEO: 'Submitted to CEO',
   CEO_APPROVE: 'CEO approved',
@@ -189,7 +180,6 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
   const [runs, setRuns] = useState<RunSummary[]>(initialData?.runs ?? [])
   // When set, we view a specific (usually off-cycle) run instead of the REGULAR one.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(initialData?.run?.id ?? null)
-  const [anomalies, setAnomalies] = useState<AnomaliesResponse | null>(initialData?.anomalies ?? null)
   const [me, setMe] = useState<MeResponse | null>(initialData?.me ?? null)
   const [loading, setLoading] = useState(!initialData)
   // Server already rendered the initial month — skip the duplicate first fetch.
@@ -206,7 +196,6 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
   // Off-cycle run dialog + retro suggestions
   const [offCycleOpen, setOffCycleOpen] = useState(false)
   const [retro, setRetro] = useState<RetroSuggestion[] | null>(null)
-  const [retroBusy, setRetroBusy] = useState(false)
   const calendar = initialData?.calendar
   const todayISO = initialData?.todayISO
 
@@ -231,8 +220,6 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
     setSelectedRunId(run?.id ?? null)
     selectedRunIdRef.current = run?.id ?? null
     if (run) {
-      const a = await safeFetch<AnomaliesResponse>(`/api/payroll/${run.id}/anomalies`)
-      setAnomalies(a.ok ? a.data : null)
       // Retro suggestions only make sense on the REGULAR run.
       if ((run.runType ?? 'REGULAR') === 'REGULAR') {
         const s = await safeFetch<{ suggestions: RetroSuggestion[] }>(`/api/payroll/retro-suggestions?month=${month}&year=${year}`)
@@ -241,7 +228,6 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
         setRetro(null)
       }
     } else {
-      setAnomalies(null)
       setRetro(null)
     }
     setLoading(false)
@@ -278,13 +264,17 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
   const isHR = roles.includes('HR_ADMIN')
   const isFinance = roles.includes('FINANCE')
   const status = payrollRun?.status ?? 'DRAFT'
-  const canEdit = canEditPayslipsAtStage(status, roles)
 
   async function handleGenerate(replace = false) {
     setBusy(true)
     // New auto-generate endpoint: pulls latest comp + applies resignation
     // filter + pro-rates partial-month exits. POST /api/payroll/generate.
-    const r = await safeFetch<{ payrollRun: { id: string }; count: number }>('/api/payroll/generate', {
+    const r = await safeFetch<{
+      payrollRun: { id: string }
+      count: number
+      skipped?: Array<{ employeeCode: string; name: string; reason: string }>
+      usedCompHistory?: Array<{ employeeCode: string; name: string; oldGross: number; newGross: number }>
+    }>('/api/payroll/generate', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ month, year, replace }),
     })
@@ -377,48 +367,68 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
     alert(`Generated ${created} payslip PDF${created === 1 ? '' : 's'}.${skipped ? ` Skipped ${skipped} existing.` : ''}${notified ? ` Notified ${notified} employee${notified === 1 ? '' : 's'}.` : ''}`)
   }
 
-  // F2 — apply retro-pay suggestions to the current REGULAR run's arrears field
-  // by PATCHing each affected employee's payslip via the bulk-update route.
-  async function handleApplyRetro() {
-    if (!payrollRun || !retro || retro.length === 0) return
-    if (!confirm(`Add arrears to ${retro.length} payslip${retro.length === 1 ? '' : 's'} on this run?`)) return
-    setRetroBusy(true)
-    // Map employeeId → payslipId for rows present on this run.
-    const slipByEmp = new Map(payrollRun.payslips.map((p) => [p.employeeId, p]))
-    const updates = retro
-      .map((s) => {
-        const slip = slipByEmp.get(s.employeeId)
-        if (!slip) return null
-        // Add suggested arrears on top of existing arrears; bump gross + net.
-        const arrears = slip.arrears + s.totalArrears
-        return {
-          payslipId: slip.id,
-          arrears,
-          grossSalary: slip.grossSalary + s.totalArrears,
-          netSalary: slip.netSalary + s.totalArrears,
-        }
-      })
-      .filter((u): u is NonNullable<typeof u> => u !== null)
-    if (updates.length === 0) {
-      setRetroBusy(false)
-      alert('None of the affected employees have a payslip on this run.')
-      return
-    }
-    const r = await safeFetch(`/api/payroll/${payrollRun.id}/bulk-update`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ updates }),
-    })
-    setRetroBusy(false)
-    if (!r.ok) { alert(r.error ?? 'Failed to apply arrears'); return }
-    fetchPayroll()
-  }
-
   const canSendBack = payrollRun
     ? sendBackAllowedRoles(status).some((r) => roles.includes(r))
     : false
   const runType = payrollRun?.runType ?? 'REGULAR'
   const isRegular = runType === 'REGULAR'
+
+  // Shared row source for both tables below — mapped once so the bank file and
+  // the payroll detail table can never drift apart.
+  const gridPayslips = useMemo<GridPayslip[]>(() => (payrollRun?.payslips ?? []).map((p) => ({
+    id: p.id,
+    employeeId: p.employeeId,
+    employee: {
+      fullName: p.employee.fullName,
+      employeeCode: p.employee.employeeCode,
+      ibanAccount: p.employee.ibanAccount ?? null,
+      bankAccount: p.employee.bankAccount ?? null,
+      bankName: p.employee.bankName ?? null,
+    },
+    grossSalary: p.grossSalary,
+    otherDeductions: p.otherDeductions,
+    overtimePay: p.overtimePay,
+    lateDeduction: p.lateDeduction ?? 0,
+    netSalary: p.netSalary,
+    transactionAmount: p.transactionAmount ?? null,
+    payoutNotes: p.payoutNotes ?? null,
+    status: p.status,
+    adjustmentNote: p.adjustmentNote,
+    isAdjusted: p.isAdjusted,
+  })), [payrollRun])
+
+  const slipRows = useMemo<SlipRow[]>(() => (payrollRun?.payslips ?? []).map((p) => ({
+    id: p.id,
+    employeeId: p.employeeId,
+    employee: {
+      fullName: p.employee.fullName,
+      employeeCode: p.employee.employeeCode,
+      designation: p.employee.designation,
+    },
+    basic: p.basic,
+    houseRent: p.houseRent,
+    utilities: p.utilities,
+    grossSalary: p.grossSalary,
+    food: p.food,
+    fuel: p.fuel,
+    overtimePay: p.overtimePay,
+    bonus: p.bonus,
+    arrears: p.arrears,
+    otherAllowance: p.otherAllowance,
+    medicalAllowance: p.medicalAllowance,
+    incomeTax: p.incomeTax,
+    eobi: p.eobi,
+    healthcare: p.healthcare,
+    loanDeduction: p.loanDeduction,
+    vehicleDeduction: 0,
+    advanceDeduction: p.advanceDeduction,
+    otherDeductions: p.otherDeductions,
+    lateDeduction: p.lateDeduction ?? 0,
+    leaveEncashment: p.leaveEncashment,
+    netSalary: p.netSalary,
+    isAdjusted: p.isAdjusted,
+    adjustmentNote: p.adjustmentNote,
+  })), [payrollRun])
 
   return (
     <div className="space-y-6">
@@ -734,54 +744,27 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
         />
       )}
 
-      {/* Anomalies — only when in DRAFT on the REGULAR run */}
-      {payrollRun && isRegular && status === 'DRAFT' && anomalies && (
+      {/* Bank transfer file — deliberately the FIRST table on the page: it is
+          what actually gets paid, in the bank's own column layout. */}
+      {payrollRun && payrollRun.payslips.length > 0 && (
         <Card className="rounded-2xl">
-          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              {anomalies.anomalies.length === 0 ? (
-                <>
-                  <CheckCircle2 className="w-4 h-4 text-slate-700" />
-                  <p className="text-sm font-semibold text-slate-700">All clear — no anomalies vs last month.</p>
-                </>
-              ) : (
-                <>
-                  <AlertTriangle className="w-4 h-4 text-slate-700" />
-                  <p className="text-sm font-semibold text-slate-900">
-                    {anomalies.anomalies.length} item{anomalies.anomalies.length > 1 ? 's' : ''} need{anomalies.anomalies.length === 1 ? 's' : ''} a quick look
-                  </p>
-                </>
-              )}
-            </div>
-            <p className="text-[11px] text-slate-500">
-              {anomalies.clean} of {anomalies.total} employees identical to {anomalies.priorMonth ? `${months[anomalies.priorMonth.month - 1]} ${anomalies.priorMonth.year}` : 'last month'}
-            </p>
+          <CardHeader>
+            <CardTitle>Bank Transfer File — {months[month - 1]} {year}</CardTitle>
+          </CardHeader>
+          <div className="px-5 pb-5">
+            <BankTransferGrid
+              runId={payrollRun.id}
+              month={month}
+              year={year}
+              runStatus={status}
+              role={gridRoleFor(status, roles)}
+              payslips={gridPayslips}
+              onSaved={fetchPayroll}
+            />
           </div>
-          {anomalies.anomalies.length > 0 && (
-            <ul className="divide-y divide-slate-100">
-              {anomalies.anomalies.map((a) => {
-                const meta = KIND_META[a.kind]
-                return (
-                  <li key={a.payslipId} className="px-5 py-3 flex items-start gap-3">
-                    <span className="text-lg shrink-0">{meta.icon}</span>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-slate-900">{a.employeeName}</p>
-                        <span className="text-[10px] text-slate-400 font-mono">{a.employeeCode}</span>
-                        <Badge variant={a.severity === 'high' ? 'destructive' : a.severity === 'medium' ? 'warning' : 'secondary'}>
-                          {meta.label}
-                        </Badge>
-                      </div>
-                      <p className="text-xs text-slate-600 mt-0.5">{a.summary}</p>
-                    </div>
-                    <a href={`/dashboard/payroll/payslip/${a.payslipId}`} className="text-xs text-slate-700 hover:underline shrink-0">View payslip →</a>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
         </Card>
       )}
+
 
       {/* KPI row */}
       {payrollRun && (
@@ -798,81 +781,23 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
         <PayrollCalendarCard initial={calendar} todayISO={todayISO} />
       )}
 
-      {/* F2 — Retro-pay / arrears suggestion card (REGULAR run only, DRAFT/editable) */}
-      {payrollRun && isRegular && retro && retro.length > 0 && (
-        <Card className="rounded-2xl border-amber-200">
-          <div className="px-5 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2">
-              <TrendingUp className="w-4 h-4 text-amber-600" />
-              <p className="text-sm font-semibold text-slate-900">
-                {retro.length} employee{retro.length === 1 ? '' : 's'} {retro.length === 1 ? 'has' : 'have'} retroactive salary changes — {formatCurrency(retro.reduce((s, r) => s + r.totalArrears, 0))} total arrears
-              </p>
-            </div>
-            {canEdit && (
-              <Button
-                onClick={handleApplyRetro}
-                disabled={retroBusy}
-                variant="outline"
-                className="text-amber-700 border-amber-200 hover:bg-amber-50"
-              >
-                {retroBusy ? 'Applying…' : 'Add to this run’s arrears'}
-              </Button>
-            )}
-          </div>
-          <ul className="divide-y divide-slate-100">
-            {retro.map((s) => (
-              <li key={s.employeeId} className="px-5 py-2.5 flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-900">{s.name} <span className="text-[10px] text-slate-400 font-mono">{s.employeeCode}</span></p>
-                  <p className="text-xs text-slate-500">Underpaid: {s.months.join(', ')}</p>
-                </div>
-                <span className="text-sm font-semibold text-slate-900 tabular-nums shrink-0">{formatCurrency(s.totalArrears)}</span>
-              </li>
-            ))}
-          </ul>
-          {!canEdit && (
-            <p className="px-5 py-2 text-xs text-slate-400">Arrears can be added while the run is editable (DRAFT / HR final).</p>
-          )}
-        </Card>
-      )}
 
-      {/* Spreadsheet Grid Editor — Excel-like inline editing */}
+      {/* Salary Slip Register — the issued salary slip's own columns, so a row
+          reads exactly like the printed slip. Together with the Bank Transfer
+          File above these are the only two payroll tables; they share no
+          figures, so nothing on the page is shown twice. */}
       {payrollRun && payrollRun.payslips.length > 0 && (
         <Card className="rounded-2xl">
           <CardHeader>
-            <CardTitle>Spreadsheet Editor — {months[month - 1]} {year}</CardTitle>
+            <CardTitle>Salary Slip Register — {months[month - 1]} {year}</CardTitle>
           </CardHeader>
           <div className="px-5 pb-5">
-            <PayrollGridEditor
-              runId={payrollRun.id}
+            <SalarySlipRegister
               month={month}
               year={year}
-              runStatus={status}
               role={gridRoleFor(status, roles)}
-              payslips={payrollRun.payslips.map((p): GridPayslip => ({
-                id: p.id,
-                employeeId: p.employeeId,
-                employee: {
-                  fullName: p.employee.fullName,
-                  employeeCode: p.employee.employeeCode,
-                  ibanAccount: p.employee.ibanAccount ?? null,
-                  bankAccount: p.employee.bankAccount ?? null,
-                  bankName: p.employee.bankName ?? null,
-                },
-                grossSalary: p.grossSalary,
-                otherDeductions: p.otherDeductions,
-                overtimePay: p.overtimePay,
-                lateDeduction: p.lateDeduction ?? 0,
-                netSalary: p.netSalary,
-                transactionAmount: p.transactionAmount ?? null,
-                payoutNotes: p.payoutNotes ?? null,
-                status: p.status,
-                adjustmentNote: p.adjustmentNote,
-                isAdjusted: p.isAdjusted,
-              }))}
-              onSaved={fetchPayroll}
-              onAdvanced={fetchPayroll}
-              onEditDetails={(payslipId) => {
+              rows={slipRows}
+              onEdit={(payslipId) => {
                 const p = payrollRun.payslips.find((x) => x.id === payslipId)
                 if (!p) return
                 setAdjustTarget({
@@ -896,125 +821,46 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
         </Card>
       )}
 
-      {/* Legacy detail table (collapsed; still useful for read-only inspection) */}
-      <Card className="rounded-2xl">
-        <CardHeader>
-          <CardTitle>Employee Payslips — {months[month - 1]} {year}</CardTitle>
-        </CardHeader>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Employee</TableHead>
-              <TableHead>Basic</TableHead>
-              <TableHead>Allowances</TableHead>
-              <TableHead>Gross</TableHead>
-              <TableHead>EOBI</TableHead>
-              <TableHead>Tax</TableHead>
-              <TableHead>Net Pay</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow><TableCell colSpan={9} className="text-center py-8 text-slate-400">Loading…</TableCell></TableRow>
-            ) : !payrollRun ? (
-              <TableRow><TableCell colSpan={9} className="py-8">
-                <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
-                  <Wallet className="w-10 h-10 text-slate-400 mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold text-slate-900">
-                    No payroll for {months[month - 1]} {year} yet
-                  </h3>
-                  <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
-                    Pulls every active employee&apos;s latest compensation
-                    (Regular Pay or the most recent change) and creates a draft run
-                    ready for adjustments.
-                  </p>
-                  {isHR && (
-                    <button
-                      onClick={() => handleGenerate(false)}
-                      disabled={busy}
-                      className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 disabled:opacity-50"
-                    >
-                      <Sparkles className="w-4 h-4" />
-                      {busy ? 'Generating…' : `Generate Payroll for ${months[month - 1]} ${year}`}
-                    </button>
-                  )}
-                  <p className="text-xs text-slate-400 mt-3">
-                    You&apos;ll be able to edit values before submitting to the CEO.
-                  </p>
-                </div>
-              </TableCell></TableRow>
-            ) : payrollRun.payslips.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="text-center py-8 text-slate-400">No payslips.</TableCell></TableRow>
-            ) : (
-              payrollRun.payslips.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <div>
-                        <p className="font-medium text-slate-900">{p.employee.fullName}</p>
-                        <p className="text-xs text-slate-400">{p.employee.employeeCode}</p>
-                      </div>
-                      {p.isAdjusted && (
-                        <span
-                          title={p.adjustmentNote ?? 'Manually adjusted'}
-                          className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-slate-50 text-slate-700 border border-slate-100"
-                        >
-                          <Pencil className="w-2.5 h-2.5" /> Adjusted
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>{formatCurrency(p.basic)}</TableCell>
-                  <TableCell>{formatCurrency(p.allowances)}</TableCell>
-                  <TableCell>{formatCurrency(p.grossPay)}</TableCell>
-                  <TableCell>{formatCurrency(p.eobi)}</TableCell>
-                  <TableCell>{formatCurrency(p.incomeTax)}</TableCell>
-                  <TableCell className="font-semibold">{formatCurrency(p.netPay)}</TableCell>
-                  <TableCell>
-                    <Badge variant={p.status === 'PAID' ? 'success' : 'warning'}>{p.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      {canEdit && (
-                        <button
-                          onClick={() => setAdjustTarget({
-                            id: p.id,
-                            employeeId: p.employeeId,
-                            employeeName: p.employee.fullName,
-                            basic: p.basic, houseRent: p.houseRent, utilities: p.utilities, food: p.food,
-                            fuel: p.fuel, medicalAllowance: p.medicalAllowance, otherAllowance: p.otherAllowance,
-                            overtimePay: p.overtimePay, bonus: p.bonus,
-                            leaveEncashment: p.leaveEncashment, arrears: p.arrears,
-                            eobi: p.eobi, incomeTax: p.incomeTax,
-                            providentFund: p.providentFund, healthcare: p.healthcare,
-                            loanDeduction: p.loanDeduction, advanceDeduction: p.advanceDeduction,
-                            otherDeductions: p.otherDeductions,
-                            grossSalary: p.grossSalary, netSalary: p.netSalary,
-                            isAdjusted: p.isAdjusted, adjustmentNote: p.adjustmentNote,
-                          })}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                          title="Adjust payslip"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                      <a
-                        href={`/dashboard/payroll/payslip/${p.id}`}
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                        title="View payslip"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </Card>
+      {/* Empty / loading state. The per-employee detail table that used to sit
+          here duplicated the Payroll Detail grid above and has been removed. */}
+      {loading ? (
+        <Card className="rounded-2xl">
+          <div className="py-10 text-center text-slate-400 text-sm">Loading…</div>
+        </Card>
+      ) : !payrollRun ? (
+        <Card className="rounded-2xl">
+          <div className="p-5">
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50 p-10 text-center">
+              <Wallet className="w-10 h-10 text-slate-400 mx-auto mb-3" />
+              <h3 className="text-lg font-semibold text-slate-900">
+                No payroll for {months[month - 1]} {year} yet
+              </h3>
+              <p className="text-sm text-slate-500 mt-1 max-w-md mx-auto">
+                Pulls every active employee&apos;s latest compensation
+                (Regular Pay or the most recent change) and creates a draft run
+                ready for adjustments.
+              </p>
+              {isHR && (
+                <button
+                  onClick={() => handleGenerate(false)}
+                  disabled={busy}
+                  className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 disabled:opacity-50"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  {busy ? 'Generating…' : `Generate Payroll for ${months[month - 1]} ${year}`}
+                </button>
+              )}
+              <p className="text-xs text-slate-400 mt-3">
+                You&apos;ll be able to edit values before submitting to the CEO.
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : payrollRun.payslips.length === 0 ? (
+        <Card className="rounded-2xl">
+          <div className="py-10 text-center text-slate-400 text-sm">No payslips in this run.</div>
+        </Card>
+      ) : null}
 
       {/* Activity timeline */}
       {payrollRun && payrollRun.approvals && payrollRun.approvals.length > 0 && (

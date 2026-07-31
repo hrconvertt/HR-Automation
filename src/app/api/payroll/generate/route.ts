@@ -203,22 +203,74 @@ export async function POST(request: NextRequest) {
       status: string
       reference: string
       transactionAmount: number
+      adjustmentNote: string | null
     }> = []
 
     const monthLabels = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
-    for (const emp of employees) {
-      // Pull the LATEST CompensationHistory entry if present; otherwise fall
-      // back to the live Salary record. CompensationHistory only stores
-      // totals, so when it leads we still need the Salary breakdown to
-      // shape each pay component.
-      const salary = emp.salary
-      if (!salary) continue // no comp on file → cannot generate
+    // Surfaced in the response so HR can see who was excluded and whose
+    // components were derived from a newer compensation change.
+    const skipped: Array<{ employeeId: string; employeeCode: string; name: string; reason: string }> = []
+    const usedCompHistory: Array<{ employeeId: string; employeeCode: string; name: string; oldGross: number; newGross: number }> = []
 
-      // Use Salary as the breakdown source. The latest CompensationHistory
-      // confirms there's been at least one comp event — the Salary record
-      // is always kept in sync by PUT /api/employees/[id]/salary, so its
-      // breakdown reflects the latest cycle.
+    for (const emp of employees) {
+      // Salary holds the component breakdown (basic / house rent / utilities /
+      // food / fuel / medical / other); CompensationHistory holds totals only.
+      // Both are used: Salary shapes the components, and the latest
+      // CompensationHistory row is what says whether that breakdown is current.
+      const salary = emp.salary
+      if (!salary) {
+        // Previously a silent `continue` — the employee just vanished from
+        // payroll with no explanation. Now they are reported back to HR.
+        skipped.push({
+          employeeId: emp.id,
+          employeeCode: emp.employeeCode,
+          name: emp.fullName,
+          reason: 'No pay components on file. Add them on the employee\'s Compensation tab.',
+        })
+        continue
+      }
+
+      // If a comp change was recorded AFTER the Salary row's effective date,
+      // the breakdown is stale — payroll would silently pay the old amount.
+      // Scale the existing components to the new gross so the ratio between
+      // them is preserved, and flag the row so HR can confirm.
+      const latestComp = emp.compensationHistory[0] ?? null
+      const salaryComponents = {
+        basic: salary.basic,
+        houseRent: salary.houseRent,
+        utilities: salary.utilities,
+        food: salary.food,
+        fuel: salary.fuel,
+        medicalAllowance: salary.medicalAllowance,
+        otherAllowance: salary.otherAllowance,
+      }
+      const salaryTotal = Object.values(salaryComponents).reduce((s, v) => s + v, 0)
+
+      let scaleNote: string | null = null
+      if (
+        latestComp &&
+        latestComp.effectiveDate > salary.effectiveFrom &&
+        latestComp.effectiveDate <= endOfMonth &&
+        salaryTotal > 0 &&
+        Math.round(latestComp.newSalary) !== Math.round(salaryTotal)
+      ) {
+        const factor = latestComp.newSalary / salaryTotal
+        for (const k of Object.keys(salaryComponents) as (keyof typeof salaryComponents)[]) {
+          salaryComponents[k] = Math.round(salaryComponents[k] * factor * 100) / 100
+        }
+        scaleNote =
+          `Pay components were last set ${salary.effectiveFrom.toISOString().slice(0, 10)} ` +
+          `but a compensation change effective ${latestComp.effectiveDate.toISOString().slice(0, 10)} ` +
+          `set gross to ${Math.round(latestComp.newSalary)}. Components scaled to match — please confirm the split.`
+        usedCompHistory.push({
+          employeeId: emp.id,
+          employeeCode: emp.employeeCode,
+          name: emp.fullName,
+          oldGross: Math.round(salaryTotal),
+          newGross: Math.round(latestComp.newSalary),
+        })
+      }
 
       // Pro-rate working days for resigned/terminated employees
       const isExiting =
@@ -242,14 +294,14 @@ export async function POST(request: NextRequest) {
 
       const result = calculatePayslip(
         {
-          basic: salary.basic,
-          hra: salary.houseRent,
-          medical: salary.medicalAllowance,
+          basic: salaryComponents.basic,
+          hra: salaryComponents.houseRent,
+          medical: salaryComponents.medicalAllowance,
           conveyance: 0,
-          fuelAllowance: salary.fuel,
-          otherAllowances: salary.otherAllowance,
-          food: salary.food,
-          utilities: salary.utilities,
+          fuelAllowance: salaryComponents.fuel,
+          otherAllowances: salaryComponents.otherAllowance,
+          food: salaryComponents.food,
+          utilities: salaryComponents.utilities,
         },
         presentDays,
         empWorkingDays,
@@ -288,6 +340,7 @@ export async function POST(request: NextRequest) {
         status: 'DRAFT',
         reference: `Salary ${monthLabels[month - 1]} ${year}`,
         transactionAmount: result.netPay,
+        adjustmentNote: scaleNote,
       })
     }
 
@@ -314,6 +367,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       payrollRun: { id: payrollRun.id, month, year },
       count: payslipsData.length,
+      skipped,
+      usedCompHistory,
     }, { status: 201 })
   } catch (err) {
     console.error('[POST /api/payroll/generate]', err)
