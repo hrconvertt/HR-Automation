@@ -59,6 +59,7 @@ export async function listEmployees(opts: ListEmployeesOpts) {
       id: true,
       employeeCode: true,
       fullName: true,
+      photoUrl: true,
       email: true,
       designation: true,
       employeeType: true,

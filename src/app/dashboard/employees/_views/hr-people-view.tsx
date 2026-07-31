@@ -41,6 +41,7 @@ interface Employee {
   id: string
   employeeCode: string
   fullName: string
+  photoUrl?: string | null
   email: string
   designation: string
   employeeType: string
@@ -407,9 +408,20 @@ export function HRPeopleView({ initialEmployees }: { initialEmployees?: Employee
                 >
                   <div className="flex items-start gap-3">
                     {/* Avatar */}
-                    <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${avatarTone(emp.fullName)}`}>
-                      {getInitials(emp.fullName)}
-                    </div>
+                    {emp.photoUrl ? (
+                      // Plain <img>: served from our own route at an unknown
+                      // intrinsic size, which next/image cannot optimise.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={emp.photoUrl}
+                        alt=""
+                        className="w-11 h-11 rounded-full object-cover flex-shrink-0 bg-slate-100"
+                      />
+                    ) : (
+                      <div className={`w-11 h-11 rounded-full flex items-center justify-center text-sm font-semibold flex-shrink-0 ${avatarTone(emp.fullName)}`}>
+                        {getInitials(emp.fullName)}
+                      </div>
+                    )}
                     {/* Body */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-start justify-between gap-2">

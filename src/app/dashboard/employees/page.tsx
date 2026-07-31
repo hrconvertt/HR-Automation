@@ -38,6 +38,7 @@ export default async function EmployeesPage() {
       id: e.id,
       employeeCode: e.employeeCode,
       fullName: e.fullName,
+      photoUrl: e.photoUrl,
       email: e.email,
       designation: e.designation,
       employeeType: e.employeeType,
