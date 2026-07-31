@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/table'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { OfferActions } from '@/components/recruiting/offer-actions'
+import { FilePlus2 } from 'lucide-react'
 
 const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'warning' | 'default'> = {
   PENDING:   'warning',
@@ -53,12 +54,20 @@ export default async function OffersPage() {
 
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">Job Offers</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          <span className="font-semibold text-slate-900">{pending.length}</span> pending ·
-          {' '}<span className="font-semibold text-slate-900">{offers.length}</span> total
-        </p>
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Job Offers</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            <span className="font-semibold text-slate-900">{pending.length}</span> pending ·
+            {' '}<span className="font-semibold text-slate-900">{offers.length}</span> total
+          </p>
+        </div>
+        <Link
+          href="/dashboard/recruiting/offers/new"
+          className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 text-white text-xs px-3 py-2"
+        >
+          <FilePlus2 className="w-3.5 h-3.5" /> New Offer Letter
+        </Link>
       </div>
 
       <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
