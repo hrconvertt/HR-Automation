@@ -58,3 +58,6 @@ prisma/*.db-wal
 
 # Local-only PII files (never commit)
 *.local.json
+
+# Compiled output from ad-hoc script type-checking
+scripts/.pdftest/
