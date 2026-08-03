@@ -2,6 +2,8 @@ import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
+import { FileText } from 'lucide-react'
 import ExitClearanceDetailClient from './_client'
 
 interface PageProps { params: Promise<{ id: string }> }
@@ -49,10 +51,24 @@ export default async function ExitClearanceDetailPage({ params }: PageProps) {
   const canAct = effectiveRole === 'HR_ADMIN' && payload.role === 'HR_ADMIN'
 
   return (
+    <div className="space-y-3">
+      {/* The document prerequisites live on their own screen — the clearance
+          form below is unchanged. */}
+      {isHR && (
+        <div className="flex justify-end">
+          <Link
+            href={`/dashboard/lifecycle/exit/${clearance.id}/documents`}
+            className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 text-white text-xs px-3 py-2"
+          >
+            <FileText className="w-3.5 h-3.5" /> Exit Documents
+          </Link>
+        </div>
+      )}
     <ExitClearanceDetailClient
       initial={JSON.parse(JSON.stringify(clearance))}
       canAct={canAct}
       isSelf={isSelf}
     />
+    </div>
   )
 }

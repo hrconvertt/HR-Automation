@@ -38,6 +38,8 @@ export type DocumentType =
   | 'confirmation_letter'
   | 'exit_clearance_form'
   | 'exit_interview_form'
+  | 'relieving_certificate'
+  | 'termination_email'
 
 export type DocumentExtras = {
   // Universal
@@ -163,6 +165,8 @@ export async function generateDocument(
     case 'confirmation_letter':         return confirmationLetter(ctx)
     case 'exit_clearance_form':         return exitClearanceForm(ctx)
     case 'exit_interview_form':         return exitInterviewForm(ctx)
+    case 'relieving_certificate':       return relievingCertificate(ctx)
+    case 'termination_email':           return terminationEmail(ctx)
     default: throw new Error(`Unknown document type: ${type}`)
   }
 }
@@ -601,4 +605,64 @@ function exitInterviewForm({ emp, extras }: Ctx) {
     </div>
   `
   return { html: wrap('Exit Interview Form', body), title: `Exit Interview - ${emp.fullName}` }
+}
+
+/**
+ * Relieving certificate — the short confirmation that the person has been
+ * released and has no pending obligations. Deliberately separate from the
+ * experience letter: that one describes the role and tenure for a future
+ * employer, this one only confirms the release, and exit processes routinely
+ * need to issue one without the other.
+ */
+function relievingCertificate({ emp, extras }: Ctx) {
+  const lastDay = extras.effectiveDate ? new Date(extras.effectiveDate) : new Date()
+  const body = `
+    <div class="doc-title">Relieving Certificate</div>
+    <p style="text-align:right">Date: ${fmtDate(new Date())}</p>
+    <p>This is to certify that <strong>${escapeHtml(emp.fullName)}</strong>${emp.employeeCode ? ` (Employee Code ${escapeHtml(emp.employeeCode)})` : ''} was employed with Convertt Ltd as <strong>${escapeHtml(emp.designation ?? '—')}</strong>${emp.department?.name ? ` in the ${escapeHtml(emp.department.name)} department` : ''}.</p>
+    <table class="kv">
+      <tr><td>Date of Joining</td><td>${emp.joiningDate ? fmtDate(emp.joiningDate) : '—'}</td></tr>
+      <tr><td>Last Working Day</td><td>${fmtDate(lastDay)}</td></tr>
+      <tr><td>Designation at Exit</td><td>${escapeHtml(emp.designation ?? '—')}</td></tr>
+    </table>
+    <p>They have been relieved of their duties with effect from the close of business on <strong>${fmtDate(lastDay)}</strong>. All company assets in their possession have been returned and no dues remain outstanding on either side.</p>
+    <p>We wish them every success in their future endeavours.</p>
+    <div class="signature-block">
+      <div class="signature">
+        <div class="line">For Convertt Ltd</div>
+        <div class="name">People Operations</div>
+      </div>
+    </div>
+  `
+  return { html: wrap('Relieving Certificate', body), title: `Relieving Certificate - ${emp.fullName}` }
+}
+
+/**
+ * Termination email — the covering note the letter is sent under. Rendered as
+ * a document so HR can copy the wording; the letter itself is the attachment,
+ * which is why the two share their substance.
+ */
+function terminationEmail({ emp, extras }: Ctx) {
+  const lastDay = extras.effectiveDate ? new Date(extras.effectiveDate) : new Date()
+  const reason = extras.terminationReason ? String(extras.terminationReason) : null
+  const body = `
+    <div class="doc-title">Termination Email</div>
+    <table class="kv">
+      <tr><td>To</td><td>${escapeHtml(emp.email ?? '—')}</td></tr>
+      <tr><td>From</td><td>People Operations, Convertt Ltd</td></tr>
+      <tr><td>Subject</td><td>Termination of Employment — ${escapeHtml(emp.fullName)}</td></tr>
+    </table>
+    <p>Dear ${escapeHtml(emp.fullName)},</p>
+    <p>Further to our discussions, this email confirms that your employment with Convertt Ltd as <strong>${escapeHtml(emp.designation ?? '—')}</strong> will end on <strong>${fmtDate(lastDay)}</strong>.${reason ? ` The reason recorded is: ${escapeHtml(reason)}.` : ''}</p>
+    <p>The formal termination letter is attached. Please complete the exit clearance form and return all company assets on or before your last working day. Your final settlement will be processed once clearance is complete.</p>
+    <p>You are asked to make yourself available for a short exit interview with HR before you leave.</p>
+    <p>We thank you for your contribution and wish you well.</p>
+    <div class="signature-block">
+      <div class="signature">
+        <div class="line">People Operations</div>
+        <div class="name">Convertt Ltd</div>
+      </div>
+    </div>
+  `
+  return { html: wrap('Termination Email', body), title: `Termination Email - ${emp.fullName}` }
 }
