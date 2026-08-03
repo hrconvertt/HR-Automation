@@ -618,6 +618,13 @@ export default function DashboardChrome({
   children,
 }: Props) {
   const pathname = usePathname()
+  // Tracked via an effect rather than useSearchParams: this component wraps
+  // every dashboard route, and useSearchParams here would require a Suspense
+  // boundary around the entire shell or fail the production build.
+  const [currentTab, setCurrentTab] = useState<string | null>(null)
+  useEffect(() => {
+    setCurrentTab(new URLSearchParams(window.location.search).get('tab'))
+  }, [pathname])
   const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [sidebarHidden, setSidebarHidden] = useState(false)
@@ -674,7 +681,16 @@ export default function DashboardChrome({
 
   function isActive(href: string) {
     if (href === '/dashboard') return pathname === '/dashboard'
-    return pathname.startsWith(href)
+    // Lifecycle views are tabs on one route (/dashboard/lifecycle?tab=probation),
+    // so matching on pathname alone lit up Overview for every one of them —
+    // Overview's href IS the bare pathname. Compare the tab when the link
+    // carries one, and require the bare link to have no tab active.
+    const [hrefPath, hrefQuery] = href.split('?')
+    if (!pathname.startsWith(hrefPath)) return false
+    const tabInHref = new URLSearchParams(hrefQuery ?? '').get('tab')
+    if (tabInHref) return currentTab === tabInHref
+    const siblingTabbed = pathname === hrefPath && currentTab
+    return !siblingTabbed
   }
 
   const [chatUnread, setChatUnread] = useState(0)

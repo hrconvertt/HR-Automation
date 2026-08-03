@@ -335,9 +335,15 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                 <Badge variant={employee.status === 'ACTIVE' ? 'success' : 'secondary'}>
                   {employee.status}
                 </Badge>
-                <Badge variant={employee.employeeType === 'PERMANENT' ? 'default' : 'warning'}>
-                  {employee.employeeType}
-                </Badge>
+                {/* Probation is recorded as both a status and an employment
+                    type, so for someone on probation both badges rendered the
+                    same word. Show the type only when it says something the
+                    status does not. */}
+                {employee.employeeType !== employee.status && (
+                  <Badge variant={employee.employeeType === 'PERMANENT' ? 'default' : 'warning'}>
+                    {employee.employeeType}
+                  </Badge>
+                )}
                 {isViewingOwn && employee.status === 'ACTIVE' && !employee.resignation && (
                   <ResignationButton employeeType={employee.employeeType} />
                 )}
