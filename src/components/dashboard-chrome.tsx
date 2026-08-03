@@ -180,6 +180,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
+      { href: '/dashboard/probation/tracker', label: 'Probation Tracker', icon: ClipboardList },
       ],
     },
     {
