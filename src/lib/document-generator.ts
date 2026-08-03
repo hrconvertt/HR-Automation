@@ -70,58 +70,115 @@ function wrap(title: string, body: string): string {
 <meta charset="UTF-8">
 <title>${escapeHtml(title)}</title>
 <style>
-  @page { size: A4; margin: 22mm; }
+  /* Convertt letterhead, measured from the official sample PDFs: A4, Roboto,
+     gradient bars top and bottom (#0857E5 -> #277FB1) inset from the edges,
+     logo top-left, address block right-aligned, and Syed Khawer / Director
+     Administration as signatory. These are fixed company identity — the only
+     thing that changes between letters is the body. */
+  @page { size: A4; margin: 0; }
   * { box-sizing: border-box; }
-  body { font-family: 'Times New Roman', Georgia, serif; color: #1f2937; line-height: 1.55; margin: 0; padding: 32px; background: #f8fafc; font-size: 12pt; }
-  .doc { max-width: 800px; margin: 0 auto; background: white; padding: 56px 64px; box-shadow: 0 1px 3px rgba(0,0,0,.08); border-top: 4px solid #1d4ed8; }
-  .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 18px; border-bottom: 1.5px solid #1d4ed8; margin-bottom: 28px; }
-  .brand { display: flex; gap: 14px; align-items: center; }
-  .brand-logo { width: 50px; height: 50px; background: #1d4ed8; color: white; font-weight: 700; font-size: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; }
-  .brand-text h1 { margin: 0; font-size: 18pt; color: #0f172a; }
-  .brand-text p { margin: 2px 0 0; font-size: 9pt; color: #64748b; font-family: Arial, sans-serif; line-height: 1.3; }
-  .meta { text-align: right; font-family: Arial, sans-serif; font-size: 10pt; color: #475569; }
-  .doc-title { font-family: Arial, sans-serif; text-align: center; font-size: 14pt; font-weight: 700; color: #0f172a; margin: 24px 0 32px; letter-spacing: 0.06em; text-transform: uppercase; }
-  .lead { margin: 0 0 16px; }
-  p { margin: 12px 0; text-align: justify; }
-  strong { color: #0f172a; }
-  table { width: 100%; border-collapse: collapse; margin: 14px 0; }
-  table.kv td { padding: 6px 0; font-size: 11pt; vertical-align: top; }
-  table.kv td:first-child { font-weight: 600; width: 35%; color: #475569; }
-  table.compact td { padding: 7px 10px; border: 1px solid #cbd5e1; font-size: 11pt; }
-  ol, ul { padding-left: 22px; }
-  ol li, ul li { margin: 6px 0; text-align: justify; }
-  .signature-block { margin-top: 50px; display: flex; gap: 60px; justify-content: space-between; }
-  .signature { flex: 1; }
-  .signature .line { border-top: 1px solid #475569; margin-top: 50px; padding-top: 6px; font-size: 10pt; color: #475569; }
-  .signature .name { font-weight: 600; color: #0f172a; font-size: 11pt; }
-  .footer { margin-top: 40px; padding-top: 12px; border-top: 1px solid #e2e8f0; font-size: 9pt; color: #94a3b8; text-align: center; font-style: italic; font-family: Arial, sans-serif; }
-  .toolbar { max-width: 800px; margin: 0 auto 16px; display: flex; justify-content: flex-end; gap: 8px; }
-  .toolbar button { padding: 8px 14px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; cursor: pointer; font-size: 13px; font-family: Arial, sans-serif; }
-  .toolbar button.primary { background: #1d4ed8; color: white; border-color: #1d4ed8; }
-  @media print { body { background: white; padding: 0; } .doc { box-shadow: none; padding: 40px; } .toolbar { display: none; } .doc { border-top: 4px solid #1d4ed8 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  body {
+    font-family: Roboto, 'Segoe UI', Arial, sans-serif;
+    color: #1a1a1a; margin: 0; padding: 24px; background: #f1f5f9; font-size: 12pt;
+  }
+  .doc {
+    width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; position: relative;
+    padding: 46pt 60pt 60pt; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+  }
+  /* ~12.8pt tall, inset ~29pt from each side, top and bottom of the page. */
+  .doc::before, .doc::after {
+    content: ''; position: absolute; left: 29pt; right: 29pt; height: 12.8pt;
+    background: linear-gradient(90deg, #0857E5 0%, #277FB1 100%);
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  .doc::before { top: 0; }
+  .doc::after  { bottom: 0; }
+  .letterhead { display: flex; justify-content: space-between; align-items: flex-start; margin: 18pt 0 30pt; }
+  .logo { font-size: 26pt; font-weight: 700; letter-spacing: .04em; color: #0f172a; }
+  .logo span { color: #0857E5; }
+  .addr { text-align: right; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; }
+  .letter-date { font-size: 11pt; margin: 0 0 18pt; }
+  .doc-title { font-size: 13pt; font-weight: 700; margin: 0 0 18pt; }
+  p { font-size: 12pt; line-height: 16.5pt; margin: 0 0 12pt; text-align: left; }
+  strong { font-weight: 700; }
+  table { width: 100%; border-collapse: collapse; margin: 12pt 0; }
+  table.kv td { padding: 4pt 0; font-size: 11.5pt; vertical-align: top; }
+  table.kv td:first-child { font-weight: 700; width: 34%; }
+  table.compact td { padding: 6pt 8pt; border: 1px solid #cbd5e1; font-size: 11pt; }
+  ol, ul { padding-left: 20pt; font-size: 12pt; line-height: 16.5pt; }
+  ol li, ul li { margin: 5pt 0; }
+  .signature-block { margin-top: 40pt; }
+  .signature .line { font-size: 10pt; color: #475569; }
+  .signature .name { font-size: 14pt; font-weight: 700; color: #0f172a; }
+  .sign-off { margin-top: 44pt; }
+  .sign-off .name { font-size: 14pt; font-weight: 700; }
+  .sign-off .title { font-size: 10pt; }
+  /* Editing chrome — never printed. */
+  .toolbar {
+    position: sticky; top: 0; z-index: 10; width: 210mm; margin: 0 auto 14px;
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    background: #0f172a; color: #fff; padding: 10px 14px; border-radius: 8px;
+    font-family: 'Segoe UI', Arial, sans-serif; font-size: 13px;
+  }
+  .toolbar button {
+    padding: 7px 13px; border-radius: 6px; border: 1px solid #334155;
+    background: #1e293b; color: #fff; cursor: pointer; font-size: 13px;
+  }
+  .toolbar button.primary { background: #0857E5; border-color: #0857E5; }
+  .toolbar .hint { opacity: .75; margin-left: auto; }
+  [contenteditable="true"]:focus { outline: 2px solid #0857E5; outline-offset: 4px; }
+  body.editing .doc { cursor: text; }
+  @media print {
+    body { background: #fff; padding: 0; }
+    .doc { width: auto; min-height: auto; box-shadow: none; margin: 0; }
+    .toolbar { display: none !important; }
+  }
 </style>
 </head>
 <body>
   <div class="toolbar">
-    <button onclick="window.print()" class="primary">Print / Save as PDF</button>
+    <button id="editBtn" onclick="toggleEdit()">Edit</button>
+    <button class="primary" onclick="window.print()">Print / Save as PDF</button>
     <button onclick="window.close()">Close</button>
+    <span class="hint" id="hint">Click Edit to change any wording before printing.</span>
   </div>
-  <div class="doc">
-    <div class="header">
-      <div class="brand">
-        <div class="brand-logo">C</div>
-        <div class="brand-text">
-          <h1>Convertt Ltd</h1>
-          <p>Office 201, 5th Floor, Mega Tower<br>Gulberg Main Boulevard, Lahore<br>finance@convertt.co · +92 370 0488685</p>
-        </div>
-      </div>
-      <div class="meta">
-        <div><strong>Date:</strong> ${fmtDate(new Date())}</div>
+  <div class="doc" id="doc">
+    <div class="letterhead">
+      <div class="logo">CONVER<span>TT</span></div>
+      <div class="addr">
+        Mega Tower 5th floor, Office #201<br>
+        Gulberg Lahore, Pakistan<br>
+        +92 42 37458015<br>
+        +1 (716) 980-7724
       </div>
     </div>
+    <div class="letter-date">${fmtDate(new Date())}</div>
     ${body}
-    <div class="footer">Confidential — This document is intended only for the named recipient.</div>
+    <div class="sign-off">
+      <div class="name">Syed Khawer</div>
+      <div class="title">Director Administration</div>
+    </div>
   </div>
+<script>
+  // Edit in place rather than round-tripping to a form: HR's changes here are
+  // wording tweaks on a finished letter, and the printed output is the
+  // deliverable, so what you edit is literally what prints.
+  var editing = false;
+  function toggleEdit() {
+    editing = !editing;
+    var doc = document.getElementById('doc');
+    doc.setAttribute('contenteditable', editing ? 'true' : 'false');
+    document.body.classList.toggle('editing', editing);
+    document.getElementById('editBtn').textContent = editing ? 'Done editing' : 'Edit';
+    document.getElementById('hint').textContent = editing
+      ? 'Editing — click into any text and type. Changes are not saved back to the employee record.'
+      : 'Click Edit to change any wording before printing.';
+    if (editing) doc.focus();
+  }
+  window.addEventListener('beforeprint', function () {
+    document.getElementById('doc').setAttribute('contenteditable', 'false');
+  });
+</script>
 </body>
 </html>`
 }
@@ -615,33 +672,28 @@ function exitInterviewForm({ emp, extras }: Ctx) {
  * need to issue one without the other.
  */
 function relievingCertificate({ emp, extras }: Ctx) {
+  // Wording taken line-for-line from the issued sample (Relieving Certificate -
+  // Ali Shan): certify line, relieved-from-duties line, a role narrative, then
+  // the fixed closing. The sample repeats its final sentence twice; that is a
+  // defect in the source document and is not reproduced.
   const lastDay = extras.effectiveDate ? new Date(extras.effectiveDate) : new Date()
+  const female = (emp.gender ?? '').toUpperCase().startsWith('F')
+  const He = female ? 'She' : 'He'
+  const his = female ? 'her' : 'his'
+  const him = female ? 'her' : 'him'
+  const honorific = female ? 'Miss' : 'Mr.'
+  const who = `${honorific} ${emp.fullName}`
+
   const body = `
-    <div class="doc-title">Relieving Certificate</div>
-    <p style="text-align:right">Date: ${fmtDate(new Date())}</p>
-    <p>This is to certify that <strong>${escapeHtml(emp.fullName)}</strong>${emp.employeeCode ? ` (Employee Code ${escapeHtml(emp.employeeCode)})` : ''} was employed with Convertt Ltd as <strong>${escapeHtml(emp.designation ?? '—')}</strong>${emp.department?.name ? ` in the ${escapeHtml(emp.department.name)} department` : ''}.</p>
-    <table class="kv">
-      <tr><td>Date of Joining</td><td>${emp.joiningDate ? fmtDate(emp.joiningDate) : '—'}</td></tr>
-      <tr><td>Last Working Day</td><td>${fmtDate(lastDay)}</td></tr>
-      <tr><td>Designation at Exit</td><td>${escapeHtml(emp.designation ?? '—')}</td></tr>
-    </table>
-    <p>They have been relieved of their duties with effect from the close of business on <strong>${fmtDate(lastDay)}</strong>. All company assets in their possession have been returned and no dues remain outstanding on either side.</p>
-    <p>We wish them every success in their future endeavours.</p>
-    <div class="signature-block">
-      <div class="signature">
-        <div class="line">For Convertt Ltd</div>
-        <div class="name">People Operations</div>
-      </div>
-    </div>
+    <div class="doc-title">Subject: Relieving Certificate</div>
+    <p>This is to certify that <strong>${escapeHtml(who)}</strong> was employed with Convertt as a <strong>${escapeHtml(emp.designation ?? '—')}</strong> from ${emp.joiningDate ? fmtDate(emp.joiningDate) : '—'} to ${fmtDate(lastDay)}.</p>
+    <p>${He} was relieved from ${his} duties effective ${fmtDate(lastDay)}, upon completion of ${his} tenure with the organization.</p>
+    <p>During ${his} employment, ${escapeHtml(who)} was responsible for the duties of ${escapeHtml(emp.designation ?? 'the role')}${emp.department?.name ? ` within the ${escapeHtml(emp.department.name)} team` : ''}, carrying out assigned responsibilities to the standards expected of the position.</p>
+    <p>${escapeHtml(who)} consistently exhibited dedication, professionalism, and attention to detail. ${He === 'He' ? 'His' : 'Her'} ability to meet deadlines and perform efficiently under pressure was commendable. We thank ${him} for ${his} valuable contributions to the organization and wish ${him} every success in ${his} future endeavors.</p>
   `
   return { html: wrap('Relieving Certificate', body), title: `Relieving Certificate - ${emp.fullName}` }
 }
 
-/**
- * Termination email — the covering note the letter is sent under. Rendered as
- * a document so HR can copy the wording; the letter itself is the attachment,
- * which is why the two share their substance.
- */
 function terminationEmail({ emp, extras }: Ctx) {
   const lastDay = extras.effectiveDate ? new Date(extras.effectiveDate) : new Date()
   const reason = extras.terminationReason ? String(extras.terminationReason) : null
