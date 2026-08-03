@@ -27,9 +27,17 @@ async function resolveAccess(request: NextRequest) {
   }
 }
 
+/**
+ * Accepts either the probation record's id or the employee's.
+ *
+ * The probation board links with the employee id (that is what it has to
+ * hand), while every write here keys off the record id — so every "Review"
+ * link 404'd. employeeId is unique on the model, so one OR resolves both
+ * without ambiguity.
+ */
 async function loadRecord(id: string) {
-  return prisma.probationRecord.findUnique({
-    where: { id },
+  return prisma.probationRecord.findFirst({
+    where: { OR: [{ id }, { employeeId: id }] },
     include: {
       employee: {
         select: {
@@ -92,7 +100,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'flag must be GREEN | AMBER | RED' }, { status: 400 })
     }
     const updated = await prisma.probationRecord.update({
-      where: { id },
+      // rec.id, not the route param: the param may be an employee id.
+      where: { id: rec.id },
       data: {
         settlingCheckInAt: new Date(),
         settlingFlag: flag,
@@ -148,7 +157,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       (metrics.timeScore < 2.5 || (goalScore != null && goalScore < 2.5)) ? 'TERMINATE' : 'EXTEND'
 
     const updated = await prisma.probationRecord.update({
-      where: { id },
+      // rec.id, not the route param: the param may be an employee id.
+      where: { id: rec.id },
       data: {
         packetGeneratedAt: new Date(),
         packetDaysWorked: metrics.daysWorked,
@@ -175,7 +185,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'recommendation must be CONFIRM | EXTEND | TERMINATE' }, { status: 400 })
     }
     const updated = await prisma.probationRecord.update({
-      where: { id },
+      // rec.id, not the route param: the param may be an employee id.
+      where: { id: rec.id },
       data: {
         managerRecommendation: recommendation,
         managerReviewNotes: (body.notes ?? '').toString() || null,
@@ -228,7 +239,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const overrode = rec.managerRecommendation != null && rec.managerRecommendation !== decision
 
     const updated = await prisma.probationRecord.update({
-      where: { id },
+      // rec.id, not the route param: the param may be an employee id.
+      where: { id: rec.id },
       data: {
         hrDecision: decision,
         hrNotes: (body.notes ?? '').toString() || null,
@@ -266,7 +278,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (!reason) return NextResponse.json({ error: 'reason required' }, { status: 400 })
 
     const updated = await prisma.probationRecord.update({
-      where: { id },
+      // rec.id, not the route param: the param may be an employee id.
+      where: { id: rec.id },
       data: {
         durationMonths: newMonths,
         endDate: newEnd,
@@ -323,7 +336,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       effective: body.salaryBump.effective ? new Date(body.salaryBump.effective) : new Date(),
     } : null
     await prisma.probationRecord.update({
-      where: { id },
+      // rec.id, not the route param: the param may be an employee id.
+      where: { id: rec.id },
       data: {
         isEarlyDecision: true,
         earlyDecisionReason: reason,
