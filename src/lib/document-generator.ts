@@ -53,6 +53,7 @@ export type DocumentExtras = {
   lastWorkingDay?: string        // ISO date
   // Termination
   terminationReason?: string
+  showCauseDate?: string         // ISO date of the Show Cause Notice, referenced in the letter
   fnfAmount?: number
   // Experience letter
   // (nothing extra — uses joiningDate + exitDate)
@@ -63,7 +64,13 @@ const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', mon
 
 // ─── Shared HTML chrome ──────────────────────────────────────────────────────
 
-function wrap(title: string, body: string): string {
+interface Signatory { name: string; title: string; above?: string }
+
+/** Every Convertt letter is signed by the Director unless the issued sample
+ *  says otherwise — the termination letter goes out from the HR Team. */
+const DEFAULT_SIGNATORY: Signatory = { name: 'Syed Khawer', title: 'Director Administration' }
+
+function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNATORY): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -155,8 +162,9 @@ function wrap(title: string, body: string): string {
     <div class="letter-date">${fmtDate(new Date())}</div>
     ${body}
     <div class="sign-off">
-      <div class="name">Syed Khawer</div>
-      <div class="title">Director Administration</div>
+      ${signatory.above ? `<p>${escapeHtml(signatory.above)}</p>` : ''}
+      <div class="name">${escapeHtml(signatory.name)}</div>
+      <div class="title">${escapeHtml(signatory.title)}</div>
     </div>
   </div>
 <script>
@@ -463,72 +471,67 @@ function noticePeriodLetter({ emp, extras }: Ctx) {
 }
 
 function terminationLetter({ emp, extras }: Ctx) {
-  const lastDay = extras.lastWorkingDay
-    ? new Date(extras.lastWorkingDay)
-    : new Date()
-  const reason = extras.terminationReason ?? '[Reason — e.g. failure to meet performance standards following written warning, breach of policy, etc.]'
-  const fnf = extras.fnfAmount
+  // Structure taken from the issued sample: a Subject/Date/To/Designation/CNIC
+  // header block, a reasoned narrative that references the Show Cause Notice,
+  // the "Accordingly..." effective-date sentence, five fixed numbered
+  // obligations, the fixed regret closing, and a HR Team sign-off — this letter
+  // does not go out over the Director's name.
+  const effective = extras.effectiveDate ? new Date(extras.effectiveDate) : new Date()
+  const showCause = extras.showCauseDate ? new Date(String(extras.showCauseDate)) : null
+  const reason = extras.terminationReason
+    ? String(extras.terminationReason)
+    : 'your attendance, professional conduct, and performance'
 
   const body = `
-    <div class="doc-title">Termination of Employment</div>
-    <p><strong>To:</strong> ${escapeHtml(emp.fullName)}, ${escapeHtml(emp.designation)} (Employee ID: ${escapeHtml(emp.employeeCode)})</p>
+    <div class="doc-title">Subject: Termination of Employment</div>
+    <table class="kv">
+      <tr><td>Date</td><td>${fmtDate(new Date())}</td></tr>
+      <tr><td>To</td><td>${escapeHtml(emp.fullName)}</td></tr>
+      <tr><td>Designation</td><td>${escapeHtml(emp.designation ?? '—')}</td></tr>
+      <tr><td>CNIC</td><td>${escapeHtml(emp.cnic ?? '')}</td></tr>
+    </table>
     <p>Dear ${escapeHtml(emp.fullName)},</p>
-    <p>This letter serves as formal notification that your employment with Convertt Ltd is hereby terminated, effective <strong>${fmtDate(lastDay)}</strong>.</p>
-    <p>The decision to terminate has been made for the following reason(s):</p>
-    <div style="background:#fee2e2;border-left:4px solid #b91c1c;padding:14px 18px;margin:14px 0;border-radius:0 4px 4px 0">
-      <p style="margin:0;white-space:pre-line">${escapeHtml(reason)}</p>
-    </div>
-    <p>This decision follows the prior Show Cause Notice and review of your response. The Company has determined that continued employment is no longer tenable.</p>
-    <p>You are required to:</p>
+    <p>${showCause ? `Following the Show Cause Notice dated ${fmtDate(showCause)} issued to you regarding ${escapeHtml(reason)}, and after` : `Following a review of ${escapeHtml(reason)}, and after`} careful review of the circumstances, including your failure to adhere to company policies, the Company has determined that your continuation of employment is no longer viable.</p>
+    <p>Your overall performance has not met the standards expected for your role. Your lack of adherence to company protocols, combined with unsatisfactory performance and limited engagement with assigned responsibilities, has raised serious concerns regarding your commitment, reliability, and alignment with organizational expectations. Despite being given an opportunity to explain your position, the concerns remain unresolved.</p>
+    <p>Accordingly, your employment is terminated effective ${fmtDate(effective)}, in line with your contract and applicable labor laws.</p>
+    <p>Please note the following important points:</p>
     <ol>
-      <li>Return all company property — laptop, ID card, access keys, and any other equipment — to IT on or before your last working day.</li>
-      <li>Complete the Exit Clearance Form with all relevant department sign-offs.</li>
-      <li>Continue to honour your confidentiality and intellectual-property obligations under your Non-Disclosure Agreement, which survive termination.</li>
+      <li><strong>Final Settlement:</strong> You will receive all outstanding salary and benefits accrued up until your last working day, in accordance with the terms of your employment agreement.</li>
+      <li><strong>Company Property:</strong> All company assets in your possession, including documents, devices, files and credentials, must be returned by your last working day.</li>
+      <li><strong>Confidentiality &amp; Reputation Obligations:</strong> You remain bound by the confidentiality provisions of your employment contract even after your departure. This includes any proprietary or confidential information related to the Company, its clients, employees, and operations.</li>
+      <li><strong>Non-Disparagement:</strong> You are reminded of your obligation to refrain from making any negative or disparaging statements, whether verbal, written, or on social media, that may harm the reputation or interests of the Company. Any violation of this obligation could result in legal action under relevant labor, civil and cybercrime laws.</li>
+      <li><strong>Exit Process:</strong> Please liaise with the HR department to complete the necessary clearance formalities and receive your final settlement.</li>
     </ol>
-    ${fnf != null ? `<p>Your Full &amp; Final (F&amp;F) settlement of <strong>${fmtMoney(fnf)}</strong> shall be processed and disbursed within 30 days from the date of separation, subject to clearance of all assets and dues.</p>` : '<p>Your Full &amp; Final (F&amp;F) settlement shall be processed and disbursed within 30 days from the date of separation, subject to clearance of all assets and dues.</p>'}
-    <p>You may collect your experience letter from HR after completing the exit clearance process.</p>
-    <div class="signature-block">
-      <div class="signature">
-        <div class="line">For Convertt Ltd</div>
-        <div class="name">Authorised Signatory · People Operations</div>
-      </div>
-      <div class="signature">
-        <div class="line">Received by Employee</div>
-        <div class="name">${escapeHtml(emp.fullName)}</div>
-      </div>
-    </div>
+    <p>We regret that the circumstances have led to this outcome and thank you for your time with the Company. We wish you the best of luck in your future professional endeavors.</p>
   `
-  return { html: wrap('Termination Letter', body), title: `Termination Letter - ${emp.fullName}` }
+  return {
+    html: wrap('Termination Letter', body, { name: 'HR Team', title: 'Convertt', above: 'Sincerely,' }),
+    title: `Termination Letter - ${emp.fullName}`,
+  }
 }
 
-function experienceLetter({ emp }: Ctx) {
-  const start = emp.joiningDate ?? new Date()
-  const end = emp.exitDate ?? new Date()
-  const months = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 30)))
-  const years = (months / 12).toFixed(1)
-  const tenureLabel = months < 12
-    ? `${months} month${months > 1 ? 's' : ''}`
-    : `${years} year${parseFloat(years) > 1 ? 's' : ''} (${months} months)`
+function experienceLetter({ emp, extras }: Ctx) {
+  // Structure taken from the issued sample: certify line naming CNIC and both
+  // dates, a role narrative, a support-duties paragraph that always carries the
+  // "AI-integrated initiatives" phrasing Convertt uses deliberately, the fixed
+  // professionalism line, then the fixed closing. Name and position are bold in
+  // the certify line, everything else regular.
+  const lastDay = extras.effectiveDate ? new Date(extras.effectiveDate) : emp.exitDate ?? new Date()
+  const female = (emp.gender ?? '').toUpperCase().startsWith('F')
+  const he = female ? 'she' : 'he'
+  const He = female ? 'She' : 'He'
+  const his = female ? 'her' : 'his'
+  const role = emp.designation ?? 'team member'
 
   const body = `
-    <div class="doc-title">Experience Letter</div>
-    <p>To Whom It May Concern,</p>
-    <p>This is to certify that <strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? ` (CNIC ${escapeHtml(emp.cnic)})` : ''} was associated with <strong>Convertt Ltd</strong> as <strong>${escapeHtml(emp.designation)}</strong> in the <strong>${escapeHtml(emp.department?.name ?? '—')}</strong> department from <strong>${fmtDate(start)}</strong> to <strong>${fmtDate(end)}</strong>, a total duration of <strong>${tenureLabel}</strong>.</p>
-    <p>During the tenure with us, ${escapeHtml(emp.fullName.split(' ')[0])} demonstrated strong commitment to the responsibilities assigned and made valuable contributions to the team. Their conduct throughout the period of employment was professional and to our satisfaction.</p>
-    <p>We wish ${escapeHtml(emp.fullName.split(' ')[0])} the very best in all future endeavours.</p>
-    <p>This certificate has been issued on request for whatever purpose it may serve.</p>
-    <div class="signature-block">
-      <div class="signature">
-        <div class="line">For Convertt Ltd</div>
-        <div class="name">Authorised Signatory · People Operations</div>
-      </div>
-      <div class="signature">
-        <div class="line">Date</div>
-        <div class="name">${fmtDate(new Date())}</div>
-      </div>
-    </div>
+    <div class="doc-title">Subject: Experience Letter</div>
+    <p>This is to certify that <strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? `, CNIC ${escapeHtml(emp.cnic)}` : ''} was employed at Convertt as a <strong>${escapeHtml(role)}</strong> from ${emp.joiningDate ? fmtDate(emp.joiningDate) : '—'} to ${fmtDate(lastDay)}.</p>
+    <p>During ${his} tenure, ${he} carried the responsibilities of ${escapeHtml(role)}${emp.department?.name ? ` within the ${escapeHtml(emp.department.name)} function` : ''}, working directly with the team and with clients to translate objectives into delivered work. ${He} owned ${his} area end to end, from planning through execution, and was accountable for the quality and timeliness of what was shipped.</p>
+    <p>Alongside that delivery, ${he} guided colleagues, maintained standards and documentation across projects, and contributed to employer branding along with AI-integrated initiatives.</p>
+    <p>${He} demonstrated professionalism, strong organizational skills, and attention to detail throughout ${his} role.</p>
+    <p>We appreciate ${his} contributions and wish ${his} continued success in ${his} future endeavors.</p>
   `
-  return { html: wrap('Experience Letter', body), title: `Experience Letter - ${emp.fullName}` }
+  return { html: wrap('Experience Letter', body), title: `Experience letter - ${emp.fullName}` }
 }
 
 function confirmationLetter({ emp }: Ctx) {
