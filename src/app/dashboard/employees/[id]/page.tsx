@@ -13,7 +13,7 @@ import UploadDocumentButton from '@/components/upload-document-button'
 import EmployeeDocumentRow from '@/components/employee-document-row'
 import ProfilePhotoAvatar from '@/components/profile-photo-avatar'
 import Link from 'next/link'
-import { ExternalLink } from 'lucide-react'
+import { ExternalLink, FileText } from 'lucide-react'
 import CompensationPanel from '@/components/compensation-panel'
 import { canSeeBanking } from '@/lib/can-see-banking'
 import { SystemRolesPanel } from '@/components/system-roles-panel'
@@ -352,6 +352,21 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                     currentDesignation={employee.designation}
                     currentDepartmentId={employee.departmentId}
                   />
+                )}
+                {canEditFull && (
+                  /* Straight after a record is created, the employment letter
+                     is the next thing HR needs. It composes from the record
+                     itself — designation, joining date, CNIC, compensation —
+                     and opens editable, so it is generated rather than typed. */
+                  <a
+                    href={`/api/documents/generate?type=offer_letter&employeeId=${employee.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-2 hover:bg-slate-50"
+                    title="Generate the employment letter from this record"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Employment Letter
+                  </a>
                 )}
                 {canEditFull && (
                   <DeleteEmployeeButton

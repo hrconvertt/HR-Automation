@@ -46,6 +46,7 @@ export type DocumentExtras = {
   effectiveDate?: string         // ISO date — overrides "today"
   // Offer letter
   reportingTo?: string
+  probationMonths?: number       // Employment letter — defaults to 3
   // Show Cause
   concerns?: string              // free-text allegations
   responseWindowDays?: number    // typically 3–7
@@ -107,6 +108,11 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
   .letter-date { font-size: 11pt; margin: 0 0 18pt; }
   .doc-title { font-size: 13pt; font-weight: 700; margin: 0 0 18pt; }
   p { font-size: 12pt; line-height: 16.5pt; margin: 0 0 12pt; text-align: left; }
+  p.j { text-align: justify; }
+  p.tight { margin: 0 0 2pt; }
+  ul.dot { list-style: none; padding-left: 14pt; margin: 4pt 0 12pt; }
+  ul.dot li { position: relative; text-align: justify; }
+  ul.dot li::before { content: 'CF'; position: absolute; left: -14pt; font-size: 8pt; top: 3.5pt; }
   strong { font-weight: 700; }
   table { width: 100%; border-collapse: collapse; margin: 12pt 0; }
   table.kv td { padding: 4pt 0; font-size: 11.5pt; vertical-align: top; }
@@ -243,44 +249,62 @@ type Ctx = {
   extras: DocumentExtras
 }
 
+/**
+ * Employment Letter — reproduced from the issued sample (Umer Afzal, 1 July
+ * 2026) without additions.
+ *
+ * Two details are faithful to the source rather than tidy: Joining Date and
+ * Probation Period are plain lines while Compensation onward are bulleted, and
+ * the office address is written out in the letter's own wording rather than the
+ * letterhead's. Both are how the issued letter reads.
+ *
+ * The company paragraph is fixed copy and is never regenerated per employee.
+ */
 function offerLetter({ emp, extras }: Ctx) {
   const salary = emp.salary
   const gross = salary
     ? salary.basic + salary.houseRent + salary.utilities + salary.food + salary.fuel + salary.medicalAllowance + salary.otherAllowance
     : 0
-  const startDate = extras.effectiveDate ? new Date(extras.effectiveDate) : emp.joiningDate ?? new Date()
-  const reportingTo = extras.reportingTo ?? emp.reportingManager?.fullName ?? '[Reporting Manager]'
+  const joining = extras.effectiveDate ? new Date(extras.effectiveDate) : emp.joiningDate ?? new Date()
+
+  // "1st July, 2026" — ordinal day, as the sample writes it.
+  const d = joining.getDate()
+  const suffix = d % 10 === 1 && d !== 11 ? 'st' : d % 10 === 2 && d !== 12 ? 'nd' : d % 10 === 3 && d !== 13 ? 'rd' : 'th'
+  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December']
+  const joiningLong = `${d}${suffix} ${MONTHS[joining.getMonth()]}, ${joining.getFullYear()}`
+
+  const timings = emp.timings ?? '10 AM - 7 PM'
+  // workDays is stored as "Mon,Tue,Wed,Thu,Fri". The sample writes the standard
+  // week as the phrase "Monday to Friday", so a contiguous Mon-Fri renders that
+  // way and anything else is listed out.
+  const DAY_NAMES: Record<string, string> = {
+    Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday',
+    Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday',
+  }
+  const days = String(emp.workDays ?? 'Mon,Tue,Wed,Thu,Fri')
+    .split(',').map((x) => x.trim()).filter(Boolean)
+  const workingDays = days.join(',') === 'Mon,Tue,Wed,Thu,Fri'
+    ? 'Monday to Friday'
+    : days.map((d) => DAY_NAMES[d] ?? d).join(', ')
 
   const body = `
-    <div class="doc-title">Letter of Offer</div>
-    <p>Dear <strong>${escapeHtml(emp.fullName)}</strong>,</p>
-    <p>We are pleased to extend this offer of employment to you for the position of <strong>${escapeHtml(emp.designation)}</strong> in our <strong>${escapeHtml(emp.department?.name ?? '—')}</strong> department at Convertt Ltd. Subject to your acceptance, the terms of your employment are summarised below:</p>
-    <table class="kv">
-      <tr><td>Position</td><td>${escapeHtml(emp.designation)}</td></tr>
-      <tr><td>Department</td><td>${escapeHtml(emp.department?.name ?? '—')}</td></tr>
-      <tr><td>Employment Type</td><td>${escapeHtml(emp.employeeType ?? 'Permanent')}</td></tr>
-      <tr><td>Reporting To</td><td>${escapeHtml(reportingTo)}</td></tr>
-      <tr><td>Date of Joining</td><td>${fmtDate(startDate)}</td></tr>
-      <tr><td>Work Location</td><td>${escapeHtml(emp.workLocation ?? 'Lahore Office')}</td></tr>
-      <tr><td>Working Hours</td><td>${escapeHtml(emp.timings ?? '10:00 AM – 7:00 PM, Monday to Friday')}</td></tr>
-      <tr><td>Gross Monthly Salary</td><td>${gross > 0 ? fmtMoney(gross) : '[Salary]'} (full breakdown attached in the Employment Agreement)</td></tr>
-      <tr><td>Probation Period</td><td>Three (3) months from joining date</td></tr>
-    </table>
-    <p>This offer is contingent on successful background verification and the signing of the standard Convertt Employment Agreement and Non-Disclosure Agreement on or before your joining date.</p>
-    <p>Please confirm your acceptance by counter-signing this letter and returning it to HR. We look forward to welcoming you to Convertt.</p>
-    <p>Warm regards,</p>
-    <div class="signature-block">
-      <div class="signature">
-        <div class="line">For Convertt Ltd</div>
-        <div class="name">People Operations</div>
-      </div>
-      <div class="signature">
-        <div class="line">Accepted &amp; Agreed</div>
-        <div class="name">${escapeHtml(emp.fullName)}</div>
-      </div>
-    </div>
+    <div class="doc-title">Subject: Employment Letter</div>
+    <p class="j">On behalf of the HR team at Convertt, I am pleased to congratulate ${escapeHtml(emp.fullName)}${emp.cnic ? ` CNIC ${escapeHtml(emp.cnic)}` : ''} on your selection for the ${escapeHtml(emp.designation ?? '—')} position. We were impressed with your profile and are excited to welcome you to our team.</p>
+    <p class="j">Below are the details of your employment:</p>
+    <p class="tight">Joining Date: ${joiningLong}</p>
+    <p class="tight">Probation Period: ${escapeHtml(String(extras.probationMonths ?? 3))} months, dependent upon your performance</p>
+    <ul class="dot">
+      <li>Compensation: PKR ${gross > 0 ? gross.toLocaleString('en-US') : '[Compensation]'} per month</li>
+      <li>Timings: ${escapeHtml(timings)}</li>
+      <li>Working Days: ${escapeHtml(workingDays)}</li>
+      <li>Office Location: Convertt, Mega Tower &ndash; 63-B Main Boulevard Gulberg, 5th Floor, Office No. 201, Lahore</li>
+    </ul>
+    <p class="j">Convertt is a CRO-focused design and development agency working with ecommerce brands, dental practices, and weight loss clinics across the US, UK, and UAE. We&rsquo;ve generated over $1B in tracked client revenue with an average 3.5X conversion uplift across 120+ projects. Our work sits at the intersection of conversion strategy, design, and development. We don&rsquo;t just make things look good, we make them perform.</p>
+    <p class="j">We look forward to having you onboard and working together towards shared success.</p>
+    <p class="j">Congratulations once again!</p>
   `
-  return { html: wrap('Offer Letter', body), title: `Offer Letter - ${emp.fullName}` }
+  return { html: wrap('Employment Letter', body), title: `Employment Letter - ${emp.fullName}` }
 }
 
 function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern') {
