@@ -343,6 +343,30 @@ const LIFECYCLE_NAV: NavGroup[] = [
   },
 ]
 
+/**
+ * Settings is a module, not one page: each area is its own route, so it gets a
+ * sidebar like Employee Lifecycle rather than stacking every section under a
+ * list on a single screen.
+ */
+const SETTINGS_NAV: NavGroup[] = [
+  {
+    label: 'Settings',
+    items: [
+      { href: '/dashboard/settings', label: 'Overview', icon: Settings },
+      { href: '/dashboard/settings/organization', label: 'Organization', icon: Network },
+      { href: '/dashboard/settings/working-days', label: 'Working Days & Hours', icon: CalendarCheck },
+      { href: '/dashboard/settings/leave-policies', label: 'Leave Policies', icon: PlaneIcon },
+      { href: '/dashboard/settings/departments', label: 'Departments', icon: Users },
+      { href: '/dashboard/settings/payroll-config', label: 'Payroll Configuration', icon: Banknote },
+      { href: '/dashboard/settings/email-templates', label: 'Email Templates', icon: MailIcon },
+      { href: '/dashboard/settings/roles', label: 'Roles', icon: ShieldCheck },
+      { href: '/dashboard/settings/daily-logging', label: 'Daily Logging', icon: ClipboardList },
+      { href: '/dashboard/settings/users', label: 'Users', icon: UserIcon },
+      { href: '/dashboard/settings/time-tracking', label: 'Time Tracking', icon: BarChart3 },
+    ],
+  },
+]
+
 const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/performance': [
     {
@@ -355,6 +379,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       ],
     },
   ],
+  '/dashboard/settings': SETTINGS_NAV,
   '/dashboard/lifecycle': LIFECYCLE_NAV,
   // Same module, different path roots — keep the sidebar on screen.
   '/dashboard/onboarding': LIFECYCLE_NAV,

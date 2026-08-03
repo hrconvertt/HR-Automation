@@ -58,36 +58,11 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <p className="mt-2 text-xs text-slate-500">Active: <span className="font-medium text-slate-700">{activeLabel}</span></p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[240px,1fr] gap-6">
-        {/* Desktop rail */}
-        <aside className="hidden lg:block space-y-1">
-          {SECTIONS.map((s) => {
-            const Icon = s.icon
-            const active = isActive(s.href)
-            return (
-              <Link
-                key={s.href}
-                href={s.href}
-                className={`block rounded-lg px-3 py-2.5 flex items-center gap-3 transition-colors ${
-                  active
-                    ? 'bg-slate-50 text-slate-900 ring-1 ring-slate-100'
-                    : 'text-slate-700 hover:bg-slate-100'
-                }`}
-              >
-                <div className={`w-8 h-8 rounded-md flex items-center justify-center flex-shrink-0 ${active ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-500'}`}>
-                  <Icon className="w-4 h-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{s.label}</p>
-                  <p className="text-[11px] text-slate-500 truncate">{s.sub}</p>
-                </div>
-              </Link>
-            )
-          })}
-        </aside>
-
-        <div className="min-w-0">{children}</div>
-      </div>
+      {/* The section list moved into the app sidebar (SETTINGS_NAV), so this
+          renders only the active section — one view at a time, like Employee
+          Lifecycle. The mobile dropdown above stays, since the app sidebar is
+          collapsed on small screens. */}
+      <div className="min-w-0">{children}</div>
     </div>
   )
 }

@@ -54,6 +54,20 @@ export async function PATCH(
         create: { userId, role, assignedBy: payload.userId },
       })
     }
+    // Guard: the primary role is what the app reads, so demoting the only
+    // HR admin locks everyone out of Settings — including the ability to undo
+    // it. Recovering needs direct database access. Refuse instead.
+    if (user.role === 'HR_ADMIN' && role !== 'HR_ADMIN') {
+      const otherHrAdmins = await prisma.user.count({
+        where: { role: 'HR_ADMIN', isActive: true, NOT: { id: userId } },
+      })
+      if (otherHrAdmins === 0) {
+        return NextResponse.json({
+          error: 'This is the only HR admin. Give someone else HR admin as their primary role first, or nobody will be able to manage settings.',
+        }, { status: 409 })
+      }
+    }
+
     await prisma.user.update({ where: { id: userId }, data: { role } })
     return NextResponse.json({ ok: true })
   }
