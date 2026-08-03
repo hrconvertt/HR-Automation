@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import RolePreviewSwitcher from '@/components/role-preview-switcher'
 import { useState, useEffect } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
@@ -633,9 +634,6 @@ export default function DashboardChrome({
     if (mustChangePass && pathname !== '/dashboard/settings/password') {
       router.replace('/dashboard/settings/password')
     }
-    if (typeof document !== 'undefined' && document.cookie.includes('hr_preview_role=')) {
-      document.cookie = 'hr_preview_role=; path=/; max-age=0; SameSite=Lax'
-    }
   }, [mustChangePass, pathname, router])
 
   useEffect(() => {
@@ -868,6 +866,12 @@ export default function DashboardChrome({
           >
             <Menu className="w-5 h-5" />
           </button>
+
+          {/* View-as lives in the header so it is reachable from any screen —
+              including one where the previewed role has lost the sidebar. */}
+          <div className="ml-auto order-last">
+            <RolePreviewSwitcher role={role} />
+          </div>
 
           <Link
             href="/dashboard"
