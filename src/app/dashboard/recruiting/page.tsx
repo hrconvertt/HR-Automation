@@ -1,5 +1,4 @@
 import { cookies } from 'next/headers'
-import { RecruitingModuleNav } from './_components/module-nav'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
@@ -377,19 +376,9 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
 
       {/* Resolved once and shared by the sidebar and the content, so the
           highlighted entry and the rendered view can never disagree. */}
-      {/* Workday-style module shell: views listed in a sidebar on the left,
-          the selected view rendered beside it. Order follows the lifecycle —
-          Requests (manager → HR) → Requisitions → Pipeline → Knockouts →
-          Talent Pool → Schedule. The landing view is the earliest place that
-          needs attention: Requests if HR has pending ones, else Pipeline. */}
-      <div className="flex flex-col lg:flex-row gap-5 items-start">
-      <RecruitingModuleNav
-        active={activeView}
-        counts={{ requests: pendingRequests.length, knockouts: knockedOut.length, pool: poolCandidates.length }}
-        canSeeKnockouts={isHR || isManager}
-      />
-
-      <Tabs className="flex-1 min-w-0" value={activeView}>
+      {/* The view list moved to the app sidebar (RECRUITING_NAV) so the board
+          gets the full width — it was competing with a column of its own. */}
+      <Tabs className="min-w-0" value={activeView}>
         {/* View selection lives in the module sidebar (see _components/module-nav). */}
 
         {/* Pipeline (kanban) — shortlist only (PASSED + OVERRIDDEN).
@@ -726,7 +715,6 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           </Card>
         </TabsContent>
       </Tabs>
-      </div>
     </div>
   )
 }

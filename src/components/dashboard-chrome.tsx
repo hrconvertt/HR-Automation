@@ -368,6 +368,27 @@ const SETTINGS_NAV: NavGroup[] = [
   },
 ]
 
+/**
+ * Recruiting had its module nav inside the content area, which cost a whole
+ * column beside an already dense board. Moving it to the app sidebar matches
+ * Settings and Employee Lifecycle and gives the pipeline the full width.
+ */
+const RECRUITING_NAV: NavGroup[] = [
+  {
+    label: 'Recruiting',
+    items: [
+      { href: '/dashboard/recruiting?tab=requests', label: 'Requests', icon: Inbox },
+      { href: '/dashboard/recruiting?tab=requisitions', label: 'Job Requisitions', icon: FolderOpen },
+      { href: '/dashboard/recruiting?tab=pipeline', label: 'Pipeline', icon: BarChart3 },
+      { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert },
+      { href: '/dashboard/recruiting?tab=pool', label: 'Talent Pool', icon: Users },
+      { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },
+      { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText },
+      { href: '/dashboard/recruiting/offers', label: 'Offers', icon: FileText },
+    ],
+  },
+]
+
 const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/performance': [
     {
@@ -381,6 +402,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
     },
   ],
   '/dashboard/settings': SETTINGS_NAV,
+  '/dashboard/recruiting': RECRUITING_NAV,
   '/dashboard/lifecycle': LIFECYCLE_NAV,
   // Same module, different path roots — keep the sidebar on screen.
   '/dashboard/onboarding': LIFECYCLE_NAV,
