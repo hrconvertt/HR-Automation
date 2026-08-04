@@ -43,31 +43,3 @@ export function canonicalDocName(type: string, period?: string | null): string {
   const label = docTypeLabel(type)
   return period ? `${label} — ${period}` : label
 }
-
-/**
- * Strip an employee's name off a document title.
- *
- * Used when normalising what is already stored. Returns null when the name is
- * already canonical, so a no-op is distinguishable from a rename.
- */
-export function withoutEmployeeName(name: string, fullName: string): string | null {
-  const parts = fullName.trim().split(/\s+/).filter((p) => p.length > 2)
-  let out = name
-  // "Profile photo — Ali Hassan", "Ali Hassan CNIC", "CNIC (Ali Hassan)"
-  out = out.replace(new RegExp(`\s*[—–-]\s*${escapeRe(fullName)}\s*$`, 'i'), '')
-  out = out.replace(new RegExp(`\s*\(${escapeRe(fullName)}\)\s*`, 'i'), ' ')
-  out = out.replace(new RegExp(`^\s*${escapeRe(fullName)}\s*[-—–_]?\s*`, 'i'), '')
-  // Trailing "- Ali" / "_AliHassan" where only part of the name was used
-  for (const p of parts) {
-    out = out.replace(new RegExp(`\s*[—–\-_]\s*${escapeRe(p)}\s*$`, 'i'), '')
-  }
-  out = out.replace(/\s{2,}/g, ' ').replace(/^[\s\-—–_]+|[\s\-—–_]+$/g, '')
-  if (!out) return null
-  // Sentence case for the leading word — "profile photo" files as "Profile photo".
-  out = out.charAt(0).toUpperCase() + out.slice(1)
-  return out === name ? null : out
-}
-
-function escapeRe(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\]/g, '\$&')
-}
