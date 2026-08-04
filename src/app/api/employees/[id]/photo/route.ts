@@ -12,6 +12,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { canonicalDocName } from '@/lib/document-types'
 import { verifyToken } from '@/lib/auth'
 
 /** Browser-renderable formats only — this becomes an <img> on every screen. */
@@ -113,7 +114,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: {
       employeeId: id,
       type: 'PHOTO',
-      name: `Profile photo — ${employee.fullName}`,
+      // The document is on this employee's record; repeating the name here
+      // only makes it differ from every other row. See canonicalDocName.
+      name: canonicalDocName('PHOTO'),
       url: '',
       fileBlob: bytes,
       fileMimeType: mime,
