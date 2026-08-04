@@ -22,6 +22,7 @@ interface ProbationRec {
   packetGeneratedAt: string | null
   packetDaysWorked: number | null
   packetDaysAbsent: number | null
+  packetDaysOnLeave: number | null
   packetLateCount: number | null
   packetAvgHours: number | null
   packetGoalScore: number | null
@@ -213,6 +214,33 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         )}
       </Card>
 
+      {/* Performance review — the decision packet counts, this one judges. */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+            Performance Review
+          </h2>
+          {daysLeft <= 10 ? (
+            <a
+              href={`/dashboard/probation/${rec.id}/review`}
+              className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 text-white text-xs px-3 py-1.5"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Generate performance review
+            </a>
+          ) : (
+            <span className="text-xs text-slate-400">
+              Opens in the last 10 days — {daysLeft} to go
+            </span>
+          )}
+        </div>
+        <p className="text-xs text-slate-500">
+          Ratings across five dimensions with the evidence beside each, the overall assessment,
+          and the increment it argues for under the 10–15% policy. This is what the confirmation
+          or extension is decided on.
+        </p>
+      </Card>
+
       {/* Decision packet */}
       <Card className="p-5">
         <div className="flex items-center justify-between mb-3">
@@ -225,7 +253,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           <div className="space-y-3">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               <Metric label="Days Worked" value={rec.packetDaysWorked ?? '—'} />
-              <Metric label="Days Absent" value={rec.packetDaysAbsent ?? '—'} />
+              <Metric label="Days on Leave" value={rec.packetDaysOnLeave ?? '—'} />
               <Metric label="Late Arrivals" value={rec.packetLateCount ?? '—'} />
               <Metric label="Avg Hours/Day" value={rec.packetAvgHours?.toFixed(1) ?? '—'} />
               <Metric label="Time Score" value={rec.packetTimeScore?.toFixed(1) ?? '—'} suffix="/ 5" />
@@ -235,6 +263,10 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
               <div className="rounded-lg bg-slate-50 border border-slate-100 p-3 text-sm">
                 <span className="text-slate-900 font-semibold">Heuristic suggestion: </span>
                 <Badge className="bg-slate-700 text-white">{rec.packetSuggestedRec}</Badge>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Counted from attendance and goals only. It does not know whether the work was
+                  any good — that is what the performance review is for.
+                </p>
               </div>
             )}
           </div>

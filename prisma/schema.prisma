@@ -1224,6 +1224,10 @@ model ProbationRecord {
   packetGeneratedAt     DateTime?
   packetDaysWorked      Int?
   packetDaysAbsent      Int?
+  // Convertt's attendance has no ABSENT status — every day is P / WFH / L / H /
+  // WE — so "days absent" was structurally always zero and read as a clean
+  // record for someone who had taken leave. This is the figure that exists.
+  packetDaysOnLeave     Int?
   packetLateCount       Int?
   packetAvgHours        Float?
   packetGoalScore       Float?
@@ -1259,6 +1263,7 @@ model ProbationRecord {
   // Optional salary bump on confirm
   salaryBumpAmount      Float?
   salaryBumpEffective   DateTime?
+  reviews               ProbationReview[]
 
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -2446,4 +2451,67 @@ model DailyKpi {
   @@unique([employeeId, metricId, date])
   @@index([employeeId, date])
   @@map("daily_kpis")
+}
+
+/// Probationary Performance Review — the form itself, not a heuristic.
+///
+/// The decision packet counts attendance and suggests an outcome, which is not
+/// the same as a review: it recorded zero absences for someone who had taken
+/// leave, and no arithmetic knows whether the work was any good. This is what
+/// the manager fills in, and what the increment is argued from.
+///
+/// The rating scale and the increment brackets are Convertt's own — 10–15% at
+/// the end of probation and again after the following six months — so a rating
+/// of Exceptional maps to 14–15% rather than to whatever was typed that day.
+model ProbationReview {
+  id              String   @id @default(cuid())
+  probationId     String
+  probation       ProbationRecord @relation(fields: [probationId], references: [id], onDelete: Cascade)
+  employeeId      String
+  reviewDate      DateTime @default(now())
+  reviewerId      String?  // Employee id of the direct manager who filled it in
+
+  // Section 2 — five dimensions, each 1–4, each with the manager's evidence.
+  //   1 Needs Improvement | 2 Meets | 3 Exceeds | 4 Exceptional
+  ratingQuality        Int?
+  notesQuality         String?
+  ratingPunctuality    Int?
+  notesPunctuality     String?
+  ratingOwnership      Int?
+  notesOwnership       String?
+  ratingCommunication  Int?
+  notesCommunication   String?
+  ratingAdaptability   Int?
+  notesAdaptability    String?
+
+  // Section 3 — UNSATISFACTORY | SATISFACTORY | EXCEEDS | EXCEPTIONAL
+  overallAssessment    String?
+  managerRemarks       String?
+
+  // Section 4 — compensation. currentSalary is captured at review time so the
+  // document still reads correctly after the raise it argues for.
+  currentSalary        Float?
+  recommendedPct       Float?
+  incrementAmount      Float?
+  proposedSalary       Float?
+  salaryEffectiveFrom  DateTime?
+
+  // Section 5 — CONFIRM | EXTEND | TERMINATE
+  decision             String?
+  extensionDays        Int?
+  improvementAreas     String?
+
+  // Section 6 — acknowledgements
+  managerSignedAt      DateTime?
+  hrSignedAt           DateTime?
+  hrSignedById         String?
+  headSignedAt         DateTime?
+  employeeAckAt        DateTime?
+
+  status          String   @default("DRAFT") // DRAFT | SUBMITTED | FINALISED
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([employeeId])
+  @@map("probation_reviews")
 }

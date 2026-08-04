@@ -155,6 +155,7 @@ export async function runProbationReconciler(): Promise<{
           packetGeneratedAt: todayMid,
           packetDaysWorked: metrics.daysWorked,
           packetDaysAbsent: metrics.daysAbsent,
+          packetDaysOnLeave: metrics.daysOnLeave,
           packetLateCount: metrics.lateArrivalCount,
           packetAvgHours: metrics.avgHoursPerDay,
           packetGoalScore: goalScore,

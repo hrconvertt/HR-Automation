@@ -163,6 +163,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         packetGeneratedAt: new Date(),
         packetDaysWorked: metrics.daysWorked,
         packetDaysAbsent: metrics.daysAbsent,
+        packetDaysOnLeave: metrics.daysOnLeave,
         packetLateCount: metrics.lateArrivalCount,
         packetAvgHours: metrics.avgHoursPerDay,
         packetGoalScore: goalScore,
