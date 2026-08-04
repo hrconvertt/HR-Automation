@@ -62,6 +62,10 @@ export type DocumentExtras = {
 
 const fmtMoney = (n: number) => `PKR ${Math.round(n).toLocaleString('en-PK')}`
 const fmtDate = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+// The letterhead date on the issued letters reads "July 1, 2026", not
+// "1 July 2026". Only the dateline uses this; body dates keep their own wording.
+const letterDate = (d: Date) =>
+  d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
 
 // ─── Shared HTML chrome ──────────────────────────────────────────────────────
 
@@ -105,14 +109,18 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
   .logo { font-size: 26pt; font-weight: 700; letter-spacing: .04em; color: #0f172a; }
   .logo span { color: #0857E5; }
   .addr { text-align: right; font-size: 10.5pt; line-height: 1.45; color: #1a1a1a; }
-  .letter-date { font-size: 11pt; margin: 0 0 18pt; }
+  .letter-date { font-size: 11pt; margin: 0 0 26pt; text-align: right; }
   .doc-title { font-size: 13pt; font-weight: 700; margin: 0 0 18pt; }
+  .doc-title.centred { text-align: center; margin: 0 0 22pt; }
+  p.left { text-align: left; }
   p { font-size: 12pt; line-height: 16.5pt; margin: 0 0 12pt; text-align: left; }
   p.j { text-align: justify; }
   p.tight { margin: 0 0 2pt; }
   ul.dot { list-style: none; padding-left: 14pt; margin: 4pt 0 12pt; }
-  ul.dot li { position: relative; text-align: justify; }
-  ul.dot li::before { content: 'CF'; position: absolute; left: -14pt; font-size: 8pt; top: 3.5pt; }
+  ul.dot li { position: relative; text-align: left; }
+  /* Was a private-use codepoint that never survived font substitution: every
+     bulleted line printed a tofu box followed by the literal letters CF. */
+  ul.dot li::before { content: '•'; position: absolute; left: -14pt; font-size: 10pt; top: 0; }
   strong { font-weight: 700; }
   table { width: 100%; border-collapse: collapse; margin: 12pt 0; }
   table.kv td { padding: 4pt 0; font-size: 11.5pt; vertical-align: top; }
@@ -165,7 +173,7 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
         +1 (716) 980-7724
       </div>
     </div>
-    <div class="letter-date">${fmtDate(new Date())}</div>
+    <div class="letter-date">${letterDate(new Date())}</div>
     ${body}
     <div class="sign-off">
       ${signatory.above ? `<p>${escapeHtml(signatory.above)}</p>` : ''}
@@ -289,7 +297,7 @@ function offerLetter({ emp, extras }: Ctx) {
     : days.map((d) => DAY_NAMES[d] ?? d).join(', ')
 
   const body = `
-    <div class="doc-title">Subject: Employment Letter</div>
+    <div class="doc-title centred">Subject: Employment Letter</div>
     <p class="j">On behalf of the HR team at Convertt, I am pleased to congratulate ${escapeHtml(emp.fullName)}${emp.cnic ? ` CNIC ${escapeHtml(emp.cnic)}` : ''} on your selection for the ${escapeHtml(emp.designation ?? '—')} position. We were impressed with your profile and are excited to welcome you to our team.</p>
     <p class="j">Below are the details of your employment:</p>
     <p class="tight">Joining Date: ${joiningLong}</p>
