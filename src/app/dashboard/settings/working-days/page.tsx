@@ -16,7 +16,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CalendarDays, Clock, Plus, Trash2, Loader2, Check, AlertTriangle } from 'lucide-react'
+import { CalendarDays, Clock, Loader2, Check, AlertTriangle } from 'lucide-react'
+import { HolidayBoard, type HolidayRow } from './_components/holiday-board'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const
 type Day = (typeof DAYS)[number]
@@ -233,67 +234,7 @@ export default function WorkingDaysSettingsPage() {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader><CardTitle>Holidays — {year}</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-xs text-slate-500">
-            Company-wide closures. Attendance treats these like weekends, so nobody is marked
-            absent and payroll does not deduct.
-          </p>
-
-          <div className="flex flex-wrap items-end gap-2">
-            <Field label="Name">
-              <input value={hName} onChange={(e) => setHName(e.target.value)}
-                placeholder="e.g. Independence Day"
-                className="border border-slate-300 rounded-md px-2 py-1.5 text-sm w-56" />
-            </Field>
-            <Field label="Date">
-              <input type="date" value={hDate} onChange={(e) => setHDate(e.target.value)}
-                className="border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
-            </Field>
-            <Field label="Type">
-              <select value={hType} onChange={(e) => setHType(e.target.value)}
-                className="border border-slate-300 rounded-md px-2 py-1.5 text-sm bg-white">
-                <option value="PUBLIC">Public</option>
-                <option value="COMPANY">Company</option>
-                <option value="OPTIONAL">Optional</option>
-              </select>
-            </Field>
-            <Button onClick={addHoliday} disabled={addingHoliday || !hName.trim() || !hDate} size="sm">
-              {addingHoliday
-                ? <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />
-                : <Plus className="w-3.5 h-3.5 mr-1.5" />}
-              Add
-            </Button>
-          </div>
-
-          {holidays.length === 0 ? (
-            <p className="text-sm text-slate-400 py-5 text-center border border-dashed border-slate-200 rounded-lg">
-              No holidays set for {year}. Every working day counts as expected until you add some.
-            </p>
-          ) : (
-            <div className="divide-y divide-slate-100 border border-slate-200 rounded-lg">
-              {holidays.map((h) => (
-                <div key={h.id} className="flex items-center gap-3 px-3 py-2">
-                  <span className="text-sm text-slate-900 font-medium min-w-0 flex-1 truncate">{h.name}</span>
-                  <span className="text-xs text-slate-500 whitespace-nowrap">
-                    {new Date(h.date).toLocaleDateString('en-GB', {
-                      weekday: 'short', day: '2-digit', month: 'short',
-                    })}
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
-                    {h.type}
-                  </span>
-                  <button onClick={() => removeHoliday(h.id)} aria-label={`Remove ${h.name}`}
-                    className="text-slate-400 hover:text-red-600">
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <HolidayBoard year={year} rows={holidays as HolidayRow[]} />
     </div>
   )
 }

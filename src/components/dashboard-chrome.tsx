@@ -389,6 +389,28 @@ const RECRUITING_NAV: NavGroup[] = [
   },
 ]
 
+/**
+ * Letter types were eight chips wrapping above the table, competing with the
+ * status chips for the same strip of screen. They are really eight views of one
+ * list, so they belong in the sidebar like Settings and Recruiting.
+ */
+const LETTERS_NAV: NavGroup[] = [
+  {
+    label: 'Letters',
+    items: [
+      { href: '/dashboard/letters', label: 'All requests', icon: FileText },
+      { href: '/dashboard/letters?type=EXPERIENCE', label: 'Experience Letter', icon: FileText },
+      { href: '/dashboard/letters?type=SALARY_CERTIFICATE', label: 'Salary Certificate', icon: Banknote },
+      { href: '/dashboard/letters?type=NOC_VISA', label: 'NOC for Visa', icon: PlaneIcon },
+      { href: '/dashboard/letters?type=BONAFIDE', label: 'Employment Verification', icon: ShieldCheck },
+      { href: '/dashboard/letters?type=RELIEVING', label: 'Relieving Letter', icon: LogOut },
+      { href: '/dashboard/letters?type=CONFIRMATION', label: 'Confirmation Letter', icon: CheckCircle2 },
+      { href: '/dashboard/letters?type=SERVICE_CERTIFICATE', label: 'Service Certificate', icon: FileText },
+      { href: '/dashboard/letters?type=WARNING', label: 'Warning Letter', icon: ShieldAlert },
+    ],
+  },
+]
+
 const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/performance': [
     {
@@ -402,6 +424,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
     },
   ],
   '/dashboard/settings': SETTINGS_NAV,
+  '/dashboard/letters': LETTERS_NAV,
   '/dashboard/recruiting': RECRUITING_NAV,
   '/dashboard/lifecycle': LIFECYCLE_NAV,
   // Same module, different path roots — keep the sidebar on screen.

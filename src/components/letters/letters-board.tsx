@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Search } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
-import { LETTER_TYPE_LABEL, LETTER_TYPES, type LetterType } from '@/lib/letter-templates'
+import { LETTER_TYPE_LABEL, type LetterType } from '@/lib/letter-templates'
 import { LetterActions } from '@/components/letters/letter-actions'
 
 type Role = 'HR_ADMIN' | 'MANAGER' | 'EMPLOYEE' | 'EXECUTIVE'
@@ -59,7 +59,15 @@ export function LettersBoard({ letters, role, employeeId, isPreviewMode }: Props
   const [activeTab, setActiveTab] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'GENERATED' | 'REJECTED'>(
     role === 'HR_ADMIN' ? 'PENDING' : 'ALL',
   )
+  // Driven by the sidebar (?type=...), read after mount rather than with
+  // useSearchParams so this component needs no Suspense boundary.
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
+  useEffect(() => {
+    const read = () => setTypeFilter(new URLSearchParams(window.location.search).get('type'))
+    read()
+    window.addEventListener('popstate', read)
+    return () => window.removeEventListener('popstate', read)
+  }, [])
   const [statusFilter, setStatusFilter] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
@@ -187,17 +195,6 @@ export function LettersBoard({ letters, role, employeeId, isPreviewMode }: Props
               />
             </div>
           )}
-
-          {/* Type chips */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs uppercase tracking-wide text-slate-500 mr-1">Type:</span>
-            <Chip active={typeFilter === null} onClick={() => setTypeFilter(null)}>All types</Chip>
-            {LETTER_TYPES.map((t) => (
-              <Chip key={t} active={typeFilter === t} onClick={() => setTypeFilter(typeFilter === t ? null : t)}>
-                {LETTER_TYPE_LABEL[t]}
-              </Chip>
-            ))}
-          </div>
 
           {/* Status chips */}
           <div className="flex items-center gap-2 flex-wrap">
