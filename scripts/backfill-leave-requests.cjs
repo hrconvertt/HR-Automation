@@ -15,7 +15,10 @@
  *   node scripts/backfill-leave-requests.cjs
  */
 
+require('dotenv').config({ path: '.env.local' })
 const { PrismaClient } = require('@prisma/client')
+
+const APPLY = process.argv.includes('--apply')
 
 const BACKFILL_REASON = 'Auto-generated from attendance record (legacy)'
 
@@ -31,7 +34,15 @@ function addDaysUTC(d, n) {
 }
 
 async function main() {
-  const prisma = new PrismaClient()
+  const prisma = new PrismaClient({
+    datasources: { db: { url: process.env.DIRECT_URL || process.env.DATABASE_URL } },
+  })
+
+  // Approvals happened outside the system, so the running HR admin stands in
+  // as the recorded approver rather than leaving the field null.
+  const hrUser = await prisma.user.findFirst({
+    where: { role: 'HR_ADMIN', isActive: true }, select: { id: true, email: true },
+  })
 
   // Wake Neon
   for (let i = 1; i <= 10; i++) {
@@ -46,7 +57,8 @@ async function main() {
   console.log('Loading attendance logs (LEAVE | HALF_DAY)…')
   const leaveLogs = await prisma.attendanceLog.findMany({
     where: { status: { in: ['LEAVE', 'HALF_DAY'] } },
-    select: { employeeId: true, date: true, status: true },
+    // notes carries the reason where attendance recorded one.
+    select: { employeeId: true, date: true, status: true, notes: true },
     orderBy: [{ employeeId: 'asc' }, { date: 'asc' }],
   })
   console.log(`  ${leaveLogs.length} leave-status attendance rows`)
@@ -101,6 +113,7 @@ async function main() {
     let runEnd = null
     let runDays = 0
     let runHasHalf = false
+    let runReason = null
     let firstHalf = false
     let lastHalf = false
 
@@ -109,21 +122,29 @@ async function main() {
       try {
         // Re-check coverage at flush time to stay idempotent across re-runs
         // (in case multiple full-day runs touch the same dates)
-        await prisma.leaveRequest.create({
-          data: {
-            employeeId: empId,
-            leaveType: 'CASUAL',
-            fromDate: runStart,
-            toDate: runEnd,
-            days: runDays,
-            firstDayHalf: firstHalf,
-            lastDayHalf: lastHalf,
-            reason: BACKFILL_REASON,
-            status: 'APPROVED',
-            approvedAt: runStart,
-            approvedById: null,
-          },
-        })
+        if (APPLY) {
+          await prisma.leaveRequest.create({
+            data: {
+              employeeId: empId,
+              leaveType: 'CASUAL',
+              fromDate: runStart,
+              toDate: runEnd,
+              days: runDays,
+              firstDayHalf: firstHalf,
+              lastDayHalf: lastHalf,
+              // The attendance note is the real reason where one was written.
+              // Where none was, the placeholder stays visible rather than being
+              // filled with something plausible-sounding and invented.
+              reason: runReason || BACKFILL_REASON,
+              status: 'APPROVED',
+              managerApprovedById: hrUser?.id ?? null,
+              managerApprovedAt: runStart,
+              approvedAt: runStart,
+              approvedById: hrUser?.id ?? null,
+              approvalComment: 'Backfilled from the attendance record',
+            },
+          })
+        }
         runsCreated++
         backfilledDays += runDays
       } catch (e) {
@@ -132,6 +153,7 @@ async function main() {
       runStart = null
       runEnd = null
       runDays = 0
+      runReason = null
       runHasHalf = false
       firstHalf = false
       lastHalf = false
@@ -147,6 +169,7 @@ async function main() {
         runStart = dUtc
         runEnd = dUtc
         runDays = dayVal
+        runReason = d.notes?.trim() || null
         runHasHalf = isHalf
         firstHalf = isHalf
         lastHalf = isHalf
@@ -161,12 +184,15 @@ async function main() {
       if (isConsecutive && !isHalf && !runHasHalf) {
         runEnd = dUtc
         runDays += 1
+        // First note in the span wins — a multi-day leave has one reason.
+        if (!runReason && d.notes?.trim()) runReason = d.notes.trim()
         lastHalf = false
       } else {
         await flush()
         runStart = dUtc
         runEnd = dUtc
         runDays = dayVal
+        runReason = d.notes?.trim() || null
         runHasHalf = isHalf
         firstHalf = isHalf
         lastHalf = isHalf
