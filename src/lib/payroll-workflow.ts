@@ -1,7 +1,15 @@
 /**
- * Payroll approval chain — 5-stage flow.
+ * Payroll approval chain — 4 stages, with a branch at the CEO.
  *
- *   DRAFT → PENDING_CEO → PENDING_HR_FINAL → PENDING_FINANCE → PAID
+ *   DRAFT → PENDING_CEO ─┬→ PENDING_FINANCE → PAID
+ *                        └────────────────→ PAID
+ *
+ * The CEO decides which. Sometimes he processes the bank files himself and the
+ * run is done; sometimes he hands it to Finance. The old PENDING_HR_FINAL step
+ * sat between CEO and Finance and was always a formality — HR prepares the run
+ * in DRAFT, so reviewing it again after the CEO added nothing.
+ *
+ * PENDING_HR_FINAL is kept in the stage type so historical runs still read.
  *
  * Any reviewer can "Send Back" with a reason, returning the run to the prior
  * stage. Each transition writes a PayrollRunApproval audit row.
@@ -15,7 +23,6 @@
 export const PAYROLL_STAGES = [
   'DRAFT',
   'PENDING_CEO',
-  'PENDING_HR_FINAL',
   'PENDING_FINANCE',
   'PAID',
 ] as const
@@ -23,6 +30,8 @@ export const PAYROLL_STAGES = [
 export type PayrollStage =
   | (typeof PAYROLL_STAGES)[number]
   | 'REJECTED'
+  // Retired stage — historical runs may still sit on it.
+  | 'PENDING_HR_FINAL'
   // Legacy statuses still allowed for historical reads
   | 'CALCULATED'
   | 'MANAGER_CONFIRMED'
@@ -34,9 +43,10 @@ export type PayrollStage =
 
 export type PayrollAction =
   | 'SUBMIT_TO_CEO'        // HR : DRAFT → PENDING_CEO
-  | 'CEO_APPROVE'          // CEO: PENDING_CEO → PENDING_HR_FINAL
-  | 'HR_FINAL_APPROVE'     // HR : PENDING_HR_FINAL → PENDING_FINANCE
-  | 'RELEASE_TO_FINANCE'   // HR : alias of HR_FINAL_APPROVE — same target stage
+  | 'CEO_APPROVE'          // CEO: PENDING_CEO → PENDING_FINANCE
+  | 'CEO_PROCESS'          // CEO: PENDING_CEO → PAID (he processed the files himself)
+  | 'HR_FINAL_APPROVE'     // retired — historical runs on PENDING_HR_FINAL
+  | 'RELEASE_TO_FINANCE'   // retired — same
   | 'MARK_PAID'            // FIN: PENDING_FINANCE → PAID
   | 'SEND_BACK'            // any reviewer → one stage back, captures reason
   // Legacy actions — preserved so old code paths keep working
@@ -75,10 +85,18 @@ export const TRANSITIONS: Transition[] = [
   {
     from: 'PENDING_CEO',
     action: 'CEO_APPROVE',
-    to: 'PENDING_HR_FINAL',
-    allowedRoles: ['EXECUTIVE'],
-    label: 'Approve',
-    description: 'CEO sign-off — returns the run to HR for final review.',
+    to: 'PENDING_FINANCE',
+    allowedRoles: ['EXECUTIVE', 'HR_ADMIN'],
+    label: 'Send to Finance',
+    description: 'Hand the run to Finance to process the transfers.',
+  },
+  {
+    from: 'PENDING_CEO',
+    action: 'CEO_PROCESS',
+    to: 'PAID',
+    allowedRoles: ['EXECUTIVE', 'HR_ADMIN'],
+    label: 'Processed — mark Paid',
+    description: 'The CEO ran the IFT/IBFT files through the bank himself.',
   },
   {
     from: 'PENDING_HR_FINAL',
@@ -109,8 +127,9 @@ export const TRANSITIONS: Transition[] = [
 /** Reverse of the chain — used by SEND_BACK to find the prior stage. */
 const PRIOR_STAGE: Record<string, PayrollStage> = {
   PENDING_CEO: 'DRAFT',
+  // Retired stage — a historical run sitting here still sends back to the CEO.
   PENDING_HR_FINAL: 'PENDING_CEO',
-  PENDING_FINANCE: 'PENDING_HR_FINAL',
+  PENDING_FINANCE: 'PENDING_CEO',
   PAID: 'PENDING_FINANCE',
 }
 
@@ -174,15 +193,20 @@ export function stageColor(status: string): 'gray' | 'blue' | 'amber' | 'green' 
   return 'gray'
 }
 
-/** Map any status (incl. legacy) to its position in the 5-stage UI pipeline. */
+/** Map any status (incl. legacy and the retired stage) to its pipeline slot. */
 export function stageIndex(status: string): number {
   // Legacy: anything past CALCULATED counts as fully done (PAID).
   const legacyDone = new Set([
     'APPROVED', 'LOCKED', 'DISBURSED', 'CLOSED',
   ])
   if (legacyDone.has(status)) return PAYROLL_STAGES.indexOf('PAID')
-  if (status === 'CALCULATED' || status === 'MANAGER_CONFIRMED' || status === 'FINANCE_REVIEWED') {
-    return PAYROLL_STAGES.indexOf('PENDING_HR_FINAL')
+  // These legacy statuses, and the retired PENDING_HR_FINAL, all sat between
+  // the CEO and Finance. They now show at the Finance step.
+  if (
+    status === 'CALCULATED' || status === 'MANAGER_CONFIRMED' ||
+    status === 'FINANCE_REVIEWED' || status === 'PENDING_HR_FINAL'
+  ) {
+    return PAYROLL_STAGES.indexOf('PENDING_FINANCE')
   }
   const idx = PAYROLL_STAGES.indexOf(status as (typeof PAYROLL_STAGES)[number])
   return idx < 0 ? 0 : idx

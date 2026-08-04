@@ -11,7 +11,8 @@ import { Card } from '@/components/ui/card'
 import { FileText } from 'lucide-react'
 import { formatCurrency } from '@/lib/utils'
 import { safeFetch } from '@/lib/safe-fetch'
-import { PayrollGridEditor, type GridPayslip } from '@/components/payroll/payroll-grid-editor'
+import { type GridPayslip } from '@/components/payroll/payroll-grid-editor'
+import { BankTransferGrid } from '@/components/payroll/bank-transfer-grid'
 
 const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
@@ -129,8 +130,13 @@ export function CeoReviewPanel({ runId, month, year, totalNet, totalGross, runTy
         {loading ? (
           <p className="text-sm text-slate-900">Loading payroll grid…</p>
         ) : (
+          /* The CEO processes the bank files, not the component breakdown.
+             He sees exactly the two sheets Faysal accepts — IFT for
+             Faysal-to-Faysal and IBFT for every other bank — because those are
+             what he feeds into his own system. The per-payslip basic/utilities
+             split is HR's working detail and only adds noise here. */
           <div className="bg-white rounded-xl p-3">
-            <PayrollGridEditor
+            <BankTransferGrid
               runId={runId}
               month={month}
               year={year}
@@ -138,7 +144,6 @@ export function CeoReviewPanel({ runId, month, year, totalNet, totalGross, runTy
               role="CEO"
               payslips={gridRows}
               onSaved={fetchRun}
-              onAdvanced={() => window.location.reload()}
             />
           </div>
         )}
