@@ -243,8 +243,12 @@ export default async function PrintPayslipPage({ params }: PageProps) {
               Convertt Ltd <span style={{ fontWeight: 400, color: '#4b5563', fontSize: 12 }}>(Generatives)</span>
             </div>
             <div style={{ fontSize: 10, color: '#374151', lineHeight: 1.4, marginTop: 2 }}>
+              {/* Three lines, as the issued slip sets them — the address, then
+                  the email, then the number. They were on one line joined by a
+                  dot, which is not what the original does. */}
               Office 201, 5th Floor, Mega Tower, Gulberg Main Blvd, Lahore<br />
-              finance@convertt.co &nbsp;·&nbsp; +92 370 0488685
+              finance@convertt.co<br />
+              +971582160970
             </div>
           </div>
         </header>
@@ -265,7 +269,7 @@ export default async function PrintPayslipPage({ params }: PageProps) {
             <EmpRow left={['Employee Number', payslip.employee.employeeCode]} right={['Employee Name', payslip.employee.fullName]} />
             <EmpRow left={['DOJ', fmtDDMMYYYY(payslip.employee.joiningDate)]} right={['Designation', payslip.employee.designation]} />
             <EmpRow left={['Location', location]} right={['Salary Month', salaryMonthLabel]} />
-            <EmpRow left={['Account Number', accountNumber]} right={['Bank / Branch', bankBranch]} />
+            <EmpRow left={['Account Number', accountNumber]} right={['Bank/Branch', bankBranch]} />
             <EmpRow left={['CNIC', payslip.employee.cnic ?? '—']} right={['Total Working Days', String(payslip.workingDays)]} />
           </tbody>
         </table>
@@ -306,18 +310,18 @@ export default async function PrintPayslipPage({ params }: PageProps) {
                   </thead>
                   <tbody>
                     <PayLine label="Basic Salary" value={pay.basic} />
-                    <PayLine label="House Rent" value={pay.houseRent} />
+                    <PayLine zero="0" label="House Rent" value={pay.houseRent} />
                     <PayLine label="Utilities" value={pay.utilities} />
-                    <tr style={{ background: '#ecfdf5' }}>
+                    <tr>
                       <td style={{ ...lblCell, fontWeight: 700 }}>Gross Salary</td>
                       <td style={{ ...numCell, fontWeight: 700 }}>{fmtPKR(grossCore)}</td>
                     </tr>
-                    <PayLine label="Food Allowance" value={pay.food} />
-                    <PayLine label="Fuel Allowance" value={pay.fuel} />
-                    <PayLine label="Over Time / Bonus" value={pay.overtimeBonus} />
-                    <PayLine label="Arrears" value={pay.arrears} />
-                    <PayLine label="Other Allowances" value={pay.otherAllowance} />
-                    <PayLine label="Monthly Allowance" value={pay.medicalAllowance + pay.monthlyAllowance} />
+                    <PayLine zero="0" label="Food Allowance" value={pay.food} />
+                    <PayLine zero="0" label="Fuel Allowance" value={pay.fuel} />
+                    <PayLine zero="0" label="Over Time/Bonus" value={pay.overtimeBonus} />
+                    <PayLine zero="0" label="Arrears" value={pay.arrears} />
+                    <PayLine zero="0" label="Other Allowances" value={pay.otherAllowance} />
+                    <PayLine zero="0" label="Monthly Allowance" value={pay.medicalAllowance + pay.monthlyAllowance} />
                   </tbody>
                   <tfoot>
                     <tr style={{ background: '#f9fafb', borderTop: '2px solid #111827' }}>
@@ -341,6 +345,7 @@ export default async function PrintPayslipPage({ params }: PageProps) {
                     <PayLine label="Health care" value={ded.healthcare} />
                     <PayLine label="Deduction (Loan / Monthly Vehicle)" value={ded.loanAndVehicle} />
                     <PayLine label="Advance Deduction" value={ded.advance} />
+                    <PayLine label="Abhi Deduction" value={0} />
                     <PayLine label="Other Deductions" value={ded.other} />
                   </tbody>
                   <tfoot>
@@ -356,14 +361,16 @@ export default async function PrintPayslipPage({ params }: PageProps) {
         </table>
 
         {/* ─── Net Pay ───────────────────────────────────────────── */}
-        <div style={{
-          background: '#065f46', color: '#fff', padding: '10px 14px',
-          borderRadius: 4, display: 'flex', justifyContent: 'space-between',
-          alignItems: 'center', fontSize: 14, fontWeight: 700,
+        <table style={{
+          marginBottom: 14, border: '1px solid #d1d5db', fontSize: 11, width: '50%',
         }}>
-          <span>Net Pay</span>
-          <span>{fmtPKR(netPay)}</span>
-        </div>
+          <tbody>
+            <tr>
+              <td style={{ ...lblCell, fontWeight: 700 }}>Net Pay:</td>
+              <td style={{ ...numCell, fontWeight: 700 }}>{fmtPKR(netPay)}</td>
+            </tr>
+          </tbody>
+        </table>
 
         {/* ─── Footer note ───────────────────────────────────────── */}
         <p style={{
@@ -400,11 +407,13 @@ function EmpRow({ left, right }: { left: [string, string]; right: [string, strin
   )
 }
 
-function PayLine({ label, value }: { label: string; value: number }) {
+function PayLine({ label, value, zero = '-' }: {
+  label: string; value: number; zero?: string
+}) {
   return (
     <tr>
       <td style={lblCell}>{label}</td>
-      <td style={numCell}>{fmtPKR(value)}</td>
+      <td style={numCell}>{value ? fmtPKR(value) : zero}</td>
     </tr>
   )
 }
