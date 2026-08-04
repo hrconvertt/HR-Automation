@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation'
 interface UserRow {
   id: string
   email: string
+  /** Second address on file. Distinct from the work email, never a copy. */
+  personalEmail: string | null
   fullName: string
   designation: string | null
   department: string | null
@@ -99,7 +101,7 @@ export default function UserManagementClient({
   }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto">
+    <div className="p-6 w-full">
       <header className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">User Management</h1>
@@ -169,12 +171,13 @@ export default function UserManagementClient({
       </div>
 
       {tab === 'users' && (
-        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-lg">
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
                 <th className="text-left px-4 py-2 font-semibold text-slate-700">Name</th>
-                <th className="text-left px-4 py-2 font-semibold text-slate-700">Email</th>
+                <th className="text-left px-4 py-2 font-semibold text-slate-700">Work email</th>
+                <th className="text-left px-4 py-2 font-semibold text-slate-700">Personal email</th>
                 <th className="text-left px-4 py-2 font-semibold text-slate-700">Role</th>
                 <th className="text-left px-4 py-2 font-semibold text-slate-700">MFA</th>
                 <th className="text-left px-4 py-2 font-semibold text-slate-700">Status</th>
@@ -183,15 +186,16 @@ export default function UserManagementClient({
             </thead>
             <tbody>
               {loading && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
               )}
               {!loading && rows.length === 0 && (
-                <tr><td colSpan={6} className="px-4 py-6 text-center text-slate-400">No users yet.</td></tr>
+                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">No users yet.</td></tr>
               )}
               {rows.map((u) => (
                 <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50">
                   <td className="px-4 py-2 font-medium text-slate-900">{u.fullName}</td>
                   <td className="px-4 py-2 text-slate-700">{u.email}</td>
+                  <td className="px-4 py-2 text-slate-500">{u.personalEmail || <span className="text-slate-300">—</span>}</td>
                   <td className="px-4 py-2">
                     <div className="flex flex-wrap gap-1">
                       {u.roles.map((r) => (

@@ -32,6 +32,7 @@ export async function GET(_req: NextRequest) {
         select: {
           id: true,
           fullName: true,
+          personalEmail: true,
           designation: true,
           department: { select: { name: true } },
         },
@@ -57,6 +58,7 @@ export async function GET(_req: NextRequest) {
         id: u.id,
         email: u.email,
         fullName: u.employee?.fullName ?? u.email,
+        personalEmail: u.employee?.personalEmail ?? null,
         designation: u.employee?.designation ?? null,
         department: u.employee?.department?.name ?? null,
         primaryRole: u.role,

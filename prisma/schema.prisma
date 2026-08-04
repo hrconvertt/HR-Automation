@@ -526,7 +526,13 @@ model Holiday {
   id          String   @id @default(cuid())
   name        String
   date        DateTime @unique
-  type        String   // PUBLIC | OPTIONAL | COMPANY
+  type        String   // PUBLIC | OPTIONAL | COMPANY | WFH
+  // A holiday existing on the calendar is not the same as it being taken. HR
+  // decides each one against workload, so nothing touches attendance until it
+  // is applied. Un-applying reverses the attendance marks it made.
+  applied     Boolean  @default(false)
+  appliedAt   DateTime?
+  appliedById String?
   createdAt   DateTime @default(now())
 
   @@map("holidays")
