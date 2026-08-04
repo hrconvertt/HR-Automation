@@ -43,6 +43,7 @@ interface Draft {
   subject: string
   text: string
   recipients: string[]
+  undeliverable: string[]
   resumes: string
 }
 
@@ -58,6 +59,8 @@ export function HolidayBoard({ year, rows }: { year: number; rows: HolidayRow[] 
   const [draft, setDraft] = useState<Draft | null>(null)
   const [draftFor, setDraftFor] = useState<HolidayRow | null>(null)
   const [extraNote, setExtraNote] = useState('')
+  const [editSubject, setEditSubject] = useState('')
+  const [editBody, setEditBody] = useState('')
 
   const applied = rows.filter((r) => r.applied).length
 
@@ -116,7 +119,14 @@ export function HolidayBoard({ year, rows }: { year: number; rows: HolidayRow[] 
     const j = await res.json().catch(() => ({}))
     setBusy(null)
     if (!res.ok) { setError(j.error ?? 'Could not build the notice.'); return }
-    setDraft({ subject: j.subject, text: j.text, recipients: j.recipients, resumes: j.resumes })
+    setDraft({
+      subject: j.subject, text: j.text, recipients: j.recipients,
+      undeliverable: j.undeliverable ?? [], resumes: j.resumes,
+    })
+    // The draft is a starting point. What HR edits here is what gets sent —
+    // every real notice has carried a line no template could have known.
+    setEditSubject(j.subject)
+    setEditBody(j.text)
     setDraftFor(h)
   }
 
@@ -126,13 +136,17 @@ export function HolidayBoard({ year, rows }: { year: number; rows: HolidayRow[] 
     const res = await fetch(`/api/holidays/${draftFor.id}/notice`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ send: true, extraNote }),
+      body: JSON.stringify({ send: true, subject: editSubject, body: editBody }),
     })
     const j = await res.json().catch(() => ({}))
     setBusy(null)
     if (!res.ok) { setError(j.error ?? 'Could not send.'); return }
-    setNote(`Notice queued for ${j.sent} recipient${j.sent === 1 ? '' : 's'}.`)
+    setNote(
+      `Notice sent to ${j.sent} recipient${j.sent === 1 ? '' : 's'} and the holiday applied — `
+      + `${j.attendanceRowsChanged} attendance rows marked.`,
+    )
     setDraft(null); setDraftFor(null); setExtraNote('')
+    router.refresh()
   }
 
   return (
@@ -274,44 +288,57 @@ export function HolidayBoard({ year, rows }: { year: number; rows: HolidayRow[] 
         <Modal title={`Notice — ${draftFor.name}`} onClose={() => { setDraft(null); setDraftFor(null) }}>
           <div className="space-y-3">
             <Field label="Subject">
-              <input readOnly value={draft.subject}
-                className="w-full border border-slate-200 bg-slate-50 rounded-md px-2 py-1.5 text-sm" />
+              <input value={editSubject} onChange={(e) => setEditSubject(e.target.value)}
+                className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
             </Field>
-            <Field label={`Recipients (${draft.recipients.length})`}>
-              <p className="text-[11px] text-slate-500 max-h-16 overflow-y-auto">
+
+            <Field label={`Recipients (${draft.recipients.length} active employees)`}>
+              <p className="text-[11px] text-slate-500 max-h-16 overflow-y-auto leading-relaxed">
                 {draft.recipients.join(', ')}
               </p>
+              {draft.undeliverable.length > 0 && (
+                <p className="text-[11px] text-amber-700 mt-1">
+                  No usable email on file for {draft.undeliverable.join(', ')} — tell them separately.
+                </p>
+              )}
             </Field>
+
             <Field label="Body">
-              <pre className="w-full border border-slate-200 rounded-md p-3 text-xs bg-slate-50 whitespace-pre-wrap font-sans max-h-56 overflow-y-auto">
-                {draft.text}
-              </pre>
+              <textarea value={editBody} rows={12}
+                onChange={(e) => setEditBody(e.target.value)}
+                className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm leading-relaxed
+                           font-sans focus:outline-none focus:ring-2 focus:ring-slate-400" />
             </Field>
+
             <Field label="Add a condition (optional)">
               <textarea value={extraNote} rows={2}
                 onChange={(e) => setExtraNote(e.target.value)}
                 placeholder="e.g. attendance is mandatory on the next working day; unapproved absence triggers the sandwich rule"
                 className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm" />
             </Field>
-            <p className="text-[11px] text-amber-700">
-              Regenerate after editing the condition to see it in the body.
+            <p className="text-[11px] text-slate-500">
+              Regenerate rebuilds the body with the condition in it — it discards anything you
+              typed above. Sending uses exactly what is in the box, and applies the holiday to
+              everyone&apos;s attendance.
             </p>
+
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="outline" size="sm"
-                onClick={() => navigator.clipboard?.writeText(draft.text)}>
+                onClick={() => navigator.clipboard?.writeText(editBody)}>
                 <Copy className="w-3.5 h-3.5 mr-1.5" /> Copy
               </Button>
               <Button variant="outline" size="sm" onClick={() => generateEmail(draftFor)}>
                 Regenerate
               </Button>
-              <Button size="sm" onClick={sendDraft} disabled={busy === 'send'}>
+              <Button size="sm" onClick={sendDraft} disabled={busy === 'send' || !editBody.trim()}>
                 {busy === 'send' && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
-                Send to all
+                Send to all &amp; apply
               </Button>
             </div>
           </div>
         </Modal>
       )}
+
     </Card>
   )
 }

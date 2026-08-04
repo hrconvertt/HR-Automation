@@ -1,9 +1,12 @@
 /**
- * /dashboard/time/approvals — unified OT + Leave approvals inbox.
+ * /dashboard/time/approvals — overtime awaiting a decision.
  *
- * HR_ADMIN: company-wide pending OT + leave at HR stage.
- * MANAGER:  direct reports' leave at manager stage.
+ * HR_ADMIN: company-wide pending overtime.
+ * MANAGER:  their direct reports' overtime.
  * Everyone else → redirected to their personal time view.
+ *
+ * Leave lives in the Leave module — it used to appear here as well, which put
+ * one request in two inboxes.
  */
 
 import { cookies } from 'next/headers'

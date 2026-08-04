@@ -26,6 +26,7 @@ export default async function LeaveRequestsPage() {
       title="Leave Requests"
       subtitle="Pending approvals — manager stage and HR stage combined"
       statuses={['PENDING', 'PENDING_HR']}
+      canEdit={role === 'HR_ADMIN'}
     />
   )
 }

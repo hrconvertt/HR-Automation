@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { notify } from '@/lib/notifications'
 
 export async function POST(req: NextRequest) {
   const token = req.cookies.get('hr_token')?.value
@@ -26,7 +27,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Switch back to HR view to approve overtime' }, { status: 403 })
   }
 
-  const { attendanceLogId, overtimeHours, approve } = await req.json()
+  const { attendanceLogId, overtimeHours, approve, ratePct, note } = await req.json()
 
   if (!attendanceLogId) {
     return NextResponse.json({ error: 'attendanceLogId required' }, { status: 400 })
@@ -65,14 +66,37 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // A decision, recorded as one. Rejecting used to write `overtimeApproved:
+  // false` — indistinguishable from never having been looked at, so the row
+  // came straight back into the inbox. REJECTED is terminal.
+  const decided = approve === true ? 'APPROVED' : 'REJECTED'
+
   const log = await prisma.attendanceLog.update({
     where: { id: attendanceLogId },
     data: {
       overtimeHours: overtimeHours ?? undefined,
-      overtimeApproved: approve ?? undefined,
-      overtimeApprovedById: approve ? payload.userId : undefined,
+      overtimeApproved: approve === true,
+      overtimeApprovedById: payload.userId,
+      overtimeStatus: decided,
+      overtimeDecidedAt: new Date(),
+      ...(typeof ratePct === 'number' ? { overtimeRatePct: ratePct } : {}),
+      ...(typeof note === 'string' && note.trim() ? { overtimeNote: note.trim().slice(0, 500) } : {}),
     },
+    include: { employee: { select: { id: true, fullName: true } } },
   })
+
+  // The employee should hear the outcome either way — an approval is money and
+  // a rejection is hours they will not be paid for.
+  const when = log.date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+  await notify({
+    employeeId: log.employeeId,
+    type: approve === true ? 'OVERTIME_APPROVED' : 'OVERTIME_REJECTED',
+    title: approve === true ? '✓ Overtime approved' : 'Overtime not approved',
+    message: approve === true
+      ? `Your ${log.overtimeHours}h of overtime on ${when} was approved.`
+      : `Your ${log.overtimeHours}h of overtime on ${when} was not approved${log.overtimeNote ? ` — ${log.overtimeNote}` : ''}.`,
+    link: '/dashboard/time/overtime',
+  }).catch(() => { /* best effort — the decision itself is already saved */ })
 
   return NextResponse.json({ log })
 }

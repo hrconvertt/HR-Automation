@@ -1,16 +1,12 @@
 /**
- * /dashboard/leave/approved — history of approved leave (role-scoped via API).
- *
- * HR gets Edit on each row. Most of this history was rebuilt from the
- * attendance sheet, which knew the day but not the reason, so those rows all
- * arrived typed as Casual — and Casual and Sick draw on separate balances.
+ * /dashboard/leave/wfh/approved — the work-from-home record.
  */
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
-import { LeaveList } from '../_components/leave-list'
+import { LeaveList } from '../../_components/leave-list'
 
-export default async function LeaveApprovedPage() {
+export default async function WfhApprovedPage() {
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   const payload = await verifyToken(token)
@@ -22,9 +18,10 @@ export default async function LeaveApprovedPage() {
 
   return (
     <LeaveList
-      title="Leave Approved"
-      subtitle="History of approved leave — scoped to your role"
+      title="WFH Approved"
+      subtitle="Approved work-from-home days — scoped to your role"
       statuses={['APPROVED']}
+      category="WFH"
       canEdit={role === 'HR_ADMIN'}
     />
   )

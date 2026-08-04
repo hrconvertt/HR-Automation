@@ -19,6 +19,8 @@ export type NotificationType =
   | 'TICKET_UPDATE'        // helpdesk ticket update
   | 'ATTENDANCE_CORRECTION_APPROVED' // HR approved an attendance correction → notify employee
   | 'ATTENDANCE_CORRECTION_REJECTED' // HR rejected an attendance correction → notify employee
+  | 'OVERTIME_APPROVED'    // overtime signed off → notify employee (it is money)
+  | 'OVERTIME_REJECTED'    // overtime declined → notify employee (hours they won't be paid)
   | 'GOAL_ASSIGNED'        // a manager/HR created a goal for an employee
   | 'GOAL_COMMENT'         // a manager commented on a goal
   | 'ANOMALY'              // attendance or other anomaly

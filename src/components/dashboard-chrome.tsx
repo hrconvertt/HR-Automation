@@ -474,12 +474,33 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
           icon: Inbox,
           roles: ['HR_ADMIN', 'MANAGER'],
         },
+        { href: '/dashboard/time/overtime', label: 'Overtime', icon: Clock },
+        {
+          href: '/dashboard/time/overtime?tab=approved',
+          label: 'OT Approved',
+          icon: CheckCircle2,
+        },
         {
           href: '/dashboard/time/conflicts',
           label: 'Conflicts',
           icon: ShieldAlert,
           roles: ['HR_ADMIN'],
         },
+      ],
+    },
+  ],
+  '/dashboard/payroll': [
+    {
+      label: 'Payroll',
+      items: [
+        { href: '/dashboard/payroll', label: 'Payroll Run', icon: Banknote },
+        {
+          href: '/dashboard/payroll/slips',
+          label: 'Salary Slips',
+          icon: FileText,
+          roles: ['HR_ADMIN'],
+        },
+        { href: '/dashboard/payroll/register', label: 'Slip Register', icon: FolderOpen },
       ],
     },
   ],
@@ -490,6 +511,13 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
         { href: '/dashboard/leave/me', label: 'My Leave', icon: PlaneIcon },
         { href: '/dashboard/leave/requests', label: 'Leave Requests', icon: Inbox },
         { href: '/dashboard/leave/approved', label: 'Leave Approved', icon: CheckCircle2 },
+      ],
+    },
+    {
+      label: 'Work From Home',
+      items: [
+        { href: '/dashboard/leave/wfh/requests', label: 'WFH Requests', icon: Inbox },
+        { href: '/dashboard/leave/wfh/approved', label: 'WFH Approved', icon: CheckCircle2 },
       ],
     },
   ],

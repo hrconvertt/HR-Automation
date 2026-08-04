@@ -453,6 +453,16 @@ model AttendanceLog {
   overtimeHours     Float    @default(0)
   overtimeApproved  Boolean  @default(false)
   overtimeApprovedById String?
+  // A decision, not just a yes/no. `overtimeApproved` alone had no way to say
+  // "rejected", so a rejected row looked identical to one nobody had looked at
+  // and never left the approvals inbox.
+  //   null | PENDING — awaiting a decision
+  //   APPROVED       — payable
+  //   REJECTED       — seen and declined; not payable, and does not come back
+  overtimeStatus       String?
+  overtimeRatePct      Int?      // % of the hourly rate paid, e.g. 100 / 150 / 200
+  overtimeDecidedAt    DateTime?
+  overtimeNote         String?   // why it was worked, or why it was declined
   notes             String?
   ipAddress         String?
 
@@ -581,6 +591,11 @@ model LeaveRequest {
   requestId    String    @unique @default(cuid())
   employeeId   String
   employee     Employee  @relation(fields: [employeeId], references: [id])
+  // LEAVE | WFH — a work-from-home day is requested and approved exactly like
+  // leave (same two stages, same approvers, same attachment), it simply doesn't
+  // spend balance and marks the day WFH instead of L. Sharing this model keeps
+  // one approval path rather than a parallel one that would drift.
+  category     String    @default("LEAVE")
   leaveType    String
   fromDate     DateTime
   toDate       DateTime

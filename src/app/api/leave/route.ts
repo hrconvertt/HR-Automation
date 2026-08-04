@@ -34,9 +34,15 @@ export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)
   const status = searchParams.get('status') ?? ''
   const employeeId = searchParams.get('employeeId') ?? ''
+  // LEAVE | WFH. Absent means leave, so every existing caller and every row
+  // written before the column existed keeps behaving exactly as before.
+  const category = (searchParams.get('category') ?? 'LEAVE').toUpperCase()
 
   const where: Record<string, unknown> = {}
   if (status) where.status = status
+  where.category = category === 'WFH'
+    ? 'WFH'
+    : { in: ['LEAVE'] }
 
   // Role scoping. Managers see their direct reports' requests AND any
   // requests where they've been assigned as stage-1 approver (covers the
@@ -72,9 +78,11 @@ export async function GET(request: NextRequest) {
     // the attachmentBytes BYTEA — every prescription and medical note was being
     // serialised into the list payload just to render a table of dates.
     select: {
-      id: true, employeeId: true, leaveType: true, fromDate: true, toDate: true,
+      id: true, employeeId: true, category: true, leaveType: true,
+      fromDate: true, toDate: true,
       days: true, firstDayHalf: true, lastDayHalf: true, reason: true,
       status: true, createdAt: true, approvedAt: true, managerApprovedAt: true,
+      approvedById: true, managerApprovedById: true,
       attachmentName: true, attachmentMime: true, attachmentUrl: true,
       employee: {
         select: {
@@ -108,6 +116,19 @@ export async function GET(request: NextRequest) {
     )
   }
 
+  // Who signed off at each stage. Both columns hold Employee ids (that is what
+  // the approve route writes), so one lookup covers lead and HR alike.
+  const approverIds = [...new Set(
+    requests.flatMap((r) => [r.managerApprovedById, r.approvedById]).filter(Boolean),
+  )] as string[]
+  const approvers = approverIds.length
+    ? await prisma.employee.findMany({
+        where: { id: { in: approverIds } },
+        select: { id: true, fullName: true, designation: true },
+      })
+    : []
+  const approverName = new Map(approvers.map((a) => [a.id, a.fullName]))
+
   const decorated = requests.map((r) => {
     const requesterRole = r.employee.user?.role ?? null
     const requesterDesignation = r.employee.designation ?? null
@@ -134,6 +155,8 @@ export async function GET(request: NextRequest) {
       statusLabel,
       requesterIsSenior: senior,
       requesterBalance: bal,
+      approvedByLead: r.managerApprovedById ? approverName.get(r.managerApprovedById) ?? null : null,
+      approvedByHr: r.approvedById ? approverName.get(r.approvedById) ?? null : null,
     }
   })
 
@@ -153,12 +176,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const {
       leaveType, startDate, endDate, reason,
+      // LEAVE | WFH — a work-from-home request travels the same approval path.
+      category: rawCategory,
       employeeId: bodyEmpId,
       firstDayHalf: rawFirstHalf, lastDayHalf: rawLastHalf,
       attachmentBase64, attachmentMime, attachmentName,
     } = body
     const firstDayHalf = !!rawFirstHalf
     const lastDayHalf = !!rawLastHalf
+    const category = rawCategory === 'WFH' ? 'WFH' : 'LEAVE'
 
     // ── Validate attachment if provided ──
     let attachmentBytes: Buffer | null = null
@@ -300,6 +326,7 @@ export async function POST(request: NextRequest) {
     const leaveRequest = await prisma.leaveRequest.create({
       data: {
         employeeId: empId,
+        category,
         leaveType,
         fromDate: start,
         toDate: end,

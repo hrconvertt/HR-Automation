@@ -143,8 +143,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       })
       if (result.count === 0) { raceLost = true; return }
 
+      // Working from home is not time off — it spends no balance. Same
+      // approval chain, different consequence.
+      const isWfh = leaveRequest.category === 'WFH'
+
       // Only deduct balance once — guaranteed because updateMany only flipped status this time.
-      const balance = await tx.leaveBalance.findFirst({
+      const balance = isWfh ? null : await tx.leaveBalance.findFirst({
         where: {
           employeeId: leaveRequest.employeeId,
           leaveType: leaveRequest.leaveType,
@@ -188,10 +192,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const isHalf =
             (isFirst && leaveRequest.firstDayHalf) ||
             (isLast && leaveRequest.lastDayHalf)
-          const status = isHalf ? 'HALF_DAY' : 'LEAVE'
-          const hoursWorked = isHalf ? 4 : 0
+          // A WFH day is a working day — it marks the grid as present from
+          // home, not as leave.
+          const status = isWfh ? 'PRESENT' : isHalf ? 'HALF_DAY' : 'LEAVE'
+          const workType = isWfh ? 'WFH' : 'ONSITE'
+          const hoursWorked = isWfh ? (isHalf ? 4 : 8) : isHalf ? 4 : 0
           const dayDate = new Date(cursor)
-          const notes = `Auto-written from approved leave (${leaveRequest.leaveType})`
+          const notes = isWfh
+            ? 'Auto-written from approved work from home'
+            : `Auto-written from approved leave (${leaveRequest.leaveType})`
           const existingLog = await tx.attendanceLog.findUnique({
             where: { employeeId_date: { employeeId: leaveRequest.employeeId, date: dayDate } },
             select: { id: true, status: true, workType: true, hoursWorked: true },
@@ -199,13 +208,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
           const savedLog = existingLog
             ? await tx.attendanceLog.update({
                 where: { id: existingLog.id },
-                data: { status, hoursWorked, notes },
+                data: { status, workType, hoursWorked, notes },
               })
             : await tx.attendanceLog.create({
                 data: {
                   employeeId: leaveRequest.employeeId,
                   date: dayDate,
-                  workType: 'ONSITE',
+                  workType,
                   status,
                   hoursWorked,
                   notes,
