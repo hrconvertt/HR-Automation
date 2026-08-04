@@ -32,6 +32,9 @@ interface Outcome {
   sent: number
   resent: number
   failed: { name: string; reason: string }[]
+  // Written to the queue because no SMTP host is configured. Not delivered.
+  queued?: string[]
+  smtpConfigured?: boolean
   period: string
 }
 
@@ -109,6 +112,17 @@ export function SlipIssueBoard({ runId, period, rows }: {
                 <span className="text-slate-500">· {outcome.resent} had been sent before</span>
               )}
             </p>
+            {outcome.queued && outcome.queued.length > 0 && (
+              <p className="flex items-start gap-1.5 text-amber-800">
+                <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                <span>
+                  {outcome.queued.length} slip{outcome.queued.length === 1 ? '' : 's'} went to the
+                  outbound queue rather than an inbox — no mail server is configured, so nothing
+                  was actually delivered. Set SMTP_HOST, SMTP_USER and SMTP_PASS in Vercel, then
+                  send again.
+                </span>
+              </p>
+            )}
             {outcome.failed.length > 0 && (
               <div className="text-amber-800">
                 <p className="flex items-center gap-1.5">

@@ -62,6 +62,14 @@ export default async function SalarySlipsPage({ searchParams }: Props) {
     )
   }
 
+  // Every regular run there is, so the picker offers the months that actually
+  // exist rather than a blank calendar.
+  const runs = await prisma.payrollRun.findMany({
+    where: { runType: 'REGULAR' },
+    select: { id: true, month: true, year: true },
+    orderBy: [{ year: 'desc' }, { month: 'desc' }],
+  })
+
   const payslips = await prisma.payslip.findMany({
     where: { payrollRunId: run.id },
     select: {
@@ -83,11 +91,62 @@ export default async function SalarySlipsPage({ searchParams }: Props) {
   return (
     <div className="space-y-4">
       <Back />
+      <RunPicker
+        runs={runs.map((r) => ({ id: r.id, month: r.month, year: r.year }))}
+        currentId={run.id}
+      />
       <SlipIssueBoard
         runId={run.id}
         period={`${MONTHS[run.month - 1]} ${run.year}`}
         rows={rows}
       />
+    </div>
+  )
+}
+
+/**
+ * Month and year, the same pair the payroll run screen uses.
+ *
+ * Only months with a run are offered — a slip cannot be issued for a month
+ * payroll never processed, and showing all twelve would invite trying.
+ */
+function RunPicker({ runs, currentId }: {
+  runs: { id: string; month: number; year: number }[]
+  currentId: string
+}) {
+  const years = [...new Set(runs.map((r) => r.year))].sort((a, b) => b - a)
+  const current = runs.find((r) => r.id === currentId)
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
+      <span className="text-xs uppercase tracking-wide text-slate-500">Salary month</span>
+      {years.map((y) => (
+        <div key={y} className="flex items-center gap-1.5 flex-wrap">
+          <span className="text-xs font-semibold text-slate-700">{y}</span>
+          {runs
+            .filter((r) => r.year === y)
+            .sort((a, b) => a.month - b.month)
+            .map((r) => (
+              <Link
+                key={r.id}
+                href={`/dashboard/payroll/slips?runId=${r.id}`}
+                className={
+                  'rounded-md px-2 py-1 text-xs border transition-colors ' +
+                  (r.id === currentId
+                    ? 'bg-slate-900 text-white border-slate-900'
+                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')
+                }
+              >
+                {MONTHS[r.month - 1].slice(0, 3)}
+              </Link>
+            ))}
+        </div>
+      ))}
+      {current && (
+        <span className="text-[11px] text-slate-400 ml-auto">
+          Showing {MONTHS[current.month - 1]} {current.year}
+        </span>
+      )}
     </div>
   )
 }

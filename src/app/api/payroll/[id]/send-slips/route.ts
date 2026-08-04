@@ -67,6 +67,7 @@ export async function POST(
   const period = `${MONTHS[run.month - 1]} ${run.year}`
   const sent: string[] = []
   const failed: { name: string; reason: string }[] = []
+  const queued: string[] = []
   const resent: string[] = []
 
   for (const s of slips) {
@@ -106,6 +107,14 @@ export async function POST(
         failed.push({ name: s.employee.fullName, reason: res.error ?? 'send failed' })
         continue
       }
+      // With no SMTP host configured, sendEmail writes to a queue and still
+      // reports ok. That is not delivery, and marking the slip sent on the
+      // strength of it is how a slip shows a green tick in an inbox nobody
+      // ever received. Count it separately and leave sentAt alone.
+      if (res.transport === 'queued') {
+        queued.push(s.employee.fullName)
+        continue
+      }
     }
 
     await prisma.payslip.update({ where: { id: s.id }, data: { sentAt: new Date() } })
@@ -118,5 +127,7 @@ export async function POST(
     sent: sent.length,
     resent: resent.length,
     failed,
+    queued,
+    smtpConfigured: Boolean(process.env.SMTP_HOST && process.env.SMTP_USER),
   })
 }

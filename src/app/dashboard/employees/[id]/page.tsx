@@ -194,20 +194,6 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
 
   const currentSalary = employee.salary
 
-  // Recent Payslips — same gate as Compensation. Managers + Leads never see
-  // payslip amounts (compensation lockdown).
-  const canSeePayslips = canViewCompensation
-  const recentPayslips = canSeePayslips
-    ? await prisma.payslip.findMany({
-        where: { employeeId: employee.id },
-        orderBy: [{ year: 'desc' }, { month: 'desc' }],
-        select: {
-          id: true, month: true, year: true,
-          grossSalary: true, netSalary: true, status: true,
-        },
-      })
-    : []
-
   // Seed a synthetic "Hire — Joining offer" row from the current Salary when
   // there's no CompensationHistory yet. Read-only — we don't persist it,
   // because the joining-offer row is implicit from joiningDate + Salary.
@@ -656,14 +642,6 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
               canDownload: canDownloadTotalRewards,
               viewerRole: effectiveRole,
             }}
-            payslips={recentPayslips.map((p) => ({
-              id: p.id,
-              month: p.month,
-              year: p.year,
-              grossSalary: p.grossSalary,
-              netSalary: p.netSalary,
-              status: p.status,
-            }))}
           />
         </TabsContent>}
 
