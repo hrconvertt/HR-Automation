@@ -528,6 +528,29 @@ function getActiveNav(
   baseGroups: NavGroup[],
   role: string,
 ): { groups: NavGroup[]; nested: boolean } {
+  // An employee profile's sections belong in the sidebar like every other
+  // module's. They cannot be a static NESTED_NAV entry because the links carry
+  // the employee's id, so the group is built from the path being viewed.
+  const profile = pathname.match(/^\/dashboard\/employees\/([^/]+)$/)
+  if (profile && profile[1] !== 'new') {
+    const base = `/dashboard/employees/${profile[1]}`
+    return {
+      nested: true,
+      groups: [{
+        label: 'Employee',
+        items: [
+          { href: `${base}?tab=overview`, label: 'Overview', icon: User },
+          { href: `${base}?tab=lifecycle`, label: 'Lifecycle', icon: UserPlus },
+          { href: `${base}?tab=compensation`, label: 'Compensation', icon: Banknote },
+          { href: `${base}?tab=leave`, label: 'Leave', icon: PlaneIcon },
+          { href: `${base}?tab=documents`, label: 'Documents', icon: FolderOpen },
+          { href: `${base}?tab=performance`, label: 'Performance', icon: TrendingUp },
+          { href: `${base}?tab=assets`, label: 'Assets', icon: Package },
+        ],
+      }],
+    }
+  }
+
   for (const prefix of Object.keys(NESTED_NAV)) {
     if (pathname.startsWith(prefix)) {
       const filtered = NESTED_NAV[prefix]

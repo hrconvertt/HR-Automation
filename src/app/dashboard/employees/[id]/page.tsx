@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
@@ -30,6 +30,9 @@ import { LOA_TYPE_LABEL, type LoaType } from '@/lib/loa'
 
 interface PageProps {
   params: Promise<{ id: string }>
+  // Which section to show. The sidebar links here rather than the page owning
+  // a second copy of the list.
+  searchParams: Promise<{ tab?: string }>
 }
 
 /**
@@ -100,8 +103,10 @@ async function getEmployee(id: string) {
   })
 }
 
-export default async function EmployeeProfilePage({ params }: PageProps) {
+export default async function EmployeeProfilePage({ params, searchParams }: PageProps) {
   const { id } = await params
+  const { tab } = await searchParams
+  const activeTab = tab ?? 'overview'
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   const payload = await verifyToken(token)
@@ -446,17 +451,12 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview" orientation="vertical" className="flex flex-col lg:flex-row gap-5 items-start">
-        <TabsList className="lg:sticky lg:top-4 flex lg:flex-col w-full lg:w-52 shrink-0 gap-0.5 bg-transparent p-0 overflow-x-auto lg:overflow-visible items-stretch">
-          <TabsTrigger className="justify-start whitespace-nowrap" value="overview">Overview</TabsTrigger>
-          {showLifecycleTab     && <TabsTrigger className="justify-start whitespace-nowrap" value="lifecycle">Lifecycle</TabsTrigger>}
-          {showCompensation     && <TabsTrigger className="justify-start whitespace-nowrap" value="compensation">Compensation</TabsTrigger>}
-          {showLeave            && <TabsTrigger className="justify-start whitespace-nowrap" value="leave">Leave</TabsTrigger>}
-          {showDocuments        && <TabsTrigger className="justify-start whitespace-nowrap" value="documents">Documents</TabsTrigger>}
-          {showPerformanceTab   && <TabsTrigger className="justify-start whitespace-nowrap" value="performance">Performance</TabsTrigger>}
-          {showAssets           && <TabsTrigger className="justify-start whitespace-nowrap" value="assets">Assets</TabsTrigger>}
-        </TabsList>
-        <div className="flex-1 min-w-0 w-full">
+      {/* The section list lives in the app sidebar, the same as every other
+          module. TabsList is gone rather than duplicated beside it. */}
+      {/* Keyed on the section so a sidebar link — a real navigation — lands on
+          the right one rather than falling back to the first. */}
+      <Tabs key={activeTab} defaultValue={activeTab}>
+        <div className="min-w-0 w-full">
 
         {/* Overview */}
         <TabsContent value="overview">

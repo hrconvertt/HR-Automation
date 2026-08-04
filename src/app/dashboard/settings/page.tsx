@@ -1,36 +1,38 @@
 'use client'
 
 /**
- * Settings — Overview landing.
+ * Settings — Overview.
  *
- * Each section is its own route (see layout.tsx for the sub-nav). This page
- * shows a grid of cards linking to each sub-section so HR can see "what
- * changes here" at a glance.
+ * This used to be eight cards linking to the eight sections already listed in
+ * the sidebar beside it. Reading the same list twice tells you nothing the
+ * second time, and it left the landing page with no answer to the only question
+ * worth asking here: what is actually set right now.
+ *
+ * So it shows the current configuration. Each row links to the section that
+ * owns it, which is a shortcut rather than a second menu.
  *
  * Non-HR users are redirected to their personal /settings/account view.
  */
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
-import {
-  Building2, Calendar, Calculator, Users, Plane,
-  Mail, ShieldCheck, ClipboardList, ChevronRight,
-} from 'lucide-react'
 
-const CARDS = [
-  { href: '/dashboard/settings/organization',    icon: Building2,   label: 'Organization',          sub: 'Company name, tax IDs, address.' },
-  { href: '/dashboard/settings/working-days',    icon: Calendar,    label: 'Working Days & Hours',  sub: 'Schedule + holiday calendar.' },
-  { href: '/dashboard/settings/leave-policies',  icon: Plane,       label: 'Leave Policies',        sub: 'Days by leave type × audience tier.' },
-  { href: '/dashboard/settings/departments',     icon: Users,       label: 'Departments',           sub: 'Org units, heads, and members.' },
-  { href: '/dashboard/settings/payroll-config',  icon: Calculator,  label: 'Payroll Configuration', sub: 'EOBI, tax slabs, OT multiplier, late rule.' },
-  { href: '/dashboard/settings/email-templates', icon: Mail,        label: 'Email Templates',       sub: 'Subject + body library with variables.' },
-  { href: '/dashboard/settings/roles',           icon: ShieldCheck, label: 'Roles',                 sub: 'Assign HR / Manager / Lead / Employee.' },
-  { href: '/dashboard/settings/daily-logging',   icon: ClipboardList,label: 'Daily Logging',        sub: 'KPI library + submission rules.' },
-] as const
+interface DayHours { start: string; end: string; breakMins: number }
+
+interface Snapshot {
+  companyName?: string
+  workingDays: string[]
+  workDayHours: Record<string, DayHours>
+  holidaysThisYear: number
+  holidaysApplied: number
+  departments?: number
+}
 
 export default function SettingsOverviewPage() {
   const router = useRouter()
+  const [snap, setSnap] = useState<Snapshot | null>(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => {
@@ -40,39 +42,114 @@ export default function SettingsOverviewPage() {
     }).catch(() => {})
   }, [router])
 
+  useEffect(() => {
+    const year = new Date().getFullYear()
+    Promise.all([
+      fetch('/api/settings').then((r) => r.json()).catch(() => ({})),
+      fetch(`/api/holidays?year=${year}`).then((r) => r.json()).catch(() => ({ holidays: [] })),
+      fetch('/api/departments').then((r) => r.json()).catch(() => ({ departments: [] })),
+    ]).then(([s, h, d]) => {
+      const cfg = s?.config ?? {}
+      // Config values are stored as JSON strings on some keys and objects on
+      // others, depending on when they were written.
+      function parse<T>(v: unknown, fallback: T): T {
+        if (v == null) return fallback
+        try { return typeof v === 'string' ? (JSON.parse(v) as T) : (v as T) } catch { return fallback }
+      }
+      const holidays: { applied?: boolean }[] = Array.isArray(h?.holidays) ? h.holidays : []
+      const depts = Array.isArray(d?.departments) ? d.departments : null
+      setSnap({
+        companyName: cfg.companyName,
+        workingDays: parse<string[]>(cfg.workingDays, []),
+        workDayHours: parse<Record<string, DayHours>>(cfg.workDayHours, {}),
+        holidaysThisYear: holidays.length,
+        holidaysApplied: holidays.filter((x) => x.applied).length,
+        departments: depts ? depts.length : undefined,
+      })
+      setLoading(false)
+    })
+  }, [])
+
+  const days = snap?.workingDays ?? []
+  const firstDay = days[0]
+  const hours = firstDay ? snap?.workDayHours?.[firstDay] : undefined
+  const year = new Date().getFullYear()
+
   return (
-    <Card>
-      <CardHeader className="border-b border-slate-100">
-        <CardTitle>Overview</CardTitle>
-      </CardHeader>
-      <CardContent className="p-6">
-        <p className="text-sm text-slate-500 mb-5">
-          Configure how Convertt HR works for your organization. Pick a section to jump in.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {CARDS.map((c) => {
-            const Icon = c.icon
-            return (
-              <Link
-                key={c.href}
-                href={c.href}
-                className="block rounded-lg border border-slate-200 p-4 hover:bg-slate-50 hover:border-slate-300 transition-colors group"
-              >
-                <div className="flex items-start gap-3">
-                  <div className="w-9 h-9 rounded-md bg-slate-100 flex items-center justify-center flex-shrink-0">
-                    <Icon className="w-4 h-4 text-slate-700" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-900">{c.label}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{c.sub}</p>
-                  </div>
-                  <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 flex-shrink-0" />
-                </div>
-              </Link>
-            )
-          })}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="space-y-3">
+      <Card>
+        <CardHeader className="border-b border-slate-100">
+          <CardTitle>How Convertt HR is configured</CardTitle>
+        </CardHeader>
+        <CardContent className="p-6">
+          {loading ? (
+            <p className="text-sm text-slate-400">Loading…</p>
+          ) : (
+            <dl className="divide-y divide-slate-100">
+              <Item
+                label="Company"
+                value={snap?.companyName || 'Not set'}
+                href="/dashboard/settings/organization"
+              />
+              <Item
+                label="Working week"
+                value={days.length
+                  ? `${days.length} days — ${days.map((d) => d.slice(0, 3)).join(', ')}`
+                  : 'Not set'}
+                detail={hours ? `${hours.start}–${hours.end}, ${hours.breakMins} min break` : undefined}
+                href="/dashboard/settings/working-days"
+              />
+              <Item
+                label={`Holidays ${year}`}
+                value={snap?.holidaysThisYear
+                  ? `${snap.holidaysThisYear} on the calendar`
+                  : 'None on the calendar'}
+                detail={snap?.holidaysThisYear
+                  ? `${snap.holidaysApplied} applied to attendance`
+                  : undefined}
+                href="/dashboard/settings/working-days"
+              />
+              <Item
+                label="Departments"
+                value={snap?.departments != null ? String(snap.departments) : '—'}
+                href="/dashboard/settings/departments"
+              />
+              <Item
+                label="Leave policy"
+                value="Casual and sick, allocated by audience tier"
+                href="/dashboard/settings/leave-policies"
+              />
+              <Item
+                label="Payroll"
+                value="No tax or EOBI deducted"
+                detail="Convertt pays the stated net figure"
+                href="/dashboard/settings/payroll-config"
+              />
+            </dl>
+          )}
+        </CardContent>
+      </Card>
+
+      <p className="text-[11px] text-slate-400">
+        Every section is in the sidebar. This page says what those settings currently hold.
+      </p>
+    </div>
+  )
+}
+
+function Item({ label, value, detail, href }: {
+  label: string; value: string; detail?: string; href: string
+}) {
+  return (
+    <div className="flex items-baseline gap-4 py-3">
+      <dt className="text-sm text-slate-500 w-44 shrink-0">{label}</dt>
+      <dd className="flex-1 min-w-0">
+        <p className="text-sm text-slate-900">{value}</p>
+        {detail && <p className="text-xs text-slate-500 mt-0.5">{detail}</p>}
+      </dd>
+      <Link href={href} className="text-xs text-slate-500 hover:text-slate-900 hover:underline shrink-0">
+        Change
+      </Link>
+    </div>
   )
 }
