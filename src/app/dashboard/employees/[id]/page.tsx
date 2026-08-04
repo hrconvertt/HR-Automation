@@ -325,13 +325,12 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
             canEdit={canEditFull || canEditOwn}
           />
           <div className="flex-1 min-w-0">
-            <div className="flex flex-wrap items-start gap-3 justify-between">
-              <div className="min-w-0 flex-1">
-                <h1 className="text-lg md:text-xl font-bold text-gray-900 truncate">{employee.fullName}</h1>
-                <p className="text-gray-500 text-sm mt-0.5 truncate">{employee.designation}</p>
-                <p className="text-xs text-gray-400 mt-0.5 font-mono break-all">{employee.employeeCode}</p>
-              </div>
+            {/* The name gets the row to itself. It was competing with six
+                action buttons in one flex line and losing — the name truncated
+                to two letters and the employee code wrapped over three. */}
+            <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-xl font-bold text-gray-900">{employee.fullName}</h1>
                 <Badge variant={employee.status === 'ACTIVE' ? 'success' : 'secondary'}>
                   {employee.status}
                 </Badge>
@@ -344,6 +343,13 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                     {employee.employeeType}
                   </Badge>
                 )}
+              </div>
+              <p className="text-gray-500 text-sm mt-1">{employee.designation}</p>
+              <p className="text-xs text-gray-400 mt-0.5 font-mono">{employee.employeeCode}</p>
+            </div>
+
+            {/* Actions on their own line, free to wrap without squeezing anything. */}
+            <div className="flex items-center gap-2 flex-wrap mt-4">
                 {isViewingOwn && employee.status === 'ACTIVE' && !employee.resignation && (
                   <ResignationButton employeeType={employee.employeeType} />
                 )}
@@ -417,7 +423,6 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
                   />
                 )}
               </div>
-            </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-4 text-sm">
               <div>
                 <p className="text-gray-400 text-xs">Department</p>
@@ -441,16 +446,17 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          {showLifecycleTab     && <TabsTrigger value="lifecycle">Lifecycle</TabsTrigger>}
-          {showCompensation     && <TabsTrigger value="compensation">Compensation</TabsTrigger>}
-          {showLeave            && <TabsTrigger value="leave">Leave</TabsTrigger>}
-          {showDocuments        && <TabsTrigger value="documents">Documents</TabsTrigger>}
-          {showPerformanceTab   && <TabsTrigger value="performance">Performance</TabsTrigger>}
-          {showAssets           && <TabsTrigger value="assets">Assets</TabsTrigger>}
+      <Tabs defaultValue="overview" orientation="vertical" className="flex flex-col lg:flex-row gap-5 items-start">
+        <TabsList className="lg:sticky lg:top-4 flex lg:flex-col w-full lg:w-52 shrink-0 gap-0.5 bg-transparent p-0 overflow-x-auto lg:overflow-visible items-stretch">
+          <TabsTrigger className="justify-start whitespace-nowrap" value="overview">Overview</TabsTrigger>
+          {showLifecycleTab     && <TabsTrigger className="justify-start whitespace-nowrap" value="lifecycle">Lifecycle</TabsTrigger>}
+          {showCompensation     && <TabsTrigger className="justify-start whitespace-nowrap" value="compensation">Compensation</TabsTrigger>}
+          {showLeave            && <TabsTrigger className="justify-start whitespace-nowrap" value="leave">Leave</TabsTrigger>}
+          {showDocuments        && <TabsTrigger className="justify-start whitespace-nowrap" value="documents">Documents</TabsTrigger>}
+          {showPerformanceTab   && <TabsTrigger className="justify-start whitespace-nowrap" value="performance">Performance</TabsTrigger>}
+          {showAssets           && <TabsTrigger className="justify-start whitespace-nowrap" value="assets">Assets</TabsTrigger>}
         </TabsList>
+        <div className="flex-1 min-w-0 w-full">
 
         {/* Overview */}
         <TabsContent value="overview">
@@ -851,6 +857,7 @@ export default async function EmployeeProfilePage({ params }: PageProps) {
             </CardContent>
           </Card>
         </TabsContent>}
+      </div>
       </Tabs>
     </div>
   )
