@@ -2,14 +2,19 @@
 
 /**
  * Shared leave-list view used by /dashboard/leave/requests + /approved.
- * Calls GET /api/leave?status=… and renders a simple table with row links
- * to /dashboard/leave/<id>.
+ *
+ * Shows the weekday alongside each date — a Monday or Friday absence reads very
+ * differently from a midweek one, and it is the first thing anyone checks when
+ * looking for a pattern. The reason sits on its own line under the employee
+ * rather than in a column of its own, so long text can breathe instead of
+ * squeezing every other column.
  */
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Paperclip, AlertCircle } from 'lucide-react'
 import { LEAVE_STATUS_LABELS, LEAVE_STATUS_TONE, formatDays } from '@/lib/leave-types'
 
 type LeaveRow = {
@@ -21,6 +26,7 @@ type LeaveRow = {
   status: string
   reason: string
   statusLabel?: string
+  attachmentName?: string | null
   employee: { fullName: string; employeeCode: string; designation: string | null }
 }
 
@@ -29,6 +35,22 @@ interface Props {
   subtitle: string
   statuses: string[] // e.g. ['PENDING','PENDING_HR'] or ['APPROVED']
 }
+
+/** Marker the attendance backfill leaves on rows nobody has confirmed yet. */
+const UNCONFIRMED = 'not yet recorded'
+
+const TYPE_TONE: Record<string, string> = {
+  SICK: 'bg-rose-50 text-rose-700 border-rose-200',
+  CASUAL: 'bg-sky-50 text-sky-700 border-sky-200',
+  ANNUAL: 'bg-violet-50 text-violet-700 border-violet-200',
+  UNPAID: 'bg-slate-100 text-slate-600 border-slate-200',
+}
+
+const fmt = (iso: string, withYear = false) =>
+  new Date(iso).toLocaleDateString('en-GB', {
+    weekday: 'short', day: '2-digit', month: 'short',
+    ...(withYear ? { year: 'numeric' } : {}),
+  })
 
 export function LeaveList({ title, subtitle, statuses }: Props) {
   const [rows, setRows] = useState<LeaveRow[]>([])
@@ -48,7 +70,6 @@ export function LeaveList({ title, subtitle, statuses }: Props) {
       .then((results) => {
         if (cancelled) return
         const all = results.flatMap((r: { requests?: LeaveRow[] }) => r.requests ?? [])
-        // Dedupe by id, sort newest first
         const seen = new Set<string>()
         const merged: LeaveRow[] = []
         for (const r of all) {
@@ -63,12 +84,26 @@ export function LeaveList({ title, subtitle, statuses }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statuses.join(',')])
 
+  const needsReason = rows.filter((r) => r.reason?.includes(UNCONFIRMED)).length
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">{title}</h1>
-        <p className="text-sm text-slate-500 mt-0.5">{subtitle}</p>
+        <p className="text-sm text-slate-500 mt-0.5">
+          {subtitle}
+          {rows.length > 0 && <> · {rows.length} record{rows.length === 1 ? '' : 's'}</>}
+        </p>
       </div>
+
+      {needsReason > 0 && (
+        <p className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+          {needsReason} record{needsReason === 1 ? '' : 's'} still need a reason and leave type
+          confirming — they were reconstructed from attendance.
+        </p>
+      )}
+
       <Card>
         <CardContent className="p-0">
           {loading && <p className="text-center py-10 text-slate-400 text-sm">Loading…</p>}
@@ -77,43 +112,87 @@ export function LeaveList({ title, subtitle, statuses }: Props) {
             <p className="text-center py-10 text-slate-400 text-sm">No requests in this view.</p>
           )}
           {!loading && !error && rows.length > 0 && (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Employee</th>
-                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Type</th>
-                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Dates</th>
-                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Days</th>
-                  <th className="text-left px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/50">
-                    <td className="px-4 py-2.5">
-                      <Link href={`/dashboard/leave/${r.id}`} className="font-medium text-slate-900 hover:underline">
-                        {r.employee?.fullName ?? '—'}
-                      </Link>
-                      <p className="text-xs text-slate-500">{r.employee?.designation ?? ''}</p>
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-700">{r.leaveType}</td>
-                    <td className="px-4 py-2.5 text-slate-700">
-                      {new Date(r.fromDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })} →{' '}
-                      {new Date(r.toDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-700">{formatDays(r.days)}</td>
-                    <td className="px-4 py-2.5">
-                      <Badge variant={LEAVE_STATUS_TONE[r.status] ?? 'secondary'}>
-                        {r.statusLabel ?? LEAVE_STATUS_LABELS[r.status] ?? r.status}
-                      </Badge>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <Th>Employee &amp; reason</Th>
+                    <Th>Type</Th>
+                    <Th>Dates</Th>
+                    <Th right>Days</Th>
+                    <Th>Status</Th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {rows.map((r) => {
+                    const single = r.fromDate.slice(0, 10) === r.toDate.slice(0, 10)
+                    const unconfirmed = r.reason?.includes(UNCONFIRMED)
+                    return (
+                      <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60 align-top">
+                        <td className="px-4 py-3 max-w-md">
+                          <Link
+                            href={`/dashboard/leave/${r.id}`}
+                            className="font-medium text-slate-900 hover:underline"
+                          >
+                            {r.employee?.fullName ?? '—'}
+                          </Link>
+                          <p className="text-xs text-slate-500">{r.employee?.designation ?? ''}</p>
+                          {r.reason && (
+                            <p className={`text-xs mt-1 ${unconfirmed ? 'text-amber-700 italic' : 'text-slate-600'}`}>
+                              {r.reason}
+                            </p>
+                          )}
+                          {r.attachmentName && (
+                            <Link
+                              href={`/dashboard/leave/${r.id}`}
+                              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 mt-1"
+                            >
+                              <Paperclip className="w-3 h-3" />
+                              {r.attachmentName}
+                            </Link>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${TYPE_TONE[r.leaveType] ?? 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                            {r.leaveType}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                          {single ? (
+                            fmt(r.fromDate, true)
+                          ) : (
+                            <>
+                              {fmt(r.fromDate)}
+                              <span className="text-slate-400"> → </span>
+                              {fmt(r.toDate, true)}
+                            </>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-slate-700 text-right whitespace-nowrap">
+                          {formatDays(r.days)}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Badge variant={LEAVE_STATUS_TONE[r.status] ?? 'secondary'}>
+                            {r.statusLabel ?? LEAVE_STATUS_LABELS[r.status] ?? r.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+function Th({ children, right }: { children: React.ReactNode; right?: boolean }) {
+  return (
+    <th className={`px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold ${right ? 'text-right' : 'text-left'}`}>
+      {children}
+    </th>
   )
 }

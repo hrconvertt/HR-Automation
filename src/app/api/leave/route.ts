@@ -68,7 +68,14 @@ export async function GET(request: NextRequest) {
     where,
     orderBy: { createdAt: 'desc' },
     take: 50,
-    include: {
+    // Explicit select: `include` alone returned every scalar, and that includes
+    // the attachmentBytes BYTEA — every prescription and medical note was being
+    // serialised into the list payload just to render a table of dates.
+    select: {
+      id: true, employeeId: true, leaveType: true, fromDate: true, toDate: true,
+      days: true, firstDayHalf: true, lastDayHalf: true, reason: true,
+      status: true, createdAt: true, approvedAt: true, managerApprovedAt: true,
+      attachmentName: true, attachmentMime: true, attachmentUrl: true,
       employee: {
         select: {
           fullName: true,
