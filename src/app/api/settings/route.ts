@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json()
   const {
-    companyName, workingDays,
+    companyName, workingDays, workDayHours,
     // Payroll calculation settings
     standardHoursPerDay, overtimeMultiplier,
     lateThresholdHour, lateThresholdMinute,
@@ -62,6 +62,16 @@ export async function POST(request: NextRequest) {
       where: { key: 'workingDays' },
       update: { value: JSON.stringify(workingDays) },
       create: { key: 'workingDays', value: JSON.stringify(workingDays) },
+    })
+  }
+
+  // Per-day start/end/break. Stored beside `workingDays` rather than replacing
+  // it, so everything already reading that key keeps working.
+  if (workDayHours) {
+    await prisma.config.upsert({
+      where: { key: 'workDayHours' },
+      update: { value: JSON.stringify(workDayHours) },
+      create: { key: 'workDayHours', value: JSON.stringify(workDayHours) },
     })
   }
 
