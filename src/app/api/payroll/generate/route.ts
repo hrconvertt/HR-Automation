@@ -93,6 +93,10 @@ export async function POST(request: NextRequest) {
 
     const employees = await prisma.employee.findMany({
       where: {
+        // Nobody is paid for a month they had not yet joined. The exit side was
+        // always handled; the joining side was not, so someone who started in
+        // July was still issued a full June payslip at their monthly rate.
+        joiningDate: { lte: endOfMonth },
         OR: [
           { status: 'ACTIVE' },
           {
