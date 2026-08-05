@@ -19,7 +19,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
-  ArrowLeft, Loader2, Check, Printer, AlertTriangle, Save,
+  ArrowLeft, Loader2, Check, Printer, AlertTriangle, Save, Mail, Copy, X,
 } from 'lucide-react'
 import {
   DIMENSIONS, RATING_SCALE, ASSESSMENTS, INCREMENT_BRACKETS,
@@ -75,6 +75,8 @@ export function ProbationReviewForm({ id }: { id: string }) {
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [draft, setDraft] = useState<{ subject: string; text: string; recipient: string | null } | null>(null)
+  const [mailing, setMailing] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -109,6 +111,21 @@ export function ProbationReviewForm({ id }: { id: string }) {
     setReview(j.review)
     setSavedAt(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }))
     router.refresh()
+  }
+
+  async function generateEmail() {
+    setMailing(true)
+    setError(null)
+    // Save first — the letter is written from what is stored, not from what is
+    // on screen, so an unsaved rating would be quietly left out of it.
+    await save()
+    const r = await fetch(`/api/probation/${id}/review/email`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+    })
+    const j = await r.json().catch(() => ({}))
+    setMailing(false)
+    if (!r.ok) { setError(j.error ?? 'Could not build the letter.'); return }
+    setDraft({ subject: j.subject, text: j.text, recipient: j.recipient })
   }
 
   if (loading) return <p className="text-sm text-slate-400 py-10">Loading…</p>
@@ -155,6 +172,15 @@ export function ProbationReviewForm({ id }: { id: string }) {
               <Check className="w-3 h-3" /> Saved {savedAt}
             </span>
           )}
+          <button
+            onClick={generateEmail}
+            disabled={mailing || saving}
+            title="Build the confirmation and salary revision letter from this review"
+            className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-1.5 hover:bg-slate-50 disabled:opacity-50"
+          >
+            {mailing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mail className="w-3.5 h-3.5" />}
+            Generate email
+          </button>
           <button
             onClick={() => window.print()}
             className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-1.5 hover:bg-slate-50"
@@ -448,6 +474,77 @@ export function ProbationReviewForm({ id }: { id: string }) {
           </div>
         </Section>
       </div>
+
+      {draft && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-start justify-center p-6 overflow-y-auto print:hidden">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
+              <h3 className="text-sm font-semibold text-slate-900">Review outcome letter</h3>
+              <button onClick={() => setDraft(null)} className="text-slate-400 hover:text-slate-900">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-4 space-y-3">
+              <div>
+                <p className="text-[11px] text-slate-500 mb-1">To</p>
+                <p className="text-sm text-slate-900">
+                  {draft.recipient ?? <span className="text-amber-700">No email address on file</span>}
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-500 mb-1">Subject</p>
+                <input
+                  value={draft.subject}
+                  onChange={(e) => setDraft({ ...draft, subject: e.target.value })}
+                  className="w-full border border-slate-300 rounded-md px-2 py-1.5 text-sm"
+                />
+              </div>
+              <div>
+                <p className="text-[11px] text-slate-500 mb-1">Body</p>
+                <textarea
+                  value={draft.text}
+                  onChange={(e) => setDraft({ ...draft, text: e.target.value })}
+                  rows={16}
+                  className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm leading-relaxed"
+                />
+              </div>
+              <p className="text-[11px] text-slate-500">
+                Edit freely — what is in the box is what goes out. The figures come from the
+                review above, so the arithmetic in it can be checked against the form.
+              </p>
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => navigator.clipboard?.writeText(draft.text)}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-1.5 hover:bg-slate-50"
+                >
+                  <Copy className="w-3.5 h-3.5" /> Copy
+                </button>
+                <button
+                  onClick={async () => {
+                    setMailing(true)
+                    const r = await fetch(`/api/probation/${id}/review/email`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ send: true, subject: draft.subject, body: draft.text }),
+                    })
+                    const j = await r.json().catch(() => ({}))
+                    setMailing(false)
+                    if (!r.ok) { setError(j.error ?? 'Could not send.'); return }
+                    setDraft(null)
+                    setError(j.queued
+                      ? 'Queued only — no mail server is configured, so nothing was delivered.'
+                      : null)
+                  }}
+                  disabled={mailing || !draft.recipient}
+                  className="rounded-md bg-slate-900 text-white text-xs px-3 py-1.5 disabled:opacity-50"
+                >
+                  {mailing ? 'Sending…' : 'Send'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
