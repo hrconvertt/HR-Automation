@@ -20,7 +20,13 @@ interface PageProps { params: Promise<{ id: string }> }
 const PRINT_CSS = `
   @page { size: A4; margin: 14mm 14mm; }
   html, body { background: #fff; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #000; font-size: 11px; }
+  /* The issued PDF embeds Carlito, which is the metric clone of Calibri.
+     Ours was Helvetica/Arial — different letterforms and different advance
+     widths, so the same 11pt text set to a different length on every line. */
+  body {
+    font-family: Carlito, Calibri, 'Segoe UI', Candara, sans-serif;
+    color: #000; font-size: 11px;
+  }
   /* Nothing on a salary slip is a link or a highlight. */
   .slip, .slip * { color: #000 !important; }
   .slip a { text-decoration: none; }
