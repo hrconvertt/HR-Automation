@@ -211,7 +211,9 @@ function countDays(from, to) {
         }
         c.setUTCDate(c.getUTCDate() + 1)
       }
-    })
+      // The pooler is slow enough that the 5s default expires mid-write on a
+      // fifteen-day range.
+    }, { timeout: 120000, maxWait: 120000 })
   }
 
   if (skipped.length) {
