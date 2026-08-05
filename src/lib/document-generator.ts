@@ -94,8 +94,10 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
        sans-serif throughout, which is why a side-by-side never matched even
        when every word did. */
     font-family: 'Times New Roman', Times, serif;
-    color: #1a1a1a; margin: 0; padding: 24px; background: #f1f5f9; font-size: 12pt;
+    color: #000; margin: 0; padding: 24px; background: #f1f5f9; font-size: 12pt;
   }
+  /* Nothing in a letter is a link. Values were rendering tinted. */
+  .doc, .doc p, .doc li, .doc td, .doc span, .doc strong { color: #000; }
   .doc {
     width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; position: relative;
     padding: 46pt 60pt 60pt; box-shadow: 0 1px 4px rgba(0,0,0,.12);
@@ -155,9 +157,17 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
   .toolbar .hint { opacity: .75; margin-left: auto; }
   [contenteditable="true"]:focus { outline: 2px solid #0857E5; outline-offset: 4px; }
   body.editing .doc { cursor: text; }
+  @page { size: A4; margin: 0; }
   @media print {
     body { background: #fff; padding: 0; }
-    .doc { width: auto; min-height: auto; box-shadow: none; margin: 0; }
+    /* The closing bar is anchored to the bottom of .doc. Collapsing .doc to its
+       content height for print left it wherever the text happened to end —
+       floating in the middle of the sheet with white space beneath it. A full
+       page keeps it on the bottom edge where it belongs. */
+    .doc {
+      width: 210mm; height: 297mm; min-height: 297mm;
+      box-shadow: none; margin: 0;
+    }
     .toolbar { display: none !important; }
   }
 </style>

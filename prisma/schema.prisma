@@ -2515,3 +2515,85 @@ model ProbationReview {
   @@index([employeeId])
   @@map("probation_reviews")
 }
+
+/// An increment cycle — the half-yearly compensation review for confirmed staff.
+///
+/// Convertt's policy is 10–15% at the end of probation and again after the
+/// following six months. Probation already has its review; this is the second
+/// half of the same policy, and it had nowhere to live, so increments were
+/// argued one email at a time with no record of what was rated or why.
+///
+/// Separate from Performance for now. It merges in once it is doing the job.
+model IncrementCycle {
+  id            String   @id @default(cuid())
+  name          String   // "H1 2026", "Jan–Jun 2026"
+  periodStart   DateTime // the window being reviewed
+  periodEnd     DateTime
+  effectiveDate DateTime // when approved revisions take effect
+  // DRAFT    — being set up, nobody notified
+  // OPEN     — managers are filling in reviews
+  // CLOSED   — decided; revisions applied
+  status        String   @default("DRAFT")
+  notes         String?
+  createdById   String?
+  closedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  reviews       IncrementReview[]
+
+  @@map("increment_cycles")
+}
+
+/// One employee's review inside a cycle.
+///
+/// Deliberately the same five dimensions and the same 1–4 scale as the
+/// probationary review, so somebody's second review can be read against their
+/// first without translating between two vocabularies.
+model IncrementReview {
+  id           String   @id @default(cuid())
+  cycleId      String
+  cycle        IncrementCycle @relation(fields: [cycleId], references: [id], onDelete: Cascade)
+  employeeId   String
+  reviewerId   String?  // Employee id of the manager who filled it in
+
+  ratingQuality        Int?
+  notesQuality         String?
+  ratingPunctuality    Int?
+  notesPunctuality     String?
+  ratingOwnership      Int?
+  notesOwnership       String?
+  ratingCommunication  Int?
+  notesCommunication   String?
+  ratingAdaptability   Int?
+  notesAdaptability    String?
+
+  overallAssessment    String?  // UNSATISFACTORY | SATISFACTORY | EXCEEDS | EXCEPTIONAL
+  managerRemarks       String?
+
+  // Captured at review time so the record still reads correctly after the raise
+  // it argues for has been applied.
+  currentSalary        Float?
+  recommendedPct       Float?
+  incrementAmount      Float?
+  proposedSalary       Float?
+  effectiveFrom        DateTime?
+
+  // APPROVE — apply the revision | HOLD — no increase this cycle
+  decision             String?
+  holdReason           String?
+
+  managerSubmittedAt   DateTime?
+  hrApprovedAt         DateTime?
+  hrApprovedById       String?
+  letterSentAt         DateTime?
+  appliedAt            DateTime? // when the salary row was actually written
+
+  status       String   @default("DRAFT") // DRAFT | SUBMITTED | APPROVED | APPLIED
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([cycleId, employeeId])
+  @@index([employeeId])
+  @@map("increment_reviews")
+}
