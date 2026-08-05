@@ -472,7 +472,10 @@ function GridTable({ data, today, canEdit, density, onNameClick, onRowClick, onC
   return (
     <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
       <div className="overflow-x-auto overflow-y-auto max-h-[70vh]">
-        <table className="text-xs border-collapse">
+        {/* w-full so the month spreads across the window. The table sized
+            itself to its content, which left a wide screen with the grid
+            crammed left and a third of the window empty beside it. */}
+        <table className="w-full text-xs border-collapse">
           <thead>
             <tr>
               <th className="sticky left-0 top-0 z-40 bg-slate-50 border-b border-r border-slate-200 px-3 py-2 text-left font-semibold text-slate-700 min-w-[220px]">
@@ -481,7 +484,7 @@ function GridTable({ data, today, canEdit, density, onNameClick, onRowClick, onC
               {days.map((d) => (
                 <th
                   key={d.day}
-                  className={`sticky top-0 z-20 border-b border-slate-200 px-1 py-1 text-center font-medium ${
+                  className={`sticky top-0 z-20 border-b border-slate-200 px-1 py-1 text-center font-medium min-w-[30px] ${
                     d.isWeekend ? 'bg-slate-100 text-slate-300' : 'bg-slate-50 text-slate-600'
                   } ${d.isToday ? 'bg-slate-200 text-slate-900 ring-1 ring-inset ring-slate-300' : ''}`}
                 >
