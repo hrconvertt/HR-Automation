@@ -183,6 +183,31 @@ export default async function PrintPayslipPage({ params }: PageProps) {
     .filter(Boolean).join(' / ') || '—'
   const location = humanizeWorkLocation(payslip.employee.workLocation)
 
+  // Every row of the pay/deduction grid, paired. Built here rather than in the
+  // markup because the two columns have different lengths and the pairing is
+  // what the issued slip's alignment depends on: blanks on the pay side while
+  // deductions continue, blanks on the deduction side while allowances do.
+  const money = (n: number) => (n ? fmtPKR(n) : '0')
+  const dash = (n: number) => (n ? fmtPKR(n) : '-')
+  const payDeductionRows: {
+    payLabel: string; payValue: string; dedLabel: string; dedValue: string; bold?: boolean
+  }[] = [
+    { payLabel: 'Basic Salary', payValue: money(pay.basic), dedLabel: 'Income tax', dedValue: dash(ded.incomeTax) },
+    { payLabel: 'House Rent', payValue: money(pay.houseRent), dedLabel: 'EOBI', dedValue: dash(ded.eobi) },
+    { payLabel: 'Utilities', payValue: money(pay.utilities), dedLabel: 'Health care', dedValue: dash(ded.healthcare) },
+    { payLabel: '', payValue: '', dedLabel: 'Deduction (Loan / Monthly Vehicle)', dedValue: dash(ded.loanAndVehicle) },
+    { payLabel: '', payValue: '', dedLabel: 'Advance Deduction', dedValue: dash(ded.advance) },
+    { payLabel: '', payValue: '', dedLabel: 'Abhi Deduction', dedValue: '-' },
+    { payLabel: 'Gross Salary', payValue: money(grossCore), dedLabel: 'Other Deductions', dedValue: dash(ded.other), bold: true },
+    { payLabel: 'Food Allowance', payValue: money(pay.food), dedLabel: '', dedValue: '' },
+    { payLabel: 'Fuel Allowance', payValue: money(pay.fuel), dedLabel: '', dedValue: '' },
+    { payLabel: 'Over Time/Bonus', payValue: money(pay.overtimeBonus), dedLabel: '', dedValue: '' },
+    { payLabel: 'Arrears', payValue: money(pay.arrears), dedLabel: '', dedValue: '' },
+    { payLabel: 'Other Allowances', payValue: money(pay.otherAllowance), dedLabel: '', dedValue: '' },
+    { payLabel: 'Monthly Allowance', payValue: money(pay.medicalAllowance + pay.monthlyAllowance), dedLabel: '', dedValue: '' },
+    { payLabel: 'Total Payments:', payValue: fmtPKR(totalPayments), dedLabel: 'Total Deduction:', dedValue: fmtPKR(totalDeductions), bold: true },
+  ]
+
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: PRINT_CSS }} />
@@ -301,78 +326,52 @@ export default async function PrintPayslipPage({ params }: PageProps) {
           </tbody>
         </table>
 
-        {/* ─── Pay & Allowances + Deductions — side-by-side ──────── */}
-        <table style={{ marginBottom: 14, borderCollapse: 'collapse' }}>
-          <tbody>
-            <tr>
-              <td style={{ verticalAlign: 'top', width: '50%', paddingRight: 6 }}>
-                <table style={{ border: '1px solid #d1d5db', fontSize: 11 }}>
-                  <thead>
-                    <tr style={{ background: '#f3f4f6' }}>
-                      <th style={hdrCell}>Pay &amp; Allowances</th>
-                      <th style={{ ...hdrCell, textAlign: 'right' }}>Rs.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <PayLine label="Basic Salary" value={pay.basic} />
-                    <PayLine zero="0" label="House Rent" value={pay.houseRent} />
-                    <PayLine label="Utilities" value={pay.utilities} />
-                    <tr>
-                      <td style={{ ...lblCell, fontWeight: 700 }}>Gross Salary</td>
-                      <td style={{ ...numCell, fontWeight: 700 }}>{fmtPKR(grossCore)}</td>
-                    </tr>
-                    <PayLine zero="0" label="Food Allowance" value={pay.food} />
-                    <PayLine zero="0" label="Fuel Allowance" value={pay.fuel} />
-                    <PayLine zero="0" label="Over Time/Bonus" value={pay.overtimeBonus} />
-                    <PayLine zero="0" label="Arrears" value={pay.arrears} />
-                    <PayLine zero="0" label="Other Allowances" value={pay.otherAllowance} />
-                    <PayLine zero="0" label="Monthly Allowance" value={pay.medicalAllowance + pay.monthlyAllowance} />
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ background: '#f9fafb', borderTop: '2px solid #111827' }}>
-                      <td style={{ ...lblCell, fontWeight: 700 }}>Total Payments:</td>
-                      <td style={{ ...numCell, fontWeight: 700 }}>{fmtPKR(totalPayments)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </td>
-              <td style={{ verticalAlign: 'top', width: '50%', paddingLeft: 6 }}>
-                <table style={{ border: '1px solid #d1d5db', fontSize: 11 }}>
-                  <thead>
-                    <tr style={{ background: '#f3f4f6' }}>
-                      <th style={hdrCell}>Deductions</th>
-                      <th style={{ ...hdrCell, textAlign: 'right' }}>Rs.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <PayLine label="Income tax" value={ded.incomeTax} />
-                    <PayLine label="EOBI" value={ded.eobi} />
-                    <PayLine label="Health care" value={ded.healthcare} />
-                    <PayLine label="Deduction (Loan / Monthly Vehicle)" value={ded.loanAndVehicle} />
-                    <PayLine label="Advance Deduction" value={ded.advance} />
-                    <PayLine label="Abhi Deduction" value={0} />
-                    <PayLine label="Other Deductions" value={ded.other} />
-                  </tbody>
-                  <tfoot>
-                    <tr style={{ background: '#f9fafb', borderTop: '2px solid #111827' }}>
-                      <td style={{ ...lblCell, fontWeight: 700 }}>Total Deduction:</td>
-                      <td style={{ ...numCell, fontWeight: 700 }}>{fmtPKR(totalDeductions)}</td>
-                    </tr>
-                  </tfoot>
-                </table>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        {/* ─── Pay & Allowances and Deductions ────────────────────
+            One table, not two side by side. The issued slip rules a single
+            grid across all four columns, so the row lines run unbroken from
+            Basic Salary through to Other Deductions. Two tables could never
+            line up: the deductions column has three more entries than the pay
+            column has at that point, so the halves drifted apart row by row
+            and no amount of padding fixed it.
 
-        {/* ─── Net Pay ───────────────────────────────────────────── */}
+            The blank cells are the original's own. Where one side runs out of
+            entries the cell is empty rather than the row being closed, which
+            is what keeps Gross Salary level with Other Deductions and Total
+            Payments level with Total Deduction. */}
         <table style={{
-          marginBottom: 14, border: '1px solid #d1d5db', fontSize: 11, width: '50%',
+          marginBottom: 14, border: '1px solid #d1d5db', fontSize: 11,
+          width: '100%', borderCollapse: 'collapse',
         }}>
+          <thead>
+            <tr style={{ background: '#f3f4f6' }}>
+              <th style={hdrCell}>Pay &amp; Allowances</th>
+              <th style={{ ...hdrCell, textAlign: 'right' }}>Rs.</th>
+              <th style={hdrCell}>Deductions</th>
+              <th style={{ ...hdrCell, textAlign: 'right' }}>Rs.</th>
+            </tr>
+          </thead>
           <tbody>
+            {payDeductionRows.map((r, i) => (
+              <tr key={i}>
+                <td style={{ ...lblCell, fontWeight: r.bold ? 700 : 400, width: '28%' }}>
+                  {r.payLabel}
+                </td>
+                <td style={{ ...numCell, fontWeight: r.bold ? 700 : 400, width: '22%' }}>
+                  {r.payValue}
+                </td>
+                <td style={{ ...lblCell, fontWeight: r.bold ? 700 : 400, width: '28%' }}>
+                  {r.dedLabel}
+                </td>
+                <td style={{ ...numCell, fontWeight: r.bold ? 700 : 400, width: '22%' }}>
+                  {r.dedValue}
+                </td>
+              </tr>
+            ))}
             <tr>
               <td style={{ ...lblCell, fontWeight: 700 }}>Net Pay:</td>
               <td style={{ ...numCell, fontWeight: 700 }}>{fmtPKR(netPay)}</td>
+              <td style={lblCell} />
+              <td style={numCell} />
             </tr>
           </tbody>
         </table>
@@ -412,13 +411,3 @@ function EmpRow({ left, right }: { left: [string, string]; right: [string, strin
   )
 }
 
-function PayLine({ label, value, zero = '-' }: {
-  label: string; value: number; zero?: string
-}) {
-  return (
-    <tr>
-      <td style={lblCell}>{label}</td>
-      <td style={numCell}>{value ? fmtPKR(value) : zero}</td>
-    </tr>
-  )
-}
