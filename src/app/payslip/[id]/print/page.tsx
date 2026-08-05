@@ -193,26 +193,26 @@ export default async function PrintPayslipPage({ params }: PageProps) {
     '', '', '', '', '', '',
     'Gross Salary', 'Food Allowance', 'Fuel Allowance',
     '', 'Over Time/Bonus', 'Arrears', 'Other Allowances',
-    '', '', 'Monthly Allowance',
+    '', '', 'Monthly Allowance', '', '',
   ]
   const payValues = [
     zero(pay.basic), zero(pay.houseRent), zero(pay.utilities),
     '', '', '', '', '', '',
     fmtPKR(grossCore), zero(pay.food), zero(pay.fuel),
     '', zero(pay.overtimeBonus), zero(pay.arrears), zero(pay.otherAllowance),
-    '', '', zero(pay.medicalAllowance + pay.monthlyAllowance),
+    '', '', zero(pay.medicalAllowance + pay.monthlyAllowance), '', '',
   ]
   const dedLabels = [
     'Income tax', 'EOBI', 'Health care',
     'Deduction (Loan /', 'Monthly Vehicle)', 'Advance Deduction',
     '', '', '',
-    'Other Deductions',
+    'Other Deductions', '', '', '', '', '', '', '', '', '', '', '',
   ]
   const dedValues = [
     dashed(ded.incomeTax), dashed(ded.eobi), dashed(ded.healthcare),
     '', dashed(ded.loanAndVehicle), dashed(ded.advance),
     '', '-', '',
-    dashed(ded.other),
+    dashed(ded.other), '', '', '', '', '', '', '', '', '', '', '',
   ]
 
   return (
@@ -282,36 +282,39 @@ export default async function PrintPayslipPage({ params }: PageProps) {
           </div>
         </div>
 
-        {/* Column widths measured from the PDF: the table spans the 467pt
-            between the margins as 111 / 157 / 112 / 87. Body is 11pt on a 14pt
-            line — it had been 9pt, which is why nothing else could be made to
-            line up. */}
+        {/* Every rule below is drawn where the PDF draws one and nowhere
+            else. The employee block and the leave rows have no vertical
+            dividers at all — only the pay body and the totals do — and the
+            Net Pay row has none after the second column. It was never a full
+            grid, which is why a full grid never looked like it.
+
+            Columns are 119 / 154 / 108 / 98 of the 479pt width. Body 11pt on
+            a 14pt line. */}
         <table style={{
           width: '100%', borderCollapse: 'collapse', fontSize: 11,
           lineHeight: '14pt', border: '1px solid #000', color: '#000',
+          tableLayout: 'fixed',
         }}>
           <colgroup>
-            <col style={{ width: '23.8%' }} />
-            <col style={{ width: '33.6%' }} />
-            <col style={{ width: '24.0%' }} />
-            <col style={{ width: '18.6%' }} />
+            <col style={{ width: '24.8%' }} />
+            <col style={{ width: '32.2%' }} />
+            <col style={{ width: '22.5%' }} />
+            <col style={{ width: '20.5%' }} />
           </colgroup>
           <tbody>
             <tr>
               <td colSpan={4} style={{
-                ...cell, background: '#dce6f1', textAlign: 'center',
-                fontWeight: 700, fontSize: 12,
+                ...under, background: '#bdd7ee', textAlign: 'center',
+                fontWeight: 700, fontSize: 12, lineHeight: '21pt', height: '21pt',
                 WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
               }}>
                 Salary Slip
               </td>
             </tr>
 
-            {/* Seven lines each side, with the blanks where the PDF has them:
-                the left column skips lines two and three while Designation
-                wraps on the right, and the right skips line four. */}
+            {/* Seven lines a side, no divider between them. */}
             <tr>
-              <td colSpan={2} style={cell}>
+              <td colSpan={2} style={under}>
                 <L k="Employee Number" v={payslip.employee.employeeCode} />
                 <Blank /><Blank />
                 <L k="DOJ" v={fmtDDMMYYYY(payslip.employee.joiningDate)} bold />
@@ -319,7 +322,7 @@ export default async function PrintPayslipPage({ params }: PageProps) {
                 <L k="Account Number" v={accountNumber} />
                 <L k="CNIC" v={payslip.employee.cnic ?? '—'} />
               </td>
-              <td colSpan={2} style={cell}>
+              <td colSpan={2} style={under}>
                 <L k="Employee Name" v={payslip.employee.fullName} />
                 <L k="Designation" v={payslip.employee.designation ?? '—'} />
                 <Blank />
@@ -329,70 +332,65 @@ export default async function PrintPayslipPage({ params }: PageProps) {
               </td>
             </tr>
 
-            {/* Leave — same four columns, figures centred. */}
+            {/* Leave — four lines, still no vertical rules. */}
             <tr>
-              <td style={{ ...cell, fontWeight: 700 }}>Leave Details</td>
-              <td style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>Entitled</td>
-              <td style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>Availed</td>
-              <td style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>Remaining</td>
-            </tr>
-            <tr>
-              <td style={{ ...cell, fontWeight: 700 }}>
-                {leaveRows.map((r) => <div key={r.label}>{r.label}</div>)}
+              <td style={{ ...under, fontWeight: 700 }}>
+                <div>Leave Details</div>
+                {leaveRows.map((r) => <div key={r.label} style={{ fontWeight: 700 }}>{r.label}</div>)}
               </td>
-              <td style={{ ...cell, textAlign: 'center' }}>
+              <td style={{ ...under, textAlign: 'center' }}>
+                <div style={{ fontWeight: 700 }}>Entitled</div>
                 {leaveRows.map((r) => <div key={r.label}>{r.bal.allocated || '-'}</div>)}
               </td>
-              <td style={{ ...cell, textAlign: 'center' }}>
+              <td style={{ ...under, textAlign: 'center' }}>
+                <div style={{ fontWeight: 700 }}>Availed</div>
                 {leaveRows.map((r) => <div key={r.label}>{r.availed || '-'}</div>)}
               </td>
-              <td style={{ ...cell, textAlign: 'center' }}>
+              <td style={{ ...under, textAlign: 'center' }}>
+                <div style={{ fontWeight: 700 }}>Remaining</div>
                 {leaveRows.map((r) => <div key={r.label}>{r.bal.remaining || '-'}</div>)}
               </td>
             </tr>
 
+            {/* From here down the dividers appear. */}
             <tr>
-              <td style={{ ...cell, fontWeight: 700 }}>Pay &amp; Allowances</td>
-              <td style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>Rs.</td>
-              <td style={{ ...cell, fontWeight: 700 }}>Deductions</td>
-              <td style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>Rs.</td>
-            </tr>
-
-            {/* One cell per column. The blanks are the issued slip's own and
-                are what holds Gross Salary level with Other Deductions. */}
-            <tr>
-              <td style={cell}>
+              <td style={base}>
+                <div style={{ fontWeight: 700 }}>Pay &amp; Allowances</div>
                 {payLabels.map((l, i) => (
                   <div key={i} style={{ fontWeight: l === 'Gross Salary' ? 700 : 400 }}>
                     {l || <>&nbsp;</>}
                   </div>
                 ))}
               </td>
-              <td style={{ ...cell, textAlign: 'center' }}>
+              <td style={{ ...ruled, textAlign: 'center' }}>
+                <div style={{ fontWeight: 700 }}>Rs.</div>
                 {payValues.map((v, i) => (
                   <div key={i} style={{ fontWeight: payLabels[i] === 'Gross Salary' ? 700 : 400 }}>
                     {v || <>&nbsp;</>}
                   </div>
                 ))}
               </td>
-              <td style={cell}>
+              <td style={ruled}>
+                <div style={{ fontWeight: 700 }}>Deductions</div>
                 {dedLabels.map((l, i) => <div key={i}>{l || <>&nbsp;</>}</div>)}
               </td>
-              <td style={{ ...cell, textAlign: 'center' }}>
+              <td style={{ ...ruled, textAlign: 'center' }}>
+                <div style={{ fontWeight: 700 }}>Rs.</div>
                 {dedValues.map((v, i) => <div key={i}>{v || <>&nbsp;</>}</div>)}
               </td>
             </tr>
 
             <tr>
-              <td style={{ ...cell, fontWeight: 700 }}>Total Payments:</td>
-              <td style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>{fmtPKR(totalPayments)}</td>
-              <td style={{ ...cell, fontWeight: 700 }}>Total Deduction:</td>
-              <td style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>{fmtPKR(totalDeductions)}</td>
+              <td style={{ ...base, borderTop: '1px solid #000', fontWeight: 700 }}>Total Payments:</td>
+              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{fmtPKR(totalPayments)}</td>
+              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700 }}>Total Deduction:</td>
+              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{fmtPKR(totalDeductions)}</td>
             </tr>
+            {/* No divider after the second column on this row. */}
             <tr>
-              <td style={{ ...cell, fontWeight: 700 }}>Net Pay:</td>
-              <td style={{ ...cell, fontWeight: 700, textAlign: 'center' }}>{fmtPKR(netPay)}</td>
-              <td colSpan={2} style={cell} />
+              <td style={{ ...base, borderTop: '1px solid #000', fontWeight: 700 }}>Net Pay:</td>
+              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{fmtPKR(netPay)}</td>
+              <td colSpan={2} style={{ ...ruled, borderTop: '1px solid #000' }} />
             </tr>
           </tbody>
         </table>
@@ -409,10 +407,19 @@ export default async function PrintPayslipPage({ params }: PageProps) {
   )
 }
 
-const cell: React.CSSProperties = {
-  border: '1px solid #000', padding: '1pt 5pt', fontSize: 11,
-  lineHeight: '14pt', verticalAlign: 'top', color: '#000',
+const base: React.CSSProperties = {
+  padding: '0 5pt', fontSize: 11, lineHeight: '14pt',
+  verticalAlign: 'top', color: '#000', border: 'none',
 }
+
+/** A cell with no rules of its own — the employee block and the leave rows. */
+const cell: React.CSSProperties = base
+
+/** Columns two, three and four in the pay body carry a rule on their left. */
+const ruled: React.CSSProperties = { ...base, borderLeft: '1px solid #000' }
+
+/** Rows that are closed off underneath: title, employee block, leave. */
+const under: React.CSSProperties = { ...base, borderBottom: '1px solid #000' }
 
 /** A line the issued slip leaves empty, holding the 14pt rhythm. */
 function Blank() {
