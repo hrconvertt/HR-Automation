@@ -16,6 +16,7 @@ import { ArrowLeft } from 'lucide-react'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { SlipIssueBoard, type SlipRow } from './_components/slip-issue-board'
+import { MonthYearPicker } from '@/components/payroll/month-year-picker'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -91,9 +92,11 @@ export default async function SalarySlipsPage({ searchParams }: Props) {
   return (
     <div className="space-y-4">
       <Back />
-      <RunPicker
-        runs={runs.map((r) => ({ id: r.id, month: r.month, year: r.year }))}
-        currentId={run.id}
+      <MonthYearPicker
+        month={run.month}
+        year={run.year}
+        years={[...new Set(runs.map((r) => r.year))].sort((a, b) => b - a)}
+        months={runs.filter((r) => r.year === run.year).map((r) => r.month).sort((a, b) => a - b)}
       />
       <SlipIssueBoard
         runId={run.id}
@@ -110,45 +113,6 @@ export default async function SalarySlipsPage({ searchParams }: Props) {
  * Only months with a run are offered — a slip cannot be issued for a month
  * payroll never processed, and showing all twelve would invite trying.
  */
-function RunPicker({ runs, currentId }: {
-  runs: { id: string; month: number; year: number }[]
-  currentId: string
-}) {
-  const current = runs.find((r) => r.id === currentId)
-  const years = [...new Set(runs.map((r) => r.year))].sort((a, b) => b - a)
-  const monthsInYear = runs
-    .filter((r) => r.year === current?.year)
-    .sort((a, b) => a.month - b.month)
-
-  return (
-    <form className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
-      <span className="text-xs uppercase tracking-wide text-slate-500 mr-1">Salary month</span>
-      <select
-        name="month"
-        defaultValue={String(current?.month ?? '')}
-        className="border border-slate-300 rounded-md px-2 py-1.5 text-sm bg-white"
-      >
-        {monthsInYear.map((r) => (
-          <option key={r.id} value={r.month}>{MONTHS[r.month - 1]}</option>
-        ))}
-      </select>
-      <select
-        name="year"
-        defaultValue={String(current?.year ?? '')}
-        className="border border-slate-300 rounded-md px-2 py-1.5 text-sm bg-white"
-      >
-        {years.map((y) => <option key={y} value={y}>{y}</option>)}
-      </select>
-      <button
-        type="submit"
-        className="rounded-md bg-slate-900 text-white text-xs px-3 py-1.5"
-      >
-        Show
-      </button>
-    </form>
-  )
-}
-
 function Back() {
   return (
     <Link

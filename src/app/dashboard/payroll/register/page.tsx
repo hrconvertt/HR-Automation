@@ -9,6 +9,7 @@
  *
  * ?month=&year= select the period (defaults to current month).
  */
+import { MonthYearPicker } from '@/components/payroll/month-year-picker'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
@@ -114,5 +115,11 @@ export default async function PayrollRegisterPage({ searchParams }: PageProps) {
     })),
   }
 
-  return <RegisterClient data={data} />
+  return (
+    <div className="space-y-4">
+      {/* Same picker as the slips screen — pick a month and it shows it. */}
+      <MonthYearPicker month={month} year={year} />
+      <RegisterClient data={data} />
+    </div>
+  )
 }

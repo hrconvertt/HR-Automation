@@ -548,14 +548,8 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
               </Button>
             )}
 
-            {/* F3 — Register / GL page */}
-            <a
-              href={`/dashboard/payroll/register?month=${month}&year=${year}`}
-              className="inline-flex items-center h-10 px-4 rounded-xl border border-slate-300 text-sm text-slate-700 hover:bg-slate-50"
-              title="Full-company payroll register + GL summary"
-            >
-              <BookOpen className="w-4 h-4 mr-1.5" /> Register / GL
-            </a>
+            {/* Register / GL is in the sidebar as Slip Register — a second
+                button to the same page here only made the action row longer. */}
 
             {/* Stage-specific actions */}
             {payrollRun && status === 'DRAFT' && isHR && (
