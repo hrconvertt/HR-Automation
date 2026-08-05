@@ -49,7 +49,6 @@ export function SlipIssueBoard({ runId, period, rows }: {
   const [busy, setBusy] = useState<string | null>(null)
   const [outcome, setOutcome] = useState<Outcome | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [selected, setSelected] = useState<Set<string>>(new Set())
 
   const noEmail = rows.filter((r) => !r.employee.email).length
   const alreadySent = rows.filter((r) => r.sentAt).length
@@ -71,13 +70,6 @@ export function SlipIssueBoard({ runId, period, rows }: {
     router.refresh()
   }
 
-  const toggle = (id: string) =>
-    setSelected((p) => {
-      const n = new Set(p)
-      if (n.has(id)) n.delete(id); else n.add(id)
-      return n
-    })
-
   return (
     <div className="space-y-4">
       <div className="bg-white border border-slate-200 rounded-xl p-4">
@@ -91,14 +83,14 @@ export function SlipIssueBoard({ runId, period, rows }: {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => send(selected.size ? [...selected] : null, ['app', 'email'], 'all')}
+              onClick={() => send(null, ['app', 'email'], 'all')}
               disabled={!!busy || rows.length === 0}
               className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 text-white text-xs px-3 py-2 disabled:opacity-50"
             >
               {busy === 'all'
                 ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
                 : <Send className="w-3.5 h-3.5" />}
-              {selected.size ? `Send ${selected.size} selected` : 'Send all'}
+              Send all
             </button>
           </div>
         </div>
@@ -146,15 +138,6 @@ export function SlipIssueBoard({ runId, period, rows }: {
         <table className="min-w-full text-[13px]">
           <thead className="bg-slate-50 text-slate-600">
             <tr>
-              <th className="w-10 px-3 py-2">
-                <input
-                  type="checkbox"
-                  aria-label="Select all"
-                  checked={selected.size === rows.length && rows.length > 0}
-                  onChange={(e) => setSelected(e.target.checked ? new Set(rows.map((r) => r.id)) : new Set())}
-                  className="w-3.5 h-3.5 accent-slate-900"
-                />
-              </th>
               <Th>Employee</Th>
               <Th right>Net pay</Th>
               <Th>Issued</Th>
@@ -163,18 +146,9 @@ export function SlipIssueBoard({ runId, period, rows }: {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={5} className="py-10 text-center text-slate-400">No payslips in this run.</td></tr>
+              <tr><td colSpan={4} className="py-10 text-center text-slate-400">No payslips in this run.</td></tr>
             ) : rows.map((r) => (
               <tr key={r.id} className="border-t border-slate-100 hover:bg-slate-50/60">
-                <td className="px-3 py-2.5">
-                  <input
-                    type="checkbox"
-                    aria-label={`Select ${r.employee.fullName}`}
-                    checked={selected.has(r.id)}
-                    onChange={() => toggle(r.id)}
-                    className="w-3.5 h-3.5 accent-slate-900"
-                  />
-                </td>
                 <td className="px-3 py-2.5">
                   <p className="font-medium text-slate-900">{r.employee.fullName}</p>
                   <p className="text-[11px] text-slate-500">

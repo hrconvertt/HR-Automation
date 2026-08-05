@@ -114,40 +114,38 @@ function RunPicker({ runs, currentId }: {
   runs: { id: string; month: number; year: number }[]
   currentId: string
 }) {
-  const years = [...new Set(runs.map((r) => r.year))].sort((a, b) => b - a)
   const current = runs.find((r) => r.id === currentId)
+  const years = [...new Set(runs.map((r) => r.year))].sort((a, b) => b - a)
+  const monthsInYear = runs
+    .filter((r) => r.year === current?.year)
+    .sort((a, b) => a.month - b.month)
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 flex-wrap">
-      <span className="text-xs uppercase tracking-wide text-slate-500">Salary month</span>
-      {years.map((y) => (
-        <div key={y} className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-semibold text-slate-700">{y}</span>
-          {runs
-            .filter((r) => r.year === y)
-            .sort((a, b) => a.month - b.month)
-            .map((r) => (
-              <Link
-                key={r.id}
-                href={`/dashboard/payroll/slips?runId=${r.id}`}
-                className={
-                  'rounded-md px-2 py-1 text-xs border transition-colors ' +
-                  (r.id === currentId
-                    ? 'bg-slate-900 text-white border-slate-900'
-                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')
-                }
-              >
-                {MONTHS[r.month - 1].slice(0, 3)}
-              </Link>
-            ))}
-        </div>
-      ))}
-      {current && (
-        <span className="text-[11px] text-slate-400 ml-auto">
-          Showing {MONTHS[current.month - 1]} {current.year}
-        </span>
-      )}
-    </div>
+    <form className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-2 flex-wrap">
+      <span className="text-xs uppercase tracking-wide text-slate-500 mr-1">Salary month</span>
+      <select
+        name="month"
+        defaultValue={String(current?.month ?? '')}
+        className="border border-slate-300 rounded-md px-2 py-1.5 text-sm bg-white"
+      >
+        {monthsInYear.map((r) => (
+          <option key={r.id} value={r.month}>{MONTHS[r.month - 1]}</option>
+        ))}
+      </select>
+      <select
+        name="year"
+        defaultValue={String(current?.year ?? '')}
+        className="border border-slate-300 rounded-md px-2 py-1.5 text-sm bg-white"
+      >
+        {years.map((y) => <option key={y} value={y}>{y}</option>)}
+      </select>
+      <button
+        type="submit"
+        className="rounded-md bg-slate-900 text-white text-xs px-3 py-1.5"
+      >
+        Show
+      </button>
+    </form>
   )
 }
 
