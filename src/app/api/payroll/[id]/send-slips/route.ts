@@ -80,7 +80,7 @@ export async function POST(
           type: 'PAYSLIP_READY',
           title: `Salary slip — ${period}`,
           message: `Your salary slip for ${period} is available. Net pay ${formatCurrency(s.netSalary)}.`,
-          link: `/dashboard/payroll/payslip/${s.id}`,
+          link: `/payslip/${s.id}/print`,
         },
       })
     }

@@ -105,7 +105,7 @@ export async function ManagerPayrollView({
                         <>
                           <Badge variant="success">Paid</Badge>
                           <Link
-                            href={`/dashboard/payroll/payslip/${myPayslip.id}`}
+                            href={`/payslip/${myPayslip.id}/print`}
                             className="text-xs px-3 py-1.5 rounded-md bg-slate-700 text-white hover:bg-slate-700"
                           >
                             View / Print PDF

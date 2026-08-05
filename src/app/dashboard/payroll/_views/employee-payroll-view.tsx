@@ -95,7 +95,7 @@ export async function EmployeePayrollView({ employeeId }: { employeeId: string }
                     <>
                       <Badge variant="success">Paid</Badge>
                       <Link
-                        href={`/dashboard/payroll/payslip/${latest.id}`}
+                        href={`/payslip/${latest.id}/print`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-slate-100 hover:bg-slate-200 text-sm font-medium text-slate-900"
                       >
                         <Download className="w-3.5 h-3.5" />
@@ -237,7 +237,7 @@ export async function EmployeePayrollView({ employeeId }: { employeeId: string }
                     </TableCell>
                     <TableCell>
                       <Link
-                        href={`/dashboard/payroll/payslip/${p.id}`}
+                        href={`/payslip/${p.id}/print`}
                         className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:text-slate-700 hover:bg-slate-50"
                         title="View / print payslip"
                       >

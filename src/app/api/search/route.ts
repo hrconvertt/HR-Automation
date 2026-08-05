@@ -102,7 +102,7 @@ export async function GET(request: NextRequest) {
         id: p.id,
         title: p.reference ?? `Payslip ${p.month}/${p.year}`,
         subtitle: p.employee.fullName,
-        href: `/dashboard/payroll/payslip/${p.id}`,
+        href: `/payslip/${p.id}/print`,
       })
     }
   } catch {}

@@ -170,7 +170,7 @@ export function SlipIssueBoard({ runId, period, rows }: {
                 <td className="px-3 py-2.5">
                   <div className="flex items-center justify-end gap-2">
                     <Link
-                      href={`/dashboard/payroll/payslip/${r.id}`}
+                      href={`/payslip/${r.id}/print`}
                       target="_blank"
                       className="inline-flex items-center gap-1 text-xs text-slate-700 hover:underline"
                       title="Preview the slip as the employee sees it"
