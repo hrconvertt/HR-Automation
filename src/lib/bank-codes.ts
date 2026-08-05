@@ -159,3 +159,30 @@ export function resolveBankCode(
 export function isFaysalIban(iban: string | null | undefined): boolean {
   return ibanPrefix(iban) === HOME_BANK_IBAN_PREFIX
 }
+
+/**
+ * The bank's name, worked out from the IBAN when nobody typed one in.
+ *
+ * Every account on file is an IBAN and the four letters after the check digits
+ * say which bank it is — FAYS is Faysal, MEZN is Meezan, UNIL is UBL. Leaving
+ * Bank/Branch blank on a salary slip when the answer is sitting in the account
+ * number two lines above it is a gap that never needed to exist.
+ *
+ * A name that was typed in wins, since it may carry the branch as well.
+ */
+export function bankNameFromIban(iban: string | null | undefined): string | null {
+  const code = bankCodeFromIban(iban)
+  if (!code) return null
+  return BANK_CODES.find((b) => b.code === code)?.name ?? null
+}
+
+/** Bank/Branch as the slip should print it: the stored name, else the IBAN's. */
+export function bankLabel(
+  bankName: string | null | undefined,
+  branch: string | null | undefined,
+  iban: string | null | undefined,
+): string {
+  const name = (bankName ?? '').trim() || bankNameFromIban(iban) || ''
+  const parts = [name, (branch ?? '').trim()].filter(Boolean)
+  return parts.length ? parts.join(' — ') : '—'
+}

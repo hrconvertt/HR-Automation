@@ -13,6 +13,7 @@
  *
  * Field mapping is documented in the AGENTS.md spec for F3.
  */
+import { bankLabel } from '@/lib/bank-codes'
 import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
@@ -188,8 +189,14 @@ export default async function PrintPayslipPage({ params }: PageProps) {
   const netPay = payslip.netSalary
 
   const accountNumber = payslip.employee.ibanAccount ?? payslip.employee.bankAccount ?? '—'
-  const bankBranch = [payslip.employee.bankName, payslip.employee.bankBranch]
-    .filter(Boolean).join(' / ') || '—'
+  // Falls back to the IBAN when no name was typed in: the four letters after
+  // the check digits say which bank it is, and that is the same number printed
+  // two lines above on the slip.
+  const bankBranch = bankLabel(
+    payslip.employee.bankName,
+    payslip.employee.bankBranch,
+    payslip.employee.ibanAccount ?? payslip.employee.bankAccount,
+  )
   const location = humanizeWorkLocation(payslip.employee.workLocation)
 
   // Matched line for line to the y positions in the issued PDF. The pay
