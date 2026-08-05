@@ -134,7 +134,14 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const {
       fullName, phone, cnic, dob, gender, address,
       temporaryAddress, workLocationAddress,
-      emergencyContact, emergencyPhone, designation,
+      emergencyContact, emergencyPhone, emergencyRelation, emergencyEmail,
+      // Fields the profile has always displayed but the form never offered, so
+      // they could only ever read as a dash.
+      maritalStatus, nationalityCountry, personalEmail, homePhone, officePhone,
+      fatherOrHusbandName, mothersMaidenName, placeOfBirth, cityOfBirth,
+      cnicIssuedOn, cnicExpiresOn, placeOfIssuance, cnicBirthDate,
+      ibanAccount, bankAccountName,
+      designation,
       departmentId, positionId, reportingManagerId,
       employeeType, status, workLocation, timings, workDays,
       confirmationDate, exitDate,

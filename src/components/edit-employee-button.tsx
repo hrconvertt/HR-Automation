@@ -27,6 +27,23 @@ interface EditEmployeeButtonProps {
     workLocationAddress: string | null
     emergencyContact: string | null
     emergencyPhone: string | null
+    // Everything below renders on the profile but had no field here, so it
+    // could only ever show a dash no matter who was looking.
+    emergencyRelation?: string | null
+    emergencyEmail?: string | null
+    maritalStatus?: string | null
+    nationalityCountry?: string | null
+    personalEmail?: string | null
+    homePhone?: string | null
+    officePhone?: string | null
+    fatherOrHusbandName?: string | null
+    mothersMaidenName?: string | null
+    placeOfBirth?: string | null
+    cityOfBirth?: string | null
+    placeOfIssuance?: string | null
+    cnicIssuedOn?: string | null
+    cnicExpiresOn?: string | null
+    cnicBirthDate?: string | null
     designation: string
     departmentId: string | null
     reportingManagerId: string | null
@@ -42,6 +59,8 @@ interface EditEmployeeButtonProps {
     bankCode?: string | null
     bankAccount?: string | null
     bankBranch?: string | null
+    ibanAccount?: string | null
+    bankAccountName?: string | null
     // Statutory / Tax IDs — HR + self only
     eobiNumber?: string | null
     ntn?: string | null
@@ -146,6 +165,34 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                     </SelectContent>
                   </Select>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Marital Status</label>
+                  <Select value={form.maritalStatus ?? ''} onValueChange={(v) => f('maritalStatus', v)}>
+                    <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Single">Single</SelectItem>
+                      <SelectItem value="Married">Married</SelectItem>
+                      <SelectItem value="Divorced">Divorced</SelectItem>
+                      <SelectItem value="Widowed">Widowed</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
+                  <Input value={form.nationalityCountry ?? ''} onChange={(e) => f('nationalityCountry', e.target.value)} placeholder="Pakistani" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Personal Email</label>
+                  <Input value={form.personalEmail ?? ''} onChange={(e) => f('personalEmail', e.target.value)} placeholder="Their own address, not the work one" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Home Phone</label>
+                  <Input value={form.homePhone ?? ''} onChange={(e) => f('homePhone', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Office Phone</label>
+                  <Input value={form.officePhone ?? ''} onChange={(e) => f('officePhone', e.target.value)} />
+                </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Permanent Address</label>
                   <Input value={form.address ?? ''} onChange={(e) => f('address', e.target.value)} placeholder="Home / family address" />
@@ -165,6 +212,49 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Phone</label>
                   <Input value={form.emergencyPhone ?? ''} onChange={(e) => f('emergencyPhone', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Relation</label>
+                  <Input value={form.emergencyRelation ?? ''} onChange={(e) => f('emergencyRelation', e.target.value)} placeholder="Father, spouse, sibling" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Emergency Email</label>
+                  <Input value={form.emergencyEmail ?? ''} onChange={(e) => f('emergencyEmail', e.target.value)} />
+                </div>
+                <div className="col-span-2 pt-2 border-t border-slate-100">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Identity &amp; CNIC</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Father / Husband Name</label>
+                  <Input value={form.fatherOrHusbandName ?? ''} onChange={(e) => f('fatherOrHusbandName', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Mother Maiden Name</label>
+                  <Input value={form.mothersMaidenName ?? ''} onChange={(e) => f('mothersMaidenName', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Place of Birth</label>
+                  <Input value={form.placeOfBirth ?? ''} onChange={(e) => f('placeOfBirth', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">City of Birth</label>
+                  <Input value={form.cityOfBirth ?? ''} onChange={(e) => f('cityOfBirth', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CNIC Issued On</label>
+                  <Input type="date" value={form.cnicIssuedOn ? form.cnicIssuedOn.split('T')[0] : ''} onChange={(e) => f('cnicIssuedOn', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CNIC Expires On</label>
+                  <Input type="date" value={form.cnicExpiresOn ? form.cnicExpiresOn.split('T')[0] : ''} onChange={(e) => f('cnicExpiresOn', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Place of Issuance</label>
+                  <Input value={form.placeOfIssuance ?? ''} onChange={(e) => f('placeOfIssuance', e.target.value)} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">CNIC Birth Date</label>
+                  <Input type="date" value={form.cnicBirthDate ? form.cnicBirthDate.split('T')[0] : ''} onChange={(e) => f('cnicBirthDate', e.target.value)} />
                 </div>
               </div>
             </div>
@@ -298,7 +388,15 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Account Number / IBAN</label>
-                  <Input value={form.bankAccount ?? ''} onChange={(e) => f('bankAccount', e.target.value)} placeholder="PK36SCBL0000001123456702" />
+                  <Input value={form.bankAccount ?? ''} onChange={(e) => f('bankAccount', e.target.value)} placeholder="Local account number, e.g. 3547475000011673" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">IBAN</label>
+                  <Input value={form.ibanAccount ?? ''} onChange={(e) => f('ibanAccount', e.target.value)} placeholder="PK36SCBL0000001123456702" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Account Title</label>
+                  <Input value={form.bankAccountName ?? ''} onChange={(e) => f('bankAccountName', e.target.value)} placeholder="Name as it appears on the account" />
                   <p className="text-[10px] text-gray-400 mt-1">Stored against this employee. Used only for payroll runs.</p>
                 </div>
               </div>

@@ -60,14 +60,30 @@ const REAL_CODE = 'CON-HR-032'
         data: { personalEmail: dup.email },
       })
     }
-    // The login moves before the employee goes, so it is never orphaned.
+    // Employee.userId is unique, so the second login cannot be repointed at the
+    // surviving employee — one person, one login. It goes, and the address it
+    // used survives as personalEmail above. Detached first so the delete cannot
+    // cascade into the employee we are keeping.
     if (dup.user) {
-      await tx.user.update({
-        where: { id: dup.user.id },
-        data: { employeeId: real.id },
-      })
+      await tx.employee.update({ where: { id: dup.id }, data: { userId: null } })
+      await tx.user.delete({ where: { id: dup.user.id } })
     }
+    // Everything the sign-up seeded alongside the record. The guard above has
+    // already established this employee holds no payslips, leave requests,
+    // documents or compensation history, so nothing here is history being lost.
     await tx.attendanceLog.deleteMany({ where: { employeeId: dup.id } })
+    await tx.leaveBalance.deleteMany({ where: { employeeId: dup.id } })
+    await tx.notification.deleteMany({ where: { employeeId: dup.id } })
+    // Onboarding is generated per employee on creation, so the duplicate got a
+    // full checklist for a person who onboarded months ago. Tasks first — they
+    // hang off the checklist.
+    const lists = await tx.onboardingChecklist.findMany({
+      where: { employeeId: dup.id }, select: { id: true },
+    })
+    for (const l of lists) {
+      await tx.onboardingTask.deleteMany({ where: { checklistId: l.id } })
+    }
+    await tx.onboardingChecklist.deleteMany({ where: { employeeId: dup.id } })
     await tx.employee.delete({ where: { id: dup.id } })
   })
 
