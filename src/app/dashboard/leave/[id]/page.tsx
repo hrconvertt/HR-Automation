@@ -16,9 +16,10 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeft, Paperclip } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { LEAVE_STATUS_LABELS, LEAVE_STATUS_TONE, formatDays } from '@/lib/leave-types'
 import { LeaveDetailActions } from './_actions'
+import { LeaveAttachment } from './_attachment'
 
 interface RouteProps {
   params: Promise<{ id: string }>
@@ -125,17 +126,14 @@ export default async function LeaveDetailPage({ params }: RouteProps) {
             </div>
           )}
 
-          {req.attachmentUrl && (
-            <div className="pt-3 border-t border-slate-100">
-              <p className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Attachment</p>
-              <a
-                href={`/api/leave/${req.id}/attachment`}
-                className="inline-flex items-center gap-1.5 mt-1 text-sm text-slate-900 hover:underline"
-              >
-                <Paperclip className="w-3.5 h-3.5" /> Download attachment
-              </a>
-            </div>
-          )}
+          {/* Shown whether or not anything is attached — evidence arrives after
+              the request far more often than with it. */}
+          <LeaveAttachment
+            id={req.id}
+            name={req.attachmentName}
+            canEdit={role === 'HR_ADMIN' || isMine}
+            canDelete={role === 'HR_ADMIN'}
+          />
 
           {req.status === 'REJECTED' && req.rejectedReason && (
             <div className="pt-3 border-t border-slate-100">
