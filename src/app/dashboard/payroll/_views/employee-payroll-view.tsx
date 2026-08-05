@@ -47,12 +47,59 @@ async function getEmployeePayrollData(employeeId: string) {
   return { latest, history, ytdGross, ytdNet, ytdTax, ytdEobi, currentYear }
 }
 
-export async function EmployeePayrollView({ employeeId }: { employeeId: string }) {
+export async function EmployeePayrollView({ employeeId, slipId }: {
+  employeeId: string
+  /** Set when arriving from the payslip-ready notification. */
+  slipId?: string
+}) {
   const { latest, history, ytdGross, ytdNet, ytdTax, ytdEobi, currentYear } =
     await getEmployeePayrollData(employeeId)
 
+  // The slip the notification was about, so the page can say what happened
+  // rather than dropping someone straight onto a document.
+  const announced = slipId
+    ? await prisma.payslip.findFirst({
+        where: { id: slipId, employeeId },
+        select: {
+          id: true, month: true, year: true, netSalary: true, sentAt: true,
+          employee: { select: { bankName: true, bankAccount: true, ibanAccount: true } },
+        },
+      })
+    : null
+  const acct = announced?.employee.ibanAccount ?? announced?.employee.bankAccount ?? null
+
   return (
     <div className="space-y-6">
+      {announced && (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <p className="text-xs uppercase tracking-wider text-emerald-800 font-semibold">
+            From People Operations
+          </p>
+          <p className="text-sm text-emerald-900 mt-1.5 leading-relaxed">
+            Your salary slip for <strong>{monthName(announced.month)} {announced.year}</strong> is
+            ready. Net pay <strong>{formatCurrency(announced.netSalary)}</strong>
+            {announced.employee.bankName ? <> to {announced.employee.bankName}</> : null}
+            {acct ? <> ending {acct.slice(-4)}</> : null}
+            {announced.sentAt ? <>, issued {new Date(announced.sentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</> : null}.
+          </p>
+          <div className="flex items-center gap-3 mt-3 flex-wrap">
+            <a
+              href={`/payslip/${announced.id}/print`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center rounded-md bg-emerald-700 text-white text-xs px-3 py-1.5"
+            >
+              View slip
+            </a>
+            <a
+              href="/dashboard/helpdesk"
+              className="text-xs text-emerald-800 hover:underline"
+            >
+              Something looks wrong?
+            </a>
+          </div>
+        </div>
+      )}
       {/* Banner */}
       <div className="rounded-2xl bg-gradient-to-br from-slate-900 via-slate-800 to-slate-700 p-6 text-white shadow-md">
         <h2 className="text-xl font-bold">My Pay</h2>

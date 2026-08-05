@@ -59,7 +59,8 @@ export async function POST(
     },
     select: {
       id: true, netSalary: true, sentAt: true,
-      employee: { select: { id: true, fullName: true, email: true, employeeCode: true } },
+      employee: { select: { id: true, fullName: true, email: true, employeeCode: true,
+        bankName: true, bankAccount: true, ibanAccount: true } },
     },
   })
   if (!slips.length) return NextResponse.json({ error: 'No payslips to send' }, { status: 400 })
@@ -73,14 +74,22 @@ export async function POST(
   for (const s of slips) {
     if (s.sentAt) resent.push(s.employee.fullName)
 
+    const acct = s.employee.ibanAccount ?? s.employee.bankAccount ?? null
+
     if (wantsApp) {
       await prisma.notification.create({
         data: {
           employeeId: s.employee.id,
           type: 'PAYSLIP_READY',
           title: `Salary slip — ${period}`,
-          message: `Your salary slip for ${period} is available. Net pay ${formatCurrency(s.netSalary)}.`,
-          link: `/payslip/${s.id}/print`,
+          // The two questions people actually ask are how much and into which
+          // account, so the notification answers both rather than saying a file
+          // exists. It lands on My Payslips with the month open — beside last
+          // month, which is what anyone checks when a figure surprises them.
+          message: `Your salary slip for ${period} is ready. Net pay ${formatCurrency(s.netSalary)}`
+            + (s.employee.bankName ? ` to ${s.employee.bankName}` : '')
+            + (acct ? ` ending ${acct.slice(-4)}` : '') + '.',
+          link: `/dashboard/payroll?slip=${s.id}`,
         },
       })
     }

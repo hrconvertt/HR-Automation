@@ -9,7 +9,11 @@ import { ManagerPayrollView } from './_views/manager-payroll-view'
 import { EmployeePayrollView } from './_views/employee-payroll-view'
 import { ExecutivePayrollView } from './_views/executive-payroll-view'
 
-export default async function PayrollPage() {
+export default async function PayrollPage({ searchParams }: {
+  // ?slip= arrives from the payslip-ready notification.
+  searchParams: Promise<{ slip?: string }>
+}) {
+  const sp = await searchParams
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   const payload = await verifyToken(token)
@@ -82,7 +86,7 @@ export default async function PayrollPage() {
   }
   if (effectiveRole === 'EMPLOYEE') {
     if (user.employee) {
-      return <EmployeePayrollView employeeId={user.employee.id} />
+      return <EmployeePayrollView employeeId={user.employee.id} slipId={sp.slip} />
     }
   }
 

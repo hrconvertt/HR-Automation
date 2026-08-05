@@ -1,7 +1,10 @@
 /**
  * Printable salary slip — A4 layout matching the Convertt template the
  * user shared. Server-rendered (not under /dashboard so the print view
- * is chrome-free), auto-fires window.print() 400ms after load.
+ * is chrome-free). Printing is the button and nothing else — it used to fire
+ * the print dialog by itself 400ms after load, so an employee opening their
+ * slip from a notification was met with a system dialog they had not asked
+ * for.
  *
  * Auth:
  *   • The employee whose payslip this is.
@@ -276,7 +279,7 @@ export default async function PrintPayslipPage({ params }: PageProps) {
           {/* Auto-trigger print on screen-sized viewports */}
           <script
             dangerouslySetInnerHTML={{
-              __html: `(function(){try{if(window.matchMedia('(min-width: 600px)').matches){setTimeout(function(){window.print();},400);}var b=document.currentScript&&document.currentScript.previousElementSibling;if(b){b.addEventListener('click',function(){window.print();});}}catch(e){}})();`,
+              __html: `(function(){try{var b=document.currentScript&&document.currentScript.previousElementSibling;if(b){b.addEventListener('click',function(){window.print();});}}catch(e){}})();`,
             }}
           />
         </div>
