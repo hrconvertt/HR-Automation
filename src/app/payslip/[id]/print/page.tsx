@@ -192,8 +192,17 @@ export default async function PrintPayslipPage({ params }: PageProps) {
   // Matched line for line to the y positions in the issued PDF. The pay
   // column runs 18 lines from Basic Salary to Monthly Allowance; the deduction
   // column has its own gaps, including a line that carries only a dash.
+  // Zero is written three different ways on the issued slip and each one means
+  // something. An allowance of nothing is a figure, so it prints 0. A deduction
+  // that never happened is an absence, so it prints a dash. A total is always a
+  // figure even when it comes to nothing — Zuhaa's Total Deduction reads 0, not
+  // a dash, because the column was added up and the answer was zero.
+  //
+  // fmtPKR returns a dash for zero, which is right for deductions and wrong for
+  // everything else, so the totals go through num().
   const zero = (n: number) => (n ? fmtPKR(n) : '0')
   const dashed = (n: number) => (n ? fmtPKR(n) : '-')
+  const num = (n: number) => (n ? fmtPKR(n) : '0')
   const payLabels = [
     'Basic Salary', 'House Rent', 'Utilities',
     '', '', '', '', '', '',
@@ -204,7 +213,7 @@ export default async function PrintPayslipPage({ params }: PageProps) {
   const payValues = [
     zero(pay.basic), zero(pay.houseRent), zero(pay.utilities),
     '', '', '', '', '', '',
-    fmtPKR(grossCore), zero(pay.food), zero(pay.fuel),
+    num(grossCore), zero(pay.food), zero(pay.fuel),
     '', zero(pay.overtimeBonus), zero(pay.arrears), zero(pay.otherAllowance),
     '', '', zero(pay.medicalAllowance + pay.monthlyAllowance), '', '',
   ]
@@ -392,14 +401,14 @@ export default async function PrintPayslipPage({ params }: PageProps) {
 
             <tr>
               <td style={{ ...base, borderTop: '1px solid #000', fontWeight: 700 }}>Total Payments:</td>
-              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{fmtPKR(totalPayments)}</td>
+              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{num(totalPayments)}</td>
               <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700 }}>Total Deduction:</td>
-              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{fmtPKR(totalDeductions)}</td>
+              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{num(totalDeductions)}</td>
             </tr>
             {/* No divider after the second column on this row. */}
             <tr>
               <td style={{ ...base, borderTop: '1px solid #000', fontWeight: 700 }}>Net Pay:</td>
-              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{fmtPKR(netPay)}</td>
+              <td style={{ ...ruled, borderTop: '1px solid #000', fontWeight: 700, textAlign: 'center' }}>{num(netPay)}</td>
               <td colSpan={2} style={{ ...ruled, borderTop: '1px solid #000' }} />
             </tr>
           </tbody>
