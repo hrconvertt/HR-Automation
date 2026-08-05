@@ -474,12 +474,10 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
           icon: Inbox,
           roles: ['HR_ADMIN', 'MANAGER'],
         },
+        // One entry. The overtime record already filters to Approved with a
+        // chip on the page, so a second sidebar link to the same screen was
+        // the same destination twice.
         { href: '/dashboard/time/overtime', label: 'Overtime', icon: Clock },
-        {
-          href: '/dashboard/time/overtime?tab=approved',
-          label: 'OT Approved',
-          icon: CheckCircle2,
-        },
         {
           href: '/dashboard/time/conflicts',
           label: 'Conflicts',

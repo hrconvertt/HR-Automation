@@ -97,7 +97,7 @@ export default async function PrintPayslipPage({ params }: PageProps) {
       employee: {
         select: {
           id: true, fullName: true, employeeCode: true, designation: true,
-          joiningDate: true, workLocation: true, ibanAccount: true,
+          joiningDate: true, exitDate: true, workLocation: true, ibanAccount: true,
           bankAccount: true, bankName: true, bankBranch: true, cnic: true,
         },
       },
@@ -198,6 +198,27 @@ export default async function PrintPayslipPage({ params }: PageProps) {
     payslip.employee.ibanAccount ?? payslip.employee.bankAccount,
   )
   const location = humanizeWorkLocation(payslip.employee.workLocation)
+
+  // Total Working Days is the calendar-days method the issued slips use: the
+  // days in the month, or the days actually served when someone joined or left
+  // part-way through. Laiba joined on 13 July and her slip read 31, while her
+  // pay had already been prorated to 19/31 — the document contradicted itself,
+  // and it reads as though she was paid a full month at a lower rate.
+  //
+  // Display only. The stored workingDays feeds the pay calculation, which is
+  // reconciled against the salary sheet to the rupee and is not being touched.
+  const daysInMonth = new Date(Date.UTC(payslip.year, payslip.month, 0)).getUTCDate()
+  const lastDay = new Date(Date.UTC(payslip.year, payslip.month - 1, daysInMonth))
+  const firstDay = new Date(Date.UTC(payslip.year, payslip.month - 1, 1))
+  const joined = payslip.employee.joiningDate
+  const left = payslip.employee.exitDate
+  const from = joined && joined > firstDay ? joined : firstDay
+  const to = left && left < lastDay ? left : lastDay
+  const daysServed = Math.max(
+    0,
+    Math.round((to.getTime() - from.getTime()) / 86400000) + 1,
+  )
+  const partMonth = daysServed !== daysInMonth
 
   // Matched line for line to the y positions in the issued PDF. The pay
   // column runs 18 lines from Basic Salary to Monthly Allowance; the deduction
@@ -357,7 +378,7 @@ export default async function PrintPayslipPage({ params }: PageProps) {
                 <Blank />
                 <L k="Salary Month" v={salaryMonthLabel} />
                 <L k="Bank/Branch" v={bankBranch} />
-                <L k="Total Working Days" v={String(payslip.workingDays)} />
+                <L k="Total Working Days" v={partMonth ? `${daysServed} of ${daysInMonth}` : String(daysInMonth)} />
               </td>
             </tr>
 
