@@ -178,7 +178,6 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           {[
             { label: 'Hire', done: true, sub: fmt(rec.startDate) },
             { label: 'Settling (Day 30)', done: !!rec.settlingCheckInAt, sub: rec.settlingCheckInAt ? fmt(rec.settlingCheckInAt) : settlingDue ? 'Due' : 'Pending' },
-            { label: 'Decision Packet', done: !!rec.packetGeneratedAt, sub: rec.packetGeneratedAt ? fmt(rec.packetGeneratedAt) : 'Pending' },
             { label: 'Outcome', done: !!rec.outcomeEnactedAt, sub: rec.outcomeEnactedAt ? `${rec.hrDecision} · ${fmt(rec.outcomeEnactedAt)}` : 'Pending' },
           ].map((s, i) => (
             <div key={i} className="flex-1 text-center">
@@ -241,39 +240,16 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         </p>
       </Card>
 
-      {/* Decision packet */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">Decision Packet</h2>
-          {!rec.packetGeneratedAt && (isHR || isManager) && (
-            <Button size="sm" variant="outline" disabled={busy} onClick={() => patch({ action: 'GENERATE_PACKET' })}>Generate Now</Button>
-          )}
-        </div>
-        {rec.packetGeneratedAt ? (
-          <div className="space-y-3">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Metric label="Days Worked" value={rec.packetDaysWorked ?? '—'} />
-              <Metric label="Days on Leave" value={rec.packetDaysOnLeave ?? '—'} />
-              <Metric label="Late Arrivals" value={rec.packetLateCount ?? '—'} />
-              <Metric label="Avg Hours/Day" value={rec.packetAvgHours?.toFixed(1) ?? '—'} />
-              <Metric label="Time Score" value={rec.packetTimeScore?.toFixed(1) ?? '—'} suffix="/ 5" />
-              <Metric label="Goal Score" value={rec.packetGoalScore?.toFixed(1) ?? '—'} suffix={rec.packetGoalScore != null ? '/ 5' : ''} />
-            </div>
-            {rec.packetSuggestedRec && (
-              <div className="rounded-lg bg-slate-50 border border-slate-100 p-3 text-sm">
-                <span className="text-slate-900 font-semibold">Heuristic suggestion: </span>
-                <Badge className="bg-slate-700 text-white">{rec.packetSuggestedRec}</Badge>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  Counted from attendance and goals only. It does not know whether the work was
-                  any good — that is what the performance review is for.
-                </p>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-500">Packet auto-generates at Day-(end-30). HR/manager can force-generate above.</p>
-        )}
-      </Card>
+      {/* The decision packet is gone. It counted attendance and goals and
+          then suggested an outcome, which is not a decision anyone should make
+          — it read zero absences for Zuhaa, who had taken leave, and still
+          suggested CONFIRM. Counting hours cannot tell you whether the work was
+          any good, and putting a recommendation next to those numbers invited
+          someone to accept it.
+
+          The performance review above replaces it: five rated dimensions with
+          the evidence written beside each, an overall assessment, and the
+          increment that assessment earns under the 10-15% policy. */}
 
       {/* Manager review */}
       <Card className="p-5">
