@@ -379,13 +379,13 @@ const RECRUITING_NAV: NavGroup[] = [
     items: [
       { href: '/dashboard/recruiting?tab=requests', label: 'Requests', icon: Inbox },
       { href: '/dashboard/recruiting?tab=requisitions', label: 'Job Requisitions', icon: FolderOpen },
+      { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       { href: '/dashboard/recruiting?tab=pipeline', label: 'Pipeline', icon: BarChart3 },
       { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert },
       { href: '/dashboard/recruiting?tab=pool', label: 'Talent Pool', icon: Users },
       { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },
       { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText },
       { href: '/dashboard/recruiting/offers', label: 'Offers', icon: FileText },
-      { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
     ],
   },
 ]

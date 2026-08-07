@@ -11,6 +11,7 @@
  */
 
 import { cookies } from 'next/headers'
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -31,7 +32,13 @@ const aed = (n: number) =>
 const day = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
-export default async function JobPostSpendPage() {
+export default async function JobPostSpendPage({ searchParams }: {
+  searchParams: Promise<{ view?: string }>
+}) {
+  // One table, two ways of reading it. By role answers what a hire cost; by
+  // post lets a total be checked. Showing both at once made the page a scroll
+  // with the same numbers twice.
+  const view = ((await searchParams).view === 'post' ? 'post' : 'role') as 'role' | 'post'
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
   if (!payload) redirect('/login')
@@ -80,84 +87,84 @@ export default async function JobPostSpendPage() {
         <Stat label="Roles advertised" value={String(roles.length)} />
       </div>
 
-      {/* By role — the number anyone actually asks for. */}
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-900">By role</h2>
+        <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2 flex-wrap">
+          <h2 className="text-sm font-semibold text-slate-900 mr-2">Spend</h2>
+          <Filter href="?view=role" label="By role" active={view === 'role'} />
+          <Filter href="?view=post" label="By job post" active={view === 'post'} />
         </div>
+
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <Th>Role</Th><Th right>Posts</Th><Th right>Spend</Th>
-                <Th right>Per vacancy</Th><Th>Requisition</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.map(([role, t]) => {
-                const req = reqBy.get(role)
-                const vac = req?.vacancies ?? 1
-                return (
-                  <tr key={role} className="border-b border-slate-50 hover:bg-slate-50/60">
-                    <td className="px-4 py-2.5 text-slate-900">{role}</td>
-                    <td className="px-4 py-2.5 text-right text-slate-600 tabular-nums">
-                      {t.posts}{t.running ? <span className="text-amber-700"> +{t.running} running</span> : null}
+          {view === 'role' ? (
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <Th>Role</Th><Th right>Posts</Th><Th right>Spend</Th>
+                  <Th right>Per vacancy</Th><Th>Requisition</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {roles.map(([role, t]) => {
+                  const req = reqBy.get(role)
+                  const vac = req?.vacancies ?? 1
+                  return (
+                    <tr key={role} className="border-b border-slate-50 hover:bg-slate-50/60">
+                      <td className="px-4 py-2.5 text-slate-900">{role}</td>
+                      <td className="px-4 py-2.5 text-right text-slate-600 tabular-nums">
+                        {t.posts}{t.running ? <span className="text-amber-700"> +{t.running} running</span> : null}
+                      </td>
+                      <td className="px-4 py-2.5 text-right font-medium text-slate-900 tabular-nums whitespace-nowrap">
+                        {t.paid ? aed(t.paid) : <span className="text-slate-400">Free</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-right text-slate-600 tabular-nums whitespace-nowrap">
+                        {t.paid ? aed(t.paid / vac) : <span className="text-slate-400">—</span>}
+                      </td>
+                      <td className="px-4 py-2.5 text-xs text-slate-500">
+                        {req ? `${req.status} · ${vac} vacanc${vac === 1 ? 'y' : 'ies'}` : 'no requisition'}
+                      </td>
+                    </tr>
+                  )
+                })}
+                <tr className="bg-slate-50 font-semibold">
+                  <td className="px-4 py-2.5 text-slate-900">Total</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{rows.length}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{aed(total)}</td>
+                  <td colSpan={2} />
+                </tr>
+              </tbody>
+            </table>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <Th>Role</Th><Th>Platform</Th><Th>Start</Th><Th>End</Th>
+                  <Th right>Daily</Th><Th right>Paid</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((r, i) => (
+                  <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/60">
+                    <td className="px-4 py-2 text-slate-900">{r.role}</td>
+                    <td className="px-4 py-2 text-slate-600 text-xs">{r.platform}</td>
+                    <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(r.from)}</td>
+                    <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(r.to)}</td>
+                    <td className="px-4 py-2 text-right text-slate-600 tabular-nums whitespace-nowrap">
+                      {r.dailyAmount ? aed(r.dailyAmount) : <span className="text-slate-400">Free</span>}
                     </td>
-                    <td className="px-4 py-2.5 text-right font-medium text-slate-900 tabular-nums whitespace-nowrap">
-                      {t.paid ? aed(t.paid) : <span className="text-slate-400">Free</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-slate-600 tabular-nums whitespace-nowrap">
-                      {t.paid ? aed(t.paid / vac) : <span className="text-slate-400">—</span>}
-                    </td>
-                    <td className="px-4 py-2.5 text-xs text-slate-500">
-                      {req ? `${req.status} · ${vac} vacanc${vac === 1 ? 'y' : 'ies'}` : 'no requisition'}
+                    <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">
+                      {r.paid == null
+                        ? <span className="text-amber-700 text-xs">still running</span>
+                        : r.paid ? aed(r.paid) : <span className="text-slate-400">Free</span>}
                     </td>
                   </tr>
-                )
-              })}
-              <tr className="bg-slate-50 font-semibold">
-                <td className="px-4 py-2.5 text-slate-900">Total</td>
-                <td className="px-4 py-2.5 text-right tabular-nums">{rows.length}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{aed(total)}</td>
-                <td colSpan={2} />
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* Every post, in order, so a total can be checked rather than trusted. */}
-      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-        <div className="px-4 py-2.5 border-b border-slate-100">
-          <h2 className="text-sm font-semibold text-slate-900">Every post</h2>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-100">
-              <tr>
-                <Th>Role</Th><Th>Platform</Th><Th>Start</Th><Th>End</Th>
-                <Th right>Daily</Th><Th right>Paid</Th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, i) => (
-                <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/60">
-                  <td className="px-4 py-2 text-slate-900">{r.role}</td>
-                  <td className="px-4 py-2 text-slate-600 text-xs">{r.platform}</td>
-                  <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(r.from)}</td>
-                  <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(r.to)}</td>
-                  <td className="px-4 py-2 text-right text-slate-600 tabular-nums whitespace-nowrap">
-                    {r.dailyAmount ? aed(r.dailyAmount) : <span className="text-slate-400">Free</span>}
-                  </td>
-                  <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">
-                    {r.paid == null
-                      ? <span className="text-amber-700 text-xs">still running</span>
-                      : r.paid ? aed(r.paid) : <span className="text-slate-400">Free</span>}
-                  </td>
+                ))}
+                <tr className="bg-slate-50 font-semibold">
+                  <td colSpan={5} className="px-4 py-2.5 text-slate-900">Total</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{aed(total)}</td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          )}
         </div>
       </div>
 
@@ -166,6 +173,22 @@ export default async function JobPostSpendPage() {
         advertising cost, not cost-per-hire, which would also need agency and referral spend.
       </p>
     </div>
+  )
+}
+
+function Filter({ href, label, active }: { href: string; label: string; active: boolean }) {
+  return (
+    <Link
+      href={href}
+      className={
+        'rounded-full px-3 py-1 text-xs font-medium border transition-colors ' +
+        (active
+          ? 'bg-slate-900 text-white border-slate-900'
+          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')
+      }
+    >
+      {label}
+    </Link>
   )
 }
 
