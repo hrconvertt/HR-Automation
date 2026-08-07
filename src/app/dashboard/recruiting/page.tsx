@@ -395,9 +395,16 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
               <div className="flex items-center gap-2 flex-wrap">
                 {(isHR || isManager) && (
                   <BulkPipelineActions
+                    // Every requisition, not just the open ones. CRO Strategist
+                    // is CLOSED and still has five candidates sitting in
+                    // SCREENING — a role closing does not empty its pipeline,
+                    // and leaving it out of the list meant those candidates
+                    // could be seen but never acted on.
                     openRequisitions={requisitions
-                      .filter((r) => r.status === 'OPEN')
-                      .map((r) => ({ id: r.id, title: r.title }))}
+                      .map((r) => ({
+                        id: r.id,
+                        title: r.status === 'OPEN' ? r.title : `${r.title} (${r.status.toLowerCase()})`,
+                      }))}
                   />
                 )}
                 {(isHR || isManager) && (
