@@ -105,10 +105,8 @@ const REQUIREMENTS = [
   console.log('Salary    : PKR 70,000 – 110,000')
   console.log('Status    : PENDING (awaiting HR approval)')
   console.log('JD        : DRAFT_JD, ' + JD.length + ' chars')
-  console.log('\nLeft as questions rather than invented:')
-  console.log('  · on-site or hybrid')
-  console.log('  · the additional perks list')
-  console.log('  · working hours (Convertt standard 10-7 Mon-Fri noted as likely)')
+  console.log('Location  : Lahore — on-site')
+  console.log('Hours     : Monday to Friday, 10:00 AM – 7:00 PM')
 
   if (!APPLY) { console.log('\nDry run. Re-run with --apply to write.'); return }
 
