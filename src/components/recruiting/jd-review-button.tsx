@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -30,9 +30,16 @@ export function JdReviewButton({ requisitionId, title, jdStatus }: Props) {
   const [error, setError] = useState('')
   const [tab, setTab] = useState<'edit' | 'preview'>('edit')
 
-  const isPosted = jdStatus === 'POSTED'
-  const isDraft  = jdStatus === 'DRAFT_JD'
-  const noJd     = !jdStatus
+  // The status has to live here, not in the prop. The prop comes from the
+  // server render of the row behind the dialog, and re-opening a JD used to
+  // change only the database: the dialog kept rendering the posted view, share
+  // panel and all, so the button looked dead even though it had worked.
+  const [status, setStatus] = useState<string | null>(jdStatus)
+  useEffect(() => { setStatus(jdStatus) }, [jdStatus])
+
+  const isPosted = status === 'POSTED'
+  const isDraft  = status === 'DRAFT_JD'
+  const noJd     = !status
 
   const label = isPosted ? 'View JD' : isDraft ? 'Review JD' : 'Generate JD'
   const Icon  = isPosted ? Lock : isDraft ? FileText : Sparkles
@@ -44,6 +51,9 @@ export function JdReviewButton({ requisitionId, title, jdStatus }: Props) {
     setLoading(false)
     if (!res.ok) { setError(data.error || 'Failed to load'); return }
     setContent(data.requisition?.jdContent ?? '')
+    // Whatever the server says the status is, that is the status. This also
+    // flips "Generate JD" to "Review JD" the first time one is generated.
+    setStatus(data.requisition?.jdStatus ?? null)
   }
 
   async function openDialog() {
@@ -110,7 +120,7 @@ export function JdReviewButton({ requisitionId, title, jdStatus }: Props) {
 
   async function reopen() {
     if (!confirm('Re-open this JD for editing? Candidates will not see it until you publish again.')) return
-    setSaving(true)
+    setError(''); setSaving(true)
     const res = await fetch(`/api/recruiting/requisitions/${requisitionId}/jd`, { method: 'DELETE' })
     setSaving(false)
     if (!res.ok) {
@@ -118,7 +128,11 @@ export function JdReviewButton({ requisitionId, title, jdStatus }: Props) {
       setError(d.error || 'Failed to reopen')
       return
     }
+    // Straight into the editor, which is the whole point of the button.
+    setStatus('DRAFT_JD')
+    setTab('edit')
     await load()
+    router.refresh()   // the row behind the dialog now says Review JD
   }
 
   return (
