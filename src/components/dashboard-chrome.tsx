@@ -386,6 +386,9 @@ const RECRUITING_NAV: NavGroup[] = [
       { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },
       { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText },
       { href: '/dashboard/recruiting/offers', label: 'Offers', icon: FileText },
+      // The metrics used to sit above every view in this module. They belong
+      // on one page of their own, which is this.
+      { href: '/dashboard/recruiting/analytics', label: 'Analytics', icon: TrendingUp },
     ],
   },
 ]
