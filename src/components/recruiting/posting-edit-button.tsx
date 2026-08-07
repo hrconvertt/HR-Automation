@@ -16,8 +16,8 @@ export interface EditablePosting {
   currency: string
   budget: number | null
   cost: number | null
-  postedAt: string | null   // yyyy-mm-dd
-  closedAt: string | null   // yyyy-mm-dd
+  postedAt: string | null   // yyyy-mm-ddThh:mm, Pakistan time
+  closedAt: string | null   // yyyy-mm-ddThh:mm, Pakistan time
   status: string
   notes: string | null
 }
@@ -111,7 +111,7 @@ export function PostingEditButton({ posting }: { posting: EditablePosting }) {
             <div className="grid grid-cols-2 gap-3">
               <Field label="Posted on">
                 <input
-                  type="date"
+                  type="datetime-local"
                   value={f.postedAt ?? ''}
                   onChange={(e) => set('postedAt', e.target.value || null)}
                   className={inputClass}
@@ -119,7 +119,7 @@ export function PostingEditButton({ posting }: { posting: EditablePosting }) {
               </Field>
               <Field label="Closed on">
                 <input
-                  type="date"
+                  type="datetime-local"
                   value={f.closedAt ?? ''}
                   onChange={(e) => set('closedAt', e.target.value || null)}
                   className={inputClass}

@@ -19,16 +19,22 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { PLATFORM_LABELS } from '@/lib/job-posting'
+import { PLATFORM_LABELS, postingStamp, postingInputValue } from '@/lib/job-posting'
 import { PostingEditButton } from '@/components/recruiting/posting-edit-button'
 
 const money = (n: number, currency: string) =>
   `${currency} ` + n.toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-const day = (d: Date | null) =>
-  d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
-
-const isoDay = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
+/** Day on top, time under it — and no time at all when none was recorded. */
+function Stamp({ at }: { at: Date | null }) {
+  const { date, time } = postingStamp(at)
+  return (
+    <>
+      <span className="whitespace-nowrap">{date}</span>
+      {time && <span className="block text-[11px] text-slate-400 tabular-nums">{time}</span>}
+    </>
+  )
+}
 
 export default async function JobPostSpendPage({ searchParams }: {
   searchParams: Promise<{ view?: string }>
@@ -165,8 +171,8 @@ export default async function JobPostSpendPage({ searchParams }: {
                   <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/60">
                     <td className="px-4 py-2 text-slate-900">{p.requisition.title}</td>
                     <td className="px-4 py-2 text-slate-600 text-xs">{PLATFORM_LABELS[p.platform] ?? p.platform}</td>
-                    <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(p.postedAt)}</td>
-                    <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(p.closedAt)}</td>
+                    <td className="px-4 py-2 text-slate-600"><Stamp at={p.postedAt} /></td>
+                    <td className="px-4 py-2 text-slate-600"><Stamp at={p.closedAt} /></td>
                     <td className="px-4 py-2 text-right text-slate-600 tabular-nums whitespace-nowrap">
                       <Amount value={p.budget} currency={p.currency} />
                     </td>
@@ -188,8 +194,8 @@ export default async function JobPostSpendPage({ searchParams }: {
                             currency: p.currency,
                             budget: p.budget,
                             cost: p.cost,
-                            postedAt: isoDay(p.postedAt),
-                            closedAt: isoDay(p.closedAt),
+                            postedAt: postingInputValue(p.postedAt),
+                            closedAt: postingInputValue(p.closedAt),
                             status: p.status,
                             notes: p.notes,
                           }}

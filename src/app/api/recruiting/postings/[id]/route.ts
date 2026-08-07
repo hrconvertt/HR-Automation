@@ -10,10 +10,25 @@ function optionalMoney(v: unknown): number | null | undefined {
   const n = Number(v)
   return Number.isFinite(n) && n >= 0 ? n : undefined
 }
+/**
+ * The dialog sends what a datetime-local input holds — "2026-02-05T14:32" with
+ * no zone. That is Pakistan time, so it is pinned to +05:00 here rather than
+ * left to `new Date()`, which would read it as the server's zone and land a
+ * post typed in Lahore five hours late on Vercel.
+ *
+ * A bare "2026-02-05" is a day with no time, and stays midnight UTC — the
+ * marker the payments table reads as "no time recorded".
+ */
 function optionalDate(v: unknown): Date | null | undefined {
   if (v === undefined) return undefined
   if (v === null || v === '') return null
-  const d = new Date(String(v))
+  const raw = String(v).trim()
+  const iso = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/.test(raw)
+    ? `${raw}+05:00`
+    : /^\d{4}-\d{2}-\d{2}$/.test(raw)
+      ? `${raw}T00:00:00Z`
+      : raw
+  const d = new Date(iso)
   return Number.isNaN(d.getTime()) ? undefined : d
 }
 
