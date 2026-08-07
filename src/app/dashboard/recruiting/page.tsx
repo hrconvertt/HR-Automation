@@ -91,6 +91,30 @@ async function resolveContext(): Promise<{
   return { role, myEmployeeId: u.employee?.id ?? null }
 }
 
+/**
+ * Names the view and carries the buttons that act on it.
+ *
+ * `actions` takes `false` as well as nodes so a caller can write
+ * `actions={isHR && <Button/>}` without a wrapper — false renders nothing.
+ */
+function ViewHeader({ title, blurb, actions }: {
+  title: string
+  blurb: string
+  actions?: React.ReactNode | false
+}) {
+  return (
+    <div className="flex items-start justify-between gap-3 flex-wrap mb-4">
+      <div className="min-w-0">
+        <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+        <p className="text-sm text-slate-500 mt-0.5">{blurb}</p>
+      </div>
+      {actions ? (
+        <div className="flex items-center gap-2 flex-wrap flex-shrink-0">{actions}</div>
+      ) : null}
+    </div>
+  )
+}
+
 const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'warning' | 'default'> = {
   OPEN: 'success',
   FILLED: 'default',
@@ -138,24 +162,20 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
         ? 'pipeline'
         : (isHR && pendingRequests.length > 0 ? 'requests' : 'pipeline')
 
+  const openRoles = requisitions
+    .filter((r) => r.status === 'OPEN')
+    .map((r) => ({ id: r.id, title: r.title }))
+
   return (
     <div className="space-y-5">
-      {/* Actions only. The four KPI cards and the Pipeline Health panel used to
-          sit here, above every view — so Talent Pool, Knockouts, My Schedule
-          and the requisition board each opened on the same block of numbers
-          that had nothing to do with what was below it. Metrics belong beside
-          the thing they describe, not stamped on top of everything. */}
-      {(isHR || isManager) && (
-        <div className="flex items-center justify-end gap-2 flex-wrap">
-          <BulkJDUpload />
-          <BulkResumeUpload
-            openRequisitions={requisitions
-              .filter((r) => r.status === 'OPEN')
-              .map((r) => ({ id: r.id, title: r.title }))}
-          />
-          <RequestToHireButton role={isHR ? 'HR_ADMIN' : 'MANAGER'} />
-        </div>
-      )}
+      {/* Every view says what it is. Clicking Pipeline used to land on an
+          unlabelled board — the sidebar was the only thing naming it, and the
+          sidebar collapses. The KPI cards that used to sit here instead have
+          their own page now (Analytics).
+
+          Actions sit with the view they act on. Bulk Upload JDs, Bulk Screen
+          Resumes and New Requisition were shown above all six views, so three
+          buttons that each belong to one screen appeared on all of them. */}
 
       {/* Resolved once and shared by the sidebar and the content, so the
           highlighted entry and the rendered view can never disagree. */}
@@ -166,11 +186,16 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
 
         {/* Pipeline (kanban) — shortlist only (PASSED + OVERRIDDEN).
             Failed knockouts live in the Knockouts tab. */}
-        <TabsContent value="pipeline" className="mt-4">
+        <TabsContent value="pipeline" className="mt-0">
+          <ViewHeader
+            title="Pipeline"
+            blurb="Shortlisted candidates by stage. Anyone who failed a hard filter is in Knockouts, not here."
+            actions={(isHR || isManager) && <BulkResumeUpload openRequisitions={openRoles} />}
+          />
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
               <p className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-900">{shortlist.length}</span> shortlisted candidates across {requisitions.filter((r) => r.status === 'OPEN').length} open {requisitions.filter((r) => r.status === 'OPEN').length === 1 ? 'role' : 'roles'}
+                <span className="font-semibold text-slate-900">{shortlist.length}</span> shortlisted candidates across {openRoles.length} open {openRoles.length === 1 ? 'role' : 'roles'}
                 {knockedOut.length > 0 && (
                   <span className="text-slate-700 ml-2">· {knockedOut.length} filtered out</span>
                 )}
@@ -191,11 +216,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                   />
                 )}
                 {(isHR || isManager) && (
-                  <AddCandidateButton
-                    openRequisitions={requisitions
-                      .filter((r) => r.status === 'OPEN')
-                      .map((r) => ({ id: r.id, title: r.title }))}
-                  />
+                  <AddCandidateButton openRequisitions={openRoles} />
                 )}
               </div>
             </div>
@@ -238,7 +259,11 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
         {/* Knockouts — candidates that failed hard filters at intake.
             HR can override here; on override they get scored + move to kanban. */}
         {(isHR || isManager) && (
-          <TabsContent value="knockouts" className="mt-4">
+          <TabsContent value="knockouts" className="mt-0">
+            <ViewHeader
+              title="Knockouts"
+              blurb="Candidates a hard filter turned away before they were scored. Override to put one back in the pipeline."
+            />
             <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
               <div className="px-4 py-3 border-b border-slate-100">
                 <p className="text-xs text-slate-500">
@@ -289,10 +314,21 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
         {/* Requisitions — the active hiring board.
             Excludes PENDING + REJECTED (those live in the Requests tab).
             Result: each row appears in exactly one tab, no double-counting. */}
-        <TabsContent value="requisitions" className="mt-4">
+        <TabsContent value="requisitions" className="mt-0">
           {(() => {
             const liveReqs = requisitions.filter((r) => r.status !== 'PENDING' && r.status !== 'REJECTED')
             return (
+              <>
+              <ViewHeader
+                title="Job Requisitions"
+                blurb="The hiring board — every approved role, its job description and its knockout filters."
+                actions={isHR && (
+                  <>
+                    <BulkJDUpload />
+                    <RequestToHireButton role="HR_ADMIN" />
+                  </>
+                )}
+              />
               <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                   <p className="text-xs text-slate-500">
@@ -343,12 +379,20 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                   </TableBody>
                 </Table>
               </Card>
+              </>
             )
           })()}
         </TabsContent>
 
         {/* Requests — manager-raised, awaiting HR decision */}
-        <TabsContent value="requests" className="mt-4">
+        <TabsContent value="requests" className="mt-0">
+          <ViewHeader
+            title="Requests"
+            blurb={isManager
+              ? 'Roles you have asked to hire for, and where each one stands.'
+              : 'Roles managers have asked to hire for, waiting on a decision.'}
+            actions={isManager && <RequestToHireButton role="MANAGER" />}
+          />
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b border-slate-100">
               <p className="text-xs text-slate-500">
@@ -419,7 +463,11 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
         </TabsContent>
 
         {/* Talent Pool — pre-vetted candidates for urgent hires */}
-        <TabsContent value="pool" className="mt-4">
+        <TabsContent value="pool" className="mt-0">
+          <ViewHeader
+            title="Talent Pool"
+            blurb="People worth going back to. Strong candidates kept on file for the next role that suits them."
+          />
           <TalentPoolView
             candidates={poolCandidates.map((c) => ({
               id: c.id,
@@ -445,7 +493,11 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
         {/* My Schedule — upcoming interviews this week.
             Interview + Offer management now lives inside the candidate
             detail panel (Workable-style), not as separate top-level tabs. */}
-        <TabsContent value="schedule" className="mt-4">
+        <TabsContent value="schedule" className="mt-0">
+          <ViewHeader
+            title="My Schedule"
+            blurb="Interviews coming up. Schedule new ones from a candidate's card on the pipeline."
+          />
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
               <p className="text-xs text-slate-500">
