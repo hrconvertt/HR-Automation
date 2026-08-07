@@ -5,11 +5,10 @@
  * actually travels the approval path it is meant to test: manager raises it,
  * HR approves, the JD gets reviewed, then it posts.
  *
- * The JD is Tahreem's own wording. Three placeholders in it were left as
- * questions rather than filled in — on-site vs hybrid, the perks list, and the
- * working hours. Convertt's standard is 10:00 AM to 7:00 PM Monday to Friday at
- * Mega Tower, which is what the employment letters say, so those are noted as
- * the likely answers rather than silently written in as decided.
+ * The JD is Tahreem's own wording, with the three placeholders she confirmed
+ * afterwards: on-site in Lahore, Monday to Friday, 10:00 AM to 7:00 PM. The
+ * perks line went rather than being padded — an advert promising unnamed extras
+ * is worse than one that does not mention them.
  *
  * Dry run by default. Pass --apply to write.
  */
@@ -21,7 +20,7 @@ const APPLY = process.argv.includes('--apply')
 const JD = `## QA Engineer — Convertt, Lahore
 
 **Job Type:** Full-time
-**Location:** Lahore — on-site / hybrid *(to be confirmed)*
+**Location:** Lahore — on-site
 
 ### Full Job Description
 
@@ -67,11 +66,10 @@ regression coverage, and help raise our overall quality bar as we scale.
 - Compensation: PKR 70,000 – 110,000/month (based on experience and automation skillset)
 - Growth path toward Senior QA / QA Automation roles
 - Collaborative team environment with a focus on continuous learning
-- *Additional perks to be confirmed*
 
 ### Job Working Hours
 
-*To be confirmed — Convertt's standard is 10:00 AM – 7:00 PM, Monday to Friday.*
+Monday to Friday, 10:00 AM – 7:00 PM
 `
 
 const REQUIREMENTS = [
