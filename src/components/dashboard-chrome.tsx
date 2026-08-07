@@ -385,6 +385,7 @@ const RECRUITING_NAV: NavGroup[] = [
       { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },
       { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText },
       { href: '/dashboard/recruiting/offers', label: 'Offers', icon: FileText },
+      { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
     ],
   },
 ]
