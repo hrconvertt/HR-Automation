@@ -115,6 +115,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: { status: targetStatus, decisionNote: note ?? undefined },
     })
+
+    // A role closing or filling takes its adverts down with it, and that is
+    // the moment Job Post Payments wants for "closed at". Nobody remembers to
+    // record it by hand a week later.
+    if (targetStatus === 'CLOSED' || targetStatus === 'FILLED') {
+      await prisma.jobPosting.updateMany({
+        where: { requisitionId: id, status: { in: ['ACTIVE', 'PAUSED'] } },
+        data: { status: 'CLOSED', closedAt: new Date() },
+      })
+    } else if (targetStatus === 'PAUSED') {
+      await prisma.jobPosting.updateMany({
+        where: { requisitionId: id, status: 'ACTIVE' },
+        data: { status: 'PAUSED' },
+      })
+    }
   } else {
     return NextResponse.json({ error: 'Provide either `decision` or `status`' }, { status: 400 })
   }

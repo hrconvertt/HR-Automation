@@ -1,13 +1,17 @@
 /**
  * Job Post Payments — what each role cost to advertise.
  *
- * Reads the rows recorded from the LinkedIn payments sheet. There is no
- * JobPostSpend table yet, so this reads the `linkedin_job_post_spend` config
- * key; when the table exists, only the query below changes.
+ * Reads JobPosting rows. A row appears here on its own the moment a JD is
+ * approved and published; HR corrects it from the Edit button when the advert
+ * actually went up somewhere else, or was billed in another currency, or the
+ * final amount only landed later.
  *
  * Free posts are shown rather than hidden. That a role was advertised at no
  * cost is a fact about the role, and dropping those rows would make
  * cost-per-hire look better than it was.
+ *
+ * Blank is not zero. A missing amount reads "not set"; a real zero reads
+ * "Free". Conflating them would quietly turn unknowns into savings.
  */
 
 import { cookies } from 'next/headers'
@@ -15,22 +19,16 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { PLATFORM_LABELS } from '@/lib/job-posting'
+import { PostingEditButton } from '@/components/recruiting/posting-edit-button'
 
-interface SpendRow {
-  role: string
-  platform: string
-  from: string | null
-  to: string | null
-  currency: string
-  dailyAmount: number
-  paid: number | null
-}
+const money = (n: number, currency: string) =>
+  `${currency} ` + n.toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-const aed = (n: number) =>
-  'AED ' + n.toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const day = (d: Date | null) =>
+  d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
-const day = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+const isoDay = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
 
 export default async function JobPostSpendPage({ searchParams }: {
   searchParams: Promise<{ view?: string }>
@@ -45,45 +43,60 @@ export default async function JobPostSpendPage({ searchParams }: {
   if (payload.role !== 'HR_ADMIN' && payload.role !== 'EXECUTIVE') {
     redirect('/dashboard/recruiting')
   }
+  const canEdit = payload.role === 'HR_ADMIN'
 
-  const cfg = await prisma.config.findUnique({
-    where: { key: 'linkedin_job_post_spend' },
-    select: { value: true },
+  const postings = await prisma.jobPosting.findMany({
+    orderBy: [{ postedAt: 'asc' }, { createdAt: 'asc' }],
+    include: {
+      requisition: { select: { title: true, status: true, vacancies: true } },
+    },
   })
-  let rows: SpendRow[] = []
-  try { rows = cfg?.value ? JSON.parse(cfg.value) : [] } catch { rows = [] }
 
-  // Which requisition each role belongs to, so spend can sit against a hire.
-  const reqs = await prisma.jobRequisition.findMany({
-    select: { title: true, status: true, vacancies: true },
-  })
-  const reqBy = new Map(reqs.map((r) => [r.title, r]))
-
-  const byRole = new Map<string, { posts: number; paid: number; running: number }>()
-  for (const r of rows) {
-    const cur = byRole.get(r.role) ?? { posts: 0, paid: 0, running: 0 }
-    cur.posts++
-    if (r.paid == null) cur.running++
-    else cur.paid += r.paid
-    byRole.set(r.role, cur)
+  // Totals are kept per currency. Adding AED to PKR would produce a number
+  // that means nothing, and the edit dialog allows either.
+  const totals = new Map<string, number>()
+  for (const p of postings) {
+    if (p.cost == null) continue
+    totals.set(p.currency, (totals.get(p.currency) ?? 0) + p.cost)
   }
-  const roles = [...byRole.entries()].sort((a, b) => b[1].paid - a[1].paid)
-  const total = roles.reduce((n, [, t]) => n + t.paid, 0)
-  const paidPosts = rows.filter((r) => (r.paid ?? 0) > 0).length
+  const totalLine = totals.size === 0
+    ? '—'
+    : [...totals].map(([c, n]) => money(n, c)).join(' · ')
+
+  const byRole = new Map<string, {
+    posts: number; running: number; vacancies: number; status: string
+    paid: Map<string, number>
+  }>()
+  for (const p of postings) {
+    const role = p.requisition.title
+    const cur = byRole.get(role) ?? {
+      posts: 0, running: 0,
+      vacancies: p.requisition.vacancies, status: p.requisition.status,
+      paid: new Map<string, number>(),
+    }
+    cur.posts++
+    if (p.cost == null) cur.running++
+    else cur.paid.set(p.currency, (cur.paid.get(p.currency) ?? 0) + p.cost)
+    byRole.set(role, cur)
+  }
+  const roles = [...byRole.entries()].sort(
+    (a, b) => sum(b[1].paid) - sum(a[1].paid),
+  )
+  const paidPosts = postings.filter((p) => (p.cost ?? 0) > 0).length
 
   return (
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Job Post Payments</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          What each role cost to advertise — {rows.length} posts, {paidPosts} paid
+          What each role cost to advertise — {postings.length} posts, {paidPosts} paid
         </p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="Total spend" value={aed(total)} />
-        <Stat label="Posts" value={String(rows.length)} />
-        <Stat label="Paid posts" value={`${paidPosts} of ${rows.length}`} />
+        <Stat label="Total spend" value={totalLine} />
+        <Stat label="Posts" value={String(postings.length)} />
+        <Stat label="Paid posts" value={`${paidPosts} of ${postings.length}`} />
         <Stat label="Roles advertised" value={String(roles.length)} />
       </div>
 
@@ -95,7 +108,11 @@ export default async function JobPostSpendPage({ searchParams }: {
         </div>
 
         <div className="overflow-x-auto">
-          {view === 'role' ? (
+          {postings.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-12">
+              No job posts yet. Publishing a job description opens its first row here.
+            </p>
+          ) : view === 'role' ? (
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
@@ -105,8 +122,7 @@ export default async function JobPostSpendPage({ searchParams }: {
               </thead>
               <tbody>
                 {roles.map(([role, t]) => {
-                  const req = reqBy.get(role)
-                  const vac = req?.vacancies ?? 1
+                  const vac = t.vacancies || 1
                   return (
                     <tr key={role} className="border-b border-slate-50 hover:bg-slate-50/60">
                       <td className="px-4 py-2.5 text-slate-900">{role}</td>
@@ -114,21 +130,23 @@ export default async function JobPostSpendPage({ searchParams }: {
                         {t.posts}{t.running ? <span className="text-amber-700"> +{t.running} running</span> : null}
                       </td>
                       <td className="px-4 py-2.5 text-right font-medium text-slate-900 tabular-nums whitespace-nowrap">
-                        {t.paid ? aed(t.paid) : <span className="text-slate-400">Free</span>}
+                        {sum(t.paid) ? [...t.paid].map(([c, n]) => money(n, c)).join(' · ') : <span className="text-slate-400">Free</span>}
                       </td>
                       <td className="px-4 py-2.5 text-right text-slate-600 tabular-nums whitespace-nowrap">
-                        {t.paid ? aed(t.paid / vac) : <span className="text-slate-400">—</span>}
+                        {sum(t.paid)
+                          ? [...t.paid].map(([c, n]) => money(n / vac, c)).join(' · ')
+                          : <span className="text-slate-400">—</span>}
                       </td>
                       <td className="px-4 py-2.5 text-xs text-slate-500">
-                        {req ? `${req.status} · ${vac} vacanc${vac === 1 ? 'y' : 'ies'}` : 'no requisition'}
+                        {t.status} · {vac} vacanc{vac === 1 ? 'y' : 'ies'}
                       </td>
                     </tr>
                   )
                 })}
                 <tr className="bg-slate-50 font-semibold">
                   <td className="px-4 py-2.5 text-slate-900">Total</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums">{rows.length}</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{aed(total)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums">{postings.length}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{totalLine}</td>
                   <td colSpan={2} />
                 </tr>
               </tbody>
@@ -137,30 +155,53 @@ export default async function JobPostSpendPage({ searchParams }: {
             <table className="w-full text-sm">
               <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <Th>Role</Th><Th>Platform</Th><Th>Start</Th><Th>End</Th>
-                  <Th right>Daily</Th><Th right>Paid</Th>
+                  <Th>Role</Th><Th>Platform</Th><Th>Posted</Th><Th>Closed</Th>
+                  <Th right>Budget</Th><Th right>Paid</Th><Th>Status</Th>
+                  {canEdit && <Th></Th>}
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r, i) => (
-                  <tr key={i} className="border-b border-slate-50 hover:bg-slate-50/60">
-                    <td className="px-4 py-2 text-slate-900">{r.role}</td>
-                    <td className="px-4 py-2 text-slate-600 text-xs">{r.platform}</td>
-                    <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(r.from)}</td>
-                    <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(r.to)}</td>
+                {postings.map((p) => (
+                  <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/60">
+                    <td className="px-4 py-2 text-slate-900">{p.requisition.title}</td>
+                    <td className="px-4 py-2 text-slate-600 text-xs">{PLATFORM_LABELS[p.platform] ?? p.platform}</td>
+                    <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(p.postedAt)}</td>
+                    <td className="px-4 py-2 text-slate-600 whitespace-nowrap">{day(p.closedAt)}</td>
                     <td className="px-4 py-2 text-right text-slate-600 tabular-nums whitespace-nowrap">
-                      {r.dailyAmount ? aed(r.dailyAmount) : <span className="text-slate-400">Free</span>}
+                      <Amount value={p.budget} currency={p.currency} />
                     </td>
                     <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">
-                      {r.paid == null
+                      {p.cost == null && p.status === 'ACTIVE'
                         ? <span className="text-amber-700 text-xs">still running</span>
-                        : r.paid ? aed(r.paid) : <span className="text-slate-400">Free</span>}
+                        : <Amount value={p.cost} currency={p.currency} />}
                     </td>
+                    <td className="px-4 py-2 text-xs text-slate-500">
+                      {p.status.charAt(0) + p.status.slice(1).toLowerCase()}
+                    </td>
+                    {canEdit && (
+                      <td className="px-4 py-2 text-right">
+                        <PostingEditButton
+                          posting={{
+                            id: p.id,
+                            role: p.requisition.title,
+                            platform: p.platform,
+                            currency: p.currency,
+                            budget: p.budget,
+                            cost: p.cost,
+                            postedAt: isoDay(p.postedAt),
+                            closedAt: isoDay(p.closedAt),
+                            status: p.status,
+                            notes: p.notes,
+                          }}
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
                 <tr className="bg-slate-50 font-semibold">
                   <td colSpan={5} className="px-4 py-2.5 text-slate-900">Total</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{aed(total)}</td>
+                  <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{totalLine}</td>
+                  <td colSpan={canEdit ? 2 : 1} />
                 </tr>
               </tbody>
             </table>
@@ -169,11 +210,26 @@ export default async function JobPostSpendPage({ searchParams }: {
       </div>
 
       <p className="text-[11px] text-slate-400">
-        Per vacancy divides the role&apos;s spend by the headcount on its requisition — it is
-        advertising cost, not cost-per-hire, which would also need agency and referral spend.
+        A post opens here when its job description is published, and closes when the role is
+        filled or closed. Budget is per day on LinkedIn. Per vacancy divides the role&apos;s spend
+        by the headcount on its requisition — advertising cost, not cost-per-hire, which would
+        also need agency and referral spend.
       </p>
     </div>
   )
+}
+
+function sum(m: Map<string, number>): number {
+  let n = 0
+  for (const v of m.values()) n += v
+  return n
+}
+
+/** Free and unknown are different facts, and read differently. */
+function Amount({ value, currency }: { value: number | null; currency: string }) {
+  if (value == null) return <span className="text-slate-400">not set</span>
+  if (value === 0) return <span className="text-slate-400">Free</span>
+  return <>{money(value, currency)}</>
 }
 
 function Filter({ href, label, active }: { href: string; label: string; active: boolean }) {
@@ -201,7 +257,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   )
 }
 
-function Th({ children, right }: { children: React.ReactNode; right?: boolean }) {
+function Th({ children, right }: { children?: React.ReactNode; right?: boolean }) {
   return (
     <th className={`px-4 py-2 text-[11px] uppercase tracking-wider text-slate-500 font-semibold whitespace-nowrap ${right ? 'text-right' : 'text-left'}`}>
       {children}

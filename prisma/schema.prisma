@@ -1447,9 +1447,17 @@ model JobPosting {
   platform          String    // LINKEDIN | INDEED | ZIPRECRUITER | CAREERS_PAGE | OTHER
   externalId        String?   // posting ID returned by the job board API
   trackingToken     String    @unique  // unique token for source attribution (e.g. "LN-2026-07-001")
-  postedAt          DateTime
+  // Optional because the LinkedIn sheet recorded no dates for the free posts.
+  // A blank date is the truth there; inventing one would not be.
+  postedAt          DateTime?
   expiresAt         DateTime?
-  cost              Float?    // cost per posting (USD)
+  // What was set when the post went up vs what was actually billed. LinkedIn
+  // bills a daily budget, so `budget` is per day on that platform; `cost` is
+  // the total taken. Both null while a post is still running.
+  budget            Float?
+  cost              Float?
+  currency          String    @default("AED")  // AED for LinkedIn; editable per post
+  closedAt          DateTime? // when the post actually came down
   status            String    @default("ACTIVE") // ACTIVE | PAUSED | EXPIRED | CLOSED
   impressions        Int       @default(0)
   clicks            Int       @default(0)

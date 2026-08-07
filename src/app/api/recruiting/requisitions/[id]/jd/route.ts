@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { generateJD } from '@/lib/jd-generator'
+import { trackingToken } from '@/lib/job-posting'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
   const req = await prisma.jobRequisition.findUnique({
     where: { id },
-    select: { jdContent: true, jdStatus: true, status: true },
+    select: { jdContent: true, jdStatus: true, status: true, postedDate: true },
   })
   if (!req) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   if (req.status !== 'OPEN') {
@@ -81,14 +82,49 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'JD content is empty — write or regenerate first' }, { status: 400 })
   }
 
+  const now = new Date()
   await prisma.jobRequisition.update({
     where: { id },
     data: {
       jdStatus: 'POSTED',
-      jdApprovedAt: new Date(),
+      jdApprovedAt: now,
       jdApprovedById: me!.id,
+      postedDate: req.postedDate ?? now,
     },
   })
+
+  // Publishing puts the role on the public careers page, so that advert now
+  // exists and belongs on Job Post Payments. It is free — the careers page
+  // costs nothing — and HR edits the row or adds a LinkedIn one beside it.
+  //
+  // Re-published after a re-open? Reopen the same row instead of stacking a
+  // second one; it is the same advert coming back up.
+  const existing = await prisma.jobPosting.findFirst({
+    where: { requisitionId: id, platform: 'CAREERS_PAGE' },
+    select: { id: true },
+  })
+  if (existing) {
+    await prisma.jobPosting.update({
+      where: { id: existing.id },
+      data: { status: 'ACTIVE', closedAt: null },
+    })
+  } else {
+    await prisma.jobPosting.create({
+      data: {
+        requisitionId: id,
+        platform: 'CAREERS_PAGE',
+        trackingToken: trackingToken('CAREERS_PAGE', now),
+        postedAt: now,
+        budget: 0,
+        cost: 0,
+        currency: 'AED',
+        status: 'ACTIVE',
+        postedBy: me!.id,
+        notes: 'Opened automatically when the JD was approved and published.',
+      },
+    })
+  }
+
   return NextResponse.json({ ok: true, jdStatus: 'POSTED' })
 }
 
@@ -100,6 +136,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   await prisma.jobRequisition.update({
     where: { id },
     data: { jdStatus: 'DRAFT_JD', jdApprovedAt: null, jdApprovedById: null },
+  })
+
+  // The role comes off the careers page while it is being edited, so the
+  // advert it opened stops being live. Paid postings are left alone — taking
+  // a JD down for a typo does not stop LinkedIn billing.
+  await prisma.jobPosting.updateMany({
+    where: { requisitionId: id, platform: 'CAREERS_PAGE', status: 'ACTIVE' },
+    data: { status: 'PAUSED', closedAt: new Date() },
   })
   return NextResponse.json({ ok: true })
 }
