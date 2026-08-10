@@ -80,12 +80,27 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (typeof body.note === 'string') data.note = body.note.trim().slice(0, 1000) || null
   if (typeof body.warningSubject === 'string') data.warningSubject = body.warningSubject.slice(0, 300)
   if (typeof body.warningBody === 'string') data.warningBody = body.warningBody.slice(0, 20000)
-  // Correcting the amount by hand — the arithmetic is only ever a starting
-  // point, and a part-month joiner or a mid-month raise moves it.
-  if (body.amount !== undefined && body.amount !== null && body.amount !== '') {
-    const n = Number(body.amount)
-    if (Number.isFinite(n) && n >= 0) data.amount = Math.round(n * 100) / 100
+  // Every figure behind the deduction is correctable. The arithmetic is only
+  // ever a starting point — a part-month joiner, a mid-month raise, a month
+  // where somebody agreed to charge two days instead of three — and HR having
+  // to accept a wrong number because the form would not let them change it is
+  // how a spreadsheet ends up being kept alongside this.
+  const money = (v: unknown, whole = false): number | undefined => {
+    if (v === undefined || v === null || v === '') return undefined
+    const n = Number(v)
+    if (!Number.isFinite(n) || n < 0) return undefined
+    return whole ? Math.round(n) : Math.round(n * 100) / 100
   }
+  const net = money(body.fullMonthNet)
+  if (net !== undefined) data.fullMonthNet = net
+  const divisor = money(body.divisorDays, true)
+  if (divisor !== undefined && divisor > 0 && divisor <= 31) data.divisorDays = divisor
+  const perDay = money(body.perDayAmount)
+  if (perDay !== undefined) data.perDayAmount = perDay
+  const days = money(body.days)
+  if (days !== undefined && days > 0 && days <= 31) data.days = days
+  const amount = money(body.amount)
+  if (amount !== undefined) data.amount = amount
   if (Object.keys(data).length === 0) {
     return NextResponse.json({ error: 'Nothing to change' }, { status: 400 })
   }

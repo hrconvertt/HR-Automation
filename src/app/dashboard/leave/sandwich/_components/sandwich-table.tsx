@@ -312,7 +312,14 @@ export function SandwichTable() {
         the charge — the history of what was decided is worth more than a tidy list.
       </p>
 
-      {sums && <CalculationDialog row={sums} all={rows} onClose={() => setSums(null)} />}
+      {sums && (
+        <CalculationDialog
+          row={sums}
+          all={rows}
+          onClose={() => setSums(null)}
+          onSaved={() => { setSums(null); load() }}
+        />
+      )}
 
       {letter && (
         <WarningDialog row={letter} onClose={() => setLetter(null)} onSent={() => { setLetter(null); load() }} />
@@ -328,77 +335,171 @@ export function SandwichTable() {
  * anyone reaching for a calculator — the person it is taken from will ask, and
  * "the system worked it out" is not an answer.
  */
-function CalculationDialog({ row, all, onClose }: {
-  row: Row; all: Row[]; onClose: () => void
+function CalculationDialog({ row, all, onClose, onSaved }: {
+  row: Row; all: Row[]; onClose: () => void; onSaved: () => void
 }) {
-  // What this person has been charged in total, this row included. A single
-  // deduction looks small; four of them is a different conversation, and the
-  // person being charged will be adding them up whether we do or not.
+  const [net, setNet] = useState(String(row.fullMonthNet))
+  const [divisor, setDivisor] = useState(String(row.divisorDays))
+  const [days, setDays] = useState(String(row.days))
+  const [perDay, setPerDay] = useState(String(row.perDayAmount))
+  const [amount, setAmount] = useState(String(row.amount))
+  const [linked, setLinked] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+
+  // While the figures are linked the two derived lines follow the three that
+  // are typed. Unlinking is for the month somebody agreed a different number
+  // — the arithmetic is the default, not the law.
+  function recalc(nextNet: string, nextDivisor: string, nextDays: string) {
+    if (!linked) return
+    const n = Number(nextNet)
+    const dv = Number(nextDivisor)
+    const dy = Number(nextDays)
+    if (!Number.isFinite(n) || !Number.isFinite(dv) || dv <= 0 || !Number.isFinite(dy)) return
+    const pd = Math.round((n / dv) * 100) / 100
+    setPerDay(String(pd))
+    setAmount(String(Math.round(pd * dy * 100) / 100))
+  }
+
   const mine = all.filter((r) => r.employee.id === row.employee.id && r.status === 'APPLIED')
-  const cumulative = mine.reduce((n, r) => n + r.amount, 0)
-  const cumulativeDays = mine.reduce((n, r) => n + r.days, 0)
+  const cumulative = mine.reduce((n, r) => n + (r.id === row.id ? Number(amount) || 0 : r.amount), 0)
+  const cumulativeDays = mine.reduce((n, r) => n + (r.id === row.id ? Number(days) || 0 : r.days), 0)
+  const dirty =
+    Number(net) !== row.fullMonthNet || Number(divisor) !== row.divisorDays ||
+    Number(days) !== row.days || Number(perDay) !== row.perDayAmount ||
+    Number(amount) !== row.amount
+
+  async function save() {
+    setBusy(true); setErr(null)
+    const res = await fetch(`/api/sandwich/${row.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fullMonthNet: net, divisorDays: divisor, days,
+        perDayAmount: perDay, amount,
+      }),
+    })
+    setBusy(false)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setErr(d.error ?? 'Could not save that.')
+      return
+    }
+    onSaved()
+  }
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="border-b border-slate-100 pb-3">
           <DialogTitle>Calculation — {row.employee.fullName}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-1 text-sm">
-          <Line label="Net pay for a full month" value={pkr(row.fullMonthNet)}
-                note={`${MONTHS[row.month - 1]} ${row.year}, as actually paid`} />
-          <Line label={`Days in ${MONTHS[row.month - 1]}`} value={String(row.divisorDays)}
-                note="calendar days, not working days" />
-          <div className="border-t border-slate-100 my-1" />
-          <Line label="One day of salary" value={pkr(row.perDayAmount)}
-                note={`${pkr(row.fullMonthNet)} ÷ ${row.divisorDays}`} />
-          <Line label="Unpaid days" value={String(row.days)}
-                note={row.dates.map(shortDay).join(', ')} />
-          <div className="border-t border-slate-200 my-1" />
-          <Line
-            label="Total deduction"
-            value={pkr(row.amount)}
-            note={`${pkr(row.perDayAmount)} × ${row.days}`}
-            strong
-            struck={row.status !== 'APPLIED'}
-          />
+
+        <div className="space-y-3">
+          <p className="text-xs text-slate-500">
+            {MONTHS[row.month - 1]} {row.year} · {row.trigger === 'FRIDAY' ? 'Friday' : 'Monday'}{' '}
+            {shortDay(row.triggerDate)}
+            {row.leaveRequest ? ` · ${row.leaveRequest.leaveType.toLowerCase()}` : ''}
+          </p>
+
+          <div className="rounded-lg border border-slate-200 overflow-hidden">
+            <Row3 label="Net pay for a full month" hint="as actually paid that month">
+              <Num value={net} onChange={(v) => { setNet(v); recalc(v, divisor, days) }} />
+            </Row3>
+            <Row3 label={`Days in ${MONTHS[row.month - 1]}`} hint="calendar days, not working days">
+              <Num value={divisor} onChange={(v) => { setDivisor(v); recalc(net, v, days) }} step="1" />
+            </Row3>
+            <Row3 label="Unpaid days" hint={row.dates.map(shortDay).join(', ')}>
+              <Num value={days} onChange={(v) => { setDays(v); recalc(net, divisor, v) }} step="0.5" />
+            </Row3>
+          </div>
+
+          <label className="flex items-center gap-2 text-[11px] text-slate-600">
+            <input type="checkbox" checked={linked} onChange={(e) => setLinked(e.target.checked)} />
+            Work the last two out from the three above
+          </label>
+
+          <div className="rounded-lg border border-slate-200 overflow-hidden bg-slate-50/60">
+            <Row3 label="One day of salary" hint={`${pkr(Number(net) || 0)} ÷ ${divisor}`}>
+              <Num value={perDay} onChange={setPerDay} readOnly={linked} />
+            </Row3>
+            <Row3 label="Total deduction" hint={`${pkr(Number(perDay) || 0)} × ${days}`} strong>
+              <Num value={amount} onChange={setAmount} readOnly={linked} strong />
+            </Row3>
+          </div>
+
+          <div className="flex items-baseline justify-between gap-3 px-1">
+            <div>
+              <p className="text-sm font-medium text-slate-700">Charged to date</p>
+              <p className="text-[11px] text-slate-400">
+                {mine.length === 0
+                  ? 'nothing applied against them'
+                  : `${mine.length} deduction${mine.length === 1 ? '' : 's'} · ${cumulativeDays} unpaid days`}
+              </p>
+            </div>
+            <p className="tabular-nums font-semibold text-slate-900">{pkr(cumulative)}</p>
+          </div>
+
           {row.status !== 'APPLIED' && (
-            <p className="text-[11px] text-slate-500 pt-1">
-              Waived — recorded but not charged.
+            <p className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">
+              Waived — recorded but not charged, so it is not in the total above.
             </p>
           )}
-
-          <div className="border-t border-slate-100 mt-2 pt-2">
-            <Line
-              label="Charged to date"
-              value={pkr(cumulative)}
-              note={mine.length === 0
-                ? 'nothing applied against them'
-                : `${mine.length} deduction${mine.length === 1 ? '' : 's'} · ${cumulativeDays} unpaid days in total`}
-            />
-          </div>
+          {dirty && (
+            <p className="text-[11px] text-slate-500">
+              Changing these does not rewrite the warning letter. Use Reset to the record on it
+              afterwards so the two agree.
+            </p>
+          )}
+          {err && <p className="text-xs text-red-700">{err}</p>}
         </div>
-        <DialogFooter>
-          <Button onClick={onClose}>Close</Button>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={onClose} disabled={busy}>Close</Button>
+          <Button onClick={save} disabled={busy || !dirty}>
+            {busy && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            Save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
 
-function Line({ label, value, note, strong, struck }: {
-  label: string; value: string; note?: string; strong?: boolean; struck?: boolean
+function Row3({ label, hint, strong, children }: {
+  label: string; hint?: string; strong?: boolean; children: React.ReactNode
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-3 py-1">
+    <div className="flex items-center justify-between gap-3 px-3 py-2 border-b border-slate-100 last:border-b-0">
       <div className="min-w-0">
-        <p className={strong ? 'font-semibold text-slate-900' : 'text-slate-700'}>{label}</p>
-        {note && <p className="text-[11px] text-slate-400">{note}</p>}
+        <p className={`text-sm ${strong ? 'font-semibold text-slate-900' : 'text-slate-700'}`}>{label}</p>
+        {hint && <p className="text-[11px] text-slate-400 truncate">{hint}</p>}
       </div>
-      <p className={`tabular-nums whitespace-nowrap ${strong ? 'text-base font-bold text-slate-900' : 'text-slate-700'} ${struck ? 'line-through text-slate-400' : ''}`}>
-        {value}
-      </p>
+      <div className="w-40 flex-shrink-0">{children}</div>
     </div>
+  )
+}
+
+function Num({ value, onChange, step = '0.01', readOnly, strong }: {
+  value: string; onChange: (v: string) => void
+  step?: string; readOnly?: boolean; strong?: boolean
+}) {
+  return (
+    <input
+      type="number"
+      min="0"
+      step={step}
+      value={value}
+      readOnly={readOnly}
+      onChange={(e) => onChange(e.target.value)}
+      className={
+        'w-full text-right tabular-nums rounded-md border px-2 py-1.5 text-sm '
+        + (readOnly
+          ? 'border-transparent bg-transparent text-slate-900 '
+          : 'border-slate-300 bg-white focus:outline-none focus:ring-2 focus:ring-slate-300 ')
+        + (strong ? 'font-bold' : '')
+      }
+    />
   )
 }
 
