@@ -16,7 +16,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Mail, Copy, Check, Loader2, Undo2, Ban, Calculator } from 'lucide-react'
+import { Mail, Copy, Check, Loader2, Undo2, Ban, Calculator, Trash2 } from 'lucide-react'
 
 interface Row {
   id: string
@@ -95,6 +95,17 @@ export function SandwichTable() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apply, informed: !apply }),
     })
+    setWriting(null)
+    load()
+  }
+
+  async function remove(row: Row) {
+    if (!confirm(
+      `Delete the ${row.days}-day deduction for ${row.employee.fullName}? `
+      + 'Waive keeps the record and stops the charge; this removes it entirely.',
+    )) return
+    setWriting(row.id)
+    await fetch(`/api/sandwich/${row.id}`, { method: 'DELETE' })
     setWriting(null)
     load()
   }
@@ -275,6 +286,15 @@ export function SandwichTable() {
                             ? <Loader2 className="w-3 h-3 animate-spin" />
                             : r.status === 'APPLIED' ? <Ban className="w-3 h-3" /> : <Undo2 className="w-3 h-3" />}
                           {r.status === 'APPLIED' ? 'Waive' : 'Reinstate'}
+                        </button>
+                        <button
+                          type="button"
+                          disabled={writing === r.id}
+                          onClick={() => remove(r)}
+                          title="Remove this deduction entirely"
+                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-slate-100 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700"
+                        >
+                          <Trash2 className="w-3 h-3" />
                         </button>
                       </div>
                     </td>

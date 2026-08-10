@@ -110,3 +110,18 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     transport: result.transport,
   })
 }
+
+/**
+ * DELETE /api/sandwich/[id] — remove it outright.
+ *
+ * Waiving keeps the record and stops the charge, which is right when a real
+ * decision was made. This is for the other case: one that should never have
+ * existed, so there is nothing worth keeping a history of.
+ */
+export async function DELETE(request: NextRequest, { params }: RouteParams) {
+  const auth = await gateHR(request)
+  if (auth.error) return auth.error
+  const { id } = await params
+  await prisma.sandwichDeduction.delete({ where: { id } })
+  return NextResponse.json({ ok: true })
+}

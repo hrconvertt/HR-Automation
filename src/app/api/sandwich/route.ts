@@ -11,6 +11,9 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { assessSandwich, isSandwichExempt, exemptionReason } from '@/lib/sandwich'
 
+/** Beyond this many days it is a planned absence, not an unnotified one. */
+const MAX_SANDWICH_LEAVE_DAYS = 3
+
 export async function GET(request: NextRequest) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -53,6 +56,13 @@ export async function GET(request: NextRequest) {
 
   const pending = candidates
     .map((l) => {
+      // Sick, annual, maternity and paternity carry notice by their nature, so
+      // they are not offered here at all. Greying them out was not enough —
+      // an Annual leave was charged 17 unpaid days twice before this.
+      if (isSandwichExempt(l.leaveType)) return null
+      // A planned block is not what the rule is aimed at either. Four weeks
+      // off hits four Fridays and produces a nonsense figure.
+      if (l.days > MAX_SANDWICH_LEAVE_DAYS) return null
       const found = assessSandwich(l.fromDate, l.toDate)
       if (found.windows.length === 0) return null
       return {
