@@ -40,6 +40,21 @@ interface Row {
   leaveRequest: { id: string; leaveType: string; reason: string } | null
 }
 
+interface Pending {
+  leaveId: string
+  employee: { id: string; fullName: string; employeeCode: string; designation: string | null }
+  leaveType: string
+  reason: string
+  fromDate: string
+  toDate: string
+  trigger: string
+  triggerDate: string
+  dates: string[]
+  days: number
+  exempt: boolean
+  exemptReason: string | null
+}
+
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -51,6 +66,7 @@ const shortDay = (d: string) =>
 
 export function SandwichTable() {
   const [rows, setRows] = useState<Row[]>([])
+  const [pending, setPending] = useState<Pending[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [writing, setWriting] = useState<string | null>(null)
@@ -60,12 +76,24 @@ export function SandwichTable() {
     setLoading(true)
     return fetch('/api/sandwich')
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('Could not load deductions'))))
-      .then((d) => setRows(d.deductions ?? []))
+      .then((d) => { setRows(d.deductions ?? []); setPending(d.pending ?? []) })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  /** Answer the question on a leave nobody has ruled on yet. */
+  async function decide(pnd: Pending, apply: boolean) {
+    setWriting(pnd.leaveId)
+    await fetch(`/api/leave/${pnd.leaveId}/sandwich`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ apply, informed: !apply }),
+    })
+    setWriting(null)
+    load()
+  }
 
   async function setStatus(row: Row, status: 'APPLIED' | 'WAIVED') {
     setWriting(row.id)
@@ -97,6 +125,65 @@ export function SandwichTable() {
           sub={`of ${rows.length}`}
         />
       </div>
+
+      {pending.length > 0 && (
+        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+          <div className="px-4 py-2.5 border-b border-slate-100">
+            <h2 className="text-sm font-semibold text-slate-900">
+              Waiting on you · {pending.length}
+            </h2>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              Leave sitting on a Friday or a Monday that nobody has ruled on. Nothing is
+              charged until you say so — the rule turns on whether notice was given, and
+              only you know that.
+            </p>
+          </div>
+          <div className="divide-y divide-slate-50">
+            {pending.map((pnd) => (
+              <div key={pnd.leaveId} className="px-4 py-3 flex items-start justify-between gap-3 flex-wrap">
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-900">
+                    <span className="font-medium">{pnd.employee.fullName}</span>
+                    <span className="text-slate-500"> · {shortDay(pnd.triggerDate)}</span>
+                    <span className={`ml-2 inline-block text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
+                      pnd.exempt
+                        ? 'bg-slate-50 text-slate-500 border-slate-200'
+                        : 'bg-amber-50 text-amber-800 border-amber-200'
+                    }`}>{pnd.leaveType}</span>
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5 max-w-2xl">
+                    {pnd.exempt
+                      ? pnd.exemptReason
+                      : `Would charge ${pnd.days} unpaid days — ${pnd.dates.map(shortDay).join(', ')}.`}
+                  </p>
+                  {pnd.reason && (
+                    <p className="text-[11px] text-slate-400 mt-0.5 max-w-2xl line-clamp-2">{pnd.reason}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  <button
+                    type="button"
+                    disabled={writing === pnd.leaveId}
+                    onClick={() => decide(pnd, true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                  >
+                    {writing === pnd.leaveId && <Loader2 className="w-3 h-3 animate-spin" />}
+                    Apply sandwich
+                  </button>
+                  <button
+                    type="button"
+                    disabled={writing === pnd.leaveId}
+                    onClick={() => decide(pnd, false)}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                  >
+                    Not applicable
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {rows.length === 0 ? (
         <p className="text-sm text-slate-400 text-center py-12 border border-slate-200 rounded-xl bg-white">

@@ -20,11 +20,34 @@ export const pkr = (n: number) =>
 /**
  * Net pay for a whole month worked in full.
  *
- * Runs the same calculatePayslip the payroll generator uses, with present days
- * equal to working days, so the figure a deduction is worked from is the one a
- * full month would actually have paid — EOBI and tax settings included.
+ * A real payslip for that month wins, when there is one for a month worked in
+ * full. Zuhaa's salary components sum to 56,000 but her July payslip paid
+ * 55,000 — the components and what was actually paid disagree, and a deduction
+ * has to come off what she was actually paid. Deducting against a number she
+ * never received would be wrong in the direction that costs her money.
+ *
+ * With no such payslip — a new joiner, a month not yet run — it falls back to
+ * the same calculatePayslip the payroll generator uses, present days equal to
+ * working days, so EOBI and tax settings still apply.
  */
-export async function fullMonthNetFor(employeeId: string): Promise<number> {
+export async function fullMonthNetFor(
+  employeeId: string,
+  year?: number,
+  month?: number,
+): Promise<number> {
+  if (year && month) {
+    const slip = await prisma.payslip.findFirst({
+      where: { employeeId, year, month, netSalary: { gt: 0 } },
+      select: { netSalary: true, presentDays: true, workingDays: true },
+      orderBy: { createdAt: 'desc' },
+    })
+    // Only a full month tells us what a full month pays. A pro-rated slip is
+    // the answer to a different question.
+    if (slip && slip.workingDays > 0 && slip.presentDays >= slip.workingDays) {
+      return slip.netSalary
+    }
+  }
+
   const salary = await prisma.salary.findUnique({ where: { employeeId } })
   if (!salary) return 0
   const cfg = await getPayrollConfig()

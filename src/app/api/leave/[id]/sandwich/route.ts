@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { dayKey } from '@/lib/date-utils'
-import { assessSandwich, sandwichAmount } from '@/lib/sandwich'
+import { assessSandwich, sandwichAmount, isSandwichExempt, exemptionReason } from '@/lib/sandwich'
 import { fullMonthNetFor, buildWarning } from '@/lib/sandwich-server'
 
 interface RouteParams { params: Promise<{ id: string }> }
@@ -62,7 +62,7 @@ async function assess(leaveId: string) {
   const month = triggerDate.getMonth() + 1
   const year = triggerDate.getFullYear()
 
-  const fullMonthNet = await fullMonthNetFor(leave.employeeId)
+  const fullMonthNet = await fullMonthNetFor(leave.employeeId, year, month)
   const money = {
     ...sandwichAmount(fullMonthNet, year, month, found.days),
     fullMonthNet, month, year,
@@ -92,6 +92,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     existing,
     employee: a.leave.employee,
     leaveType: a.leave.leaveType,
+    // A Friday still opens a window on a sick leave — HR can still charge one
+    // where the illness turned up after the fact — but the answer defaults to
+    // no and the dialog says why.
+    exempt: isSandwichExempt(a.leave.leaveType),
+    exemptReason: exemptionReason(a.leave.leaveType),
   })
 }
 

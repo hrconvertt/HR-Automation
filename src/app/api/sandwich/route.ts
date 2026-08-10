@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { assessSandwich, isSandwichExempt, exemptionReason } from '@/lib/sandwich'
 
 export async function GET(request: NextRequest) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
@@ -36,8 +37,44 @@ export async function GET(request: NextRequest) {
     },
   })
 
+  // Every leave sitting on a Friday or a Monday that nobody has ruled on yet.
+  // Nothing here is charged — the rule turns on whether notice was given, and
+  // that is HR's call, not something the system gets to decide on its own.
+  const decided = new Set(rows.map((r) => r.leaveRequestId).filter(Boolean) as string[])
+  const candidates = await prisma.leaveRequest.findMany({
+    where: { category: 'LEAVE', status: 'APPROVED', id: { notIn: [...decided] } },
+    orderBy: { fromDate: 'desc' },
+    take: 300,
+    select: {
+      id: true, fromDate: true, toDate: true, leaveType: true, reason: true, days: true,
+      employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } },
+    },
+  })
+
+  const pending = candidates
+    .map((l) => {
+      const found = assessSandwich(l.fromDate, l.toDate)
+      if (found.windows.length === 0) return null
+      return {
+        leaveId: l.id,
+        employee: l.employee,
+        leaveType: l.leaveType,
+        reason: l.reason,
+        fromDate: l.fromDate,
+        toDate: l.toDate,
+        trigger: found.windows[0].trigger,
+        triggerDate: found.windows[0].triggerDate,
+        dates: found.dates,
+        days: found.days,
+        exempt: isSandwichExempt(l.leaveType),
+        exemptReason: exemptionReason(l.leaveType),
+      }
+    })
+    .filter(Boolean)
+
   const applied = rows.filter((r) => r.status === 'APPLIED')
   return NextResponse.json({
+    pending,
     deductions: rows.map((r) => ({
       ...r,
       dates: (() => { try { return JSON.parse(r.dates) as string[] } catch { return [] } })(),

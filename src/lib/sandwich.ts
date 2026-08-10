@@ -23,6 +23,39 @@ import { dayKey } from '@/lib/date-utils'
 
 export type SandwichTrigger = 'FRIDAY' | 'MONDAY'
 
+/**
+ * Leave types the rule does not bite on.
+ *
+ * The policy charges leave taken "without prior notice". Some kinds of leave
+ * carry notice by their nature and are accepted on a Friday or Monday as they
+ * are on any other day:
+ *
+ *   SICK       — Tahreem's rule: a sick leave requested on a Friday or Monday
+ *                is accepted. Being ill on a Friday is not gaming the weekend.
+ *   ANNUAL     — booked and approved in advance, so notice is the whole point.
+ *   MATERNITY  — statutory and planned.
+ *   PATERNITY
+ *
+ * That leaves CASUAL and UNPAID, which is where an unnotified absence lands.
+ *
+ * This is a default, not a lock. HR can still apply the rule to an exempt type
+ * from the dialog — somebody who ghosts for two days and calls it sick
+ * afterwards is exactly the case the policy is aimed at.
+ */
+export const SANDWICH_EXEMPT_TYPES = ['SICK', 'ANNUAL', 'MATERNITY', 'PATERNITY']
+
+export function isSandwichExempt(leaveType: string | null | undefined): boolean {
+  return !!leaveType && SANDWICH_EXEMPT_TYPES.includes(leaveType.toUpperCase())
+}
+
+export function exemptionReason(leaveType: string | null | undefined): string | null {
+  if (!isSandwichExempt(leaveType)) return null
+  const t = (leaveType ?? '').toUpperCase()
+  if (t === 'SICK') return 'Sick leave requested on a Friday or Monday is accepted.'
+  if (t === 'ANNUAL') return 'Annual leave is booked in advance, so notice was given.'
+  return 'This leave type is planned in advance, so notice was given.'
+}
+
 export interface SandwichWindow {
   trigger: SandwichTrigger
   /** The Friday or Monday that opened it, YYYY-MM-DD. */

@@ -55,6 +55,8 @@ type SandwichInfo = {
   days: number
   money: { perDay: number; amount: number; divisor: number; fullMonthNet: number; month: number; year: number } | null
   existing: { id: string; status: string; days: number; amount: number; note: string | null; warningSentAt: string | null } | null
+  exempt: boolean
+  exemptReason: string | null
 }
 
 /** Marker the attendance backfill leaves on rows nobody has confirmed yet. */
@@ -428,8 +430,14 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
               <p className="text-xs font-semibold text-amber-900">
                 This falls on a {sand.windows.map((w) => w.trigger === 'FRIDAY' ? 'Friday' : 'Monday').join(' and a ')}.
-                Does the sandwich rule apply?
+                {sand.exempt ? ' The sandwich rule does not normally apply here.' : ' Does the sandwich rule apply?'}
               </p>
+              {sand.exempt && (
+                <p className="text-[11px] text-amber-900 bg-white/70 border border-amber-200 rounded p-1.5">
+                  {sand.exemptReason} Only charge it if the absence was not what it
+                  was called — someone who went quiet and named it afterwards.
+                </p>
+              )}
               <p className="text-[11px] text-amber-800">
                 Leave taken on a Friday or Monday without prior notice carries the weekend
                 beside it — {sand.days} unpaid days
@@ -441,10 +449,10 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
 
               <div className="flex items-center gap-2 flex-wrap">
                 <Choice active={applySandwich === true} onClick={() => setApplySandwich(true)}>
-                  Apply — no notice given
+                  {sand.exempt ? 'Charge it anyway' : 'Apply — no notice given'}
                 </Choice>
                 <Choice active={applySandwich === false} onClick={() => setApplySandwich(false)}>
-                  {alreadyDecided ? 'Waive it' : 'No — notice was given'}
+                  {alreadyDecided ? 'Waive it' : sand.exempt ? 'No — accepted as normal' : 'No — notice was given'}
                 </Choice>
               </div>
 
