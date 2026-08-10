@@ -312,7 +312,7 @@ export function SandwichTable() {
         the charge — the history of what was decided is worth more than a tidy list.
       </p>
 
-      {sums && <CalculationDialog row={sums} onClose={() => setSums(null)} />}
+      {sums && <CalculationDialog row={sums} all={rows} onClose={() => setSums(null)} />}
 
       {letter && (
         <WarningDialog row={letter} onClose={() => setLetter(null)} onSent={() => { setLetter(null); load() }} />
@@ -328,7 +328,16 @@ export function SandwichTable() {
  * anyone reaching for a calculator — the person it is taken from will ask, and
  * "the system worked it out" is not an answer.
  */
-function CalculationDialog({ row, onClose }: { row: Row; onClose: () => void }) {
+function CalculationDialog({ row, all, onClose }: {
+  row: Row; all: Row[]; onClose: () => void
+}) {
+  // What this person has been charged in total, this row included. A single
+  // deduction looks small; four of them is a different conversation, and the
+  // person being charged will be adding them up whether we do or not.
+  const mine = all.filter((r) => r.employee.id === row.employee.id && r.status === 'APPLIED')
+  const cumulative = mine.reduce((n, r) => n + r.amount, 0)
+  const cumulativeDays = mine.reduce((n, r) => n + r.days, 0)
+
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
       <DialogContent className="max-w-lg">
@@ -358,6 +367,16 @@ function CalculationDialog({ row, onClose }: { row: Row; onClose: () => void }) 
               Waived — recorded but not charged.
             </p>
           )}
+
+          <div className="border-t border-slate-100 mt-2 pt-2">
+            <Line
+              label="Charged to date"
+              value={pkr(cumulative)}
+              note={mine.length === 0
+                ? 'nothing applied against them'
+                : `${mine.length} deduction${mine.length === 1 ? '' : 's'} · ${cumulativeDays} unpaid days in total`}
+            />
+          </div>
         </div>
         <DialogFooter>
           <Button onClick={onClose}>Close</Button>
