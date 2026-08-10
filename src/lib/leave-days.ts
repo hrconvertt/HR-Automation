@@ -9,6 +9,20 @@ export type LeaveDayOpts = {
   firstDayHalf?: boolean
   lastDayHalf?: boolean
   holidayDates?: Set<string>
+  /**
+   * Charge the weekends a request brackets (rule 2 below). On by default.
+   *
+   * Off for annual leave. The bracket rule exists to stop single days being
+   * used to manufacture long weekends; a four-week annual leave booked and
+   * approved in advance is not that, and charging its interior Saturdays and
+   * Sundays would take 25 days off a balance for 19 days away from work.
+   */
+  bracketWeekends?: boolean
+}
+
+/** Annual leave is planned, so it is not what the bracket rule is aimed at. */
+export function bracketsWeekendsFor(leaveType: string): boolean {
+  return leaveType !== 'ANNUAL'
 }
 
 /**
@@ -22,7 +36,10 @@ export type LeaveDayOpts = {
  *   4. Half-day flags         — firstDayHalf / lastDayHalf each subtract 0.5.
  */
 export function countWorkingDays(start: Date, end: Date, opts: LeaveDayOpts = {}): number {
-  const { firstDayHalf = false, lastDayHalf = false, holidayDates = new Set<string>() } = opts
+  const {
+    firstDayHalf = false, lastDayHalf = false,
+    holidayDates = new Set<string>(), bracketWeekends = true,
+  } = opts
   const s = new Date(start); s.setHours(0, 0, 0, 0)
   const e = new Date(end); e.setHours(23, 59, 59, 999)
 
@@ -36,7 +53,7 @@ export function countWorkingDays(start: Date, end: Date, opts: LeaveDayOpts = {}
       // Public holiday — always free, doesn't charge balance
     } else if (day !== 0 && day !== 6) {
       count++
-    } else {
+    } else if (bracketWeekends) {
       // Sandwich check
       const friBefore = new Date(cur)
       const monAfter = new Date(cur)

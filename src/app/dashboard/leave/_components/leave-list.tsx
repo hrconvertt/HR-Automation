@@ -31,6 +31,8 @@ type LeaveRow = {
   status: string
   reason: string
   statusLabel?: string
+  firstDayHalf?: boolean
+  lastDayHalf?: boolean
   attachmentName?: string | null
   approvedByLead?: string | null
   approvedByHr?: string | null
@@ -44,6 +46,15 @@ interface Props {
   category?: 'LEAVE' | 'WFH'
   /** HR only — lets a record be re-typed and given its reason. */
   canEdit?: boolean
+}
+
+type SandwichInfo = {
+  applies: boolean
+  windows: Array<{ trigger: 'FRIDAY' | 'MONDAY'; triggerDate: string; dates: string[] }>
+  dates: string[]
+  days: number
+  money: { perDay: number; amount: number; divisor: number; fullMonthNet: number; month: number; year: number } | null
+  existing: { id: string; status: string; days: number; amount: number; note: string | null; warningSentAt: string | null } | null
 }
 
 /** Marker the attendance backfill leaves on rows nobody has confirmed yet. */
@@ -240,11 +251,16 @@ export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEd
 }
 
 /**
- * The correction most of this history needs.
+ * The whole record, editable.
  *
- * The records rebuilt from attendance know the day someone was away but not
- * why, so they all arrived as Casual with a placeholder. Casual and Sick draw
- * on separate balances — re-typing here moves the charge with it.
+ * This used to offer Type and Reason only, on the grounds that moving dates
+ * means rewriting the attendance the approval already wrote. The API does that
+ * rewrite now, so the rest of the record is here: dates, day count, half days,
+ * category and status.
+ *
+ * A Friday or a Monday in the range brings up the sandwich question. It is a
+ * question rather than an automatic charge because the policy turns on whether
+ * notice was given, and only HR knows that.
  */
 function EditDialog({ row, isWfh, onClose, onSaved }: {
   row: LeaveRow
@@ -253,9 +269,38 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
   onSaved: () => void
 }) {
   const [leaveType, setLeaveType] = useState(row.leaveType)
+  const [category, setCategory] = useState(row.category ?? 'LEAVE')
+  const [status, setStatus] = useState(row.status)
+  const [fromDate, setFromDate] = useState(row.fromDate.slice(0, 10))
+  const [toDate, setToDate] = useState(row.toDate.slice(0, 10))
+  const [days, setDays] = useState(String(row.days))
+  const [firstDayHalf, setFirstDayHalf] = useState(!!row.firstDayHalf)
+  const [lastDayHalf, setLastDayHalf] = useState(!!row.lastDayHalf)
   const [reason, setReason] = useState(row.reason?.includes(UNCONFIRMED) ? '' : (row.reason ?? ''))
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+
+  // Sandwich
+  const [sand, setSand] = useState<SandwichInfo | null>(null)
+  const [applySandwich, setApplySandwich] = useState<boolean | null>(null)
+  const [informed, setInformed] = useState(false)
+  const [sandNote, setSandNote] = useState('')
+
+  // Ask the server what the rule would cost. It knows the salary and the
+  // public holidays; the browser knows neither.
+  useEffect(() => {
+    if (isWfh) return
+    let live = true
+    fetch(`/api/leave/${row.id}/sandwich`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: SandwichInfo | null) => {
+        if (!live || !d) return
+        setSand(d)
+        if (d.existing) setApplySandwich(d.existing.status === 'APPLIED')
+      })
+      .catch(() => { /* the dialog still works without it */ })
+    return () => { live = false }
+  }, [row.id, isWfh])
 
   async function save() {
     setSaving(true)
@@ -263,67 +308,173 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
     const res = await fetch(`/api/leave/${row.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ leaveType, reason }),
+      body: JSON.stringify({
+        leaveType, category, status, fromDate, toDate,
+        days: Number(days),
+        firstDayHalf, lastDayHalf, reason,
+      }),
     })
-    setSaving(false)
     if (!res.ok) {
       const j = await res.json().catch(() => ({}))
+      setSaving(false)
       setErr(j.error ?? 'Could not save that.')
       return
     }
+
+    // The sandwich decision rides along with the save, so one trip through the
+    // dialog settles both the record and what it costs.
+    if (applySandwich !== null && sand?.applies) {
+      const sres = await fetch(`/api/leave/${row.id}/sandwich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apply: applySandwich, informed, note: sandNote || null }),
+      })
+      if (!sres.ok) {
+        const j = await sres.json().catch(() => ({}))
+        setSaving(false)
+        setErr(j.error ?? 'The record saved, but the sandwich decision did not.')
+        return
+      }
+    }
+    setSaving(false)
     onSaved()
   }
 
+  const money = sand?.money
+  const alreadyDecided = !!sand?.existing
+
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
-      <DialogContent>
+      <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit record — {row.employee?.fullName}</DialogTitle>
         </DialogHeader>
         <div className="space-y-3">
-          <p className="text-xs text-slate-500">
-            {fmt(row.fromDate, true)}
-            {row.fromDate.slice(0, 10) !== row.toDate.slice(0, 10) && <> → {fmt(row.toDate, true)}</>}
-            {' · '}{formatDays(row.days)}
-          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="From">
+              <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className={inputCls} />
+            </Field>
+            <Field label="To">
+              <input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} className={inputCls} />
+            </Field>
+          </div>
 
-          {!isWfh && (
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">Type</label>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Days" hint="Blank recalculates from the dates.">
+              <input
+                type="number" min="0" step="0.5" value={days}
+                onChange={(e) => setDays(e.target.value)}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="Status">
+              <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
+                {['PENDING', 'PENDING_HR', 'APPROVED', 'REJECTED', 'CANCELLED'].map((s) => (
+                  <option key={s} value={s}>{LEAVE_STATUS_LABELS[s] ?? s}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Type">
               <select
                 value={leaveType}
                 onChange={(e) => setLeaveType(e.target.value)}
-                className="w-full text-sm rounded-md border border-slate-200 px-3 py-2 bg-white"
+                disabled={category === 'WFH'}
+                className={inputCls}
               >
                 {EDITABLE_TYPES.map((t) => (
                   <option key={t} value={t}>{t.charAt(0) + t.slice(1).toLowerCase()}</option>
                 ))}
               </select>
-              {row.status === 'APPROVED' && leaveType !== row.leaveType && (
-                <p className="text-[11px] text-amber-700 mt-1">
-                  This day is already charged to {row.leaveType.toLowerCase()} — saving moves the
-                  charge to {leaveType.toLowerCase()}.
+            </Field>
+            <Field label="Category">
+              <select value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls}>
+                <option value="LEAVE">Leave</option>
+                <option value="WFH">Work from home</option>
+              </select>
+            </Field>
+          </div>
+
+          {status === 'APPROVED' && leaveType !== row.leaveType && category === 'LEAVE' && (
+            <p className="text-[11px] text-amber-700">
+              This is charged to {row.leaveType.toLowerCase()} — saving moves the charge to {leaveType.toLowerCase()}.
+            </p>
+          )}
+
+          <div className="flex items-center gap-4">
+            <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+              <input type="checkbox" checked={firstDayHalf} onChange={(e) => setFirstDayHalf(e.target.checked)} />
+              First day is a half day
+            </label>
+            <label className="inline-flex items-center gap-1.5 text-xs text-slate-600">
+              <input type="checkbox" checked={lastDayHalf} onChange={(e) => setLastDayHalf(e.target.checked)} />
+              Last day is a half day
+            </label>
+          </div>
+
+          <Field label="Reason">
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={3}
+              placeholder="What the employee gave as the reason"
+              className={inputCls}
+            />
+          </Field>
+
+          {sand?.applies && money && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
+              <p className="text-xs font-semibold text-amber-900">
+                This falls on a {sand.windows.map((w) => w.trigger === 'FRIDAY' ? 'Friday' : 'Monday').join(' and a ')}.
+                Does the sandwich rule apply?
+              </p>
+              <p className="text-[11px] text-amber-800">
+                Leave taken on a Friday or Monday without prior notice carries the weekend
+                beside it — {sand.days} unpaid days
+                {' ('}{sand.dates.map((d) => new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit' })).join(', ')}
+                {'). '}
+                A day is {pkrShort(money.perDay)} — net pay over {money.divisor} days — so this
+                would deduct <strong>{pkrShort(money.amount)}</strong>.
+              </p>
+
+              <div className="flex items-center gap-2 flex-wrap">
+                <Choice active={applySandwich === true} onClick={() => setApplySandwich(true)}>
+                  Apply — no notice given
+                </Choice>
+                <Choice active={applySandwich === false} onClick={() => setApplySandwich(false)}>
+                  {alreadyDecided ? 'Waive it' : 'No — notice was given'}
+                </Choice>
+              </div>
+
+              {applySandwich === true && (
+                <>
+                  <label className="inline-flex items-center gap-1.5 text-[11px] text-amber-900">
+                    <input type="checkbox" checked={!informed} onChange={(e) => setInformed(!e.target.checked)} />
+                    Neither HR nor their lead was told beforehand
+                  </label>
+                  <input
+                    value={sandNote}
+                    onChange={(e) => setSandNote(e.target.value)}
+                    placeholder="Note for the record (optional)"
+                    className="w-full px-2 py-1.5 rounded-md border border-amber-200 text-xs bg-white"
+                  />
+                  <p className="text-[11px] text-amber-700">
+                    Saving records the deduction and drafts the warning email. Nothing is sent
+                    until you send it from Sandwich Deductions.
+                  </p>
+                </>
+              )}
+              {alreadyDecided && (
+                <p className="text-[11px] text-amber-700">
+                  Already recorded as {sand.existing!.status === 'APPLIED' ? 'applied' : 'waived'}
+                  {sand.existing!.warningSentAt ? ' · warning sent' : ''}.
                 </p>
               )}
             </div>
           )}
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Reason</label>
-            <textarea
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              rows={3}
-              autoFocus
-              placeholder="What the employee gave as the reason"
-              className="w-full text-sm rounded-md border border-slate-200 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-slate-500"
-            />
-          </div>
-
-          <p className="text-[11px] text-slate-400">
-            Dates and day count are not editable here — changing those means rewriting the
-            attendance already written for them.
-          </p>
           {err && <p className="text-xs text-red-700">{err}</p>}
         </div>
         <DialogFooter>
@@ -335,6 +486,42 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  )
+}
+
+const inputCls = 'w-full text-sm rounded-md border border-slate-200 px-3 py-2 bg-white focus:outline-none focus:ring-2 focus:ring-slate-500'
+
+const pkrShort = (n: number) =>
+  'PKR ' + n.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+
+function Field({ label, hint, children }: {
+  label: string; hint?: string; children: React.ReactNode
+}) {
+  return (
+    <label className="block">
+      <span className="block text-sm font-medium text-slate-700 mb-1">{label}</span>
+      {children}
+      {hint && <span className="text-[11px] text-slate-400 mt-0.5 block">{hint}</span>}
+    </label>
+  )
+}
+
+function Choice({ active, onClick, children }: {
+  active: boolean; onClick: () => void; children: React.ReactNode
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={
+        'text-[11px] font-medium px-2.5 py-1 rounded-full border transition-colors ' +
+        (active
+          ? 'bg-amber-900 text-white border-amber-900'
+          : 'bg-white text-amber-900 border-amber-300 hover:bg-amber-100')
+      }
+    >
+      {children}
+    </button>
   )
 }
 
