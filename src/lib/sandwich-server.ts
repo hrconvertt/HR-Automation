@@ -94,6 +94,25 @@ export interface WarningInput {
   year: number
   leaveType?: string | null
   informed?: boolean        // did they tell anyone at all
+  // The whole absence, which is often longer than the day that triggered the
+  // rule. Zuhaa was away Thursday and Friday; a letter that opens by naming
+  // only the Friday reads as though we had not noticed the Thursday.
+  leaveFrom?: string        // YYYY-MM-DD
+  leaveTo?: string          // YYYY-MM-DD
+}
+
+/** "Thursday, 09 July and Friday, 10 July 2026" — every day of the absence. */
+function describeAbsence(from: string, to: string): string {
+  const days: string[] = []
+  const cursor = new Date(`${from}T00:00:00`)
+  const end = new Date(`${to}T00:00:00`)
+  while (cursor <= end && days.length < 31) {
+    days.push(cursor.toLocaleDateString('en-GB', { weekday: 'long', day: '2-digit', month: 'long' }))
+    cursor.setDate(cursor.getDate() + 1)
+  }
+  const year = new Date(`${to}T00:00:00`).getFullYear()
+  if (days.length === 1) return `${days[0]} ${year}`
+  return `${days.slice(0, -1).join(', ')} and ${days[days.length - 1]} ${year}`
 }
 
 /**
@@ -107,7 +126,7 @@ export interface WarningInput {
 export function buildWarning(input: WarningInput): { subject: string; body: string } {
   const {
     fullName, trigger, triggerDate, dates, days, amount, perDayAmount,
-    divisorDays, month, year, informed,
+    divisorDays, month, year, informed, leaveFrom, leaveTo,
   } = input
 
   const first = fullName.split(/\s+/)[0]
@@ -119,16 +138,20 @@ export function buildWarning(input: WarningInput): { subject: string; body: stri
     ? 'the Saturday and Sunday that follow it'
     : 'the Saturday and Sunday before it'
 
-  const subject = `Sandwich leave deduction — ${triggerLong}`
+  // The absence as it actually was, falling back to the trigger day alone.
+  const multiDay = !!(leaveFrom && leaveTo && leaveFrom !== leaveTo)
+  const absence = multiDay ? describeAbsence(leaveFrom!, leaveTo!) : triggerLong
+  const subject = `Sandwich leave deduction — ${multiDay ? absence : triggerLong}`
 
   const body = [
     `Dear ${first},`,
     '',
     informed === false
-      ? `You were away on ${triggerLong} and we had no notice of it from HR or your lead beforehand.`
-      : `This is regarding your leave on ${triggerLong}.`,
+      ? `You were away on ${absence} and we had no notice of it from HR or your lead beforehand.`
+      : `This is regarding your leave on ${absence}.`,
     '',
-    `Under section 5 of the Convertt Leave Policy, leave taken on a ${TRIGGER_LABEL[trigger]} without prior notice counts ${weekendPart} as well. That makes ${days} unpaid days in total:`,
+    `Under section 5 of the Convertt Leave Policy, leave taken on a ${TRIGGER_LABEL[trigger]} without prior notice counts ${weekendPart} as well. `
+      + `${multiDay ? `The ${TRIGGER_LABEL[trigger]} in question was ${triggerLong}, so that makes` : 'That makes'} ${days} unpaid days in total:`,
     '',
     `    ${describeDates(dates)}`,
     '',

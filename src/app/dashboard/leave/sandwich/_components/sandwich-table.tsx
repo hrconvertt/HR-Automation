@@ -16,7 +16,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Mail, Copy, Check, Loader2, Undo2, Ban } from 'lucide-react'
+import { Mail, Copy, Check, Loader2, Undo2, Ban, Calculator } from 'lucide-react'
 
 interface Row {
   id: string
@@ -61,8 +61,11 @@ const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
 const pkr = (n: number) =>
   'PKR ' + n.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
+// Takes either "2026-07-31" or a full ISO timestamp — the API sends both, and
+// blindly appending a time to the second produced "Invalid Date" on screen.
 const shortDay = (d: string) =>
-  new Date(`${d}T00:00:00`).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
+  new Date(`${String(d).slice(0, 10)}T00:00:00`)
+    .toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short' })
 
 export function SandwichTable() {
   const [rows, setRows] = useState<Row[]>([])
@@ -71,6 +74,7 @@ export function SandwichTable() {
   const [error, setError] = useState<string | null>(null)
   const [writing, setWriting] = useState<string | null>(null)
   const [letter, setLetter] = useState<Row | null>(null)
+  const [sums, setSums] = useState<Row | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -249,6 +253,13 @@ export function SandwichTable() {
                       <div className="flex items-center gap-1.5 justify-end">
                         <button
                           type="button"
+                          onClick={() => setSums(r)}
+                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-slate-100 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                        >
+                          <Calculator className="w-3 h-3" /> Calculation
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => setLetter(r)}
                           className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-slate-100 bg-slate-50 text-slate-700 hover:bg-slate-100"
                         >
@@ -281,9 +292,73 @@ export function SandwichTable() {
         the charge — the history of what was decided is worth more than a tidy list.
       </p>
 
+      {sums && <CalculationDialog row={sums} onClose={() => setSums(null)} />}
+
       {letter && (
         <WarningDialog row={letter} onClose={() => setLetter(null)} onSent={() => { setLetter(null); load() }} />
       )}
+    </div>
+  )
+}
+
+/**
+ * How the number was arrived at, line by line.
+ *
+ * A deduction that lands on somebody's payslip has to be explainable without
+ * anyone reaching for a calculator — the person it is taken from will ask, and
+ * "the system worked it out" is not an answer.
+ */
+function CalculationDialog({ row, onClose }: { row: Row; onClose: () => void }) {
+  return (
+    <Dialog open onOpenChange={(o) => { if (!o) onClose() }}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader className="border-b border-slate-100 pb-3">
+          <DialogTitle>Calculation — {row.employee.fullName}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-1 text-sm">
+          <Line label="Net pay for a full month" value={pkr(row.fullMonthNet)}
+                note={`${MONTHS[row.month - 1]} ${row.year}, as actually paid`} />
+          <Line label={`Days in ${MONTHS[row.month - 1]}`} value={String(row.divisorDays)}
+                note="calendar days, not working days" />
+          <div className="border-t border-slate-100 my-1" />
+          <Line label="One day of salary" value={pkr(row.perDayAmount)}
+                note={`${pkr(row.fullMonthNet)} ÷ ${row.divisorDays}`} />
+          <Line label="Unpaid days" value={String(row.days)}
+                note={row.dates.map(shortDay).join(', ')} />
+          <div className="border-t border-slate-200 my-1" />
+          <Line
+            label="Total deduction"
+            value={pkr(row.amount)}
+            note={`${pkr(row.perDayAmount)} × ${row.days}`}
+            strong
+            struck={row.status !== 'APPLIED'}
+          />
+          {row.status !== 'APPLIED' && (
+            <p className="text-[11px] text-slate-500 pt-1">
+              Waived — recorded but not charged.
+            </p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function Line({ label, value, note, strong, struck }: {
+  label: string; value: string; note?: string; strong?: boolean; struck?: boolean
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1">
+      <div className="min-w-0">
+        <p className={strong ? 'font-semibold text-slate-900' : 'text-slate-700'}>{label}</p>
+        {note && <p className="text-[11px] text-slate-400">{note}</p>}
+      </div>
+      <p className={`tabular-nums whitespace-nowrap ${strong ? 'text-base font-bold text-slate-900' : 'text-slate-700'} ${struck ? 'line-through text-slate-400' : ''}`}>
+        {value}
+      </p>
     </div>
   )
 }

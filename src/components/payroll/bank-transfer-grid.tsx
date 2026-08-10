@@ -22,7 +22,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 const money = (n: number) => n.toLocaleString('en-PK', { maximumFractionDigits: 2 })
 import { bankCodeFromIban, isFaysalIban } from '@/lib/bank-codes'
-import { Save, Download, Landmark, AlertCircle, Eye, Printer, X } from 'lucide-react'
+import { Save, Download, Landmark, AlertCircle, Eye, Printer, X, Pencil } from 'lucide-react'
 import { safeFetch } from '@/lib/safe-fetch'
 import type { GridPayslip, GridRole } from './payroll-grid-editor'
 
@@ -50,6 +50,11 @@ export function BankTransferGrid({
   const [edits, setEdits] = useState<Record<string, Partial<Record<BankCell, string | number>>>>({})
   const [busy, setBusy] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
+  // The whole table goes into edit mode at once, rather than every cell
+  // sitting there as a live input. A bank file is read far more often than it
+  // is changed, and a page full of boxes invites a stray keystroke into an
+  // account number.
+  const [editing, setEditing] = useState(false)
 
   // Drop pending edits when the underlying run/rows change. Done during render
   // (React's documented "adjusting state when props change" pattern) rather
@@ -140,10 +145,39 @@ export function BankTransferGrid({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {canEdit && (
-            <Button onClick={save} disabled={!dirty || busy} size="sm" className="bg-slate-700 hover:bg-slate-700 text-white">
-              <Save className="w-3.5 h-3.5 mr-1.5" /> {busy ? 'Saving…' : 'Save Changes'}
+          {canEdit && !editing && (
+            <Button onClick={() => setEditing(true)} variant="outline" size="sm">
+              <Pencil className="w-3.5 h-3.5 mr-1.5" /> Edit table
             </Button>
+          )}
+          {canEdit && editing && (
+            <>
+              <Button
+                onClick={() => {
+                  // Leaving edit mode throws away anything unsaved, so say so
+                  // rather than discarding a row somebody just retyped.
+                  if (dirty && !confirm(
+                    `Discard ${Object.keys(edits).length} unsaved row`
+                    + `${Object.keys(edits).length === 1 ? '' : 's'}?`,
+                  )) return
+                  setEdits({})
+                  setEditing(false)
+                }}
+                variant="outline"
+                size="sm"
+                disabled={busy}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={async () => { await save(); setEditing(false) }}
+                disabled={!dirty || busy}
+                size="sm"
+                className="bg-slate-700 hover:bg-slate-700 text-white"
+              >
+                <Save className="w-3.5 h-3.5 mr-1.5" /> {busy ? 'Saving…' : 'Save Changes'}
+              </Button>
+            </>
           )}
           <Button
             onClick={() => setPreviewOpen(true)}
@@ -160,7 +194,9 @@ export function BankTransferGrid({
         {format === 'IFT'
           ? 'Faysal-to-Faysal transfers. No bank column — the bank is implicit.'
           : 'Transfers to banks other than Faysal. The bank code comes from the account number.'}
-        {canEdit && ' Account number, amount and note are editable here; everything else is derived.'} All amounts PKR.
+        {canEdit && (editing
+          ? ' Account number, amount and note are editable; everything else is derived.'
+          : ' Use Edit table to change an account number, an amount or a note.')} All amounts PKR.
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
@@ -188,7 +224,7 @@ export function BankTransferGrid({
                 <td className="px-3 py-2 font-medium text-slate-900 whitespace-nowrap">{r.p.employee.fullName}</td>
                 <BankCellInput
                   value={r.iban}
-                  editable={canEdit}
+                  editable={canEdit && editing}
                   edited={r.edited.has('ibanAccount')}
                   mono
                   onChange={(v) => setCell(r.p.id, 'ibanAccount', String(v),
@@ -197,7 +233,7 @@ export function BankTransferGrid({
                 {format === 'IBFT' && <td className="px-3 py-2 text-slate-700 whitespace-nowrap">{r.bank || '—'}</td>}
                 <BankCellInput
                   value={r.amount}
-                  editable={canEdit}
+                  editable={canEdit && editing}
                   edited={r.edited.has('transactionAmount')}
                   numeric right bold
                   onChange={(v) => setCell(r.p.id, 'transactionAmount', Number(v) || 0,
@@ -207,7 +243,7 @@ export function BankTransferGrid({
                 <td className="px-3 py-2 text-slate-500 text-[11px] whitespace-nowrap">{reference}</td>
                 <BankCellInput
                   value={r.notes}
-                  editable={canEdit}
+                  editable={canEdit && editing}
                   edited={r.edited.has('payoutNotes')}
                   onChange={(v) => setCell(r.p.id, 'payoutNotes', String(v), r.p.payoutNotes ?? '')}
                 />

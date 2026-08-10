@@ -422,6 +422,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       label: 'Performance',
       items: [
         { href: '/dashboard/performance', label: 'Overview', icon: TrendingUp },
+        { href: '/dashboard/performance/increments', label: 'Increments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
         { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
         { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
         { href: '/dashboard/culture', label: 'Recognition', icon: Sparkles },

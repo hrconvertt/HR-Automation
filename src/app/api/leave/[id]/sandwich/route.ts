@@ -133,6 +133,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     year: money.year,
     leaveType: leave.leaveType,
     informed,
+    leaveFrom: dayKey(leave.fromDate),
+    leaveTo: dayKey(leave.toDate),
   })
 
   const data = {
