@@ -14,7 +14,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { sendEmail } from '@/lib/email'
-import { warningHtml } from '@/lib/sandwich-server'
+import { warningHtml, buildWarning } from '@/lib/sandwich-server'
+import type { SandwichTrigger } from '@/lib/sandwich'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -38,6 +39,41 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (auth.error) return auth.error
   const { id } = await params
   const body = await request.json().catch(() => ({}))
+
+  // Rebuild the letter from the record. An edited letter can drift from the
+  // facts it describes — a draft went out naming August dates for a July
+  // absence and four unpaid days where the record says three — and once it has
+  // drifted there is no way back to the truth by hand.
+  if (body.regenerate) {
+    const row = await prisma.sandwichDeduction.findUnique({
+      where: { id },
+      include: {
+        employee: { select: { fullName: true } },
+        leaveRequest: { select: { fromDate: true, toDate: true, leaveType: true } },
+      },
+    })
+    if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const w = buildWarning({
+      fullName: row.employee.fullName,
+      trigger: row.trigger as SandwichTrigger,
+      triggerDate: row.triggerDate.toISOString().slice(0, 10),
+      dates: JSON.parse(row.dates),
+      days: row.days,
+      amount: row.amount,
+      perDayAmount: row.perDayAmount,
+      divisorDays: row.divisorDays,
+      month: row.month,
+      year: row.year,
+      leaveType: row.leaveRequest?.leaveType,
+      informed: false,
+      leaveFrom: row.leaveRequest?.fromDate.toISOString().slice(0, 10),
+      leaveTo: row.leaveRequest?.toDate.toISOString().slice(0, 10),
+    })
+    const fresh = await prisma.sandwichDeduction.update({
+      where: { id }, data: { warningSubject: w.subject, warningBody: w.body },
+    })
+    return NextResponse.json({ ok: true, deduction: fresh })
+  }
 
   const data: Record<string, unknown> = {}
   if (body.status === 'APPLIED' || body.status === 'WAIVED') data.status = body.status

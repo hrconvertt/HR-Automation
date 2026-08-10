@@ -412,6 +412,29 @@ function WarningDialog({ row, onClose, onSent }: {
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
+  // Does the letter still describe the record? Cheap and blunt on purpose —
+  // the amount and the day count are the two things that must appear, and a
+  // letter missing either has drifted from what it is charging.
+  const drifted = !!body && (
+    !body.includes(pkr(row.amount))
+    || !new RegExp(`\b${row.days} unpaid days\b`).test(body)
+  )
+
+  async function regenerate() {
+    setBusy(true); setErr(null); setMsg(null)
+    const res = await fetch(`/api/sandwich/${row.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ regenerate: true }),
+    })
+    const d = await res.json().catch(() => ({}))
+    setBusy(false)
+    if (!res.ok) { setErr(d.error ?? 'Could not rebuild it.'); return }
+    setSubject(d.deduction?.warningSubject ?? '')
+    setBody(d.deduction?.warningBody ?? '')
+    setMsg('Rebuilt from the record.')
+  }
+
   async function copy() {
     try {
       await navigator.clipboard.writeText(`Subject: ${subject}\n\n${body}`)
@@ -483,6 +506,13 @@ function WarningDialog({ row, onClose, onSent }: {
             />
           </label>
 
+          {drifted && (
+            <p className="text-xs text-amber-900 bg-amber-50 border border-amber-300 rounded p-2">
+              This letter no longer states {pkr(row.amount)} and {row.days} unpaid days, which is
+              what the record says. Edited text is kept as written — use Reset to the record if it
+              has drifted.
+            </p>
+          )}
           {msg && <p className="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-2">{msg}</p>}
           {err && <p className="text-xs text-red-700 bg-red-50 border border-red-200 rounded p-2">{err}</p>}
         </div>
@@ -493,6 +523,7 @@ function WarningDialog({ row, onClose, onSent }: {
             {copied ? <Check className="w-3.5 h-3.5 mr-1.5" /> : <Copy className="w-3.5 h-3.5 mr-1.5" />}
             {copied ? 'Copied' : 'Copy'}
           </Button>
+          <Button variant="outline" onClick={regenerate} disabled={busy}>Reset to the record</Button>
           <Button variant="outline" onClick={save} disabled={busy}>Save draft</Button>
           <Button onClick={send} disabled={busy || !row.employee.email}>
             {busy && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
