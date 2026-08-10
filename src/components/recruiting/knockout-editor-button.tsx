@@ -10,14 +10,16 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Filter, Plus, X } from 'lucide-react'
+import { Filter, Plus, Sparkles, X } from 'lucide-react'
+import { extractCriteriaFromJd } from '@/lib/jd-criteria'
 
-type Criterion = { type: string; value: string; isHard: boolean }
+/** `source` is local to this dialog — the API ignores anything it doesn't know. */
+type Criterion = { type: string; value: string; isHard: boolean; source?: string }
 
 const TYPES: Array<{ value: string; label: string; hint: string }> = [
   { value: 'WORK_AUTH',     label: 'Work Authorization', hint: 'e.g. PK' },
   { value: 'LOCATION',      label: 'Location',           hint: 'Lahore,Karachi,Remote-OK' },
-  { value: 'SKILL',         label: 'Skill',              hint: 'e.g. Shopify Liquid' },
+  { value: 'SKILL',         label: 'Skill',              hint: 'Shopify Liquid — or Selenium | Cypress for either' },
   { value: 'MIN_YEARS',     label: 'Minimum Years',      hint: 'e.g. 3' },
   { value: 'MIN_EDUCATION', label: 'Minimum Education',  hint: 'BACHELORS | MASTERS | PHD' },
   { value: 'LANGUAGE',      label: 'Language',           hint: 'e.g. English' },
@@ -36,6 +38,7 @@ export function KnockoutEditorButton({ requisitionId, title, jdContent }: Props)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [loaded, setLoaded] = useState(false)
+  const [fromJd, setFromJd] = useState(0)
 
   async function load() {
     setError('')
@@ -45,13 +48,29 @@ export function KnockoutEditorButton({ requisitionId, title, jdContent }: Props)
     const existing: Criterion[] = (data.criteria ?? []).map((c: { type: string; value: string; isHard: boolean }) => ({
       type: c.type, value: c.value, isHard: c.isHard,
     }))
-    // Suggest a SKILL criterion based on the JD if first edit and nothing exists.
+    // Nothing saved yet — read the JD and fill the form in. Tahreem adds what
+    // the JD did not say; she should not have to retype what it did.
     if (existing.length === 0 && jdContent) {
-      const suggested = suggestFromJd(jdContent)
-      if (suggested) existing.push(suggested)
+      const read = extractCriteriaFromJd(jdContent)
+      existing.push(...read)
+      setFromJd(read.length)
+    } else {
+      setFromJd(0)
     }
     setCriteria(existing)
     setLoaded(true)
+  }
+
+  /** Re-read the JD, keeping anything already typed. */
+  function readJd() {
+    if (!jdContent) return
+    const read = extractCriteriaFromJd(jdContent)
+    setCriteria((cs) => {
+      const have = new Set(cs.map((c) => `${c.type}:${c.value.toLowerCase()}`))
+      const added = read.filter((c) => !have.has(`${c.type}:${c.value.toLowerCase()}`))
+      setFromJd(added.length)
+      return [...cs, ...added]
+    })
   }
 
   async function openDialog() {
@@ -109,18 +128,33 @@ export function KnockoutEditorButton({ requisitionId, title, jdContent }: Props)
 
           <div className="space-y-3 py-2">
             <p className="text-xs text-slate-500">
-              Hard filters auto-disqualify candidates at intake. Soft filters are recorded but don&apos;t block.
-              No filters = everyone passes through (legacy behaviour).
+              Hard filters auto-disqualify a candidate at intake. Soft filters are recorded but
+              don&apos;t block. No filters means everyone passes through.
             </p>
 
+            {fromJd > 0 && (
+              <p className="text-xs text-slate-600 bg-slate-50 border border-slate-100 rounded-md p-2">
+                <Sparkles className="w-3 h-3 inline mr-1 -mt-0.5" />
+                <span className="font-medium">{fromJd} read from the job description.</span>{' '}
+                Skills come in soft on purpose — seven hard filters off one requirements list would
+                send every applicant to Knockouts. Tick Hard on the ones that genuinely gate, and
+                delete what doesn&apos;t belong.
+              </p>
+            )}
+
             {criteria.length === 0 ? (
-              <p className="text-sm text-slate-400 text-center py-4">No criteria yet. Add one below.</p>
+              <p className="text-sm text-slate-400 text-center py-4">
+                {jdContent
+                  ? 'Nothing found in the job description. Add a criterion below.'
+                  : 'No criteria yet. Add one below, or write a JD first and they will be read from it.'}
+              </p>
             ) : (
               <div className="space-y-2">
                 {criteria.map((c, i) => {
                   const hint = TYPES.find((t) => t.value === c.type)?.hint ?? ''
                   return (
-                    <div key={i} className="flex items-center gap-2 p-2 border border-slate-200 rounded-md bg-white">
+                    <div key={i} className="p-2 border border-slate-200 rounded-md bg-white">
+                    <div className="flex items-center gap-2">
                       <select
                         value={c.type}
                         onChange={(e) => update(i, { type: e.target.value })}
@@ -150,18 +184,34 @@ export function KnockoutEditorButton({ requisitionId, title, jdContent }: Props)
                         <X className="w-4 h-4" />
                       </button>
                     </div>
+                    {c.source && (
+                      <p className="text-[11px] text-slate-400 mt-1 pl-1">from {c.source}</p>
+                    )}
+                    </div>
                   )
                 })}
               </div>
             )}
 
-            <button
-              type="button"
-              onClick={add}
-              className="inline-flex items-center gap-1 text-xs text-slate-700 hover:text-slate-700"
-            >
-              <Plus className="w-3 h-3" /> Add criterion
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={add}
+                className="inline-flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900"
+              >
+                <Plus className="w-3 h-3" /> Add criterion
+              </button>
+              {jdContent && (
+                <button
+                  type="button"
+                  onClick={readJd}
+                  className="inline-flex items-center gap-1 text-xs text-slate-700 hover:text-slate-900"
+                  title="Read the job description again and add anything missing"
+                >
+                  <Sparkles className="w-3 h-3" /> Read the JD again
+                </button>
+              )}
+            </div>
 
             {error && <p className="text-sm text-slate-700 bg-slate-50 border border-slate-100 rounded p-2">{error}</p>}
           </div>
@@ -174,15 +224,4 @@ export function KnockoutEditorButton({ requisitionId, title, jdContent }: Props)
       </Dialog>
     </>
   )
-}
-
-// Very rough JD heuristic — if the JD mentions a common platform/tool keyword,
-// pre-populate a SKILL filter as a starting point.
-function suggestFromJd(jd: string): Criterion | null {
-  const t = jd.toLowerCase()
-  const KEYWORDS = ['shopify', 'react', 'node', 'figma', 'python', 'django', 'next.js', 'liquid']
-  for (const k of KEYWORDS) {
-    if (t.includes(k)) return { type: 'SKILL', value: k.charAt(0).toUpperCase() + k.slice(1), isHard: true }
-  }
-  return null
 }

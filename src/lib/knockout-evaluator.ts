@@ -11,6 +11,7 @@
  *                                             — candidate.location matches one of csv,
  *                                               OR openToRemote && value includes "Remote-OK"
  *   SKILL          value="Shopify Liquid"     — candidate.skills (JSON array) contains, case-insensitive
+ *                  value="Selenium | Cypress" — pipe-separated alternatives; any one passes
  *   MIN_YEARS      value="3"                  — candidate.yearsExperience >= value
  *   MIN_EDUCATION  value="BACHELORS"          — candidate education rank >= value rank
  *   LANGUAGE       value="English"            — candidate.languages contains, case-insensitive
@@ -99,10 +100,20 @@ export function evaluateCriteria(
         break
       }
       case 'SKILL': {
+        // "Selenium | Cypress | Playwright" is one requirement with three ways
+        // to satisfy it — a JD that says "or" means or. A value with no pipe
+        // is a single alternative, so this is the old behaviour for those.
+        const alternatives = v.split('|').map((s) => s.trim().toLowerCase()).filter(Boolean)
         const skillList = parseJsonArray(candidate.skills).map((s) => s.toLowerCase())
-        const needle = v.toLowerCase()
-        const has = skillList.some((s) => s.includes(needle))
-        if (!has) failures.push({ type: c.type, reason: `Missing required skill: ${v}` })
+        const has = alternatives.some((needle) => skillList.some((s) => s.includes(needle)))
+        if (!has) {
+          failures.push({
+            type: c.type,
+            reason: alternatives.length > 1
+              ? `Missing all of: ${v.split('|').map((s) => s.trim()).join(', ')}`
+              : `Missing required skill: ${v}`,
+          })
+        }
         break
       }
       case 'MIN_YEARS': {
