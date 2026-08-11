@@ -7,6 +7,28 @@ import { PrintButton } from '@/components/letters/print-button'
 
 interface PageProps { params: Promise<{ id: string }> }
 
+/**
+ * The browser puts the page title in the Save-as-PDF filename box, so the
+ * title is the filename. It used to read "Employment Letter", which meant
+ * every letter for every employee arrived in Downloads under the same name
+ * and had to be renamed by hand before it could be filed or sent.
+ *
+ * "Sheikh Taha Adnan - Employment Letter" sorts by person and says who it is
+ * for. Slashes and colons are stripped because Windows will not have them in
+ * a filename.
+ */
+export async function generateMetadata({ params }: PageProps) {
+  const { id } = await params
+  const letter = await prisma.letterRequest.findUnique({
+    where: { id },
+    select: { letterType: true, employee: { select: { fullName: true } } },
+  })
+  if (!letter) return { title: 'Letter' }
+  const kind = LETTER_TYPE_LABEL[letter.letterType as LetterType] ?? 'Letter'
+  const clean = (v: string) => v.replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim()
+  return { title: `${clean(letter.employee.fullName)} - ${clean(kind)}` }
+}
+
 const PRINT_CSS = `
   @page { size: A4; margin: 22mm 20mm; }
   html, body { background: #fff; }
