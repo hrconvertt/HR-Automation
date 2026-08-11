@@ -36,9 +36,14 @@ export function splitGross(gross: number): PaySplit {
 }
 
 // ─── Increment rules ────────────────────────────────────────────────────────
-// What a raise is normally worth, by the reason for it. These are the
-// starting figures, not a cap — a number can always be overridden, and the
-// point of stating them is that HR is not re-deriving them each time.
+// What a raise is worth and when the next falls due, by track.
+//
+//   Probation ends      → confirmed permanent, 10%
+//   Six-monthly track   → 10-15% every six months from confirmation
+//   Annual track        → 24% once a year
+//
+// Starting figures, not a cap: a number can always be overridden. The point of
+// stating them is that nobody re-derives them from memory each review.
 
 export type IncrementTrack = 'PROBATION_TO_PERMANENT' | 'BIANNUAL' | 'ANNUAL'
 
@@ -48,6 +53,8 @@ export interface IncrementRule {
   minPct: number
   /** Upper bound. Equal to minPct where the figure is fixed. */
   maxPct: number
+  /** How long until the next one falls due, in months. */
+  cycleMonths: number
   note: string
 }
 
@@ -56,19 +63,23 @@ export const INCREMENT_RULES: Record<IncrementTrack, IncrementRule> = {
     label: 'Probation → permanent',
     minPct: 10,
     maxPct: 10,
-    note: 'Confirmation on completing probation.',
+    cycleMonths: 6,
+    note: 'Given on confirmation. The six-monthly clock starts from here.',
   },
   BIANNUAL: {
     label: 'Six-monthly',
     minPct: 10,
     maxPct: 15,
-    note: 'Half-yearly review — the band leaves room for performance.',
+    cycleMonths: 6,
+    note: 'Every six months after confirmation — one at six, another at twelve, '
+      + 'and so on. The band leaves room for performance.',
   },
   ANNUAL: {
     label: 'Annual',
     minPct: 24,
     maxPct: 24,
-    note: 'Yearly review.',
+    cycleMonths: 12,
+    note: 'Once a year, for anyone not on the six-monthly track.',
   },
 }
 
