@@ -2666,3 +2666,33 @@ model IncrementReview {
   @@index([employeeId])
   @@map("increment_reviews")
 }
+
+// ─── BANK CODES ───────────────────────────────────────────────────────────────
+// The bank list the salary sheet is coded against, editable rather than
+// compiled in.
+//
+// This lived in src/lib/bank-codes.ts as a hardcoded map, which meant a new
+// bank or a corrected name needed a deploy. It is reference data HR maintains,
+// so it belongs in a table HR can maintain.
+//
+// `ibanPrefix` is the four letters that appear inside a Pakistani IBAN, which
+// is not always the code the salary sheet wants: UBL's IBANs carry UNIL, and
+// the sheet wants UBL. Keeping both is what lets an account number be read and
+// a payment file be written without one guess standing in for the other.
+model BankCode {
+  id          String   @id @default(cuid())
+  bankName    String   @unique
+  bankCode    String   // what the salary sheet expects, e.g. UBL, MBL, NBP
+  ibanPrefix  String?  // the four letters inside the IBAN, e.g. UNIL for UBL
+  swift       String?
+  // Faysal-to-Faysal transfers go out as IFT and carry no bank code — the bank
+  // is implicit. Everything else is IBFT and needs one.
+  isOwnBank   Boolean  @default(false)
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([bankCode])
+  @@map("bank_codes")
+}
