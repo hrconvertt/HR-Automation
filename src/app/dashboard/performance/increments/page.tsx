@@ -16,6 +16,7 @@ import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
+import { INCREMENT_RULES, ruleRange, type IncrementTrack } from '@/lib/pay-split'
 
 const FIRST_REVIEW_MONTHS = 6
 const CYCLE_MONTHS = 12
@@ -121,6 +122,43 @@ export default async function IncrementsPage() {
         <Stat label="Raised this year" value={String(raisedThisYear.length)} sub={`in ${today.getFullYear()}`} />
         <Stat label="Average rise" value={avgPct != null ? `${avgPct.toFixed(1)}%` : '—'} sub="last increment each" />
         <Stat label="Monthly payroll" value={pkr(totalCurrent)} sub="gross, active staff" />
+      </div>
+
+      {/* The bands, stated once. Nobody should be recalling these from memory
+          in the middle of a review. */}
+      <div className="rounded-xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-900">What a raise is worth</h2>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Starting figures, not a cap — the number can always be set higher or lower.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
+          {(Object.keys(INCREMENT_RULES) as IncrementTrack[]).map((track) => {
+            const rule = INCREMENT_RULES[track]
+            return (
+              <div key={track} className="px-4 py-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
+                    {rule.label}
+                  </p>
+                  {rule.discretionary && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-200">
+                      Optional
+                    </span>
+                  )}
+                </div>
+                <p className="text-2xl font-bold text-slate-900 mt-1 tabular-nums">
+                  {ruleRange(track)}
+                </p>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {rule.cycleMonths === 12 ? 'Every 12 months' : 'Every 6 months'}
+                </p>
+                <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{rule.note}</p>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
