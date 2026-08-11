@@ -1,6 +1,13 @@
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
+  // pdf-parse loads pdf.js, which loads its worker as a separate file at
+  // runtime. Bundled into a server chunk that file has no path any more, and
+  // every CV upload died on "Cannot find module .next/server/chunks/
+  // pdf.worker.mjs". Left external it is required from node_modules, where
+  // the worker is still sitting next to it.
+  serverExternalPackages: ['pdf-parse'],
+
   async headers() {
     return [
       {
