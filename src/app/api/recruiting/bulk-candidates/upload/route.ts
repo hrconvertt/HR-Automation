@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { installPdfGlobals } from '@/lib/pdf-node-globals'
 import Anthropic from '@anthropic-ai/sdk'
 
 export const runtime = 'nodejs'
@@ -44,6 +45,8 @@ async function extractTextFromBuffer(buffer: Buffer, filename: string): Promise<
   if (ext === 'txt' || ext === 'md') return buffer.toString('utf-8')
   if (ext === 'pdf') {
     // pdf-parse v2 exports a PDFParse class — there is no default export.
+    // pdf.js reaches for DOMMatrix as it loads, and Node has none.
+    installPdfGlobals()
     const { PDFParse } = await import('pdf-parse')
     const parser = new PDFParse({ data: new Uint8Array(buffer) })
     const data = await parser.getText()
