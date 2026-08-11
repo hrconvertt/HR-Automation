@@ -22,6 +22,7 @@
 import { config } from 'dotenv'
 config({ path: '.env.local', override: true })
 import { PrismaClient } from '@prisma/client'
+import { generateLetter } from '../src/lib/letter-templates'
 
 const p = new PrismaClient()
 const APPLY = process.argv.includes('--apply')
@@ -50,7 +51,8 @@ const PROMOTIONS: Promotion[] = [
   for (const promo of PROMOTIONS) {
     const emp = await p.employee.findFirst({
       where: { fullName: { contains: promo.name.split(' ')[0], mode: 'insensitive' } },
-      select: { id: true, fullName: true, designation: true },
+      select: { id: true, fullName: true, designation: true, joiningDate: true,
+                employeeCode: true },
     })
     if (!emp) { console.log(`  ! no employee matching "${promo.name}"`); continue }
 
@@ -69,16 +71,30 @@ const PROMOTIONS: Promotion[] = [
 
     if (!APPLY) continue
 
+    // LetterRequest has no promotion columns — those live on the template's
+    // input type, not the model — so the letter is generated here and the
+    // finished text is stored on the row.
+    const signedBy = { name: 'Syed Khawer', title: 'Director Administration' }
+    const letter = generateLetter(
+      'PROMOTION',
+      { fullName: emp.fullName, designation: promo.to, joiningDate: emp.joiningDate,
+        employeeCode: emp.employeeCode },
+      { letterType: 'PROMOTION',
+        promotionFromDesignation: promo.from,
+        promotionToDesignation: promo.to,
+        promotionEffectiveDate: EFFECTIVE },
+      signedBy,
+    )
     await p.letterRequest.create({
       data: {
         employeeId: emp.id,
         letterType: 'PROMOTION',
-        status: 'ISSUED',
-        promotionFromDesignation: promo.from,
-        promotionToDesignation: promo.to,
-        promotionEffectiveDate: EFFECTIVE,
-        purpose: 'Promotion effective 30 April 2026, per the certificate signed by '
-          + 'Syed Khawer, Director Administration.',
+        status: 'GENERATED',
+        signedByName: signedBy.name,
+        signedByTitle: signedBy.title,
+        letterBody: letter.body,
+        purpose: `Promoted from ${promo.from} to ${promo.to}, effective 30 April 2026, `
+          + 'per the certificate signed by Syed Khawer, Director Administration.',
       },
     })
 
