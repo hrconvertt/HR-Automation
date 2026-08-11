@@ -143,6 +143,22 @@ const STATUS_COLOR: Record<string, string> = {
 
 export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveBalances, pendingCorrectionDays, showLate, isSelf }: Props) {
   const pendingDays = new Set(pendingCorrectionDays ?? [])
+
+  // Every day covered by a leave record, against what that leave was for.
+  // Built from the rows already on this page — no extra query.
+  const noteByDay = new Map<string, string>()
+  for (const l of recentLeaves ?? []) {
+    const kind = l.leaveType.charAt(0) + l.leaveType.slice(1).toLowerCase()
+    const why = l.reason && !l.reason.toLowerCase().includes('not yet recorded')
+      ? `${kind}: ${l.reason}`
+      : kind
+    const cursor = new Date(l.fromDate.slice(0, 10) + 'T00:00:00')
+    const end = new Date(l.toDate.slice(0, 10) + 'T00:00:00')
+    while (cursor <= end) {
+      noteByDay.set(cursor.toISOString().slice(0, 10), why)
+      cursor.setDate(cursor.getDate() + 1)
+    }
+  }
   // Filter balances to current/latest year
   const currentYear = leaveBalances[0]?.year ?? new Date().getFullYear()
   const currentBalances = leaveBalances.filter((b) => b.year === currentYear)
@@ -220,6 +236,7 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
                 filter={statusFilter}
                 pendingDays={pendingDays}
                 showLate={!!showLate}
+                noteByDay={noteByDay}
                 onCellClick={isSelf ? (c) => setCorrecting(c) : undefined}
               />
             ))}
@@ -419,6 +436,7 @@ function MonthCalendar({
   filter,
   pendingDays,
   showLate,
+  noteByDay,
   onCellClick,
 }: {
   month: MonthBlock
@@ -426,6 +444,9 @@ function MonthCalendar({
   /** ISO days with a PENDING correction request — marked with a dot. */
   pendingDays: Set<string>
   showLate: boolean
+  /** What each day actually was, keyed by ISO date — the leave type and its
+   *  reason. "Leave (Full Day)" on hover says nothing about which leave. */
+  noteByDay: Map<string, string>
   /** When set (own attendance), past non-weekend cells become clickable to
    *  request a correction. */
   onCellClick?: (c: Cell) => void
@@ -468,7 +489,7 @@ function MonthCalendar({
               } ${clickable ? 'cursor-pointer rounded hover:bg-slate-50 hover:ring-1 hover:ring-slate-200' : ''}`}
             >
               <div className="text-[9px] text-slate-400">{c.day}</div>
-              <StatusBadge status={c.status} future={blank} />
+              <StatusBadge status={c.status} future={blank} note={noteByDay.get(c.iso)} />
               {pending && (
                 <span className="absolute top-3 right-0.5 w-1.5 h-1.5 rounded-full bg-slate-900 ring-2 ring-white" />
               )}

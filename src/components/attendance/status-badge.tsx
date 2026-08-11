@@ -51,9 +51,16 @@ interface StatusBadgeProps {
   future?: boolean
   /** Optional override label (e.g. for header day numbers). */
   size?: 'sm' | 'md'
+  /**
+   * What this particular day was — the holiday's name, or what the leave was
+   * for. "Public Holiday" and "Leave (Full Day)" say what kind of day it is
+   * and nothing about which one, so the hover answered a question nobody was
+   * asking.
+   */
+  note?: string
 }
 
-export function StatusBadge({ status, future, size = 'sm' }: StatusBadgeProps): ReactElement {
+export function StatusBadge({ status, future, size = 'sm', note }: StatusBadgeProps): ReactElement {
   if (future) {
     return (
       <span
@@ -83,7 +90,7 @@ export function StatusBadge({ status, future, size = 'sm' }: StatusBadgeProps): 
   return (
     <span
       className={`inline-flex items-center justify-center rounded ${weight} ${dims} ${s.bg} ${s.text} ${s.border} ${s.pattern ?? ''} ${weekendPattern} ${halfTextOutline}`}
-      title={s.title}
+      title={note ? `${s.title} — ${note}` : s.title}
     >
       {s.label}
     </span>
