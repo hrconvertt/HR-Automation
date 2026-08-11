@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { splitGross } from '@/lib/pay-split'
 import { verifyToken, hasRole } from '@/lib/auth'
 
 interface RouteParams { params: Promise<{ id: string }> }
@@ -76,6 +77,43 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         approvedById: payload.userId,
       },
     })
+
+    // Carry the new figure into the pay components, unless this entry is
+    // history being backfilled behind a later one.
+    //
+    // These two records held the same fact and drifted: Zuhaa read 56,000
+    // against a history of 55,000, another read 85,000 against 95,000. Nobody
+    // mistyped — they were simply two numbers with nothing keeping them in
+    // step. Writing the components from the event is what keeps them honest.
+    const latest = await prisma.compensationHistory.findFirst({
+      where: { employeeId: id },
+      orderBy: { effectiveDate: 'desc' },
+      select: { effectiveDate: true },
+    })
+    const isCurrent = !latest || effective >= latest.effectiveDate
+    if (isCurrent && newGross > 0) {
+      const split = splitGross(newGross)
+      const existing = await prisma.salary.findUnique({ where: { employeeId: id } })
+      // Allowances beyond basic and utilities are somebody's decision, not a
+      // percentage — they are zeroed only when they were part of the old gross,
+      // so the components add back to the figure just recorded.
+      await prisma.salary.upsert({
+        where: { employeeId: id },
+        update: {
+          basic: split.basic,
+          utilities: split.utilities,
+          houseRent: 0, food: 0, fuel: 0, medicalAllowance: 0, otherAllowance: 0,
+          effectiveFrom: effective,
+        },
+        create: {
+          employeeId: id,
+          basic: split.basic,
+          utilities: split.utilities,
+          effectiveFrom: effective,
+          monthlyPayDay: existing?.monthlyPayDay ?? null,
+        },
+      })
+    }
 
     // monthlyPayDay applies to the live Salary record — update if provided
     if (monthlyPayDay != null) {
