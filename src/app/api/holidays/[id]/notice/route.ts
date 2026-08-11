@@ -46,6 +46,57 @@ async function nextWorkingDay(after: Date): Promise<Date> {
   return d
 }
 
+/**
+ * What kind of day this is, so the notice can sound like it means it.
+ *
+ * A festival, a national day and a day of mourning are not interchangeable.
+ * "Wishing you a restful day" is a pleasant thing to say before Eid and a
+ * tone-deaf thing to say before Ashura, and a notice that gets that wrong
+ * reads as though nobody looked at it.
+ */
+type Occasion = 'EID' | 'MOURNING' | 'NATIONAL' | 'COMMEMORATIVE' | 'GENERAL'
+
+function occasionOf(name: string): Occasion {
+  const n = name.toLowerCase()
+  if (/\beid\b/.test(n)) return 'EID'
+  if (/ashura|muharram|kashmir solidarity/.test(n)) return 'MOURNING'
+  if (/independence|pakistan day|defence day/.test(n)) return 'NATIONAL'
+  if (/iqbal|quaid/.test(n)) return 'COMMEMORATIVE'
+  return 'GENERAL'
+}
+
+/** The sentence that opens the notice, before any of the logistics. */
+function openingLine(name: string, occasion: Occasion): string {
+  switch (occasion) {
+    case 'EID':
+      return `${name} is almost here, and we hope it brings you a few good days with the people you love.`
+    case 'MOURNING':
+      return `We will be observing ${name} together this year.`
+    case 'NATIONAL':
+      return `We will be marking ${name} this year.`
+    case 'COMMEMORATIVE':
+      return `We will be observing ${name} this year.`
+    default:
+      return `${name} falls on us this year, and the office will be taking it.`
+  }
+}
+
+/** The sentence that closes it. */
+function closingLine(occasion: Occasion, many: boolean): string {
+  switch (occasion) {
+    case 'EID':
+      return 'Eid Mubarak from everyone at Convertt — enjoy the break, and come back rested.'
+    case 'MOURNING':
+      return 'We hope you are able to spend the day as you would wish to.'
+    case 'NATIONAL':
+      return `Have a good ${many ? 'few days' : 'day'}, and enjoy the time with your families.`
+    case 'COMMEMORATIVE':
+      return `Enjoy the ${many ? 'days' : 'day'} off.`
+    default:
+      return `Wishing you and your families a restful ${many ? 'few days' : 'day'}.`
+  }
+}
+
 /** Something that can actually be delivered — "N/A" and blanks are not. */
 const isDeliverable = (e: string | null | undefined): e is string =>
   !!e && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.trim())
@@ -107,16 +158,17 @@ export async function POST(
   // Warm, and still a notice. It opens by naming the occasion rather than
   // leading with an instruction, and closes with something a person would
   // actually say before a holiday.
+  const occasion = occasionOf(holiday.name)
   const paragraphs = [
     'Dear Team,',
     isWfh
       ? `We will be working from home ${span}. Please stay reachable during regular hours and keep your team updated on what you are picking up — everything else carries on as normal.`
-      : `In observance of ${holiday.name}, the Convertt office will remain closed ${span}.`,
+      : `${openingLine(holiday.name, occasion)} The Convertt office will be closed ${span}.`,
     isWfh
       ? `Normal office working resumes on ${longDate(resumes)}.`
-      : `We will resume regular operations on ${longDate(resumes)}. Kindly wrap up anything time-sensitive beforehand and let your lead know if something needs cover.`,
+      : `We are back to normal on ${longDate(resumes)}. If anything of yours falls due over the break, please get it wrapped up beforehand or hand it to your lead — nobody should be checking messages on their day off.`,
     body.extraNote?.trim() || null,
-    isWfh ? null : `Wishing you and your families a restful ${many ? 'few days' : 'day'}.`,
+    isWfh ? null : closingLine(occasion, many),
     'Warm regards,',
     'Human Resources<br>Convertt',
   ].filter(Boolean) as string[]
