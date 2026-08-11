@@ -23,8 +23,12 @@ async function requireHr(request: NextRequest) {
   if (!me || me.role !== 'HR_ADMIN') {
     return { ok: false as const, status: 403, error: 'Forbidden — HR only' }
   }
-  if (request.cookies.get('hr_preview_role')?.value) {
-    return { ok: false as const, status: 403, error: 'Leave preview mode to change holidays.' }
+  // Only block when previewing as somebody else. This used to reject any
+  // preview cookie at all, including "view as HR", so Apply answered 403 to
+  // the very person allowed to press it and looked like a dead button.
+  const preview = request.cookies.get('hr_preview_role')?.value
+  if (preview && preview !== 'HR_ADMIN') {
+    return { ok: false as const, status: 403, error: 'Switch back to HR view to change holidays.' }
   }
   return { ok: true as const, userId: payload.userId }
 }
