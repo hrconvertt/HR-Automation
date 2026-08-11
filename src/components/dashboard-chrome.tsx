@@ -104,6 +104,8 @@ const FOCUS_PATHS = new Set([
   '/dashboard/leadership-chat',
   '/dashboard/settings/daily-logging',
   '/dashboard/settings/bank-codes',
+  '/dashboard/performance/appraisals',
+  '/dashboard/performance/increments',
   '/dashboard/time/me',
   '/dashboard/time/everyone',
   '/dashboard/time/approvals',
@@ -427,6 +429,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/performance', label: 'Overview', icon: TrendingUp },
         { href: '/dashboard/performance/increments', label: 'Increments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+        { href: '/dashboard/performance/appraisals', label: 'Appraisal Forms', icon: ClipboardList },
         { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
         { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
         { href: '/dashboard/culture', label: 'Recognition', icon: Sparkles },
