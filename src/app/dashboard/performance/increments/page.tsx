@@ -15,6 +15,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import Link from 'next/link'
 
 const FIRST_REVIEW_MONTHS = 6
 const CYCLE_MONTHS = 12
@@ -143,7 +144,12 @@ export default async function IncrementsPage() {
                 return (
                   <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60">
                     <td className="px-4 py-2.5">
-                      <p className="text-slate-900 font-medium">{r.fullName}</p>
+                      <Link
+                        href={`/dashboard/performance/increments/${r.id}`}
+                        className="text-slate-900 font-medium hover:underline"
+                      >
+                        {r.fullName}
+                      </Link>
                       <p className="text-[11px] text-slate-500">
                         {r.designation ?? r.employeeCode}
                         {r.department?.name ? ` · ${r.department.name}` : ''}
