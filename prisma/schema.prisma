@@ -223,6 +223,11 @@ model Employee {
   hideAnniversary     Boolean   @default(false)
   isDemo              Boolean   @default(false)
 
+  // Which increment cycle this person is on — ANNUAL (24% every 12 months) or
+  // BIANNUAL (10-15% every 6). Per person rather than company-wide, because
+  // both run side by side here.
+  incrementTrack      String    @default("ANNUAL")
+
   // Relations
   attendanceLogs      AttendanceLog[]
   leaveBalances       LeaveBalance[]

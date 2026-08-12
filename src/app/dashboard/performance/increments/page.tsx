@@ -18,6 +18,7 @@ import { prisma } from '@/lib/prisma'
 import { isFounder } from '@/lib/review-scope'
 import Link from 'next/link'
 import { INCREMENT_RULES, ruleRange, type IncrementTrack } from '@/lib/pay-split'
+import { TrackPicker, TrackBand } from './_components/track-picker'
 
 const FIRST_REVIEW_MONTHS = 6
 const CYCLE_MONTHS = 12
@@ -48,7 +49,7 @@ export default async function IncrementsPage() {
       where: { status: 'ACTIVE' },
       select: {
         id: true, fullName: true, employeeCode: true, designation: true,
-        joiningDate: true, department: { select: { name: true } },
+        joiningDate: true, incrementTrack: true, department: { select: { name: true } },
         salary: {
           select: {
             basic: true, houseRent: true, utilities: true, food: true,
@@ -83,7 +84,13 @@ export default async function IncrementsPage() {
 
     // No increment yet means the clock runs from joining, at six months.
     const anchor = last?.effectiveDate ?? e.joiningDate
-    const window = last ? CYCLE_MONTHS : FIRST_REVIEW_MONTHS
+    // Their own cycle decides the wait — six-monthly and annual are not the
+    // same gap, so a fixed twelve months would have shown half the company a
+    // date six months later than it really is.
+    const cycle = INCREMENT_RULES[
+      (e.incrementTrack === 'BIANNUAL' ? 'BIANNUAL' : 'ANNUAL') as IncrementTrack
+    ].cycleMonths ?? CYCLE_MONTHS
+    const window = last ? cycle : FIRST_REVIEW_MONTHS
     const dueDate = anchor ? addMonths(anchor, window) : null
     const monthsSince = anchor ? monthsBetween(anchor, today) : null
     const overdueBy = dueDate ? monthsBetween(dueDate, today) : null
@@ -175,8 +182,9 @@ export default async function IncrementsPage() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 border-b border-slate-100">
               <tr>
-                <Th>Employee</Th><Th right>Current</Th><Th>Last increment</Th>
-                <Th right>Rise</Th><Th right>%</Th><Th>Next due</Th><Th>Status</Th>
+                <Th>Employee</Th><Th right>Current</Th><Th>Track</Th><Th right>Band</Th>
+                <Th>Last increment</Th><Th right>Rise</Th><Th right>%</Th>
+                <Th>Next due</Th><Th>Status</Th>
               </tr>
             </thead>
             <tbody>
@@ -198,6 +206,12 @@ export default async function IncrementsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap text-slate-900">
                       {r.current ? pkr(r.current) : <span className="text-slate-400">not set</span>}
+                    </td>
+                    <td className="px-4 py-2.5">
+                      <TrackPicker employeeId={r.id} value={r.incrementTrack} />
+                    </td>
+                    <td className="px-4 py-2.5 whitespace-nowrap">
+                      <TrackBand value={r.incrementTrack} />
                     </td>
                     <td className="px-4 py-2.5 text-slate-600 whitespace-nowrap">
                       {r.last ? (
