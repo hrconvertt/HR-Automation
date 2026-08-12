@@ -15,6 +15,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { isFounder } from '@/lib/review-scope'
 import Link from 'next/link'
 import { INCREMENT_RULES, ruleRange, type IncrementTrack } from '@/lib/pay-split'
 
@@ -73,7 +74,7 @@ export default async function IncrementsPage() {
   }
 
   const today = new Date()
-  const rows = employees.map((e) => {
+  const rows = employees.filter((e) => !isFounder(e.designation)).map((e) => {
     const s = e.salary
     const current = s
       ? s.basic + s.houseRent + s.utilities + s.food + s.fuel + s.medicalAllowance + s.otherAllowance
@@ -152,7 +153,9 @@ export default async function IncrementsPage() {
                   {ruleRange(track)}
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  {rule.cycleMonths === 12 ? 'Every 12 months' : 'Every 6 months'}
+                  {rule.cycleMonths == null
+                    ? 'Once, when probation ends'
+                    : `Every ${rule.cycleMonths} months`}
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{rule.note}</p>
               </div>

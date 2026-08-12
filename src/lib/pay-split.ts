@@ -38,7 +38,8 @@ export function splitGross(gross: number): PaySplit {
 // ─── Increment rules ────────────────────────────────────────────────────────
 // What a raise is worth and when the next falls due, by track.
 //
-//   Probation ends      → confirmed permanent, 10% if the company applies it
+//   Probation ends      → confirmed permanent, 10% if the company applies it.
+//                         Happens once, never repeats.
 //   Six-monthly track   → 10-15% every six months from confirmation
 //   Annual track        → 24% once a year
 //
@@ -53,8 +54,13 @@ export interface IncrementRule {
   minPct: number
   /** Upper bound. Equal to minPct where the figure is fixed. */
   maxPct: number
-  /** How long until the next one falls due, in months. */
-  cycleMonths: number
+  /**
+   * How long until the next one falls due, in months — null when it does not
+   * recur at all. Confirmation happens once, when probation ends; it is not a
+   * cycle and showing it as one made the card read "every 6 months" for a
+   * thing that never comes round again.
+   */
+  cycleMonths: number | null
   /**
    * Whether it is given as a matter of course. The confirmation raise is the
    * company's call each time, so it is offered rather than assumed — a screen
@@ -70,10 +76,10 @@ export const INCREMENT_RULES: Record<IncrementTrack, IncrementRule> = {
     label: 'Probation → permanent',
     minPct: 10,
     maxPct: 10,
-    cycleMonths: 6,
+    cycleMonths: null,
     discretionary: true,
-    note: 'Offered on confirmation, at the company’s discretion. Where it is given '
-      + 'it starts the six-monthly clock.',
+    note: 'A one-off when probation ends, and entirely the company’s call — it is '
+      + 'not owed and it does not repeat.',
   },
   BIANNUAL: {
     label: 'Six-monthly',

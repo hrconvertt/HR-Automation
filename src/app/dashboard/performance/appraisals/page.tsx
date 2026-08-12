@@ -20,6 +20,7 @@ import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { isFounder } from '@/lib/review-scope'
 import { REVIEW_WINDOW_DAYS } from '@/lib/probation-review'
 import { INCREMENT_RULES, ruleRange } from '@/lib/pay-split'
 import { ClipboardList, ShieldCheck, TrendingUp } from 'lucide-react'
@@ -126,6 +127,7 @@ export default async function AppraisalsPage() {
   // ── On probation ──────────────────────────────────────────────────────
   for (const p of probations) {
     if (p.employee.status !== 'ACTIVE') continue
+    if (isFounder(p.employee.designation)) continue
     const left = daysAway(p.endDate)
     if (left > REVIEW_WINDOW_DAYS) continue
     due.push({
@@ -149,6 +151,7 @@ export default async function AppraisalsPage() {
   // ── Permanent, on the increment clock ─────────────────────────────────
   for (const e of employees) {
     if (onProbation.has(e.id)) continue
+    if (isFounder(e.designation)) continue
     const anchor = lastRaise.get(e.id) ?? e.joiningDate
     if (!anchor) continue
     const window = lastRaise.has(e.id) ? CYCLE_MONTHS : FIRST_REVIEW_MONTHS
