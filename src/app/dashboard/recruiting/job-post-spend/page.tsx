@@ -21,6 +21,7 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PLATFORM_LABELS, postingStamp, postingInputValue } from '@/lib/job-posting'
 import { PostingEditButton } from '@/components/recruiting/posting-edit-button'
+import { AddPostingButton } from '@/components/recruiting/add-posting-button'
 
 const money = (n: number, currency: string) =>
   `${currency} ` + n.toLocaleString('en-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -50,6 +51,14 @@ export default async function JobPostSpendPage({ searchParams }: {
     redirect('/dashboard/recruiting')
   }
   const canEdit = payload.role === 'HR_ADMIN'
+
+  // Every requisition can be advertised again, closed ones included — a role
+  // going quiet does not stop the last advert being billed.
+  const requisitionOptions = await prisma.jobRequisition.findMany({
+    where: { status: { notIn: ['PENDING', 'REJECTED'] } },
+    select: { id: true, title: true, status: true },
+    orderBy: { createdAt: 'desc' },
+  })
 
   const postings = await prisma.jobPosting.findMany({
     orderBy: [{ postedAt: 'asc' }, { createdAt: 'asc' }],
@@ -111,6 +120,11 @@ export default async function JobPostSpendPage({ searchParams }: {
           <h2 className="text-sm font-semibold text-slate-900 mr-2">Spend</h2>
           <Filter href="?view=role" label="By role" active={view === 'role'} />
           <Filter href="?view=post" label="By job post" active={view === 'post'} />
+          {canEdit && (
+            <div className="ml-auto">
+              <AddPostingButton roles={requisitionOptions} />
+            </div>
+          )}
         </div>
 
         <div className="overflow-x-auto">
