@@ -86,7 +86,13 @@ export async function GET(request: NextRequest) {
 
     const [activeEmps, todayLogs, todayPunches, loasToday, leavesToday] = await Promise.all([
       prisma.employee.findMany({
-        where: { status: 'ACTIVE', ...empFilter },
+        // ACTIVE is not the same as "has started". A hire is created the day
+        // the offer is accepted and carries a joining date days or weeks out —
+        // Muhammad Mubashir was sitting in "Not marked yet" on the 19th with a
+        // first day of the 24th. Nobody is absent from a job they have not
+        // begun, and marking them would open an attendance record before their
+        // employment.
+        where: { status: 'ACTIVE', ...empFilter, joiningDate: { lte: todayEnd } },
         select: { id: true, employeeCode: true, fullName: true, timings: true, department: { select: { name: true } } },
         orderBy: { fullName: 'asc' },
       }),

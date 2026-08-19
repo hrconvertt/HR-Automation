@@ -86,8 +86,11 @@ export default async function TeamAbsenceCalendarPage({ searchParams }: PageProp
   const mEnd = new Date(year, month, 0, 23, 59, 59)
   const daysInMonth = new Date(year, month, 0).getDate()
 
+  // Anyone who has not started by the end of the month has no attendance to
+  // show for it — a hire whose first day is in September should not spend
+  // August as a row of blanks.
   const employees = await prisma.employee.findMany({
-    where: { status: 'ACTIVE', ...empFilter },
+    where: { status: 'ACTIVE', ...empFilter, joiningDate: { lte: mEnd } },
     select: { id: true, fullName: true, department: { select: { name: true } } },
     orderBy: { fullName: 'asc' },
   })
