@@ -19,6 +19,7 @@ import { TalentPoolView } from '@/components/recruiting/talent-pool-view'
 import { KnockoutEditorButton } from '@/components/recruiting/knockout-editor-button'
 import { KnockoutOverrideButton } from '@/components/recruiting/knockout-override-button'
 import { BulkPipelineActions } from '@/components/recruiting/bulk-pipeline-actions'
+import { PipelineRoleFilter } from '@/components/recruiting/pipeline-role-filter'
 import { BulkJDUpload } from '@/components/recruiting/bulk-jd-upload'
 import { BulkResumeUpload } from '@/components/recruiting/bulk-resume-upload'
 
@@ -128,7 +129,7 @@ const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'war
   FAIL: 'destructive',
 }
 
-export default async function RecruitingPage({ searchParams }: { searchParams?: Promise<{ tab?: string; stage?: string }> }) {
+export default async function RecruitingPage({ searchParams }: { searchParams?: Promise<{ tab?: string; stage?: string; role?: string }> }) {
   const sp = (await searchParams) ?? {}
   const { role, myEmployeeId } = await resolveContext()
   const { requisitions, candidates, interviews, poolCandidates } = await getData()
@@ -149,8 +150,13 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   const pendingRequests = requestsVisible.filter((r) => r.status === 'PENDING')
   // Workday-style "gate before score": kanban shows only PASSED + OVERRIDDEN.
   // FAILED knockouts live in their own tab.
-  const shortlist  = candidates.filter((c) => ['PASSED', 'OVERRIDDEN'].includes(c.knockoutStatus))
-  const knockedOut = candidates.filter((c) => c.knockoutStatus === 'FAILED')
+  // The role filter above the board. Empty means every role.
+  const roleFilter = sp.role ?? ''
+  const inRole = (c: { requisitionId: string }) => !roleFilter || c.requisitionId === roleFilter
+
+  const shortlistAll = candidates.filter((c) => ['PASSED', 'OVERRIDDEN'].includes(c.knockoutStatus))
+  const shortlist  = shortlistAll.filter(inRole)
+  const knockedOut = candidates.filter((c) => c.knockoutStatus === 'FAILED' && inRole(c))
 
   // Which view the sidebar highlights and the shell renders. Resolved on the
   // server from the URL, so no Client Component needs `useSearchParams`.
@@ -195,24 +201,30 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
               <p className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-900">{shortlist.length}</span> shortlisted candidates across {openRoles.length} open {openRoles.length === 1 ? 'role' : 'roles'}
+                <span className="font-semibold text-slate-900">{shortlist.length}</span> shortlisted{' '}
+                {roleFilter
+                  ? `in ${requisitions.find((r) => r.id === roleFilter)?.title ?? 'this role'}`
+                  : `across ${openRoles.length} open ${openRoles.length === 1 ? 'role' : 'roles'}`}
                 {knockedOut.length > 0 && (
                   <span className="text-slate-700 ml-2">· {knockedOut.length} filtered out</span>
                 )}
               </p>
               <div className="flex items-center gap-2 flex-wrap">
-                {(isHR || isManager) && (
+                {/* Every requisition, not just the open ones. CRO Strategist is
+                    CLOSED and still has candidates sitting in SCREENING — a role
+                    closing does not empty its pipeline. */}
+                <PipelineRoleFilter
+                  selected={roleFilter}
+                  roles={requisitions.map((r) => ({
+                    id: r.id,
+                    title: r.status === 'OPEN' ? r.title : `${r.title} (${r.status.toLowerCase()})`,
+                    count: shortlistAll.filter((c) => c.requisitionId === r.id).length,
+                  }))}
+                />
+                {(isHR || isManager) && roleFilter && (
                   <BulkPipelineActions
-                    // Every requisition, not just the open ones. CRO Strategist
-                    // is CLOSED and still has five candidates sitting in
-                    // SCREENING — a role closing does not empty its pipeline,
-                    // and leaving it out of the list meant those candidates
-                    // could be seen but never acted on.
-                    openRequisitions={requisitions
-                      .map((r) => ({
-                        id: r.id,
-                        title: r.status === 'OPEN' ? r.title : `${r.title} (${r.status.toLowerCase()})`,
-                      }))}
+                    requisitionId={roleFilter}
+                    requisitionTitle={requisitions.find((r) => r.id === roleFilter)?.title ?? ''}
                   />
                 )}
                 {(isHR || isManager) && (

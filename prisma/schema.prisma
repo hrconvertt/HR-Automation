@@ -2065,7 +2065,10 @@ model ExitClearance {
   handoverPasswords       String?
   handoverSignedAt        DateTime?
   handoverSignedByMgr     Boolean  @default(false)
-  status               String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED
+  // CANCELLED is for a clearance opened against someone who did not leave.
+  // Deleting it would take the exit letters and the final salary slip with
+  // it, and those are evidence of what was believed at the time.
+  status               String   @default("IN_PROGRESS") // IN_PROGRESS | COMPLETED | CANCELLED
   // Trigger source — what kicked off this clearance.
   //   RESIGNATION  — employee self-served from /dashboard/resign
   //   TERMINATION  — HR initiated via Termination workflow (off Show Cause)

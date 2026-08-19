@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
       take: 20,
     }),
     prisma.exitClearance.findMany({
-      where: { status: { not: 'COMPLETED' }, OR: [{ lastWorkingDay: { gte: monthStart, lt: nextMonthStart } }, { lastWorkingDay: null }] },
+      where: { status: { notIn: ['COMPLETED', 'CANCELLED'] }, OR: [{ lastWorkingDay: { gte: monthStart, lt: nextMonthStart } }, { lastWorkingDay: null }] },
       select: {
         id: true, lastWorkingDay: true,
         employee: { select: { id: true, fullName: true, designation: true } },

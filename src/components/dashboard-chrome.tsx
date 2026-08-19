@@ -401,7 +401,10 @@ const RECRUITING_NAV: NavGroup[] = [
       { href: '/dashboard/recruiting?tab=pool', label: 'Talent Pool', icon: Users },
       { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },
       { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText },
-      { href: '/dashboard/recruiting/offers', label: 'Offers', icon: FileText },
+      // Offers is not in the sidebar. The offer that matters is the employment
+      // letter on the person's own profile, and a second empty board listing
+      // "0 pending · 0 total" only invited the question of which was the real
+      // one. The route still exists for anything linking to it.
       // The metrics used to sit above every view in this module. They belong
       // on one page of their own, which is this.
       { href: '/dashboard/recruiting/analytics', label: 'Analytics', icon: TrendingUp },

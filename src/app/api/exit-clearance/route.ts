@@ -16,6 +16,10 @@ export async function GET(request: NextRequest) {
   if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const clearances = await prisma.exitClearance.findMany({
+    // A cancelled clearance was opened against somebody who did not leave.
+    // It stays on the record — the letters filed under it are evidence of what
+    // was believed at the time — but it is not an exit in progress.
+    where: { status: { not: 'CANCELLED' } },
     orderBy: { createdAt: 'desc' },
     include: {
       employee: {

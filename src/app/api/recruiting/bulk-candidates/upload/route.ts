@@ -143,6 +143,17 @@ export async function POST(request: NextRequest) {
     })
     if (!requisition) return NextResponse.json({ error: 'Requisition not found' }, { status: 404 })
 
+    // Screening is an AI call per CV, so without a key nothing can work. Said
+    // plainly and up front, because the alternative is a row of files each
+    // reporting its own opaque failure and no way to tell they share a cause.
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({
+        error: 'CV screening needs an Anthropic API key. Set ANTHROPIC_API_KEY '
+          + 'in the Vercel project settings and redeploy — until then, add '
+          + 'candidates with the Add Candidate button.',
+      }, { status: 503 })
+    }
+
     const jdText = requisition.jdContent || requisition.description || requisition.requirements || 'Title: ' + requisition.title
 
     const results: Array<{ filename: string; status: 'success' | 'error'; candidate?: Record<string, unknown>; error?: string }> = []
@@ -205,7 +216,11 @@ export async function POST(request: NextRequest) {
         if (matchScore != null && matchScore >= 60) strongIds.push(candidate.id)
       } catch (err) {
         console.error('[bulk-candidates] Error processing ' + filename + ':', err)
-        results.push({ filename, status: 'error', error: err instanceof Error ? err.message : 'Failed' })
+        results.push({
+          filename,
+          status: 'error',
+          error: err instanceof Error ? err.message : 'Could not read this file',
+        })
       }
     }
 
@@ -226,6 +241,10 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[bulk-candidates upload]', error)
-    return NextResponse.json({ error: 'Failed to process resumes' }, { status: 500 })
+    return NextResponse.json({
+      error: error instanceof Error
+        ? `Failed to process resumes: ${error.message}`
+        : 'Failed to process resumes',
+    }, { status: 500 })
   }
 }

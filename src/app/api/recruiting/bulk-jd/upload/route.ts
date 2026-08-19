@@ -122,6 +122,13 @@ export async function POST(request: NextRequest) {
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const formData = await request.formData()
+
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({
+        error: 'JD parsing needs an Anthropic API key. Set ANTHROPIC_API_KEY in '
+          + 'the Vercel project settings and redeploy.',
+      }, { status: 503 })
+    }
     const files = formData.getAll('files')
     if (!files || files.length === 0) return NextResponse.json({ error: 'No files provided' }, { status: 400 })
     if (files.length > 20) return NextResponse.json({ error: 'Maximum 20 files per upload' }, { status: 400 })
