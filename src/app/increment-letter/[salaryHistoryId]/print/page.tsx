@@ -14,6 +14,7 @@ import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { LOGO_DATA_URI } from '@/lib/brand-logo'
 
 interface PageProps { params: Promise<{ salaryHistoryId: string }> }
 
@@ -153,17 +154,19 @@ export default async function PrintIncrementLetterPage({ params }: PageProps) {
           />
         </div>
 
-        {/* ─── Header — logo + company block (matches payslip) ───── */}
+        {/* ─── Header — logo + company block (matches payslip) ─────
+            This was a green tick in a circle, which is not and never was the
+            Convertt mark. It is now the Playbook logo, the same one on the
+            salary slip and every letter. */}
         <header style={{ display: 'flex', alignItems: 'flex-start', gap: 12, marginBottom: 18 }}>
-          <svg width="56" height="56" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <circle cx="32" cy="32" r="30" fill="#059669" />
-            <path d="M18 33 L28 43 L46 22" stroke="#fff" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 18, fontWeight: 700, color: '#065f46' }}>
-              Convertt Ltd <span style={{ fontWeight: 400, color: '#4b5563', fontSize: 12 }}>(Generatives)</span>
-            </div>
+            <img
+              src={LOGO_DATA_URI}
+              alt="Convertt"
+              style={{ width: 150, display: 'block', marginBottom: 6 }}
+            />
             <div style={{ fontSize: 10, color: '#374151', lineHeight: 1.4, marginTop: 2 }}>
+              Convertt Ltd <span style={{ color: '#6b7280' }}>(Generatives)</span><br />
               Office 201, 5th Floor, Mega Tower, Gulberg Main Blvd, Lahore<br />
               hr@convertt.co &nbsp;·&nbsp; +92 370 0488685
             </div>

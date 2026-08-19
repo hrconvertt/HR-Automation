@@ -11,6 +11,7 @@
  */
 
 import { prisma } from '@/lib/prisma'
+import { LOGO_DATA_URI } from '@/lib/brand-logo'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
@@ -160,11 +161,9 @@ export default async function TotalRewardsPage({ params }: PageProps) {
             border-bottom: 1px solid #f1f5f9;
           }
           .trs-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid #e2e8f0; }
-          .trs-logo {
-            width: 48px; height: 48px; background: #1d4ed8; color: white;
-            font-weight: 700; font-size: 20px; border-radius: 8px;
-            display: flex; align-items: center; justify-content: center;
-          }
+          /* Was a blue rounded square with a letter C in it — a placeholder
+             that had outlived its placeholder. */
+          .trs-logo { width: 150px; display: block; margin-bottom: 8px; }
           .trs-meta { text-align: right; }
           .trs-meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: .2em; color: #64748b; font-weight: 600; }
           .trs-meta-value { font-size: 18px; font-weight: 700; margin-top: 2px; }
@@ -208,8 +207,9 @@ export default async function TotalRewardsPage({ params }: PageProps) {
 
         <div className="trs-header">
           <div style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
-            <div className="trs-logo">C</div>
             <div>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className="trs-logo" src={LOGO_DATA_URI} alt="Convertt" />
               <h1>Convertt Ltd</h1>
               <p style={{ margin: '4px 0 0', fontSize: 10.5, color: '#64748b', lineHeight: 1.55 }}>
                 Office 201, 5th Floor, Mega Tower<br />

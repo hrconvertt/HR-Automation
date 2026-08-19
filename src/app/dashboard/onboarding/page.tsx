@@ -1,4 +1,8 @@
+import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
+import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { ChecklistGrid, type GridRow } from './_components/checklist-grid'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -41,7 +45,18 @@ async function getData() {
       include: { employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } } },
     }),
   ])
-  return { checklists, probations, today }
+  const everyone = await prisma.employee.findMany({
+    where: { status: { notIn: EXCLUDED_EMP_STATUSES } },
+    orderBy: { employeeCode: 'asc' },
+    select: {
+      id: true, fullName: true, employeeCode: true, joiningDate: true,
+      employeeType: true, status: true,
+      department: { select: { name: true } },
+      onboarding: true,
+    },
+  })
+
+  return { checklists, probations, everyone, today }
 }
 
 const CHECKLIST_FIELDS: { key: keyof Awaited<ReturnType<typeof getData>>['checklists'][0]; label: string }[] = [
@@ -75,7 +90,27 @@ function progressOf(c: Awaited<ReturnType<typeof getData>>['checklists'][0]) {
 export default async function OnboardingPage({ searchParams }: { searchParams: Promise<{ filter?: string }> }) {
   const { filter } = await searchParams
   const activeFilter = filter === 'in-progress' || filter === 'overdue' || filter === 'complete' ? filter : 'all'
-  const { checklists, probations, today } = await getData()
+
+  const cookieStore = await cookies()
+  const payload = await verifyToken(cookieStore.get('hr_token')?.value)
+  if (!payload) redirect('/login')
+  const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
+  const isHR = role === 'HR_ADMIN'
+
+  const { checklists, probations, everyone, today } = await getData()
+
+  const gridRows: GridRow[] = everyone.map((e) => ({
+    employeeId: e.id,
+    employeeCode: e.employeeCode,
+    fullName: e.fullName,
+    joiningDate: e.joiningDate?.toISOString() ?? null,
+    employeeType: e.employeeType,
+    department: e.department?.name ?? null,
+    status: e.status,
+    checklist: e.onboarding
+      ? (e.onboarding as unknown as Record<string, boolean>)
+      : null,
+  }))
 
   function daysLeft(date: Date) {
     return Math.ceil((new Date(date).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
@@ -127,7 +162,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
       <Tabs defaultValue="checklists">
         <TabsList className="bg-white border border-slate-200 rounded-lg p-1 inline-flex">
           <TabsTrigger value="checklists">Active Onboarding</TabsTrigger>
-          <TabsTrigger value="probation">Probation Tracker</TabsTrigger>
+          <TabsTrigger value="documents">Document Checklist</TabsTrigger>
         </TabsList>
 
         {/* Active onboarding — card grid */}
@@ -216,65 +251,11 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
         </TabsContent>
 
         {/* Probation tracker — table (no point in cards for time-series data) */}
-        <TabsContent value="probation" className="mt-4">
-          <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
-            <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-              <p className="text-xs text-slate-500">
-                <span className="font-semibold text-slate-900">{probations.length}</span> probation records · {activeProbation} active · {endingSoon} ending within 14 days
-              </p>
-            </div>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Employee</TableHead>
-                  <TableHead>Designation</TableHead>
-                  <TableHead>Start</TableHead>
-                  <TableHead>End</TableHead>
-                  <TableHead>Days Left</TableHead>
-                  <TableHead>Outcome</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {probations.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-10 text-slate-400 text-sm">
-                    No probation records yet.
-                  </TableCell></TableRow>
-                ) : (
-                  probations.map((p) => {
-                    const dl = daysLeft(p.endDate)
-                    const isAlert = !p.outcome && dl <= 14 && dl >= 0
-                    return (
-                      <TableRow key={p.id}>
-                        <TableCell>
-                          <Link href={`/dashboard/employees/${p.employee.id}`} className="font-medium text-slate-900 hover:text-slate-700">
-                            {p.employee.fullName}
-                          </Link>
-                          <p className="text-xs text-slate-400">{p.employee.employeeCode}</p>
-                        </TableCell>
-                        <TableCell className="text-slate-600">{p.employee.designation}</TableCell>
-                        <TableCell className="text-slate-500">{formatDate(p.startDate)}</TableCell>
-                        <TableCell className="text-slate-500">{formatDate(p.endDate)}</TableCell>
-                        <TableCell>
-                          <span className={`text-sm tabular-nums ${isAlert ? 'text-slate-700 font-semibold' : dl < 0 && !p.outcome ? 'text-slate-700 font-semibold' : 'text-slate-700'}`}>
-                            {p.outcome ? '—' : dl < 0 ? `Overdue ${Math.abs(dl)}d` : `${dl} days`}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          {p.outcome ? (
-                            <Badge variant={p.outcome === 'CONFIRMED' ? 'success' : p.outcome === 'TERMINATED' ? 'destructive' : 'warning'}>
-                              {p.outcome === 'CONFIRMED' ? 'Confirmed' : p.outcome === 'TERMINATED' ? 'Terminated' : 'Extended'}
-                            </Badge>
-                          ) : (
-                            <Badge variant={isAlert ? 'warning' : 'secondary'}>In progress</Badge>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </Card>
+        {/* Every employee's documents, one row each. The probation tracker
+            that used to live in this slot now sits under Probation in the
+            sidebar, where people go looking for it. */}
+        <TabsContent value="documents" className="mt-4">
+          <ChecklistGrid rows={gridRows} isHR={isHR} />
         </TabsContent>
       </Tabs>
     </div>

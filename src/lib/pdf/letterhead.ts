@@ -15,6 +15,8 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { PDFDocument, rgb, type PDFFont, type PDFPage, type PDFImage } from 'pdf-lib'
 import fontkit from '@pdf-lib/fontkit'
+import { logoPngBytes } from '@/lib/brand-logo'
+import { LETTERHEAD_ADDRESS_LINES } from '@/lib/brand'
 
 const ASSETS = path.join(process.cwd(), 'src/assets/letterhead')
 
@@ -33,15 +35,16 @@ const BAR_HEIGHT = 12.8
 
 // ── Fixed elements ──────────────────────────────────────────────────────────
 const LOGO_X = 60.1
-const LOGO_TOP_FROM_TOP = 64.9
-const LOGO_W = 174.0
+// The measured sample placed a 496x69 image whose artwork sat 6px inside the
+// canvas on every side, at 174pt wide and 64.9pt from the top — so the *mark*
+// printed 170.1pt wide with its top edge 67.0pt down. The Playbook artwork is
+// trimmed tight (545 of 548px, 8px down of 80), so the same numbers would print
+// it 1.7% larger and 0.4pt lower. These two are re-derived to land the mark
+// exactly where the sample's mark landed. Measured, not adjusted by eye.
+const LOGO_TOP_FROM_TOP = 64.5
+const LOGO_W = 171.1
 
-const COMPANY_ADDRESS_LINES = [
-  'Mega Tower 5th floor, Office #201',
-  'Gulberg Lahore, Pakistan',
-  '+92 42 37458015',
-  '+1 (716) 980-7724',
-]
+const COMPANY_ADDRESS_LINES = LETTERHEAD_ADDRESS_LINES
 const ADDRESS_TOP_FROM_TOP = 68.0
 const ADDRESS_RIGHT = 537.7
 const ADDRESS_LEADING = 14.0
@@ -173,7 +176,11 @@ export async function startLetter(
   drawGradientBar(page, PAGE_H - BAR_HEIGHT)
   drawGradientBar(page, 0)
 
-  const logo: PDFImage = await pdf.embedPng(fs.readFileSync(path.join(ASSETS, 'convertt_logo.png')))
+  // The Playbook mark, from src/lib/brand-logo — the same bytes the HTML
+  // letters and the salary slip draw. The old src/assets/letterhead copy had a
+  // white box baked in behind it and a pure-black wordmark; the current mark is
+  // transparent and set in charcoal.
+  const logo: PDFImage = await pdf.embedPng(logoPngBytes())
   const logoH = (logo.height / logo.width) * LOGO_W
   page.drawImage(logo, {
     x: LOGO_X,

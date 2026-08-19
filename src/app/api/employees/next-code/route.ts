@@ -30,21 +30,25 @@ export async function GET(request: NextRequest) {
     if (d) deptCode = d.code
   }
 
-  // Look at every existing employeeCode for this dept prefix.
-  const prefix = `CON-${deptCode}-`
-  const rows = await prisma.employee.findMany({
-    where: { employeeCode: { startsWith: prefix } },
-    select: { employeeCode: true },
-  })
+  // The number is a company-wide joining sequence, not a per-department one.
+  //
+  // This used to take the maximum within the department prefix, which reads
+  // naturally and is wrong: in the master sheet the number is the SR # — the
+  // order people joined the company. Web-Shopify runs 004, 006, 010, 013 …
+  // because other departments hired in between. Numbering per department would
+  // have suggested CON-UIUX-044 while CON-MRK-044 already existed, handing two
+  // people the same serial.
+  const rows = await prisma.employee.findMany({ select: { employeeCode: true } })
 
   let maxN = 0
   for (const r of rows) {
-    const suffix = r.employeeCode.slice(prefix.length)
-    const n = parseInt(suffix, 10)
+    const m = /^CON-[A-Z]+-(\d+)$/.exec(r.employeeCode ?? '')
+    if (!m) continue
+    const n = parseInt(m[1], 10)
     if (Number.isFinite(n) && n > maxN) maxN = n
   }
 
   const nextNum = maxN + 1
-  const next = `${prefix}${String(nextNum).padStart(3, '0')}`
+  const next = `CON-${deptCode}-${String(nextNum).padStart(3, '0')}`
   return NextResponse.json({ next, deptCode, nextNum })
 }

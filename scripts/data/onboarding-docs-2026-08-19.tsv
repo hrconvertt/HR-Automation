@@ -1,0 +1,54 @@
+# Employee_Master columns AX:BH, read from the live Master Sheet - Convertt_HR
+# on 19 Aug 2026. Spreadsheet 1rJfXV4kscRrmxKrqODFrlaaEL_xOS9e-Rv-qNdV0HsU.
+#
+# Flag order (11 chars), matching AX..BH:
+#   0 NDA signed by Employee                          -> ndaSigned
+#   1 NDA signed by Convertt                          -> ndaSignedByCompany
+#   2 Internship Appointment Letter — Employee        -> internshipLetterSigned
+#   3 Internship Appointment Letter — Convertt        -> internshipLetterSignedByCompany
+#   4 Agreement Signed by Employee                    -> agreementSigned
+#   5 Agreement Signed by Convertt                    -> agreementSignedByCompany
+#   6 Pic                                             -> photoTaken
+#   7 CNIC Document on File                           -> cnicCopied
+#   8 Education Evidence                              -> educationDocsCopied
+#   9 Experience Letter                               -> experienceLettersCopied
+#  10 Certification                                   -> certificationOnFile
+#
+# Y = Yes   N = No   X = "None" (not applicable)   - = blank
+	Syed Asghar	YYXX--NYNYY
+CON-BD-007	Iqra Naveed	YYXX------X
+CON-CTO-002	Muhammad Waqas Fareed	YYXXYYNNNNX
+CON-HR-032	Tahreem Waheed	YY--NNYN--X
+CON-MDT-009	Sheikh Taha Adnan	YYYYYYYYNNX
+CON-MDT-019	Usman Ali	YY--YYYY--X
+CON-MDT-025	Tayyab Hussain	YYXXYYYYN--
+CON-MRK-044	Laiba Mannan	YY--YYYY--X
+CON-MDT-031	Momin Munir	YYXX------X
+CON-UIUX-005	Abdullah Shafiq	YYXXYYYY---
+CON-UIUX-040	Zuhaa Shafi	YY---------
+CON-UIUX-043	Umer Afzal	YYXXNNNYYNX
+CON-UIUX-008	Muhammad Usman Saeed	YYXXNNNYYYX
+CON-UIUX-012	Ali Hassan	YY--NNYYYYX
+CON-UIUX-017	Umar Ameen	YY--YYYYY--
+CON-UIUX-021	Taiyba Naeem	YYXXYYYYYYX
+CON-UIUX-022	Altaf Yaseen	YY--YY----X
+CON-UIUX-034	Muhammad Ammar Younas	YYXX-------
+CON-WBS-004	Atta Ur Rehman	YYXX-------
+CON-WBS-006	Muzaffar Jamil	YYXXNNNYYN-
+CON-WBS-010	Muhammad Ahsan	YYXXNNNYYY-
+CON-WBS-013	Momna Waryam Khan	YY--YYYY--X
+CON-WBS-014	Muhammad Usama Aslam	YY--YYYYY--
+CON-WBS-015	Zain Rasheed	YYXX-------
+CON-WBS-024	Muhammad Rayyan	YYXX-------
+CON-WBS-033	Muhammad Irfan	YYXXNNNNYNX
+CON-WBW-003	Aqib Aslam	YYXXY-YYY--
+CON-WBW-011	Ali Shan	XXXXXXXXXXX
+CON-UIUX-037	Muhammad Salman Shahid	XXXXXXXXXXX
+CON-ADM-001	Arslan	XXXXXXXXXXX
+CON-ADM-003	Jamshed	XXXXXXXXXXX
+-	Zubair N.C	XXXXXXXXXXX
+-	Umer Malik	XXXXXXXXXXX
+CON-HR-016	Rija Ahmed	YYXXYYYY---
+CON-UIUX-028	Romesa	-----------
+CON-MRK-029	Ramsha	-----------
+CON-MRK-041	Muhammad Hashir	-----------

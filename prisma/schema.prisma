@@ -36,6 +36,9 @@ model User {
   language       String    @default("EN")       // EN | UR | AR | HI | BN | ZH | ES | FR | DE | RU (most are placeholders — full translation rolling out)
   timezone       String    @default("Asia/Karachi")
   pronouns       String?
+  // Notification sound, chosen alongside the per-type switches. NONE means the
+  // app stays silent without having to switch every notification off.
+  notificationSound String @default("CHIME") // NONE | CHIME | PING | KNOCK
   notificationPrefs NotificationPreference[]
   employee       Employee?
   createdAt      DateTime  @default(now())
@@ -233,6 +236,8 @@ model Employee {
   leaveBalances       LeaveBalance[]
   leaveRequests       LeaveRequest[]
   sandwichDeductions  SandwichDeduction[]
+  eventsFinanced      CompanyEvent[]  @relation("EventFinanceOwner")
+  eventRoles          EventRole[]     @relation("EventRoleHolder")
   payslips            Payslip[]
   performanceReviews  PerformanceReview[]
   goals               Goal[]
@@ -1115,6 +1120,15 @@ model OnboardingChecklist {
   experienceLettersCopied Boolean @default(false)
   ndaSigned             Boolean   @default(false)
   photoTaken            Boolean   @default(false)
+  // The master sheet tracks both sides of every signature — a contract signed
+  // by the employee and never countersigned is an open risk, and a single
+  // boolean cannot say which side is missing.
+  ndaSignedByCompany            Boolean @default(false)
+  agreementSignedByCompany      Boolean @default(false)
+  internshipLetterSigned        Boolean @default(false)
+  internshipLetterSignedByCompany Boolean @default(false)
+  // Professional certifications, where the role calls for one.
+  certificationOnFile           Boolean @default(false)
   systemAccessGranted   Boolean   @default(false)
   equipmentIssued       Boolean   @default(false)
   introductionDone      Boolean   @default(false)
@@ -2175,6 +2189,41 @@ model PromotionRequest {
   ceoApprovedById      String?
   ceoNotes             String?
   letterId             String?
+
+  // ── Where they are coming from ──────────────────────────────────────────
+  // Snapshotted at request time. The employee record moves when the promotion
+  // is enacted, so without this the letter cannot say what changed.
+  fromDesignation      String?
+  fromLevel            String?   // L1 | L2 | L3 | L4 | L5 — HR Playbook 4.1
+  toLevel              String?
+  fromSalaryAmount     Float?
+  bandMin              Float?    // the new level's published band, 4.3
+  bandMax              Float?
+  noticeMonths         Int?      // 1 for L2-L3, 2 for L4-L5 — 4.1
+
+  // ── The four gates of HR Playbook 4.4 ───────────────────────────────────
+  // "promotion is earned by consistently performing at the next level, then
+  // confirmed by the business — a strong appraisal alone does not promote".
+  evidence             String?   // two consecutive periods at "exceeds", with work
+  sponsorName          String?   // the Reporting Manager who nominates
+  sponsorship          String?   // their written case against the next level
+  fairnessNote         String?   // HR's consistency check across the team
+  fairnessCheckedBy    String?
+  businessNeed         String?   // required for L4-L5: is there a seat
+
+  // ── Signature ───────────────────────────────────────────────────────────
+  // Drawn in the browser and stored as a PNG data URI, alongside who signed
+  // and when. A typed name is not a signature; the image is what prints.
+  signedByName         String?
+  signedByTitle        String?
+  signatureDataUrl     String?
+  signedAt             DateTime?
+
+  // The generated letter, kept as a snapshot so later edits to the employee
+  // record cannot rewrite a letter that has already been handed over.
+  letterBody           String?
+  letterGeneratedAt    DateTime?
+
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 
@@ -2213,17 +2262,96 @@ model Config {
 // monthly input is honest and dead simple).
 // ─── PEOPLE & CULTURE ─────────────────────────────────────────────────────────
 
+// An event, and everything the proposal for it needs.
+//
+// The extra fields are not decoration: the Mango Party proposal that went to
+// the CEO had an overview, objectives, what was included, decoration, a run of
+// show, roles with headcounts, a budget and success metrics. Those were typed
+// into a Word document by hand. Holding them here means the proposal is
+// generated from the plan rather than written alongside it and drifting.
 model CompanyEvent {
   id          String   @id @default(cuid())
   title       String
   description String?
   eventDate   DateTime
   location    String?
-  category    String   @default("GENERAL") // DINNER | TRIP | SPORTS | TRAINING | TOWN_HALL | EID | GENERAL
+  category    String   @default("GENERAL") // DINNER | TRIP | SPORTS | TRAINING | TOWN_HALL | EID | NATIONAL | SEASONAL | PROMOTION | GENERAL
   createdById String?
+
+  // Where it is in the pipeline. Nothing is spent until it is APPROVED.
+  status      String   @default("PLANNING") // PLANNING | PROPOSED | APPROVED | HELD | CANCELLED
+
+  // ── The plan ──────────────────────────────────────────────────────────
+  startTime      String?   // "15:00" — kept as text, it is a run-of-show label
+  endTime        String?
+  expectedGuests Int?
+  overview       String?   // the opening paragraph
+  objectives     String?   // one per line
+  refreshments   String?   // one per line
+  activities     String?
+  rewards        String?
+  decoration     String?
+  runOfShow      String?   // "0:00–0:10 | Welcome and kickoff" one per line
+  requirements   String?   // things to arrange or buy
+  successMetrics String?
+  whyItMatters   String?
+  notes          String?
+
+  // ── The money ─────────────────────────────────────────────────────────
+  currency       String   @default("PKR")
+  // Who is handling the spend on the day — the person who buys and reconciles.
+  financeOwnerId String?
+  financeOwner   Employee? @relation("EventFinanceOwner", fields: [financeOwnerId], references: [id])
+
+  // ── The proposal ──────────────────────────────────────────────────────
+  proposedById   String?
+  proposalBody   String?   // generated text, kept so an edited one is not lost
+  proposalAt     DateTime?
+  approvedByName String?
+  approvedAt     DateTime?
+
+  costItems   EventCostItem[]
+  eventRoles  EventRole[]
+
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  @@index([eventDate])
   @@map("company_events")
+}
+
+// One line of an event budget. Estimated when planning, actual afterwards —
+// both kept, because "what we thought it would cost" is the number that gets
+// approved and "what it did" is the number that informs the next one.
+model EventCostItem {
+  id        String   @id @default(cuid())
+  eventId   String
+  event     CompanyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  label     String
+  category  String   @default("OTHER") // REFRESHMENTS | DECORATION | PRIZES | VENUE | EQUIPMENT | OTHER
+  quantity  Float    @default(1)
+  unitCost  Float    @default(0)
+  actual    Float?   // what was really spent, once known
+  notes     String?
+  createdAt DateTime @default(now())
+  @@index([eventId])
+  @@map("event_cost_items")
+}
+
+// Who is doing what. The Mango proposal listed "Refreshments Volunteers (3)"
+// against a responsibility, so headcount and named person are both optional —
+// a role can be filled by a number before it is filled by people.
+model EventRole {
+  id             String   @id @default(cuid())
+  eventId        String
+  event          CompanyEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  role           String
+  headcount      Int      @default(1)
+  responsibility String?
+  employeeId     String?
+  employee       Employee? @relation("EventRoleHolder", fields: [employeeId], references: [id])
+  createdAt      DateTime @default(now())
+  @@index([eventId])
+  @@map("event_roles")
 }
 
 model Kudos {
