@@ -26,6 +26,8 @@ interface Props {
   employeeId: string
   checklistId: string
   day1Schedule: string
+  /** A draft built from the role, shown when nothing has been saved yet. */
+  day1Suggestion?: string
   notes: string
   tasks: Task[]
   canEdit: boolean
@@ -62,14 +64,19 @@ function isDocumentTask(t: Task): boolean {
     lower.includes('nda') ||
     lower.includes('agreement') ||
     lower.includes('offer letter') ||
-    lower.includes('bank')
+    lower.includes('bank') ||
+    lower.includes('handbook')
   )
 }
 
 export function OnboardingWorkspace(props: Props) {
   const router = useRouter()
   const [tasks, setTasks] = useState(props.tasks)
-  const [day1, setDay1] = useState(props.day1Schedule)
+  // Start from what is saved; fall back to the generated draft so the box is
+  // never blank. Saving is still explicit — leaving the page without touching
+  // it writes nothing.
+  const [day1, setDay1] = useState(props.day1Schedule || props.day1Suggestion || '')
+  const isDraft = !props.day1Schedule && day1 === props.day1Suggestion
   const [notes, setNotes] = useState(props.notes)
   const [pending, startTransition] = useTransition()
   const [busyTaskId, setBusyTaskId] = useState<string | null>(null)
@@ -227,7 +234,23 @@ export function OnboardingWorkspace(props: Props) {
     <div className="space-y-5">
       {/* Day 1 schedule */}
       <Card className="rounded-xl border-slate-200 p-5">
-        <h3 className="text-sm font-semibold text-slate-900 mb-2">Day 1 Schedule</h3>
+        <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
+          <h3 className="text-sm font-semibold text-slate-900">Day 1 Schedule</h3>
+          {props.canEdit && isDraft && (
+            <span className="text-[11px] text-slate-500">
+              Drafted from the role — edit anything, then click out to save.
+            </span>
+          )}
+          {props.canEdit && props.day1Suggestion && !isDraft && (
+            <button
+              type="button"
+              onClick={() => setDay1(props.day1Suggestion ?? '')}
+              className="text-[11px] text-slate-500 underline hover:text-slate-900"
+            >
+              Reset to the suggested schedule
+            </button>
+          )}
+        </div>
         {props.canEdit ? (
           <textarea
             value={day1}
@@ -295,22 +318,10 @@ export function OnboardingWorkspace(props: Props) {
                 return (
                   <div key={t.id} className={`rounded-lg p-3 border ${isDone ? 'bg-slate-50 border-slate-100' : isSkipped ? 'bg-slate-50/60 border-slate-100' : 'bg-white border-slate-200'}`}>
                     <div className="flex items-start gap-3">
-                      {canAct && !isSkipped ? (
-                        <button
-                          type="button"
-                          disabled={rowBusy}
-                          onClick={() => (isDone ? undoTask(t) : markComplete(t))}
-                          title={isDone ? 'Undo — mark as pending' : 'Mark done'}
-                          className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-1 disabled:opacity-50 ${isDone ? 'bg-slate-700 border-slate-700 text-white hover:bg-slate-600' : 'border-slate-300 bg-white hover:border-slate-500 hover:bg-slate-50'}`}
-                        >
-                          {isDone && <Check className="w-3 h-3" />}
-                        </button>
-                      ) : (
-                        <div className={`w-5 h-5 mt-0.5 rounded border flex items-center justify-center flex-shrink-0 ${isDone ? 'bg-slate-700 border-slate-700 text-white' : isSkipped ? 'bg-slate-200 border-slate-200 text-slate-500' : 'border-slate-300 bg-white'}`} title={isSkipped ? 'Marked not required' : isDone ? 'Completed' : 'Pending'}>
-                          {isDone && <Check className="w-3 h-3" />}
-                          {isSkipped && <X className="w-3 h-3" />}
-                        </div>
-                      )}
+                      {/* No tick box. Mark Done and Not Required are the two
+                          actions, and a third control that did the same thing as
+                          one of them only invited the question of which was
+                          authoritative. Status is on the row already. */}
                       <div className="flex-1 min-w-0">
                         <p className={`text-sm ${isDone ? 'line-through text-slate-500' : isSkipped ? 'text-slate-500' : 'text-slate-900'}`}>{t.title}</p>
                         {t.description && <p className="text-xs text-slate-500 mt-0.5">{t.description}</p>}

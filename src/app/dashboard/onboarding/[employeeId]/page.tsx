@@ -2,6 +2,7 @@ import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
+import { buildDay1Schedule } from '@/lib/day1-schedule'
 import { verifyToken } from '@/lib/auth'
 import { Card } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
@@ -85,6 +86,15 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
         employeeId={employee.id}
         checklistId={employee.onboarding?.id ?? ''}
         day1Schedule={employee.onboarding?.day1ScheduleJson ?? ''}
+        // Nothing saved yet? Offer a draft built from the role rather than an
+        // empty box. It is not written to the record until HR saves it.
+        day1Suggestion={buildDay1Schedule({
+          fullName: employee.fullName,
+          designation: employee.designation,
+          department: employee.department?.name ?? null,
+          managerName: employee.reportingManager?.fullName ?? null,
+          employeeType: employee.employeeType,
+        })}
         notes={employee.onboarding?.notes ?? ''}
         tasks={tasks.map((t) => ({
           id: t.id,

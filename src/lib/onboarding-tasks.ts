@@ -59,7 +59,10 @@ export function buildStandardOnboardingTasks(
     { title: 'Offer Letter Issued', owner: 'HR', category: 'WEEK_1_PAPERWORK', orderIndex: 1 },
     { title: `Employment Agreement Signed (${agreementVariant})`, owner: 'HR', category: 'WEEK_1_PAPERWORK', orderIndex: 2 },
     { title: 'NDA Signed', owner: 'HR', category: 'WEEK_1_PAPERWORK', orderIndex: 3 },
-    { title: 'Employee Handbook Shared', owner: 'HR', category: 'WEEK_1_PAPERWORK', orderIndex: 4 },
+    // The handbook is a file that gets sent, so the row should be able to hold
+    // the copy that was sent rather than only assert that it happened.
+    { title: 'Employee Handbook Shared', owner: 'HR', category: 'WEEK_1_PAPERWORK', orderIndex: 4,
+      documentType: 'ONBOARDING_DOC' },
 
     // ── Employee-provided documents (self-upload) ──
     { title: 'CNIC Collected (photocopy)', owner: 'EMPLOYEE', category: 'WEEK_1_PAPERWORK', orderIndex: 5, isEmployeeUploadable: true, documentType: 'CNIC' },

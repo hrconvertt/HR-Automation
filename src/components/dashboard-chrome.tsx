@@ -99,6 +99,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/culture/recognition',
   '/dashboard/culture/birthdays',
   '/dashboard/culture/anniversaries',
+  '/dashboard/lifecycle/verification',
   '/dashboard/lifecycle/exit',
   '/dashboard/lifecycle/job-changes',
   '/dashboard/lifecycle/loa',
@@ -345,6 +346,7 @@ const LIFECYCLE_NAV: NavGroup[] = [
       // The top-level HR nav entry was removed so it isn't duplicated;
       // Managers keep their top-level Probation entry (no lifecycle nav).
       { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
+      { href: '/dashboard/lifecycle/verification', label: 'Background Verification', icon: ShieldCheck },
       { href: '/dashboard/lifecycle/job-changes', label: 'Job Changes', icon: TrendingUp },
       { href: '/dashboard/lifecycle/loa', label: 'Leave of Absence', icon: PlaneIcon },
       { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert },

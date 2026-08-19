@@ -236,6 +236,8 @@ model Employee {
   leaveBalances       LeaveBalance[]
   leaveRequests       LeaveRequest[]
   sandwichDeductions  SandwichDeduction[]
+  verifications       BackgroundVerification[] @relation("VerificationSubject")
+  verificationsRun    BackgroundVerification[] @relation("VerificationAssignee")
   eventsFinanced      CompanyEvent[]  @relation("EventFinanceOwner")
   eventRoles          EventRole[]     @relation("EventRoleHolder")
   payslips            Payslip[]
@@ -2828,4 +2830,76 @@ model BankCode {
 
   @@index([bankCode])
   @@map("bank_codes")
+}
+
+// ─── BACKGROUND VERIFICATION ────────────────────────────────────────────────
+// Checking what a new hire told us against what their previous employer says.
+// One row per employer checked — someone with three previous jobs can have
+// three, and they can disagree independently.
+//
+// Playbook SOP-01 requires two professional references, at least one a former
+// direct manager, contacted directly and with notes filed. This is where those
+// notes live.
+model BackgroundVerification {
+  id           String   @id @default(cuid())
+  employeeId   String
+  employee     Employee @relation("VerificationSubject", fields: [employeeId], references: [id], onDelete: Cascade)
+
+  // Who is being asked.
+  employerName String
+  contactName  String?
+  contactRole  String?
+  contactEmail String?
+  contactPhone String?
+
+  status       String    @default("NOT_STARTED")
+  // NOT_STARTED | AWAITING_CONSENT | SENT | CHASING | RESPONDED | COMPLETED | UNREACHABLE
+
+  // Who is running it. Verification is a person's job, not the department's.
+  assignedToId String?
+  assignedTo   Employee? @relation("VerificationAssignee", fields: [assignedToId], references: [id])
+
+  // Consent is a precondition, not a formality — Playbook 3.2 and the UAE data
+  // protection law both require it before anyone is contacted.
+  consentAt    DateTime?
+  requestedAt  DateTime?
+  respondedAt  DateTime?
+
+  // The answer sheet, twice over: what the candidate told us, and what the
+  // employer confirmed. JSON keyed by field id so adding a question to the form
+  // is not a migration.
+  claimedJson  String?
+  verifiedJson String?
+
+  outcome      String?   // CLEAR | MINOR_DISCREPANCY | MAJOR_DISCREPANCY | NO_RESPONSE
+  decisionNote String?
+  decidedAt    DateTime?
+  decidedById  String?
+
+  emails       VerificationEmail[]
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([employeeId])
+  @@map("background_verifications")
+}
+
+// Every exchange, kept verbatim. The decision at the end has to be defensible
+// months later, and "I remember them saying" is not evidence.
+model VerificationEmail {
+  id             String   @id @default(cuid())
+  verificationId String
+  verification   BackgroundVerification @relation(fields: [verificationId], references: [id], onDelete: Cascade)
+  direction      String   // OUTBOUND | INBOUND
+  fromAddress    String
+  toAddress      String
+  subject        String
+  body           String
+  occurredAt     DateTime @default(now())
+  loggedById     String?
+  createdAt      DateTime @default(now())
+
+  @@index([verificationId])
+  @@map("verification_emails")
 }
