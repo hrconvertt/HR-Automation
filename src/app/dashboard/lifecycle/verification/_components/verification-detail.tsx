@@ -66,6 +66,7 @@ export function VerificationDetail({ check, employee, staff }: {
   const [err, setErr] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
   const [composing, setComposing] = useState(false)
+  const [removingEmail, setRemovingEmail] = useState<string | null>(null)
   const [draft, setDraft] = useState({
     direction: 'OUTBOUND', subject: '', body: '', fromAddress: '', toAddress: '',
   })
@@ -123,6 +124,21 @@ export function VerificationDetail({ check, employee, staff }: {
     setC((p) => ({ ...p, emails: [...p.emails, d.email] }))
     setComposing(false)
     setDraft({ direction: 'OUTBOUND', subject: '', body: '', fromAddress: '', toAddress: '' })
+    router.refresh()
+  }
+
+  /** Logged by hand, so removable by hand — a wrong paste should not be permanent. */
+  async function removeEmail(e: LoggedEmail) {
+    if (!confirm(`Remove "${e.subject || 'this email'}" from the record?`)) return
+    setRemovingEmail(e.id); setErr(null)
+    const res = await fetch(`/api/verification/${c.id}/emails/${e.id}`, { method: 'DELETE' })
+    setRemovingEmail(null)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setErr(d.error ?? 'Could not remove that.')
+      return
+    }
+    setC((p) => ({ ...p, emails: p.emails.filter((x) => x.id !== e.id) }))
     router.refresh()
   }
 
@@ -422,7 +438,21 @@ export function VerificationDetail({ check, employee, staff }: {
                         : <ArrowDownLeft className="w-3.5 h-3.5 text-indigo-500" />}
                       {e.subject || '(no subject)'}
                     </p>
-                    <span className="text-[11px] text-slate-400">{stamp(e.occurredAt)}</span>
+                    <span className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-[11px] text-slate-400">{stamp(e.occurredAt)}</span>
+                      <button
+                        type="button"
+                        aria-label="Remove this email from the record"
+                        title="Remove this email from the record"
+                        disabled={removingEmail === e.id}
+                        onClick={() => removeEmail(e)}
+                        className="text-slate-300 hover:text-red-600 disabled:opacity-50"
+                      >
+                        {removingEmail === e.id
+                          ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          : <Trash2 className="w-3.5 h-3.5" />}
+                      </button>
+                    </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
                     {out ? 'Sent' : 'Received'}

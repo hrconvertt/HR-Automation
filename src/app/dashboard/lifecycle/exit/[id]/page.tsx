@@ -3,7 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import Link from 'next/link'
-import { FileText } from 'lucide-react'
+import { FileText, ArrowLeft } from 'lucide-react'
 import ExitClearanceDetailClient from './_client'
 import { formatDate } from '@/lib/utils'
 import { exitDocumentsFor, type ExitScenario } from '@/lib/exit-documents'
@@ -83,8 +83,26 @@ export default async function ExitClearanceDetailPage({ params }: PageProps) {
     ? clearance.lastWorkingDay.toISOString().slice(0, 10)
     : null
 
+  // Rows HR closed by hand, where a file was never the evidence.
+  const ticked = Object.fromEntries(
+    (await prisma.exitDocumentTick.findMany({
+      where: { employeeId: clearance.employee.id },
+      select: { docKey: true },
+    })).map((t) => [t.docKey, true]),
+  )
+
   return (
     <div className="space-y-3">
+      {/* The way out, at the top where the page starts. There is a Back button
+          further down, but it sits below seven sections and a document board —
+          which is to say, wherever the content happens to end. */}
+      <Link
+        href="/dashboard/lifecycle/exit"
+        className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-900"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Back to exit clearance
+      </Link>
+
       {/* Section 7. The documents used to sit behind a button on their own
           screen, so the checklist could say "1 / 6 sections cleared" while
           nothing on it knew whether a single letter had been issued. One
@@ -106,6 +124,7 @@ export default async function ExitClearanceDetailPage({ params }: PageProps) {
             scenario={scenario}
             documents={exitDocs}
             attached={attached}
+            ticked={ticked}
             canEdit={canAct}
             lastWorkingDay={lastWorkingDay}
           />

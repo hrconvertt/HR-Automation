@@ -237,6 +237,7 @@ model Employee {
   leaveRequests       LeaveRequest[]
   sandwichDeductions  SandwichDeduction[]
   documentDrafts      DocumentDraft[]
+  exitDocumentTicks   ExitDocumentTick[]
   verifications       BackgroundVerification[] @relation("VerificationSubject")
   verificationsRun    BackgroundVerification[] @relation("VerificationAssignee")
   eventsFinanced      CompanyEvent[]  @relation("EventFinanceOwner")
@@ -2925,4 +2926,26 @@ model DocumentDraft {
 
   @@unique([employeeId, docType])
   @@map("document_drafts")
+}
+
+// ─── EXIT DOCUMENT TICKS ────────────────────────────────────────────────────
+// A row on the exit document board is normally satisfied by a file on record.
+// Some are not: assets handed back in person, a letter posted rather than
+// scanned, a step that genuinely did not apply. This lets HR tick one by hand
+// without inventing a file to attach.
+//
+// Deliberately separate from EmployeeDocument. A tick is somebody saying it
+// happened; a file is evidence that it did. Merging them would lose which is
+// which, and the board shows the difference.
+model ExitDocumentTick {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  docKey     String   // ExitDocument.key
+  tickedById String?
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, docKey])
+  @@map("exit_document_ticks")
 }

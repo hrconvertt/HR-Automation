@@ -17,7 +17,7 @@
 import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import {
-  FileText, Upload, Check, Loader2, AlertTriangle, ExternalLink, Circle,
+  FileText, Upload, Check, Loader2, AlertTriangle, ExternalLink, Circle, CheckCircle2,
 } from 'lucide-react'
 import type { ExitDocument } from '@/lib/exit-documents'
 
@@ -28,7 +28,7 @@ export interface AttachedDoc {
 }
 
 export function ExitDocumentBoard({
-  employeeId, employeeName, scenario, documents, attached, canEdit, lastWorkingDay,
+  employeeId, employeeName, scenario, documents, attached, ticked = {}, canEdit, lastWorkingDay,
 }: {
   employeeId: string
   employeeName: string
@@ -36,10 +36,12 @@ export function ExitDocumentBoard({
   documents: ExitDocument[]
   /** Prerequisite key -> the file already on record for it. */
   attached: Record<string, AttachedDoc | undefined>
+  /** Prerequisite keys HR ticked by hand, with no file attached. */
+  ticked?: Record<string, boolean>
   canEdit: boolean
   lastWorkingDay: string | null
 }) {
-  const done = documents.filter((d) => attached[d.key]).length
+  const done = documents.filter((d) => attached[d.key] || ticked[d.key]).length
 
   return (
     <div className="space-y-4">
@@ -83,6 +85,7 @@ export function ExitDocumentBoard({
             doc={d}
             employeeId={employeeId}
             attached={attached[d.key]}
+            ticked={!!ticked[d.key]}
             canEdit={canEdit}
             lastWorkingDay={lastWorkingDay}
           />
@@ -92,10 +95,11 @@ export function ExitDocumentBoard({
   )
 }
 
-function Row({ doc, employeeId, attached, canEdit, lastWorkingDay }: {
+function Row({ doc, employeeId, attached, ticked, canEdit, lastWorkingDay }: {
   doc: ExitDocument
   employeeId: string
   attached?: AttachedDoc
+  ticked: boolean
   canEdit: boolean
   lastWorkingDay: string | null
 }) {
@@ -114,6 +118,26 @@ function Row({ doc, employeeId, attached, canEdit, lastWorkingDay }: {
     // New tab: the browser's print dialog there gives print, save-as-PDF and
     // download without us reimplementing any of them.
     window.open(`/api/documents/generate?${qs}`, '_blank')
+  }
+
+  /** Hand tick — for the rows a file was never going to satisfy. */
+  async function toggleTick() {
+    setBusy(true); setError(null)
+    const res = ticked
+      ? await fetch(`/api/exit-documents/tick?employeeId=${encodeURIComponent(employeeId)}`
+          + `&docKey=${encodeURIComponent(doc.key)}`, { method: 'DELETE' })
+      : await fetch('/api/exit-documents/tick', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ employeeId, docKey: doc.key }),
+        })
+    setBusy(false)
+    if (!res.ok) {
+      const j = await res.json().catch(() => ({}))
+      setError(j.error ?? 'Could not update that.')
+      return
+    }
+    router.refresh()
   }
 
   async function upload(file: File) {
@@ -137,11 +161,29 @@ function Row({ doc, employeeId, attached, canEdit, lastWorkingDay }: {
   return (
     <div className="p-4">
       <div className="flex items-start gap-3">
-        <span className="mt-0.5 shrink-0">
-          {attached
-            ? <Check className="w-4 h-4 text-emerald-600" />
-            : <Circle className="w-4 h-4 text-slate-300" />}
-        </span>
+        {/* The circle is the second way to close a row. A file is still the
+            better evidence, so a row satisfied by one is not clickable — there
+            is nothing to toggle. */}
+        {attached ? (
+          <span className="mt-0.5 shrink-0" title={`On file: ${attached.name}`}>
+            <Check className="w-4 h-4 text-emerald-600" />
+          </span>
+        ) : (
+          <button
+            type="button"
+            disabled={!canEdit || busy}
+            onClick={toggleTick}
+            aria-pressed={ticked}
+            title={ticked
+              ? 'Ticked by hand — click to clear'
+              : 'Tick this by hand, without a file'}
+            className="mt-0.5 shrink-0 disabled:cursor-default"
+          >
+            {ticked
+              ? <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              : <Circle className={`w-4 h-4 text-slate-300 ${canEdit ? 'hover:text-slate-500' : ''}`} />}
+          </button>
+        )}
 
         <div className="min-w-0 flex-1">
           <p className={`text-sm font-medium ${attached ? 'text-slate-900' : 'text-slate-700'}`}>
@@ -155,6 +197,11 @@ function Row({ doc, employeeId, attached, canEdit, lastWorkingDay }: {
           {attached && (
             <p className="text-[11px] text-emerald-700 mt-1">
               On file: {attached.name} · {attached.createdAt}
+            </p>
+          )}
+          {!attached && ticked && (
+            <p className="text-[11px] text-emerald-700 mt-1">
+              Ticked by hand — no file attached
             </p>
           )}
           {error && (
