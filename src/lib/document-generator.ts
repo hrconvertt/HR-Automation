@@ -77,7 +77,25 @@ interface Signatory { name: string; title: string; above?: string }
  *  says otherwise — the termination letter goes out from the HR Team. */
 const DEFAULT_SIGNATORY: Signatory = { name: 'Syed Khawer', title: 'Director Administration' }
 
-function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNATORY): string {
+/**
+ * 'letter' is the measured company letterhead — gradient bars, 12pt serif body.
+ * 'form'  is for things people fill in rather than read: no bars (a fill-in
+ *          form is not correspondence), smaller type, tighter spacing, so an
+ *          eight-question interview fits on a page or two instead of five.
+ */
+type DocVariant = 'letter' | 'form'
+
+interface WrapMeta { employeeId?: string; docType?: string; edited?: boolean }
+
+function wrap(
+  title: string,
+  body: string,
+  signatory: Signatory = DEFAULT_SIGNATORY,
+  variant: DocVariant = 'letter',
+  meta: WrapMeta = {},
+): string {
+  const isForm = variant === 'form'
+  const canSave = !!(meta.employeeId && meta.docType)
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -102,13 +120,15 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
   .doc, .doc p, .doc li, .doc td, .doc span, .doc strong { color: #000; }
   .doc {
     width: 210mm; min-height: 297mm; margin: 0 auto; background: #fff; position: relative;
-    padding: 46pt 60pt 60pt; box-shadow: 0 1px 4px rgba(0,0,0,.12);
+    padding: ${isForm ? '32pt 46pt 40pt' : '46pt 60pt 60pt'};
+    box-shadow: 0 1px 4px rgba(0,0,0,.12);
   }
   /* ~12.8pt tall, inset ~29pt from each side, top and bottom of the page. */
   .doc::before, .doc::after {
     content: ''; position: absolute; left: 29pt; right: 29pt; height: 12.8pt;
     background: linear-gradient(90deg, #0857E5 0%, #277FB1 100%);
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    ${isForm ? 'display: none;' : ''}
   }
   .doc::before { top: 0; }
   .doc::after  { bottom: 0; }
@@ -147,6 +167,35 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
   .sign-off { margin-top: 44pt; }
   .sign-off .name { font-size: 14pt; font-weight: 700; }
   .sign-off .title { font-size: 10pt; }
+  /* The write-in boxes on a form. */
+  .answer { border: 1px solid #cbd5e1; min-height: 48pt; border-radius: 3px; margin: 0 0 8pt; }
+  .answer.tall { min-height: 64pt; }
+  .cols { display: block; }
+
+  /* ── Form scale ──────────────────────────────────────────────────────────
+     Same face, one step down, and the answer boxes shrink with it. Set as a
+     block so a letter is untouched by any of it. */
+  ${isForm ? `
+  .doc { font-size: 10.5pt; }
+  .letterhead { margin: 6pt 0 14pt; }
+  .logo img { height: 20pt; }
+  .addr { font-size: 8.5pt; line-height: 1.35; }
+  .letter-date { font-size: 9.5pt; margin: 0 0 12pt; }
+  .doc-title { font-size: 14pt; margin: 0 0 10pt; }
+  p { font-size: 10.5pt; line-height: 14pt; margin: 0 0 6pt; }
+  h3 { font-size: 11pt !important; margin: 12pt 0 4pt !important; }
+  table.kv td { padding: 2pt 0; font-size: 10pt; }
+  table.compact td { padding: 4pt 6pt; font-size: 9.5pt; }
+  ol, ul { font-size: 10.5pt; line-height: 14pt; }
+  .answer { min-height: 34pt !important; }
+  .answer.tall { min-height: 46pt !important; }
+  .signature-block { margin-top: 22pt; }
+  .signature .name { font-size: 11.5pt; }
+  .signature .line { font-size: 9pt; }
+  /* Two questions per row where they fit, which halves the page count. */
+  .cols { display: flex; gap: 14pt; }
+  .cols > * { flex: 1 1 0; min-width: 0; }
+  ` : ''}
   /* Editing chrome — never printed. */
   .toolbar {
     position: sticky; top: 0; z-index: 10; width: 210mm; margin: 0 auto 14px;
@@ -180,9 +229,12 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
 <body>
   <div class="toolbar">
     <button id="editBtn" onclick="toggleEdit()">Edit</button>
+    ${canSave && meta.edited ? '<button onclick="revertDraft()">Revert to template</button>' : ''}
     <button class="primary" onclick="window.print()">Print / Save as PDF</button>
     <button onclick="window.close()">Close</button>
-    <span class="hint" id="hint">Click Edit to change any wording before printing.</span>
+    <span class="hint" id="hint">${meta.edited
+      ? 'Showing your edited version. Click Edit to change it again.'
+      : 'Click Edit to change any wording before printing.'}</span>
   </div>
   <div class="doc" id="doc">
     <div class="letterhead">
@@ -202,6 +254,8 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
   // wording tweaks on a finished letter, and the printed output is the
   // deliverable, so what you edit is literally what prints.
   var editing = false;
+  var SAVE = ${canSave ? JSON.stringify({ employeeId: meta.employeeId, docType: meta.docType }) : 'null'};
+
   function toggleEdit() {
     editing = !editing;
     var doc = document.getElementById('doc');
@@ -209,9 +263,41 @@ function wrap(title: string, body: string, signatory: Signatory = DEFAULT_SIGNAT
     document.body.classList.toggle('editing', editing);
     document.getElementById('editBtn').textContent = editing ? 'Done editing' : 'Edit';
     document.getElementById('hint').textContent = editing
-      ? 'Editing — click into any text and type. Changes are not saved back to the employee record.'
+      ? 'Editing — click into any text and type. Pressing Done saves it.'
       : 'Click Edit to change any wording before printing.';
-    if (editing) doc.focus();
+    if (editing) { doc.focus(); return; }
+    // Leaving edit mode is the save. Asking for a second, separate click was
+    // how every amendment got lost — the tab gets closed after printing.
+    saveDraft();
+  }
+
+  function saveDraft() {
+    if (!SAVE) return;
+    var hint = document.getElementById('hint');
+    hint.textContent = 'Saving…';
+    fetch('/api/documents/draft', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        employeeId: SAVE.employeeId,
+        docType: SAVE.docType,
+        html: document.getElementById('doc').innerHTML,
+      }),
+    }).then(function (r) {
+      hint.textContent = r.ok
+        ? 'Saved. Reopening this document shows your version.'
+        : 'Could not save — your edits are still on screen, so print before closing.';
+    }).catch(function () {
+      hint.textContent = 'Could not save — your edits are still on screen, so print before closing.';
+    });
+  }
+
+  function revertDraft() {
+    if (!SAVE) return;
+    if (!confirm('Discard your saved edits and go back to the standard template?')) return;
+    fetch('/api/documents/draft?employeeId=' + encodeURIComponent(SAVE.employeeId)
+      + '&docType=' + encodeURIComponent(SAVE.docType), { method: 'DELETE' })
+      .then(function () { location.reload(); });
   }
   window.addEventListener('beforeprint', function () {
     document.getElementById('doc').setAttribute('contenteditable', 'false');
@@ -655,51 +741,51 @@ function exitClearanceForm({ emp, extras }: Ctx) {
 
 function exitInterviewForm({ emp, extras }: Ctx) {
   const lastDay = extras.lastWorkingDay ? new Date(extras.lastWorkingDay) : (emp.exitDate ?? new Date())
+
+  // Paired down the page rather than stacked: eight questions each followed by
+  // a full-width box ran to five pages, which nobody prints and nobody fills in.
+  const q = (n: number, heading: string, prompt: string, tall = false) => `
+    <div>
+      <h3>${n}. ${escapeHtml(heading)}</h3>
+      <p>${escapeHtml(prompt)}</p>
+      <div class="answer${tall ? ' tall' : ''}"></div>
+    </div>`
+
   const body = `
     <div class="doc-title">Exit Interview Form</div>
     <table class="kv">
-      <tr><td>Employee Name</td><td>${escapeHtml(emp.fullName)}</td></tr>
-      <tr><td>Employee ID</td><td>${escapeHtml(emp.employeeCode)}</td></tr>
-      <tr><td>Designation</td><td>${escapeHtml(emp.designation)}</td></tr>
-      <tr><td>Department</td><td>${escapeHtml(emp.department?.name ?? '—')}</td></tr>
-      <tr><td>Last Working Day</td><td>${fmtDate(lastDay)}</td></tr>
-      <tr><td>Interview Conducted By</td><td>______________________________</td></tr>
-      <tr><td>Interview Date</td><td>______________________________</td></tr>
+      <tr><td>Employee Name</td><td>${escapeHtml(emp.fullName)}</td>
+          <td>Employee ID</td><td>${escapeHtml(emp.employeeCode)}</td></tr>
+      <tr><td>Designation</td><td>${escapeHtml(emp.designation)}</td>
+          <td>Department</td><td>${escapeHtml(emp.department?.name ?? '—')}</td></tr>
+      <tr><td>Last Working Day</td><td>${fmtDate(lastDay)}</td>
+          <td>Interview Date</td><td>________________________</td></tr>
+      <tr><td>Conducted By</td><td colspan="3">________________________</td></tr>
     </table>
-    <p style="font-style:italic;color:#64748b">All responses are confidential and used to improve the workplace.</p>
+    <p style="font-style:italic;color:#475569;margin-bottom:10pt">
+      All responses are confidential and used to improve the workplace.
+    </p>
 
-    <h3 style="font-size:12pt;margin-top:18px">1. Reason for Leaving</h3>
-    <p>Please describe your primary reason(s) for leaving Convertt:</p>
-    <div style="border:1px solid #cbd5e1;min-height:64px;padding:8px;border-radius:4px"></div>
+    <div class="cols">
+      ${q(1, 'Reason for Leaving', 'Your primary reason(s) for leaving Convertt:', true)}
+      ${q(2, 'Job Role & Responsibilities', 'How well did the role match what was set out at hiring?', true)}
+    </div>
+    <div class="cols">
+      ${q(3, 'Manager & Team', 'How would you describe working with your manager and team?')}
+      ${q(4, 'Company Culture & Environment', 'What did you enjoy most? What would you change?')}
+    </div>
+    <div class="cols">
+      ${q(5, 'Compensation & Benefits', 'Were you satisfied with your compensation and benefits?')}
+      ${q(6, 'Career Growth', 'Did you have opportunities to grow at Convertt?')}
+    </div>
 
-    <h3 style="font-size:12pt">2. Job Role &amp; Responsibilities</h3>
-    <p>How well did your role match the expectations set during hiring?</p>
-    <div style="border:1px solid #cbd5e1;min-height:48px;padding:8px;border-radius:4px"></div>
+    <h3>7. Would You Recommend Convertt?</h3>
+    <p>Would you recommend Convertt as a workplace? &nbsp; ☐ Yes &nbsp; ☐ Maybe &nbsp; ☐ No &nbsp;&nbsp; Why or why not?</p>
+    <div class="answer"></div>
 
-    <h3 style="font-size:12pt">3. Manager &amp; Team</h3>
-    <p>How would you describe working with your manager and team?</p>
-    <div style="border:1px solid #cbd5e1;min-height:48px;padding:8px;border-radius:4px"></div>
-
-    <h3 style="font-size:12pt">4. Company Culture &amp; Environment</h3>
-    <p>What did you enjoy most? What would you change?</p>
-    <div style="border:1px solid #cbd5e1;min-height:48px;padding:8px;border-radius:4px"></div>
-
-    <h3 style="font-size:12pt">5. Compensation &amp; Benefits</h3>
-    <p>Were you satisfied with your compensation and benefits package?</p>
-    <div style="border:1px solid #cbd5e1;min-height:48px;padding:8px;border-radius:4px"></div>
-
-    <h3 style="font-size:12pt">6. Career Growth</h3>
-    <p>Did you feel you had opportunities for growth at Convertt?</p>
-    <div style="border:1px solid #cbd5e1;min-height:48px;padding:8px;border-radius:4px"></div>
-
-    <h3 style="font-size:12pt">7. Would You Recommend Convertt?</h3>
-    <p>Would you recommend Convertt as a workplace to others?  ☐ Yes  ☐ Maybe  ☐ No</p>
-    <p>Why or why not?</p>
-    <div style="border:1px solid #cbd5e1;min-height:48px;padding:8px;border-radius:4px"></div>
-
-    <h3 style="font-size:12pt">8. Suggestions for Improvement</h3>
-    <p>Any additional feedback or suggestions for Convertt?</p>
-    <div style="border:1px solid #cbd5e1;min-height:64px;padding:8px;border-radius:4px"></div>
+    <h3>8. Suggestions for Improvement</h3>
+    <p>Anything else you would want us to hear?</p>
+    <div class="answer tall"></div>
 
     <div class="signature-block">
       <div class="signature">
@@ -712,7 +798,10 @@ function exitInterviewForm({ emp, extras }: Ctx) {
       </div>
     </div>
   `
-  return { html: wrap('Exit Interview Form', body), title: `Exit Interview - ${emp.fullName}` }
+  return {
+    html: wrap('Exit Interview Form', body, DEFAULT_SIGNATORY, 'form'),
+    title: `Exit Interview - ${emp.fullName}`,
+  }
 }
 
 /**

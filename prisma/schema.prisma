@@ -236,6 +236,7 @@ model Employee {
   leaveBalances       LeaveBalance[]
   leaveRequests       LeaveRequest[]
   sandwichDeductions  SandwichDeduction[]
+  documentDrafts      DocumentDraft[]
   verifications       BackgroundVerification[] @relation("VerificationSubject")
   verificationsRun    BackgroundVerification[] @relation("VerificationAssignee")
   eventsFinanced      CompanyEvent[]  @relation("EventFinanceOwner")
@@ -2902,4 +2903,26 @@ model VerificationEmail {
 
   @@index([verificationId])
   @@map("verification_emails")
+}
+
+// ─── EDITED DOCUMENT DRAFTS ─────────────────────────────────────────────────
+// A generated document opens in a tab with an Edit toggle. The edits used to
+// live only in that tab's DOM, so pressing Generate again handed back the
+// untouched template and the wording was gone. This keeps the edited copy: one
+// per employee per document type, overwritten each time it is saved.
+//
+// It is a draft, not the issued document — the signed PDF still goes into
+// EmployeeDocument once it is printed and uploaded.
+model DocumentDraft {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  docType    String   // DocumentType from document-generator
+  html       String
+  editedById String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, docType])
+  @@map("document_drafts")
 }

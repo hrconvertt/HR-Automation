@@ -341,12 +341,15 @@ const LIFECYCLE_NAV: NavGroup[] = [
     label: 'Employee Lifecycle',
     items: [
       { href: '/dashboard/lifecycle', label: 'Overview', icon: Users },
+      // Verification comes first because it comes first: a hire lands here the
+      // moment the offer is accepted, and onboarding starts once the checks are
+      // running. The sidebar reads in the order the lifecycle happens.
+      { href: '/dashboard/lifecycle/verification', label: 'Background Verification', icon: ShieldCheck },
       { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
       // Probation lives INSIDE the lifecycle (its natural stage position).
       // The top-level HR nav entry was removed so it isn't duplicated;
       // Managers keep their top-level Probation entry (no lifecycle nav).
       { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
-      { href: '/dashboard/lifecycle/verification', label: 'Background Verification', icon: ShieldCheck },
       { href: '/dashboard/lifecycle/job-changes', label: 'Job Changes', icon: TrendingUp },
       { href: '/dashboard/lifecycle/loa', label: 'Leave of Absence', icon: PlaneIcon },
       { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert },

@@ -32,22 +32,28 @@ function tempPassword(): string {
   return out
 }
 
-/** Next sequential employee code for a department code, e.g. CON-BD-007. */
+/**
+ * Next employee code, e.g. CON-BD-045.
+ *
+ * The number is a company-wide joining sequence, not a per-department one —
+ * the master sheet's SR # column. This filtered to the department prefix and
+ * then took the max, which reads naturally and hands out a serial somebody
+ * else already has: a QA hire in Web-Shopify came out CON-WBS-037 while the
+ * company was on 44.
+ *
+ * Kept in step with /api/employees/next-code, which the New Employee dialog
+ * uses. Two places generate codes; they must not disagree.
+ */
 async function nextEmployeeCode(deptCode: string): Promise<string> {
-  const prefix = `CON-${deptCode}-`
-  const existing = await prisma.employee.findMany({
-    where: { employeeCode: { startsWith: prefix } },
-    select: { employeeCode: true },
-  })
+  const existing = await prisma.employee.findMany({ select: { employeeCode: true } })
   let maxN = 0
   for (const e of existing) {
-    const m = e.employeeCode.match(/^CON-[A-Z]+-(\d+)$/)
-    if (m) {
-      const n = parseInt(m[1], 10)
-      if (n > maxN) maxN = n
-    }
+    const m = e.employeeCode?.match(/^CON-[A-Z]+-(\d+)$/)
+    if (!m) continue
+    const n = parseInt(m[1], 10)
+    if (Number.isFinite(n) && n > maxN) maxN = n
   }
-  return `${prefix}${String(maxN + 1).padStart(3, '0')}`
+  return `CON-${deptCode}-${String(maxN + 1).padStart(3, '0')}`
 }
 
 export interface PromoteResult {
@@ -166,6 +172,28 @@ export async function promoteToEmployee(
       },
     })
 
+    // Open the background check the moment the hire exists.
+    //
+    // The lifecycle starts here, not at Day 1: Playbook SOP-01 wants references
+    // taken before an offer, and in practice they get chased during notice. A
+    // row waiting on the verification tab is what makes anyone chase them —
+    // left to be created by hand it never was.
+    //
+    // The employer is unknown at this point, so the row names what the CV said
+    // and HR corrects it. currentCompany is the one field the candidate record
+    // reliably carries.
+    await tx.backgroundVerification.create({
+      data: {
+        employeeId: employee.id,
+        employerName: candidate.currentCompany?.trim() || 'Previous employer — to be confirmed',
+        status: 'NOT_STARTED',
+        claimedJson: JSON.stringify({
+          candidateName: candidate.fullName,
+          ...(candidate.currentRole ? { designation: candidate.currentRole } : {}),
+        }),
+      },
+    })
+
     // Salary row (only when we actually have an offer amount).
     if (grossSalary > 0) {
       await tx.salary.create({
@@ -255,6 +283,14 @@ export async function promoteToEmployee(
     })
 
     return { employee, plainPassword }
+  }, {
+    // Hiring writes a user, a role, an employee, a salary, a compensation row,
+    // an onboarding checklist with seventeen tasks, a verification row and a
+    // letter — nine tables against a pooled connection. Prisma's 5s default
+    // was enough on a fast link and nothing else, and the whole hire rolled
+    // back mid-way whenever it was not.
+    timeout: 60_000,
+    maxWait: 20_000,
   })
 
   // Probation record — required for PERMANENT/PROBATION. Defaults to a

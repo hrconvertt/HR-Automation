@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
 import { buildDay1Schedule } from '@/lib/day1-schedule'
+import { buildStandardOnboardingTasks } from '@/lib/onboarding-tasks'
 import { verifyToken } from '@/lib/auth'
 import { Card } from '@/components/ui/card'
 import { formatDate } from '@/lib/utils'
@@ -39,6 +40,34 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
     redirect('/dashboard/onboarding')
   }
 
+  // A workspace with no tasks was showing an empty state and a button asking
+  // HR to press "Apply Standard Checklist" — a question with one right answer,
+  // asked every time. The seventeen standard tasks are seeded here instead, so
+  // the page opens on the checklist rather than on an errand.
+  let tasks = employee.onboarding?.tasks ?? []
+  if (tasks.length === 0) {
+    const checklistId = employee.onboarding?.id
+      ?? (await prisma.onboardingChecklist.create({ data: { employeeId } })).id
+    const seeds = buildStandardOnboardingTasks(employee.employeeType)
+    await prisma.onboardingTask.createMany({
+      data: seeds.map((t) => ({
+        checklistId,
+        title: t.title,
+        owner: t.owner,
+        category: t.category,
+        orderIndex: t.orderIndex,
+        description: t.description ?? null,
+        isEmployeeUploadable: t.isEmployeeUploadable ?? false,
+        documentType: t.documentType ?? null,
+      })),
+      skipDuplicates: true,
+    })
+    tasks = await prisma.onboardingTask.findMany({
+      where: { checklistId },
+      orderBy: [{ category: 'asc' }, { orderIndex: 'asc' }],
+    })
+  }
+
   // Auth: HR_ADMIN, the hire's manager, or the hire themselves.
   const isHR = me.role === 'HR_ADMIN'
   const isManager = me.role === 'MANAGER' && me.employee?.id === employee.reportingManagerId
@@ -47,7 +76,6 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
     redirect('/dashboard/onboarding')
   }
 
-  const tasks = employee.onboarding?.tasks ?? []
   const total = tasks.length
   // NOT_REQUIRED counts as completed for progress %.
   const done = tasks.filter((t) => t.status === 'COMPLETED' || t.status === 'NOT_REQUIRED' || t.isComplete).length
