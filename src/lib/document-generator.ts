@@ -85,7 +85,12 @@ const DEFAULT_SIGNATORY: Signatory = { name: 'Syed Khawer', title: 'Director Adm
  */
 type DocVariant = 'letter' | 'form'
 
-interface WrapMeta { employeeId?: string; docType?: string; edited?: boolean }
+interface WrapMeta {
+  employeeId?: string; docType?: string; edited?: boolean
+  /** Suppress the default single company sign-off — for letters that carry
+   *  their own dual (employee + company) acceptance block in the body. */
+  noSignOff?: boolean
+}
 
 function wrap(
   title: string,
@@ -167,6 +172,16 @@ function wrap(
   .sign-off { margin-top: 44pt; }
   .sign-off .name { font-size: 14pt; font-weight: 700; }
   .sign-off .title { font-size: 10pt; }
+  /* Dual acceptance block — employee on the left, company on the right, the
+     way a signed-and-returned offer letter closes. */
+  .sig-grid { width: 100%; margin-top: 46pt; border-collapse: collapse; }
+  .sig-grid td { width: 50%; vertical-align: bottom; padding: 0 18pt; }
+  .sig-grid td:first-child { padding-left: 0; }
+  .sig-grid td:last-child { padding-right: 0; }
+  .sig-line { border-top: 1px solid #1a1a1a; margin-bottom: 5pt; }
+  .sig-name { font-size: 11.5pt; font-weight: 700; }
+  .sig-role { font-size: 9.5pt; color: #1a1a1a; }
+  .sig-date { font-size: 9.5pt; color: #475569; margin-top: 8pt; }
   /* The write-in boxes on a form. */
   .answer { border: 1px solid #cbd5e1; min-height: 48pt; border-radius: 3px; margin: 0 0 8pt; }
   .answer.tall { min-height: 64pt; }
@@ -243,11 +258,11 @@ function wrap(
     </div>
     <div class="letter-date">${letterDate(new Date())}</div>
     ${body}
-    <div class="sign-off">
+    ${meta.noSignOff ? '' : `<div class="sign-off">
       ${signatory.above ? `<p>${escapeHtml(signatory.above)}</p>` : ''}
       <div class="name">${escapeHtml(signatory.name)}</div>
       <div class="title">${escapeHtml(signatory.title)}</div>
-    </div>
+    </div>`}
   </div>
 <script>
   // Edit in place rather than round-tripping to a form: HR's changes here are
@@ -360,15 +375,20 @@ type Ctx = {
 }
 
 /**
- * Employment Letter — reproduced from the issued sample (Umer Afzal, 1 July
- * 2026) without additions.
+ * Offer of Employment — the letter Convertt actually issues to a new hire,
+ * structured as a binding offer that the candidate signs and returns.
  *
- * Two details are faithful to the source rather than tidy: Joining Date and
- * Probation Period are plain lines while Compensation onward are bulleted, and
- * the office address is written out in the letter's own wording rather than the
- * letterhead's. Both are how the issued letter reads.
+ * The clause set follows the standard Pakistani agency offer letter — offer
+ * contingent on documents, title, duties per the enclosed JD, the offer with
+ * gross + conveyance and a tax note, probation, notice period, benefits, a
+ * conflict-of-interest clause, an entire-agreement clause, and a five-business-
+ * day acceptance window — closing with signatures from both the employee and
+ * the company.
  *
- * The company paragraph is fixed copy and is never regenerated per employee.
+ * Deliberately NOT listed as a benefit: provident fund and gratuity. HR
+ * Playbook 1.5 records that Convertt provides neither for Pakistan at present
+ * (EOBI continues), so putting them in an offer would promise something the
+ * company does not give.
  */
 function offerLetter({ emp, extras }: Ctx) {
   const salary = emp.salary
@@ -376,45 +396,74 @@ function offerLetter({ emp, extras }: Ctx) {
     ? salary.basic + salary.houseRent + salary.utilities + salary.food + salary.fuel + salary.medicalAllowance + salary.otherAllowance
     : 0
   const joining = extras.effectiveDate ? new Date(extras.effectiveDate) : emp.joiningDate ?? new Date()
+  const joiningLong = joining.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 
-  // "1st July, 2026" — ordinal day, as the sample writes it.
-  const d = joining.getDate()
-  const suffix = d % 10 === 1 && d !== 11 ? 'st' : d % 10 === 2 && d !== 12 ? 'nd' : d % 10 === 3 && d !== 13 ? 'rd' : 'th'
-  const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
-    'July', 'August', 'September', 'October', 'November', 'December']
-  const joiningLong = `${d}${suffix} ${MONTHS[joining.getMonth()]}, ${joining.getFullYear()}`
+  const role = emp.designation ?? '[Designation]'
+  const probation = extras.probationMonths ?? 3
+  const conveyance = 5000
 
-  const timings = emp.timings ?? '10 AM - 7 PM'
-  // workDays is stored as "Mon,Tue,Wed,Thu,Fri". The sample writes the standard
-  // week as the phrase "Monday to Friday", so a contiguous Mon-Fri renders that
-  // way and anything else is listed out.
-  const DAY_NAMES: Record<string, string> = {
-    Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday',
-    Fri: 'Friday', Sat: 'Saturday', Sun: 'Sunday',
-  }
-  const days = String(emp.workDays ?? 'Mon,Tue,Wed,Thu,Fri')
-    .split(',').map((x) => x.trim()).filter(Boolean)
-  const workingDays = days.join(',') === 'Mon,Tue,Wed,Thu,Fri'
-    ? 'Monday to Friday'
-    : days.map((d) => DAY_NAMES[d] ?? d).join(', ')
+  // Notice period follows the Playbook: two months for Lead / senior client-
+  // facing roles, one month for everyone else; two weeks while on probation.
+  const senior = /lead|head|senior|manager|director|chief|principal/i.test(role)
+  const confirmedNotice = senior ? 'two (2) months' : 'one (1) month'
+
+  const city = emp.city ?? 'Lahore'
+  const money = (n: number) => `PKR ${n.toLocaleString('en-US')}`
 
   const body = `
-    <div class="doc-title centred">Subject: Employment Letter</div>
-    <p class="j">On behalf of the HR team at Convertt, I am pleased to congratulate ${escapeHtml(emp.fullName)}${emp.cnic ? ` CNIC ${escapeHtml(emp.cnic)}` : ''} on your selection for the ${escapeHtml(emp.designation ?? '—')} position. We were impressed with your profile and are excited to welcome you to our team.</p>
-    <p class="j">Below are the details of your employment:</p>
-    <p class="tight">Joining Date: ${joiningLong}</p>
-    <p class="tight">Probation Period: ${escapeHtml(String(extras.probationMonths ?? 3))} months, dependent upon your performance</p>
-    <ul class="dot">
-      <li>Compensation: PKR ${gross > 0 ? gross.toLocaleString('en-US') : '[Compensation]'} per month</li>
-      <li>Timings: ${escapeHtml(timings)}</li>
-      <li>Working Days: ${escapeHtml(workingDays)}</li>
-      <li>Office Location: Convertt, Mega Tower &ndash; 63-B Main Boulevard Gulberg, 5th Floor, Office No. 201, Lahore</li>
-    </ul>
-    <p class="j">Convertt is a CRO-focused design and development agency working with ecommerce brands, dental practices, and weight loss clinics across the US, UK, and UAE. We&rsquo;ve generated over $1B in tracked client revenue with an average 3.5X conversion uplift across 120+ projects. Our work sits at the intersection of conversion strategy, design, and development. We don&rsquo;t just make things look good, we make them perform.</p>
-    <p class="j">We look forward to having you onboard and working together towards shared success.</p>
-    <p class="j">Congratulations once again!</p>
+    <div class="doc-title centred">Offer of Employment</div>
+
+    <table class="kv">
+      <tr><td>Name</td><td>${escapeHtml(emp.fullName)}</td></tr>
+      <tr><td>Designation</td><td>${escapeHtml(role)}</td></tr>
+      ${emp.cnic ? `<tr><td>CNIC No.</td><td>${escapeHtml(emp.cnic)}</td></tr>` : ''}
+      <tr><td>City</td><td>${escapeHtml(city)}</td></tr>
+      <tr><td>Joining Date</td><td>${joiningLong}</td></tr>
+    </table>
+
+    <p class="j">Dear ${escapeHtml(emp.fullName)},</p>
+
+    <p class="j">This is an offer of employment as a <strong>${escapeHtml(role)}</strong> at Convertt. This offer is contingent upon our receipt of your educational documents to confirm your degree, and any other contingencies that the company may wish to state.</p>
+
+    <p class="j">Your title will be <strong>${escapeHtml(role)}</strong> if you accept this employment offer. In this role, you will be expected to carry out the duties and responsibilities described in the enclosed job description, which is periodically updated to reflect the needs of the role.</p>
+
+    <p class="j"><strong>Offer:</strong> We are offering you a monthly gross salary of <strong>${gross > 0 ? money(gross) : '[Gross Salary]'}</strong>, inclusive of a Conveyance Allowance of ${money(conveyance)} per month. Taxes and other statutory withholdings will be applied as required by law and the policies of the company.</p>
+
+    <p class="j"><strong>Probation:</strong> Initially, you will be on ${escapeHtml(String(probation))}-months&rsquo; probation. At the end of this period, a review will determine your performance and confirmation of employment.</p>
+
+    <p class="j"><strong>Notice Period:</strong> A notice of ${confirmedNotice} is required for termination of services by either party once confirmed. If you are on probation, two (2) weeks&rsquo; notice is required (subject to the approval of your manager).</p>
+
+    <p class="j"><strong>Benefits:</strong> The standard company benefits package &mdash; group health insurance, OPD cover, EOBI registration, and paid holidays, with leave as per the company&rsquo;s leave policy &mdash; is offered with this employment in line with the company&rsquo;s standard policy.</p>
+
+    <p class="j">As per company policy, you are not permitted to undertake freelancing or any other business activity that is in direct or indirect conflict of interest with the company&rsquo;s business.</p>
+
+    <p class="j">You acknowledge that this offer letter, together with the final form of any enclosed documents, represents the entire agreement between you and Convertt, and that no verbal or written agreements, promises, or representations not specifically stated in this letter are or will be binding upon Convertt.</p>
+
+    <p class="j">If you are in agreement with the above, please sign below and return this letter to the company. This employment offer is in effect for five (5) business days.</p>
+
+    <table class="sig-grid">
+      <tr>
+        <td>
+          <div class="sig-line"></div>
+          <div class="sig-name">${escapeHtml(emp.fullName)}</div>
+          <div class="sig-role">${escapeHtml(role)}, Convertt</div>
+          <div class="sig-date">Date: _____________________</div>
+        </td>
+        <td>
+          <div class="sig-line"></div>
+          <div class="sig-name">Syed Khawer</div>
+          <div class="sig-role">Director Administration, Convertt</div>
+          <div class="sig-date">Date: _____________________</div>
+        </td>
+      </tr>
+    </table>
   `
-  return { html: wrap('Employment Letter', body), title: `Employment Letter - ${emp.fullName}` }
+  return {
+    html: wrap('Offer of Employment', body, DEFAULT_SIGNATORY, 'letter', {
+      employeeId: emp.id, docType: 'offer_letter', noSignOff: true,
+    }),
+    title: `Offer of Employment - ${emp.fullName}`,
+  }
 }
 
 function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern') {
