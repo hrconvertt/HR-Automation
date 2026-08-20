@@ -422,6 +422,7 @@ const LETTERS_NAV: NavGroup[] = [
     label: 'Letters',
     items: [
       { href: '/dashboard/letters', label: 'All requests', icon: FileText },
+      { href: '/dashboard/letters/employment', label: 'Employment Letter', icon: Mail },
       { href: '/dashboard/letters?type=EXPERIENCE', label: 'Experience Letter', icon: FileText },
       { href: '/dashboard/letters?type=SALARY_CERTIFICATE', label: 'Salary Certificate', icon: Banknote },
       { href: '/dashboard/letters?type=NOC_VISA', label: 'NOC for Visa', icon: PlaneIcon },

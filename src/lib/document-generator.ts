@@ -46,9 +46,17 @@ export type DocumentType =
 export type DocumentExtras = {
   // Universal
   effectiveDate?: string         // ISO date — overrides "today"
-  // Offer letter
+  // Offer letter — every field the builder can edit. Absent means "use the
+  // value on the employee record".
   reportingTo?: string
   probationMonths?: number       // Employment letter — defaults to 3
+  designation?: string           // override the role named in the letter
+  cnic?: string
+  city?: string
+  grossSalary?: number           // override the salary from the record
+  conveyance?: number            // conveyance allowance, defaults to 5000
+  noticeConfirmed?: string       // e.g. "two (2) months" — overrides the Playbook default
+  benefits?: string              // free-text benefits line, overrides the default
   // Show Cause
   concerns?: string              // free-text allegations
   responseWindowDays?: number    // typically 3–7
@@ -182,6 +190,32 @@ function wrap(
   .sig-name { font-size: 11.5pt; font-weight: 700; }
   .sig-role { font-size: 9.5pt; color: #1a1a1a; }
   .sig-date { font-size: 9.5pt; color: #475569; margin-top: 8pt; }
+  /* ── E-signature ─────────────────────────────────────────────────────────
+     A slot the signer clicks to draw a signature. It sits just above the
+     signature line, so a drawn mark reads as sitting on the line. Empty slots
+     show a faint "Click to sign" that never prints. */
+  .esign-slot { height: 40pt; display: flex; align-items: flex-end; cursor: pointer; }
+  .esign-slot img { max-height: 40pt; max-width: 100%; }
+  .esign-slot .esign-hint {
+    font-family: 'Segoe UI', Arial, sans-serif; font-size: 8.5pt; color: #94a3b8;
+    border: 1px dashed #cbd5e1; border-radius: 4px; padding: 3px 8px;
+  }
+  .esign-slot.signed { cursor: default; }
+  /* Modal — screen only. */
+  .esign-modal {
+    display: none; position: fixed; inset: 0; z-index: 50;
+    background: rgba(15,23,42,.55); align-items: center; justify-content: center;
+    font-family: 'Segoe UI', Arial, sans-serif;
+  }
+  .esign-modal.open { display: flex; }
+  .esign-card { background: #fff; border-radius: 12px; padding: 18px; width: 460px; max-width: 92vw; }
+  .esign-card h3 { margin: 0 0 4px; font-size: 15px; color: #0f172a; }
+  .esign-card p { margin: 0 0 12px; font-size: 12px; color: #64748b; }
+  .esign-pad { border: 1px solid #cbd5e1; border-radius: 8px; width: 100%; height: 170px; touch-action: none; background: #fff; }
+  .esign-actions { display: flex; justify-content: space-between; margin-top: 12px; gap: 8px; }
+  .esign-actions button { padding: 8px 14px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; cursor: pointer; font-size: 13px; }
+  .esign-actions .primary { background: #0f172a; color: #fff; border-color: #0f172a; }
+  @media print { .esign-slot .esign-hint { display: none; } .esign-modal { display: none !important; } }
   /* The write-in boxes on a form. */
   .answer { border: 1px solid #cbd5e1; min-height: 48pt; border-radius: 3px; margin: 0 0 8pt; }
   .answer.tall { min-height: 64pt; }
@@ -248,8 +282,8 @@ function wrap(
     <button class="primary" onclick="window.print()">Print / Save as PDF</button>
     <button onclick="window.close()">Close</button>
     <span class="hint" id="hint">${meta.edited
-      ? 'Showing your edited version. Click Edit to change it again.'
-      : 'Click Edit to change any wording before printing.'}</span>
+      ? 'Showing your edited version. Click a signature line to sign, or Edit to change wording.'
+      : 'Click a signature line to sign, or Edit to change any wording before printing.'}</span>
   </div>
   <div class="doc" id="doc">
     <div class="letterhead">
@@ -260,9 +294,24 @@ function wrap(
     ${body}
     ${meta.noSignOff ? '' : `<div class="sign-off">
       ${signatory.above ? `<p>${escapeHtml(signatory.above)}</p>` : ''}
+      <div class="esign-slot" data-esign="${escapeHtml(signatory.name)}"><span class="esign-hint">Click to sign</span></div>
       <div class="name">${escapeHtml(signatory.name)}</div>
       <div class="title">${escapeHtml(signatory.title)}</div>
     </div>`}
+  </div>
+
+  <div class="esign-modal" id="esignModal">
+    <div class="esign-card">
+      <h3>Sign here</h3>
+      <p id="esignWho">Draw your signature with the mouse, trackpad or finger.</p>
+      <canvas class="esign-pad" id="esignPad"></canvas>
+      <div class="esign-actions">
+        <button onclick="esignClear()">Clear</button>
+        <span style="flex:1"></span>
+        <button onclick="esignCancel()">Cancel</button>
+        <button class="primary" onclick="esignPlace()">Place signature</button>
+      </div>
+    </div>
   </div>
 <script>
   // Edit in place rather than round-tripping to a form: HR's changes here are
@@ -317,6 +366,75 @@ function wrap(
   window.addEventListener('beforeprint', function () {
     document.getElementById('doc').setAttribute('contenteditable', 'false');
   });
+
+  // ── E-signature ───────────────────────────────────────────────────────────
+  // Click a signature slot to draw a signature; it stamps onto the letter and,
+  // where saving is on, becomes part of the saved copy. Mouse, trackpad and
+  // finger all draw through pointer events, so there is one code path.
+  var esignTarget = null, esignDrawing = false, esignDirty = false;
+
+  function esignSetup() {
+    var slots = document.querySelectorAll('.esign-slot');
+    for (var i = 0; i < slots.length; i++) {
+      slots[i].addEventListener('click', function () {
+        if (this.classList.contains('signed')) return;
+        esignTarget = this;
+        var who = this.getAttribute('data-esign') || 'here';
+        document.getElementById('esignWho').textContent =
+          'Signing as ' + who + '. Draw with the mouse, trackpad or finger.';
+        openEsign();
+      });
+    }
+  }
+
+  function openEsign() {
+    var m = document.getElementById('esignModal');
+    m.classList.add('open');
+    var c = document.getElementById('esignPad');
+    var r = c.getBoundingClientRect();
+    var ratio = window.devicePixelRatio || 1;
+    c.width = Math.round(r.width * ratio);
+    c.height = Math.round(r.height * ratio);
+    var ctx = c.getContext('2d');
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    ctx.clearRect(0, 0, r.width, r.height);
+    ctx.lineWidth = 2.2; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#16171A';
+    esignDirty = false;
+  }
+  function esignPt(e) {
+    var c = document.getElementById('esignPad');
+    var r = c.getBoundingClientRect();
+    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  }
+  function esignBind() {
+    var c = document.getElementById('esignPad');
+    c.addEventListener('pointerdown', function (e) {
+      esignDrawing = true; c.setPointerCapture(e.pointerId);
+      var ctx = c.getContext('2d'); var p = esignPt(e);
+      ctx.beginPath(); ctx.moveTo(p.x, p.y);
+    });
+    c.addEventListener('pointermove', function (e) {
+      if (!esignDrawing) return;
+      var ctx = c.getContext('2d'); var p = esignPt(e);
+      ctx.lineTo(p.x, p.y); ctx.stroke(); esignDirty = true;
+    });
+    function end() { esignDrawing = false; }
+    c.addEventListener('pointerup', end);
+    c.addEventListener('pointerleave', end);
+  }
+  function esignClear() { openEsign(); }
+  function esignCancel() { document.getElementById('esignModal').classList.remove('open'); }
+  function esignPlace() {
+    if (!esignTarget || !esignDirty) { esignCancel(); return; }
+    var url = document.getElementById('esignPad').toDataURL('image/png');
+    esignTarget.innerHTML = '<img src="' + url + '" alt="Signature">';
+    esignTarget.classList.add('signed');
+    esignCancel();
+    if (typeof saveDraft === 'function' && SAVE) saveDraft();
+  }
+  esignSetup();
+  esignBind();
 </script>
 </body>
 </html>`
@@ -392,22 +510,26 @@ type Ctx = {
  */
 function offerLetter({ emp, extras }: Ctx) {
   const salary = emp.salary
-  const gross = salary
+  const recordGross = salary
     ? salary.basic + salary.houseRent + salary.utilities + salary.food + salary.fuel + salary.medicalAllowance + salary.otherAllowance
     : 0
+  // Every field falls back to the record, so the letter is complete straight
+  // away and the builder only overrides what HR actually changes.
+  const gross = extras.grossSalary != null ? extras.grossSalary : recordGross
   const joining = extras.effectiveDate ? new Date(extras.effectiveDate) : emp.joiningDate ?? new Date()
   const joiningLong = joining.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })
 
-  const role = emp.designation ?? '[Designation]'
+  const role = extras.designation?.trim() || emp.designation || '[Designation]'
   const probation = extras.probationMonths ?? 3
-  const conveyance = 5000
+  const conveyance = extras.conveyance != null ? extras.conveyance : 5000
 
   // Notice period follows the Playbook: two months for Lead / senior client-
   // facing roles, one month for everyone else; two weeks while on probation.
   const senior = /lead|head|senior|manager|director|chief|principal/i.test(role)
-  const confirmedNotice = senior ? 'two (2) months' : 'one (1) month'
+  const confirmedNotice = extras.noticeConfirmed?.trim() || (senior ? 'two (2) months' : 'one (1) month')
 
-  const city = emp.city ?? 'Lahore'
+  const city = extras.city?.trim() || emp.city || 'Lahore'
+  const cnic = extras.cnic?.trim() || emp.cnic || ''
   const money = (n: number) => `PKR ${n.toLocaleString('en-US')}`
 
   const body = `
@@ -416,7 +538,7 @@ function offerLetter({ emp, extras }: Ctx) {
     <table class="kv">
       <tr><td>Name</td><td>${escapeHtml(emp.fullName)}</td></tr>
       <tr><td>Designation</td><td>${escapeHtml(role)}</td></tr>
-      ${emp.cnic ? `<tr><td>CNIC No.</td><td>${escapeHtml(emp.cnic)}</td></tr>` : ''}
+      ${cnic ? `<tr><td>CNIC No.</td><td>${escapeHtml(cnic)}</td></tr>` : ''}
       <tr><td>City</td><td>${escapeHtml(city)}</td></tr>
       <tr><td>Joining Date</td><td>${joiningLong}</td></tr>
     </table>
@@ -433,7 +555,7 @@ function offerLetter({ emp, extras }: Ctx) {
 
     <p class="j"><strong>Notice Period:</strong> A notice of ${confirmedNotice} is required for termination of services by either party once confirmed. If you are on probation, two (2) weeks&rsquo; notice is required (subject to the approval of your manager).</p>
 
-    <p class="j"><strong>Benefits:</strong> The standard company benefits package &mdash; group health insurance, OPD cover, EOBI registration, and paid holidays, with leave as per the company&rsquo;s leave policy &mdash; is offered with this employment in line with the company&rsquo;s standard policy.</p>
+    <p class="j"><strong>Benefits:</strong> ${extras.benefits?.trim() ? escapeHtml(extras.benefits.trim()) : 'The standard company benefits package &mdash; group health insurance, OPD cover, EOBI registration, and paid holidays, with leave as per the company&rsquo;s leave policy &mdash; is offered with this employment in line with the company&rsquo;s standard policy.'}</p>
 
     <p class="j">As per company policy, you are not permitted to undertake freelancing or any other business activity that is in direct or indirect conflict of interest with the company&rsquo;s business.</p>
 
@@ -444,12 +566,14 @@ function offerLetter({ emp, extras }: Ctx) {
     <table class="sig-grid">
       <tr>
         <td>
+          <div class="esign-slot" data-esign="${escapeHtml(emp.fullName)}"><span class="esign-hint">Click to sign</span></div>
           <div class="sig-line"></div>
           <div class="sig-name">${escapeHtml(emp.fullName)}</div>
           <div class="sig-role">${escapeHtml(role)}, Convertt</div>
           <div class="sig-date">Date: _____________________</div>
         </td>
         <td>
+          <div class="esign-slot" data-esign="Syed Khawer"><span class="esign-hint">Click to sign</span></div>
           <div class="sig-line"></div>
           <div class="sig-name">Syed Khawer</div>
           <div class="sig-role">Director Administration, Convertt</div>

@@ -61,6 +61,17 @@ export async function GET(request: NextRequest) {
   if (searchParams.get('terminationReason')) extras.terminationReason = searchParams.get('terminationReason')!
   if (searchParams.get('fnfAmount')) extras.fnfAmount = parseFloat(searchParams.get('fnfAmount')!) || undefined
 
+  // The builder passes its edited fields base64-packed in one param, so the
+  // Preview/Print link can carry the whole form without a query string a mile
+  // long. Anything here layers on top of the query params above.
+  const packed = searchParams.get('fields')
+  if (packed) {
+    try {
+      const extra = JSON.parse(Buffer.from(packed, 'base64').toString('utf8'))
+      Object.assign(extras, sanitizeOfferExtras(extra))
+    } catch { /* ignore a bad pack — fall back to record values */ }
+  }
+
   try {
     const { html } = await generateDocument(type, employeeId, extras)
     return new NextResponse(html, {
@@ -70,5 +81,57 @@ export async function GET(request: NextRequest) {
   } catch (err) {
     console.error('[generate document]', err)
     return NextResponse.json({ error: 'Failed to generate document' }, { status: 500 })
+  }
+}
+
+/** Whitelist + coerce the builder's editable fields. */
+function sanitizeOfferExtras(v: Record<string, unknown>): DocumentExtras {
+  const out: DocumentExtras = {}
+  const str = (x: unknown) => (typeof x === 'string' && x.trim() ? x.trim().slice(0, 2000) : undefined)
+  const num = (x: unknown) => {
+    const n = Number(x)
+    return Number.isFinite(n) && n >= 0 ? n : undefined
+  }
+  if (str(v.designation)) out.designation = str(v.designation)
+  if (str(v.cnic)) out.cnic = str(v.cnic)
+  if (str(v.city)) out.city = str(v.city)
+  if (str(v.effectiveDate)) out.effectiveDate = str(v.effectiveDate)
+  if (str(v.noticeConfirmed)) out.noticeConfirmed = str(v.noticeConfirmed)
+  if (str(v.benefits)) out.benefits = str(v.benefits)
+  if (num(v.grossSalary) !== undefined) out.grossSalary = num(v.grossSalary)
+  if (num(v.conveyance) !== undefined) out.conveyance = num(v.conveyance)
+  if (num(v.probationMonths) !== undefined) out.probationMonths = num(v.probationMonths)
+  return out
+}
+
+/**
+ * POST — save the builder's draft. Generates the letter from the edited fields
+ * and stores it as a DocumentDraft, so reopening the letter shows this version.
+ * HR only.
+ */
+export async function POST(request: NextRequest) {
+  const payload = await verifyToken(request.cookies.get('hr_token')?.value)
+  if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!hasRole(payload, 'HR_ADMIN')) return NextResponse.json({ error: 'HR only' }, { status: 403 })
+
+  const body = await request.json().catch(() => ({}))
+  const type = body.type as DocumentType
+  const employeeId = String(body.employeeId ?? '')
+  if (!type || !employeeId) {
+    return NextResponse.json({ error: 'type and employeeId required' }, { status: 400 })
+  }
+
+  const extras = sanitizeOfferExtras((body.fields ?? {}) as Record<string, unknown>)
+  try {
+    const { html } = await generateDocument(type, employeeId, extras)
+    await prisma.documentDraft.upsert({
+      where: { employeeId_docType: { employeeId, docType: type } },
+      update: { html, editedById: payload.userId },
+      create: { employeeId, docType: type, html, editedById: payload.userId },
+    })
+    return NextResponse.json({ ok: true })
+  } catch (err) {
+    console.error('[save document draft]', err)
+    return NextResponse.json({ error: 'Failed to save draft' }, { status: 500 })
   }
 }
