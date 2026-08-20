@@ -17,7 +17,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CalendarDays, Clock, Loader2, Check, AlertTriangle } from 'lucide-react'
-import { HolidayBoard, type HolidayRow } from './_components/holiday-board'
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'] as const
 type Day = (typeof DAYS)[number]
@@ -25,7 +24,6 @@ type Day = (typeof DAYS)[number]
 interface DayHours { start: string; end: string; breakMins: number }
 const DEFAULT_HOURS: DayHours = { start: '10:00', end: '19:00', breakMins: 60 }
 
-interface Holiday { id: string; name: string; date: string; type: string }
 
 /** Minutes worked in a day, after the break. A negative span reads as 0. */
 function dayMinutes(h: DayHours): number {
@@ -49,19 +47,10 @@ export default function WorkingDaysSettingsPage() {
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const [holidays, setHolidays] = useState<Holiday[]>([])
-  const [hName, setHName] = useState('')
-  const [hDate, setHDate] = useState('')
-  const [hType, setHType] = useState('PUBLIC')
-  const [addingHoliday, setAddingHoliday] = useState(false)
 
-  const year = new Date().getFullYear()
 
   useEffect(() => {
-    Promise.all([
-      fetch('/api/settings').then((r) => r.json()).catch(() => ({})),
-      fetch(`/api/holidays?year=${year}`).then((r) => r.json()).catch(() => ({ holidays: [] })),
-    ]).then(([s, h]) => {
+    fetch('/api/settings').then((r) => r.json()).catch(() => ({})).then((s) => {
       try {
         const wd = s?.config?.workingDays
         if (wd) {
@@ -71,10 +60,9 @@ export default function WorkingDaysSettingsPage() {
         const wh = s?.config?.workDayHours
         if (wh) setHours(typeof wh === 'string' ? JSON.parse(wh) : wh)
       } catch { /* fall back to defaults */ }
-      setHolidays(Array.isArray(h?.holidays) ? h.holidays : [])
       setLoading(false)
     })
-  }, [year])
+  }, [])
 
   const hoursFor = (d: Day): DayHours => hours[d] ?? DEFAULT_HOURS
   const setDay = (d: Day, patch: Partial<DayHours>) =>
@@ -101,27 +89,6 @@ export default function WorkingDaysSettingsPage() {
     if (!res.ok) { setError('Could not save. Try again.'); return }
     setSaved(true)
     setTimeout(() => setSaved(false), 2500)
-  }
-
-  async function addHoliday() {
-    if (!hName.trim() || !hDate) return
-    setAddingHoliday(true)
-    setError(null)
-    const res = await fetch('/api/holidays', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: hName.trim(), date: hDate, type: hType }),
-    })
-    setAddingHoliday(false)
-    if (!res.ok) { setError('Could not add that holiday.'); return }
-    setHName(''); setHDate('')
-    const h = await fetch(`/api/holidays?year=${year}`).then((r) => r.json()).catch(() => null)
-    if (h?.holidays) setHolidays(h.holidays)
-  }
-
-  async function removeHoliday(id: string) {
-    setHolidays((p) => p.filter((x) => x.id !== id))
-    await fetch(`/api/holidays?id=${id}`, { method: 'DELETE' }).catch(() => {})
   }
 
   if (loading) return <div className="p-8 text-sm text-slate-500">Loading…</div>
@@ -234,7 +201,6 @@ export default function WorkingDaysSettingsPage() {
         </CardContent>
       </Card>
 
-      <HolidayBoard year={year} rows={holidays as HolidayRow[]} />
     </div>
   )
 }
