@@ -199,6 +199,11 @@ model Employee {
   department          Department? @relation(fields: [departmentId], references: [id])
   positionId          String?
   position            Position?   @relation(fields: [positionId], references: [id])
+  // Career ladder level (L1–L5, HR Playbook 4.1), set on the Org Chart, which
+  // is the source of truth for both hierarchy and level. The profile's Position
+  // Level reads this. Kept on the employee (not only via the Position record)
+  // so it can be assigned to anyone directly from the chart.
+  careerLevel         String?     // L1 | L2 | L3 | L4 | L5
   reportingManagerId  String?
   reportingManager    Employee?   @relation("Reports", fields: [reportingManagerId], references: [id])
   directReports       Employee[]  @relation("Reports")

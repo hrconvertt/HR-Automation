@@ -18,7 +18,11 @@ interface Props {
   onDragOver: () => void
   onDragLeave: () => void
   onDrop: (employeeId: string) => void
+  /** HR sets the career level here — the Org Chart owns it. */
+  onSetLevel?: (employeeId: string, level: string | null) => void
 }
+
+const LEVEL_OPTIONS = ['L1', 'L2', 'L3', 'L4', 'L5'] as const
 
 // Deterministic colour from id — so the same employee always gets the same hue.
 function colourFor(id: string): string {
@@ -50,6 +54,7 @@ export default function OrgNodeCard({
   onDragOver,
   onDragLeave,
   onDrop,
+  onSetLevel,
 }: Props) {
   if (node.isVirtual) {
     // Special "Unassigned" / other synthetic buckets.
@@ -138,14 +143,36 @@ export default function OrgNodeCard({
                 </p>
               </div>
             </div>
-            <div className="mt-2 flex items-center justify-between gap-2">
-              {node.department ? (
+            <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+              {/* Career level — HR sets it here; the Org Chart owns it. Clicks
+                  are kept off the card's profile link. */}
+              {canEdit && onSetLevel ? (
+                <select
+                  value={node.careerLevel ?? ''}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation() }}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  onChange={(e) => { e.stopPropagation(); onSetLevel(node.id, e.target.value || null) }}
+                  className={`px-1.5 py-0.5 text-[10px] font-semibold rounded border cursor-pointer ${
+                    node.careerLevel
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-400 border-slate-200'
+                  }`}
+                  title="Career level (L1–L5)"
+                >
+                  <option value="">Level —</option>
+                  {LEVEL_OPTIONS.map((l) => <option key={l} value={l}>{l}</option>)}
+                </select>
+              ) : node.careerLevel ? (
+                <span className="px-1.5 py-0.5 text-[10px] font-semibold rounded bg-slate-900 text-white">
+                  {node.careerLevel}
+                </span>
+              ) : null}
+              {node.department && (
                 <span className="inline-block px-2 py-0.5 text-[10px] font-medium bg-slate-50 text-slate-700 rounded">
                   {node.department}
                 </span>
-              ) : (
-                <span />
               )}
+              <span className="flex-1" />
               {node.totalReports > 0 && (
                 <span
                   className="text-[10px] text-gray-500"

@@ -21,6 +21,7 @@ export interface OrgNode {
   departmentId: string | null
   photoUrl: string | null
   reportingManagerId: string | null
+  careerLevel: string | null
   directReports: number
   totalReports: number   // recursive: all descendants under this node
   warning?: string
@@ -103,6 +104,7 @@ export async function GET(request: NextRequest) {
       designation: true,
       photoUrl: true,
       reportingManagerId: true,
+      careerLevel: true,
       department: { select: { id: true, name: true } },
     },
   })
@@ -125,6 +127,7 @@ export async function GET(request: NextRequest) {
       departmentId: e.department?.id ?? null,
       photoUrl: e.photoUrl,
       reportingManagerId: e.reportingManagerId,
+      careerLevel: e.careerLevel,
       directReports: 0,
       totalReports: 0,
       children: [],
@@ -249,6 +252,7 @@ export async function GET(request: NextRequest) {
       departmentId: null,
       photoUrl: null,
       reportingManagerId: null,
+      careerLevel: null,
       directReports: orphans.length,
       totalReports: orphans.reduce((sum, o) => sum + 1 + o.totalReports, 0),
       isVirtual: true,

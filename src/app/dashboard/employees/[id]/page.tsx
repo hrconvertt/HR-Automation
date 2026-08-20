@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { verifyToken } from '@/lib/auth'
+import { LEVEL_LABEL } from '@/lib/promotion'
 import EditEmployeeButton from '@/components/edit-employee-button'
 import DeleteEmployeeButton from '@/components/delete-employee-button'
 import UploadDocumentButton from '@/components/upload-document-button'
@@ -563,7 +564,11 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                   {([
                     ['Designation', employee.designation],
                     ['Department', employee.department?.name],
-                    ['Position Level', employee.position?.level],
+                    // Career level is set on the Org Chart (the source of truth);
+                    // the old Position.level is the fallback for anyone still on it.
+                    ['Position Level', employee.careerLevel
+                      ? LEVEL_LABEL(employee.careerLevel)
+                      : employee.position?.level],
                     ['Work Location', humanize(employee.workLocation)],
                     ['Timings', employee.timings],
                     ['Work Schedule', employee.workDays.replace(/,/g, ' · ')],

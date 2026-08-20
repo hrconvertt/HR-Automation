@@ -13,6 +13,7 @@ export interface OrgNode {
   departmentId: string | null
   photoUrl: string | null
   reportingManagerId: string | null
+  careerLevel: string | null
   directReports: number
   totalReports: number
   warning?: string
@@ -178,6 +179,25 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
 
   useEffect(() => {
     fetchTree()
+  }, [fetchTree])
+
+  // HR sets a person's career level on the chart — the Org Chart owns it.
+  // Optimistically stamp the node, then persist; refetch on failure to undo.
+  const setLevel = useCallback(async (employeeId: string, level: string | null) => {
+    setData((prev) => {
+      if (!prev) return prev
+      const walk = (n: OrgNode): OrgNode =>
+        n.id === employeeId
+          ? { ...n, careerLevel: level, children: n.children.map(walk) }
+          : { ...n, children: n.children.map(walk) }
+      return { ...prev, tree: walk(prev.tree) }
+    })
+    const r = await fetch('/api/org-chart/level', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ employeeId, level }),
+    }).catch(() => null)
+    if (!r || !r.ok) { await fetchTree() }
   }, [fetchTree])
 
   // Card dimensions per mode.
@@ -649,6 +669,7 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
                   // Disallow dropping onto a virtual bucket like "Unassigned".
                   if (!p.node.isVirtual) handleDrop(employeeId, p.node.id)
                 }}
+                onSetLevel={setLevel}
               />
             </div>
           ))}
