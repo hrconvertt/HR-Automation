@@ -42,6 +42,10 @@ export async function POST(request: NextRequest) {
   const body = await request.json()
   const {
     companyName, workingDays, workDayHours,
+    // Which country's working week this save is for. Convertt runs in Pakistan
+    // and the UAE (HR Playbook 1.2) and their weeks differ, so the schedule is
+    // stored per country. Absent means Pakistan, the default.
+    country,
     // Payroll calculation settings
     standardHoursPerDay, overtimeMultiplier,
     lateThresholdHour, lateThresholdMinute,
@@ -49,30 +53,27 @@ export async function POST(request: NextRequest) {
     taxEnabled,
   } = body
 
-  if (companyName) {
+  const loc = country === 'UAE' ? 'UAE' : 'PK'
+
+  const upsertKey = async (key: string, value: string) => {
     await prisma.config.upsert({
-      where: { key: 'companyName' },
-      update: { value: companyName },
-      create: { key: 'companyName', value: companyName },
+      where: { key }, update: { value }, create: { key, value },
     })
   }
+
+  if (companyName) await upsertKey('companyName', companyName)
 
   if (workingDays) {
-    await prisma.config.upsert({
-      where: { key: 'workingDays' },
-      update: { value: JSON.stringify(workingDays) },
-      create: { key: 'workingDays', value: JSON.stringify(workingDays) },
-    })
+    await upsertKey(`workingDays:${loc}`, JSON.stringify(workingDays))
+    // Pakistan mirrors the legacy key, so attendance and payroll — which read
+    // `workingDays` — keep working while everyone is in Pakistan.
+    if (loc === 'PK') await upsertKey('workingDays', JSON.stringify(workingDays))
   }
 
-  // Per-day start/end/break. Stored beside `workingDays` rather than replacing
-  // it, so everything already reading that key keeps working.
+  // Per-day start/end/break, namespaced the same way.
   if (workDayHours) {
-    await prisma.config.upsert({
-      where: { key: 'workDayHours' },
-      update: { value: JSON.stringify(workDayHours) },
-      create: { key: 'workDayHours', value: JSON.stringify(workDayHours) },
-    })
+    await upsertKey(`workDayHours:${loc}`, JSON.stringify(workDayHours))
+    if (loc === 'PK') await upsertKey('workDayHours', JSON.stringify(workDayHours))
   }
 
   // Save any payroll config keys that were passed
