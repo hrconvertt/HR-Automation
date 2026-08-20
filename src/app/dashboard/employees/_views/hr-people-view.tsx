@@ -28,7 +28,8 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select'
-import { Search, Plus, ExternalLink, Mail } from 'lucide-react'
+import { Search, Plus, ExternalLink, Mail, Trash2 } from 'lucide-react'
+import { RequestDocumentsButton } from '@/components/request-documents-button'
 import { getInitials } from '@/lib/utils'
 
 interface Department {
@@ -131,6 +132,7 @@ export function HRPeopleView({ initialEmployees }: { initialEmployees?: Employee
     tempPassword: string | null
     linkedExisting: boolean
     message: string
+    employeeId: string | null
   }>(null)
   const [copied, setCopied] = useState(false)
 
@@ -250,6 +252,7 @@ export function HRPeopleView({ initialEmployees }: { initialEmployees?: Employee
         tempPassword: data.login.tempPassword ?? null,
         linkedExisting: !!data.login.linkedExisting,
         message: data.login.message ?? '',
+        employeeId: data.employee?.id ?? null,
       })
       setCopied(false)
     }
@@ -374,6 +377,12 @@ export function HRPeopleView({ initialEmployees }: { initialEmployees?: Employee
               <Mail className="w-4 h-4 mr-1.5" />
               Invite all uninvited
             </Button>
+            <Link href="/dashboard/employees/trash">
+              <Button variant="outline" size="sm">
+                <Trash2 className="w-4 h-4 mr-1.5" />
+                Trash
+              </Button>
+            </Link>
             <Button onClick={() => setAddOpen(true)} size="sm">
               <Plus className="w-4 h-4 mr-1.5" />
               Add Employee
@@ -806,7 +815,14 @@ export function HRPeopleView({ initialEmployees }: { initialEmployees?: Employee
               </div>
             </div>
           )}
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
+            {credentials?.employeeId && (
+              <RequestDocumentsButton
+                employeeId={credentials.employeeId}
+                toEmail={credentials.email}
+                label="Request onboarding documents"
+              />
+            )}
             <Button onClick={() => setCredentials(null)}>Done</Button>
           </DialogFooter>
         </DialogContent>

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Check, Trash2, Upload, X, Paperclip, RotateCcw } from 'lucide-react'
+import { RequestDocumentsButton } from '@/components/request-documents-button'
 
 interface Task {
   id: string
@@ -34,6 +35,9 @@ interface Props {
   canMarkComplete: boolean
   viewerRole: string
   joiningDate: string
+  employeeName: string
+  toEmail?: string | null
+  documentsRequestedAt?: string | null
 }
 
 // "Custom Tasks" (OTHER) deliberately not rendered — HR no longer wants
@@ -232,6 +236,29 @@ export function OnboardingWorkspace(props: Props) {
 
   return (
     <div className="space-y-5">
+      {/* Ask the new joiner for their papers. Sits at the top because it is
+          the first thing HR does once the record exists. */}
+      {props.canEdit && (
+        <Card className="rounded-xl border-slate-200 p-4 flex items-center justify-between gap-3 flex-wrap">
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Onboarding documents</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {props.documentsRequestedAt
+                ? `Requested ${new Date(props.documentsRequestedAt).toLocaleDateString('en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                  })} — send a reminder any time.`
+                : 'Ask ' + props.employeeName.split(' ')[0] + ' for the papers we still need before Day 1.'}
+            </p>
+          </div>
+          <RequestDocumentsButton
+            employeeId={props.employeeId}
+            toEmail={props.toEmail}
+            variant="default"
+            label={props.documentsRequestedAt ? 'Request again' : 'Request documents'}
+          />
+        </Card>
+      )}
+
       {/* Day 1 schedule */}
       <Card className="rounded-xl border-slate-200 p-5">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">

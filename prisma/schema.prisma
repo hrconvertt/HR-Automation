@@ -191,6 +191,17 @@ model Employee {
   directReports       Employee[]  @relation("Reports")
   employeeType        String      @default("PROBATION") // PERMANENT | PROBATION | INTERNSHIP | TRAINING
   status              String      @default("ACTIVE")    // ACTIVE | PROBATION | ON_LEAVE | RESIGNED | TERMINATED | LAYOFF | INACTIVE
+  // ── Trash ────────────────────────────────────────────────────────────────
+  // A record created by mistake goes here, NOT to TERMINATED — a mistake is
+  // not an exit, and marking it TERMINATED would put it in the exit board, the
+  // termination analytics and the leaver counts. deletedAt is the source of
+  // truth (the directory filters on it); status is dropped to INACTIVE as a
+  // safety net so lifecycle lists that already exclude INACTIVE exclude this
+  // too. preDeleteStatus remembers what to restore to.
+  deletedAt           DateTime?
+  deletedById         String?
+  deleteReason        String?
+  preDeleteStatus     String?
   workLocation        String      @default("ONSITE")    // ONSITE | WFH | HYBRID
   timings             String?
   workDays            String      @default("Mon,Tue,Wed,Thu,Fri") // comma-separated: Mon,Tue,Wed,Thu,Fri,Sat,Sun
@@ -1144,6 +1155,10 @@ model OnboardingChecklist {
   // Welcome email auto-send scheduling
   welcomeEmailScheduledFor DateTime?
   welcomeEmailSentAt    DateTime?
+  // When HR last asked the new joiner for their onboarding documents. Records
+  // the ask so the workspace can show "requested on X" rather than leaving HR
+  // guessing whether the request has gone out.
+  documentsRequestedAt  DateTime?
   // Custom tasks per-hire (preferred over fixed booleans for new flows)
   tasks                 OnboardingTask[]
   createdAt             DateTime  @default(now())

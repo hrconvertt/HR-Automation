@@ -196,7 +196,13 @@ export default async function TotalRewardsPage({ params }: PageProps) {
           .trs-info td:last-child { font-weight: 500; }
         `}</style>
 
-        <div className="trs-noprint" style={{ maxWidth: 800, margin: '0 auto 12px', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <div className="trs-noprint" style={{ maxWidth: 800, margin: '0 auto 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+          <a
+            href={`/dashboard/employees/${id}`}
+            style={{ fontSize: 13, color: '#475569', textDecoration: 'none' }}
+          >
+            ← Back to profile
+          </a>
           <button
             onClick={() => window.print()}
             style={{ padding: '6px 14px', borderRadius: 6, background: '#1d4ed8', color: 'white', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}

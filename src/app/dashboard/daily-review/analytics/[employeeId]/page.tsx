@@ -1,3 +1,5 @@
+import Link from 'next/link'
+import { ArrowLeft } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -36,6 +38,12 @@ export default async function AnalyticsPage({
   return (
     <div className="space-y-4">
       <div>
+        <Link
+          href="/dashboard/daily-review"
+          className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 text-sm mb-2"
+        >
+          <ArrowLeft className="w-4 h-4" /> Back to Daily Review
+        </Link>
         <h1 className="text-2xl font-bold text-gray-900">{employee.fullName}</h1>
         <p className="text-sm text-gray-500 mt-1">{employee.designation ?? 'Employee'} · daily logging analytics</p>
       </div>

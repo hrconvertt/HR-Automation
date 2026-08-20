@@ -320,13 +320,57 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 
   const { id } = await params
-  const mode = request.nextUrl.searchParams.get('mode') === 'hard' ? 'hard' : 'archive'
+  const modeParam = request.nextUrl.searchParams.get('mode')
+  const mode = modeParam === 'hard' ? 'hard'
+    : modeParam === 'trash' ? 'trash'
+    : 'archive'
 
   const emp = await prisma.employee.findUnique({
     where: { id },
     include: { user: { select: { id: true } } },
   })
   if (!emp) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  if (mode === 'trash') {
+    // A record created by mistake. Unlike Archive, this does NOT mark the
+    // person TERMINATED — a mistake is not a leaver, and stamping it as one
+    // pollutes the exit board and the attrition numbers. It goes to Trash,
+    // out of the directory, recoverable, and no exit email is sent.
+    const reason = (await request.json().catch(() => ({}))).reason as string | undefined
+    await prisma.$transaction(async (tx) => {
+      await tx.employee.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          deletedById: payload.userId,
+          deleteReason: reason?.trim()?.slice(0, 500) || null,
+          // Remember where to put it back, then drop to INACTIVE so every
+          // lifecycle list that already excludes INACTIVE excludes this too.
+          preDeleteStatus: emp.status,
+          status: 'INACTIVE',
+        },
+      })
+      if (emp.user) {
+        await tx.user.update({ where: { id: emp.user.id }, data: { isActive: false } })
+      }
+    })
+    try {
+      await prisma.auditLog.create({
+        data: {
+          userId: payload.userId,
+          employeeId: id,
+          action: 'UPDATE',
+          entity: 'Employee',
+          entityId: id,
+          oldValue: JSON.stringify({ status: emp.status }),
+          newValue: JSON.stringify({ trashed: true, reason: reason ?? null }),
+        },
+      })
+    } catch (auditErr) {
+      console.error('[audit] Employee trash', auditErr)
+    }
+    return NextResponse.json({ ok: true, mode: 'trash' })
+  }
 
   if (mode === 'archive') {
     // Soft delete — preserve historical data. Most appropriate for real exits.

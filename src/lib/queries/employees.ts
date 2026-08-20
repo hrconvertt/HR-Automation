@@ -39,6 +39,9 @@ export async function listEmployees(opts: ListEmployeesOpts) {
   return prisma.employee.findMany({
     where: {
       AND: [
+        // Trashed records never appear in the directory — they live in Trash
+        // until restored or permanently removed.
+        { deletedAt: null },
         search
           ? {
               OR: [
