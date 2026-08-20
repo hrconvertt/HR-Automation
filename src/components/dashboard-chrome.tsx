@@ -22,6 +22,7 @@ import {
   Package,
   LifeBuoy,
   BarChart3,
+  Bell,
   PartyPopper,
   FolderOpen,
   Settings,
@@ -88,6 +89,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/assets',
   '/dashboard/documents',
   '/dashboard/settings',
+  '/dashboard/settings/notifications',
   '/dashboard/help',
   '/dashboard/admin/seed',
   '/dashboard/admin/health',
@@ -376,6 +378,7 @@ const SETTINGS_NAV: NavGroup[] = [
       // The bank list payroll codes against — was a hardcoded map until now.
       { href: '/dashboard/settings/bank-codes', label: 'Bank Codes', icon: Landmark, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       { href: '/dashboard/settings/email-templates', label: 'Email Templates', icon: MailIcon },
+      { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell },
       { href: '/dashboard/settings/roles', label: 'Roles', icon: ShieldCheck },
       { href: '/dashboard/settings/daily-logging', label: 'Daily Logging', icon: ClipboardList },
       { href: '/dashboard/settings/users', label: 'Users', icon: UserIcon },
@@ -476,7 +479,8 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/attendance?view=grid', label: 'Grid View', icon: CalendarCheck },
         { href: '/dashboard/attendance?view=summary', label: 'Summary View', icon: BarChart3 },
-        { href: '/dashboard/attendance/calendar', label: 'Calendar', icon: CalendarDays },
+        // The Team Absence Calendar is now part of the main Calendar (leave, WFH
+        // and LOA show there), so the duplicate is gone from here.
         {
           href: '/dashboard/attendance/corrections',
           label: 'Corrections',

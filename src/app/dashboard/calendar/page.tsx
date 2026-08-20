@@ -48,7 +48,7 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
   const monthStart = new Date(year, month, 1)
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59)
 
-  const [employees, companyEvents, probationRecords, leaveRequests, holidaysDb] = await Promise.all([
+  const [employees, companyEvents, probationRecords, leaveRequests, holidaysDb, wfhLogs, loaRecords] = await Promise.all([
     prisma.employee.findMany({
       where: {
         status: 'ACTIVE',
@@ -82,6 +82,26 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
       where: { date: { gte: monthStart, lte: monthEnd } },
       select: { id: true, name: true, date: true, type: true },
     }),
+    // WFH days and leaves of absence, so the one calendar shows everything the
+    // old Team Absence Calendar did — leave, WFH and LOA in a single view.
+    prisma.attendanceLog.findMany({
+      where: { date: { gte: monthStart, lte: monthEnd }, workType: 'WFH' },
+      select: {
+        id: true, date: true,
+        employee: { select: { id: true, fullName: true, reportingManagerId: true } },
+      },
+    }),
+    prisma.leaveOfAbsence.findMany({
+      where: {
+        status: { in: ['ACTIVE', 'EXTENDED'] },
+        startDate: { lte: monthEnd },
+        expectedReturn: { gte: monthStart },
+      },
+      select: {
+        id: true, startDate: true, expectedReturn: true,
+        employee: { select: { id: true, fullName: true, reportingManagerId: true } },
+      },
+    }),
   ])
 
   // Scope leaves:
@@ -93,13 +113,32 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
   //   own approved leave wasn't surfacing because he viewed his own calendar
   //   under a non-HR role and the filter only checked id-equality.
   const myEmpId = me.employee?.id ?? null
-  const visibleLeaves = leaveRequests.filter((l) => {
+  // Same visibility rule for every absence kind: HR/Exec see all, a manager/lead
+  // sees their team plus themselves, everyone else sees only their own.
+  const canSee = (emp: { id: string; reportingManagerId: string | null }) => {
     if (isHR || isExec) return true
-    if (isManager || isLead) {
-      return l.employee.reportingManagerId === myEmpId || l.employee.id === myEmpId
-    }
-    return l.employee.id === myEmpId
-  })
+    if (isManager || isLead) return emp.reportingManagerId === myEmpId || emp.id === myEmpId
+    return emp.id === myEmpId
+  }
+  const visibleLeaves = leaveRequests.filter((l) => canSee(l.employee))
+
+  // WFH and LOA join the leaves layer as their own types, so the single
+  // calendar shows leave, WFH and LOA together — what the Team Absence Calendar
+  // used to show on its own.
+  const wfhLeaves = wfhLogs.filter((w) => canSee(w.employee)).map((w) => ({
+    id: `wfh-${w.id}`,
+    fromDate: w.date.toISOString(),
+    toDate: w.date.toISOString(),
+    leaveType: 'WFH',
+    employeeName: w.employee.fullName,
+  }))
+  const loaLeaves = loaRecords.filter((r) => canSee(r.employee)).map((r) => ({
+    id: `loa-${r.id}`,
+    fromDate: r.startDate.toISOString(),
+    toDate: r.expectedReturn.toISOString(),
+    leaveType: 'LOA',
+    employeeName: r.employee.fullName,
+  }))
 
   return (
     <CalendarGrid
@@ -121,13 +160,17 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
         endDate: p.endDate.toISOString(),
         employeeName: p.employee.fullName,
       }))}
-      leaves={visibleLeaves.map((l) => ({
-        id: l.id,
-        fromDate: l.fromDate.toISOString(),
-        toDate: l.toDate.toISOString(),
-        leaveType: l.leaveType,
-        employeeName: l.employee.fullName,
-      }))}
+      leaves={[
+        ...visibleLeaves.map((l) => ({
+          id: l.id,
+          fromDate: l.fromDate.toISOString(),
+          toDate: l.toDate.toISOString(),
+          leaveType: l.leaveType,
+          employeeName: l.employee.fullName,
+        })),
+        ...wfhLeaves,
+        ...loaLeaves,
+      ]}
       dbHolidays={holidaysDb.map((h) => ({ id: h.id, name: h.name, date: h.date.toISOString(), type: h.type }))}
       pkHolidays={PK_HOLIDAYS_2026.filter((h) => {
         const d = new Date(h.date)
