@@ -79,6 +79,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/leave/sandwich',
   '/dashboard/policies',
   '/dashboard/letters',
+  '/dashboard/letters/employment',
   '/dashboard/employees',
   '/dashboard/payroll',
   '/dashboard/recruiting',
@@ -166,6 +167,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
+        { href: '/dashboard/letters/employment', label: 'Employment Letter', icon: Mail },
         { href: '/dashboard/email-queue', label: 'Email Queue', icon: Mail },
         { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
