@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -38,6 +39,7 @@ interface Props {
   employeeName: string
   toEmail?: string | null
   documentsRequestedAt?: string | null
+  infoFormSubmittedAt?: string | null
 }
 
 // "Custom Tasks" (OTHER) deliberately not rendered — HR no longer wants
@@ -236,8 +238,26 @@ export function OnboardingWorkspace(props: Props) {
 
   return (
     <div className="space-y-5">
-      {/* Ask the new joiner for their papers. Sits at the top because it is
-          the first thing HR does once the record exists. */}
+      {/* The information intake and the document request — the first two things
+          that happen once the record exists. */}
+      <Card className="rounded-xl border-slate-200 p-4 flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-sm font-semibold text-slate-900">Employee information form</p>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            {props.infoFormSubmittedAt
+              ? `Submitted ${new Date(props.infoFormSubmittedAt).toLocaleDateString('en-GB', {
+                  day: '2-digit', month: 'short', year: 'numeric',
+                })} — the details are on the record.`
+              : 'The five sections from the old Google form — filled once, straight onto the record.'}
+          </p>
+        </div>
+        <Link href={`/dashboard/onboarding/${props.employeeId}/intake`}>
+          <Button size="sm" variant={props.infoFormSubmittedAt ? 'outline' : 'default'}>
+            {props.infoFormSubmittedAt ? 'View / edit' : 'Open the form'}
+          </Button>
+        </Link>
+      </Card>
+
       {props.canEdit && (
         <Card className="rounded-xl border-slate-200 p-4 flex items-center justify-between gap-3 flex-wrap">
           <div>

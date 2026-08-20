@@ -67,7 +67,9 @@ async function buildFor(employeeId: string) {
   const email = buildDocumentRequest({
     employeeName: employee.fullName,
     docs,
-    uploadUrl: `${base}/dashboard/onboarding/${employee.id}`,
+    // The intake form is the front door — it collects the information and links
+    // on to the document uploads.
+    uploadUrl: `${base}/dashboard/onboarding/${employee.id}/intake`,
     firstDay: employee.joiningDate,
   })
 

@@ -165,6 +165,19 @@ model Employee {
   cityOfBirth         String?
   placeOfIssuance     String?
   nationalityCountry  String?   // defaults to "Pakistan" when populated
+  // ── Structured mailing address (bank KYC / account opening) ──────────────
+  // The intake form collects these separately from the free-text `address` so
+  // payroll and the bank-account paperwork have clean, discrete fields.
+  addressLine1        String?
+  addressLine2        String?
+  city                String?
+  stateProvince       String?
+  postalCode          String?
+  country             String?
+  // "Full name as per CNIC", which can differ from the everyday fullName.
+  cnicFullName        String?
+  // Set when the new joiner submits the Employee Information intake form.
+  infoFormSubmittedAt DateTime?
   homePhone           String?
   officePhone         String?
   bankAccountName     String?   // account title — name on the bank account

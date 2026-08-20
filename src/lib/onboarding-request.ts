@@ -79,12 +79,18 @@ export function buildDocumentRequest(input: DocumentRequestInput): EmailDraft {
     out.push('')
   }
 
-  if (input.docs.length && input.uploadUrl) {
-    out.push('The easiest way is to upload them straight to your onboarding page:')
+  if (input.uploadUrl) {
+    out.push(
+      'The quickest way is to fill in your information form and upload your '
+      + 'documents there — it takes a few minutes and saves you any paperwork on '
+      + 'the day:',
+    )
     out.push(`  ${input.uploadUrl}`)
     out.push('')
-    out.push('Or just reply to this email with them attached — whichever suits you.')
-    out.push('')
+    if (input.docs.length) {
+      out.push('Or just reply to this email with the documents attached — whichever suits you.')
+      out.push('')
+    }
   } else if (input.docs.length) {
     out.push('Please reply to this email with them attached.')
     out.push('')

@@ -146,6 +146,7 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
         employeeName={employee.fullName}
         toEmail={employee.personalEmail ?? employee.email}
         documentsRequestedAt={employee.onboarding?.documentsRequestedAt?.toISOString() ?? null}
+        infoFormSubmittedAt={employee.infoFormSubmittedAt?.toISOString() ?? null}
       />
     </div>
   )
