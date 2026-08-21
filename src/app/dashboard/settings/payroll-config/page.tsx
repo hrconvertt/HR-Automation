@@ -33,6 +33,14 @@ export default function PayrollConfigSettingsPage() {
   const [payrollCutoffDay, setPayrollCutoffDay] = useState(25)
   const [payrollReviewDays, setPayrollReviewDays] = useState(2)
   const [payrollDisburseDay, setPayrollDisburseDay] = useState(28)
+  // Leave-linked pay + full & final
+  const [lwpRateBasis, setLwpRateBasis] = useState<'gross' | 'basic'>('gross')
+  const [lwpDayDivisor, setLwpDayDivisor] = useState<'calendar' | 'working'>('calendar')
+  const [leaveEncashmentEnabled, setLeaveEncashmentEnabled] = useState(false)
+  const [leaveEncashmentBasis, setLeaveEncashmentBasis] = useState<'gross' | 'basic'>('basic')
+  const [fnfNoticeRecovery, setFnfNoticeRecovery] = useState(true)
+  const [fnfEncashUnusedLeave, setFnfEncashUnusedLeave] = useState(true)
+  const [fnfIncludeGratuity, setFnfIncludeGratuity] = useState(true)
   const [taxEnabled, setTaxEnabled] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -62,6 +70,13 @@ export default function PayrollConfigSettingsPage() {
       if (d.config?.payrollCutoffDay) setPayrollCutoffDay(Number(d.config.payrollCutoffDay))
       if (d.config?.payrollReviewDays) setPayrollReviewDays(Number(d.config.payrollReviewDays))
       if (d.config?.payrollDisburseDay) setPayrollDisburseDay(Number(d.config.payrollDisburseDay))
+      if (d.config?.lwpRateBasis) setLwpRateBasis(d.config.lwpRateBasis)
+      if (d.config?.lwpDayDivisor) setLwpDayDivisor(d.config.lwpDayDivisor)
+      if (d.config?.leaveEncashmentEnabled !== undefined) setLeaveEncashmentEnabled(d.config.leaveEncashmentEnabled === 'true')
+      if (d.config?.leaveEncashmentBasis) setLeaveEncashmentBasis(d.config.leaveEncashmentBasis)
+      if (d.config?.fnfNoticeRecovery !== undefined) setFnfNoticeRecovery(d.config.fnfNoticeRecovery === 'true')
+      if (d.config?.fnfEncashUnusedLeave !== undefined) setFnfEncashUnusedLeave(d.config.fnfEncashUnusedLeave === 'true')
+      if (d.config?.fnfIncludeGratuity !== undefined) setFnfIncludeGratuity(d.config.fnfIncludeGratuity === 'true')
       if (d.config?.taxEnabled !== undefined) setTaxEnabled(d.config.taxEnabled === 'true')
     }).catch(() => {})
   }, [])
@@ -89,6 +104,8 @@ export default function PayrollConfigSettingsPage() {
         ssEmployerRate: ssEmployerRate / 100,
         ssWageCeiling,
         payFrequency, payrollCutoffDay, payrollReviewDays, payrollDisburseDay,
+        lwpRateBasis, lwpDayDivisor, leaveEncashmentEnabled, leaveEncashmentBasis,
+        fnfNoticeRecovery, fnfEncashUnusedLeave, fnfIncludeGratuity,
         taxEnabled,
       }),
     })
@@ -299,6 +316,61 @@ export default function PayrollConfigSettingsPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Leave-linked pay: how unpaid leave is priced, and encashment. */}
+        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
+          <p className="text-sm font-semibold text-slate-800">Leave-Linked Deductions</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Leave-without-pay is deducted from" hint="Which salary figure a day of LWP is priced on">
+              <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                value={lwpRateBasis} onChange={(e) => setLwpRateBasis(e.target.value as 'gross' | 'basic')}>
+                <option value="gross">Gross salary</option>
+                <option value="basic">Basic salary</option>
+              </select>
+            </Field>
+            <Field label="Per-day rate divides by" hint="Days used to get the daily rate">
+              <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                value={lwpDayDivisor} onChange={(e) => setLwpDayDivisor(e.target.value as 'calendar' | 'working')}>
+                <option value="calendar">Calendar days in month</option>
+                <option value="working">Working days in month</option>
+              </select>
+            </Field>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            One unpaid day = monthly {lwpRateBasis} ÷ {lwpDayDivisor === 'calendar' ? 'calendar' : 'working'} days in the month.
+          </p>
+          <div className="border-t border-slate-100 pt-3">
+            <Toggle label="Leave Encashment"
+              sub={leaveEncashmentEnabled ? 'Unused leave is paid out' : 'Unused leave is not paid out'}
+              checked={leaveEncashmentEnabled} onChange={setLeaveEncashmentEnabled} />
+            {leaveEncashmentEnabled && (
+              <div className="mt-3">
+                <Field label="Encashment priced on">
+                  <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                    value={leaveEncashmentBasis} onChange={(e) => setLeaveEncashmentBasis(e.target.value as 'gross' | 'basic')}>
+                    <option value="basic">Basic salary</option>
+                    <option value="gross">Gross salary</option>
+                  </select>
+                </Field>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Full & Final settlement — what an exit payout includes. */}
+        <div className="rounded-lg border border-slate-200 p-4 space-y-3">
+          <p className="text-sm font-semibold text-slate-800">Full &amp; Final Settlement</p>
+          <p className="text-xs text-slate-500 -mt-1">What an employee&apos;s exit settlement includes.</p>
+          <Toggle label="Recover unserved notice"
+            sub="Deduct salary in lieu of notice not served"
+            checked={fnfNoticeRecovery} onChange={setFnfNoticeRecovery} />
+          <Toggle label="Encash remaining leave"
+            sub="Pay out the leave balance on exit"
+            checked={fnfEncashUnusedLeave} onChange={setFnfEncashUnusedLeave} />
+          <Toggle label="Include end-of-service benefit"
+            sub="Add the gratuity / provident-fund payout"
+            checked={fnfIncludeGratuity} onChange={setFnfIncludeGratuity} />
         </div>
 
         <div className={`rounded-lg border p-4 ${taxEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>

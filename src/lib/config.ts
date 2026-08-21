@@ -43,6 +43,17 @@ export interface PayrollConfig {
   ssEmployerRate: number         // fraction of secured wage, default 0.06
   ssWageCeiling: number          // PKR/month — only employees at/below this are covered, default 25000
   taxEnabled: boolean
+  // ── Leave-linked pay ──
+  // How a day of leave-without-pay is priced: on gross or basic, divided by
+  // calendar days in the month or by working days.
+  lwpRateBasis: 'gross' | 'basic'          // default gross
+  lwpDayDivisor: 'calendar' | 'working'    // default calendar
+  leaveEncashmentEnabled: boolean          // pay out unused leave
+  leaveEncashmentBasis: 'gross' | 'basic'  // default basic
+  // ── Full & Final settlement (on exit) ──
+  fnfNoticeRecovery: boolean       // recover salary for unserved notice period
+  fnfEncashUnusedLeave: boolean    // pay out remaining leave balance
+  fnfIncludeGratuity: boolean      // include the end-of-service benefit in the settlement
   workingDays: string[]
   // ── Pay cycle ──
   payFrequency: 'monthly' | 'bi_weekly' | 'weekly' // default monthly
@@ -78,6 +89,13 @@ const DEFAULTS: PayrollConfig = {
   ssEmployerRate: 0.06,
   ssWageCeiling: 25000,
   taxEnabled: false,
+  lwpRateBasis: 'gross',
+  lwpDayDivisor: 'calendar',
+  leaveEncashmentEnabled: false,
+  leaveEncashmentBasis: 'basic',
+  fnfNoticeRecovery: true,
+  fnfEncashUnusedLeave: true,
+  fnfIncludeGratuity: true,
   workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
   payFrequency: 'monthly',
   payrollCutoffDay: 25,
@@ -115,6 +133,13 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
           'ssEmployerRate',
           'ssWageCeiling',
           'taxEnabled',
+          'lwpRateBasis',
+          'lwpDayDivisor',
+          'leaveEncashmentEnabled',
+          'leaveEncashmentBasis',
+          'fnfNoticeRecovery',
+          'fnfEncashUnusedLeave',
+          'fnfIncludeGratuity',
           'workingDays',
           'payFrequency',
           'payrollCutoffDay',
@@ -153,6 +178,13 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
     ssEmployerRate: map.ssEmployerRate ? Number(map.ssEmployerRate) : DEFAULTS.ssEmployerRate,
     ssWageCeiling: map.ssWageCeiling ? Number(map.ssWageCeiling) : DEFAULTS.ssWageCeiling,
     taxEnabled: map.taxEnabled ? map.taxEnabled === 'true' : DEFAULTS.taxEnabled,
+    lwpRateBasis: (map.lwpRateBasis as PayrollConfig['lwpRateBasis']) || DEFAULTS.lwpRateBasis,
+    lwpDayDivisor: (map.lwpDayDivisor as PayrollConfig['lwpDayDivisor']) || DEFAULTS.lwpDayDivisor,
+    leaveEncashmentEnabled: map.leaveEncashmentEnabled ? map.leaveEncashmentEnabled === 'true' : DEFAULTS.leaveEncashmentEnabled,
+    leaveEncashmentBasis: (map.leaveEncashmentBasis as PayrollConfig['leaveEncashmentBasis']) || DEFAULTS.leaveEncashmentBasis,
+    fnfNoticeRecovery: map.fnfNoticeRecovery ? map.fnfNoticeRecovery === 'true' : DEFAULTS.fnfNoticeRecovery,
+    fnfEncashUnusedLeave: map.fnfEncashUnusedLeave ? map.fnfEncashUnusedLeave === 'true' : DEFAULTS.fnfEncashUnusedLeave,
+    fnfIncludeGratuity: map.fnfIncludeGratuity ? map.fnfIncludeGratuity === 'true' : DEFAULTS.fnfIncludeGratuity,
     workingDays: map.workingDays ? JSON.parse(map.workingDays) : DEFAULTS.workingDays,
     payFrequency: (map.payFrequency as PayrollConfig['payFrequency']) || DEFAULTS.payFrequency,
     payrollCutoffDay: map.payrollCutoffDay ? Number(map.payrollCutoffDay) : DEFAULTS.payrollCutoffDay,

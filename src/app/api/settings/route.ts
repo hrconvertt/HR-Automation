@@ -55,6 +55,8 @@ export async function POST(request: NextRequest) {
     socialSecurityEnabled, socialSecurityInstitution,
     ssEmployeeRate, ssEmployerRate, ssWageCeiling,
     payFrequency, payrollCutoffDay, payrollReviewDays, payrollDisburseDay,
+    lwpRateBasis, lwpDayDivisor, leaveEncashmentEnabled, leaveEncashmentBasis,
+    fnfNoticeRecovery, fnfEncashUnusedLeave, fnfIncludeGratuity,
     taxEnabled,
   } = body
 
@@ -114,6 +116,13 @@ export async function POST(request: NextRequest) {
   if (payrollCutoffDay !== undefined) payrollUpdates.payrollCutoffDay = payrollCutoffDay
   if (payrollReviewDays !== undefined) payrollUpdates.payrollReviewDays = payrollReviewDays
   if (payrollDisburseDay !== undefined) payrollUpdates.payrollDisburseDay = payrollDisburseDay
+  if (lwpRateBasis !== undefined) payrollUpdates.lwpRateBasis = lwpRateBasis
+  if (lwpDayDivisor !== undefined) payrollUpdates.lwpDayDivisor = lwpDayDivisor
+  if (leaveEncashmentEnabled !== undefined) payrollUpdates.leaveEncashmentEnabled = leaveEncashmentEnabled
+  if (leaveEncashmentBasis !== undefined) payrollUpdates.leaveEncashmentBasis = leaveEncashmentBasis
+  if (fnfNoticeRecovery !== undefined) payrollUpdates.fnfNoticeRecovery = fnfNoticeRecovery
+  if (fnfEncashUnusedLeave !== undefined) payrollUpdates.fnfEncashUnusedLeave = fnfEncashUnusedLeave
+  if (fnfIncludeGratuity !== undefined) payrollUpdates.fnfIncludeGratuity = fnfIncludeGratuity
   // The monthly EOBI cap is no longer typed by hand — it is the employee's
   // contribution: wage base × employee rate. Recompute it whenever either
   // input changes, so the value downstream payroll reads stays correct.
