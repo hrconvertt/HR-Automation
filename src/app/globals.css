@@ -24,3 +24,15 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Scroll without a visible scrollbar — the sidebar still scrolls by wheel,
+   trackpad or drag, but the track and thumb are hidden. */
+.scrollbar-none {
+  scrollbar-width: none;          /* Firefox */
+  -ms-overflow-style: none;       /* old Edge / IE */
+}
+.scrollbar-none::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;                  /* Chrome, Safari, new Edge */
+}

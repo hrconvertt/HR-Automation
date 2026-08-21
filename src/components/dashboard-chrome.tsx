@@ -948,7 +948,7 @@ export default function DashboardChrome({
           </div>
         )}
 
-        <nav className="flex-1 overflow-y-auto py-4 px-2 space-y-5">
+        <nav className="flex-1 overflow-y-auto scrollbar-none py-4 px-2 space-y-5">
           {nested && (
             <Link
               href="/dashboard"
