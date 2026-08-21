@@ -21,6 +21,7 @@ const SECTIONS = [
   { href: '/dashboard/settings/leave-policies',  label: 'Leave Policies',        icon: Plane,        sub: 'Days by leave type × tier' },
   { href: '/dashboard/settings/departments',     label: 'Departments',           icon: Users,        sub: 'Org units + heads' },
   { href: '/dashboard/settings/payroll-config',  label: 'Payroll Configuration', icon: Calculator,   sub: 'EOBI, tax, OT, late rule' },
+  { href: '/dashboard/settings/salary-structure', label: 'Salary Structure',      icon: Calculator,   sub: 'Basic % + component library' },
   { href: '/dashboard/settings/roles',           label: 'Roles',                 icon: ShieldCheck,  sub: 'Access matrix' },
   { href: '/dashboard/settings/daily-logging',   label: 'Daily Logging',         icon: ClipboardList,sub: 'KPI library + rules' },
 ] as const

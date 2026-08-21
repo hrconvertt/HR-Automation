@@ -41,7 +41,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json()
   const {
-    companyName, workingDays, workDayHours,
+    companyName, workingDays, workDayHours, salaryStructureBasicPct,
     // Which country's working week this save is for. Convertt runs in Pakistan
     // and the UAE (HR Playbook 1.2) and their weeks differ, so the schedule is
     // stored per country. Absent means Pakistan, the default.
@@ -62,6 +62,13 @@ export async function POST(request: NextRequest) {
   }
 
   if (companyName) await upsertKey('companyName', companyName)
+
+  // Payroll — default Basic share of gross (Salary Structure page).
+  if (salaryStructureBasicPct !== undefined) {
+    const n = Number(salaryStructureBasicPct)
+    const pct = Number.isFinite(n) && n >= 0 && n <= 100 ? n : 60
+    await upsertKey('salaryStructure:basicPctOfGross', String(pct))
+  }
 
   if (workingDays) {
     await upsertKey(`workingDays:${loc}`, JSON.stringify(workingDays))

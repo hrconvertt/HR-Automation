@@ -2295,6 +2295,35 @@ model Config {
   @@map("config")
 }
 
+// ─── PAYROLL: SALARY COMPONENT LIBRARY ──────────────────────────────────────
+// The org-level template of what a salary is made of — Basic, allowances,
+// statutory deductions. This is the library; assigning a structure to a
+// specific employee comes later. Every rate is a value on the row, never a
+// hardcoded constant, because Finance Acts and company policy change them.
+model SalaryComponent {
+  id              String   @id @default(cuid())
+  name            String
+  // What it does to pay.
+  type            String   // earning | deduction
+  // How its amount is worked out.
+  calculationBasis String  // fixed_amount | percent_of_basic | percent_of_gross
+  // The number that goes with the basis: an amount for fixed_amount, a
+  // percentage (e.g. 40 for 40%) for the percent bases.
+  defaultValue    Float    @default(0)
+  // Statutory components (EOBI, tax, social security) are governed by law, so
+  // they are flagged and cannot simply be deleted from the library.
+  isStatutory     Boolean  @default(false)
+  // Whether this earning is part of taxable income.
+  isTaxable       Boolean  @default(true)
+  active          Boolean  @default(true)
+  // Display order in the structure and on the payslip.
+  orderIndex      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("salary_components")
+}
+
 // ─── Executive analytics inputs ─────────────────────────────────────
 // HR enters the company's monthly revenue here so the CEO dashboard
 // can compute Cost-of-People % and Revenue-per-Employee. We don't pull

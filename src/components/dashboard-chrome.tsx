@@ -113,6 +113,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/leadership-chat',
   '/dashboard/settings/daily-logging',
   '/dashboard/settings/bank-codes',
+  '/dashboard/settings/salary-structure',
   '/dashboard/performance/appraisals',
   '/dashboard/performance/increments',
   '/dashboard/time/me',
@@ -379,6 +380,7 @@ const SETTINGS_NAV: NavGroup[] = [
       { href: '/dashboard/settings/leave-policies', label: 'Leave Policies', icon: PlaneIcon },
       { href: '/dashboard/settings/departments', label: 'Departments', icon: Users },
       { href: '/dashboard/settings/payroll-config', label: 'Payroll Configuration', icon: Banknote },
+      { href: '/dashboard/settings/salary-structure', label: 'Salary Structure', icon: Banknote },
       // The bank list payroll codes against — was a hardcoded map until now.
       { href: '/dashboard/settings/bank-codes', label: 'Bank Codes', icon: Landmark, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell },
