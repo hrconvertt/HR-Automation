@@ -413,6 +413,7 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                       designation: employee.designation,
                       careerLevel: employee.careerLevel,
                       filerStatus: employee.filerStatus,
+                      disbursementMethod: employee.disbursementMethod,
                       departmentId: employee.departmentId,
                       reportingManagerId: employee.reportingManagerId,
                       employeeType: employee.employeeType,

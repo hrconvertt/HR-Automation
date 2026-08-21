@@ -208,6 +208,9 @@ model Employee {
   // tax slabs themselves are the same, but this is recorded for compliance and
   // future non-filer surcharges. filer | non_filer | late_filer
   filerStatus         String?     @default("filer")
+  // How this person is paid. Only bank_transfer employees go into the IBFT
+  // bank-upload file; cheque/cash are handled outside the wire batch.
+  disbursementMethod  String?     @default("bank_transfer") // bank_transfer | cheque | cash
   reportingManagerId  String?
   reportingManager    Employee?   @relation("Reports", fields: [reportingManagerId], references: [id])
   directReports       Employee[]  @relation("Reports")

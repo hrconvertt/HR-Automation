@@ -49,6 +49,7 @@ interface EditEmployeeButtonProps {
     designation: string
     careerLevel?: string | null
     filerStatus?: string | null
+    disbursementMethod?: string | null
     departmentId: string | null
     reportingManagerId: string | null
     employeeType: string
@@ -294,6 +295,18 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Salary Paid By</label>
+                  <Select value={form.disbursementMethod ?? 'bank_transfer'} onValueChange={(v) => f('disbursementMethod', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="bank_transfer">Bank transfer</SelectItem>
+                      <SelectItem value="cheque">Cheque</SelectItem>
+                      <SelectItem value="cash">Cash</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400 mt-1">Only bank-transfer staff go into the bank upload file.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>

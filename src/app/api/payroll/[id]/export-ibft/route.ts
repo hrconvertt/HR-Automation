@@ -49,6 +49,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
               ibanAccount: true,
               bankAccount: true,
               bankName: true,
+              disbursementMethod: true,
             },
           },
         },
@@ -73,14 +74,21 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   const monthShort = MONTHS_SHORT[run.month - 1]
   const reference = `Salary ${monthShort} ${run.year}`
 
-  const rows = run.payslips.map((p) => ({
+  // Only bank-transfer employees belong in the wire batch. Cheque/cash are
+  // paid outside this file; null defaults to bank_transfer (everyone existing).
+  const bankRows = run.payslips.filter(
+    (p) => (p.employee.disbursementMethod ?? 'bank_transfer') === 'bank_transfer',
+  )
+
+  const rows = bankRows.map((p) => ({
     'Beneficiary First Name': p.employee.fullName,
     'Beneficiary Account No': p.employee.ibanAccount ?? p.employee.bankAccount ?? '',
     'Bank': p.employee.bankName ?? '',
-    'Transaction Amount': Number(p.netSalary.toFixed(2)),
-    'Reference # 1': reference,
-    'Reference # 9': reference,
-    'Notes': p.adjustmentNote ?? '',
+    // Honour the HR grid's bank-payout override; fall back to net salary.
+    'Transaction Amount': Number((p.transactionAmount ?? p.netSalary).toFixed(2)),
+    'Reference # 1': p.reference ?? reference,
+    'Reference # 9': p.reference ?? reference,
+    'Notes': p.payoutNotes ?? p.adjustmentNote ?? '',
   }))
 
   // Build the workbook
