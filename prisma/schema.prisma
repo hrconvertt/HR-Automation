@@ -276,6 +276,7 @@ model Employee {
   eventsFinanced      CompanyEvent[]  @relation("EventFinanceOwner")
   eventRoles          EventRole[]     @relation("EventRoleHolder")
   payslips            Payslip[]
+  salaryAdvances      SalaryAdvance[]
   performanceReviews  PerformanceReview[]
   goals               Goal[]
   onboarding          OnboardingChecklist?
@@ -2345,6 +2346,28 @@ model TaxSlab {
 
   @@unique([taxYear, incomeFrom])
   @@map("tax_slabs")
+}
+
+// A salary advance or loan given to an employee, recovered over N monthly
+// installments from payroll. remaining tracks what is still owed so payroll can
+// deduct the installment until it reaches zero.
+model SalaryAdvance {
+  id                 String    @id @default(cuid())
+  employeeId         String
+  employee           Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  principal          Float     // total amount advanced
+  installmentAmount  Float     // deducted each pay run
+  remaining          Float     // outstanding balance
+  reason             String?
+  // pending → approved (active) → completed; or rejected/cancelled
+  status             String    @default("pending")
+  approvedById       String?
+  approvedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@index([employeeId, status])
+  @@map("salary_advances")
 }
 
 // ─── Executive analytics inputs ─────────────────────────────────────

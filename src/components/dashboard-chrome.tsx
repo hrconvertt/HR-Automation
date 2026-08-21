@@ -115,6 +115,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/settings/bank-codes',
   '/dashboard/settings/salary-structure',
   '/dashboard/settings/tax-slabs',
+  '/dashboard/payroll/advances',
   '/dashboard/performance/appraisals',
   '/dashboard/performance/increments',
   '/dashboard/time/me',
@@ -160,6 +161,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'Finance & Admin',
       items: [
         { href: '/dashboard/compensation', label: 'Compensation', icon: Award },
+        { href: '/dashboard/payroll/advances', label: 'Loans & Advances', icon: Banknote },
         { href: '/dashboard/compliance', label: 'Compliance', icon: Shield },
         { href: '/dashboard/assets', label: 'Assets', icon: Package },
       ],
