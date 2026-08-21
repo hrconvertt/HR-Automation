@@ -29,7 +29,6 @@ const PERSONAL = [
 
 const HR_ONLY = [
   { href: '/dashboard/settings',                label: 'Organization', icon: Building2,   sub: 'Company name, departments, leave' },
-  { href: '/dashboard/settings/email-templates',label: 'Email Templates', icon: ShieldCheck, sub: 'Subject + body templates' },
 ] as const
 
 export default function SettingsSidebar({ role }: Props) {

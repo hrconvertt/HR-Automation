@@ -381,7 +381,6 @@ const SETTINGS_NAV: NavGroup[] = [
       { href: '/dashboard/settings/payroll-config', label: 'Payroll Configuration', icon: Banknote },
       // The bank list payroll codes against — was a hardcoded map until now.
       { href: '/dashboard/settings/bank-codes', label: 'Bank Codes', icon: Landmark, roles: ['HR_ADMIN', 'EXECUTIVE'] },
-      { href: '/dashboard/settings/email-templates', label: 'Email Templates', icon: MailIcon },
       { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell },
       { href: '/dashboard/settings/roles', label: 'Roles', icon: ShieldCheck },
       { href: '/dashboard/settings/daily-logging', label: 'Daily Logging', icon: ClipboardList },
