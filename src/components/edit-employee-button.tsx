@@ -9,6 +9,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import { Pencil } from 'lucide-react'
+import { LEVELS, LEVEL_LABEL } from '@/lib/promotion'
 
 interface Department { id: string; name: string; code: string }
 interface ManagerOption { id: string; fullName: string; designation: string; employeeCode: string }
@@ -45,6 +46,7 @@ interface EditEmployeeButtonProps {
     cnicExpiresOn?: string | null
     cnicBirthDate?: string | null
     designation: string
+    careerLevel?: string | null
     departmentId: string | null
     reportingManagerId: string | null
     employeeType: string
@@ -266,6 +268,19 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-gray-700 mb-1">Designation *</label>
                   <Input value={form.designation} onChange={(e) => f('designation', e.target.value)} />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Position Level</label>
+                  <Select value={form.careerLevel ?? '__none'} onValueChange={(v) => f('careerLevel', v === '__none' ? '' : v)}>
+                    <SelectTrigger><SelectValue placeholder="Not set" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none">— Not set —</SelectItem>
+                      {LEVELS.map((l) => (
+                        <SelectItem key={l} value={l}>{LEVEL_LABEL(l)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-gray-400 mt-1">Career ladder L1–L5. Also set from the Org Chart.</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
