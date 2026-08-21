@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/dialog'
 import { Pencil } from 'lucide-react'
 import { LEVELS, LEVEL_LABEL } from '@/lib/promotion'
+import { FILER_STATUSES } from '@/lib/income-tax'
 
 interface Department { id: string; name: string; code: string }
 interface ManagerOption { id: string; fullName: string; designation: string; employeeCode: string }
@@ -47,6 +48,7 @@ interface EditEmployeeButtonProps {
     cnicBirthDate?: string | null
     designation: string
     careerLevel?: string | null
+    filerStatus?: string | null
     departmentId: string | null
     reportingManagerId: string | null
     employeeType: string
@@ -281,6 +283,17 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-gray-400 mt-1">Career ladder L1–L5. Also set from the Org Chart.</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">FBR Filer Status</label>
+                  <Select value={form.filerStatus ?? 'filer'} onValueChange={(v) => f('filerStatus', v)}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {FILER_STATUSES.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>

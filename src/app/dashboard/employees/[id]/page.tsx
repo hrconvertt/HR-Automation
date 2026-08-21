@@ -412,6 +412,7 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                       bankAccountName: employee.bankAccountName,
                       designation: employee.designation,
                       careerLevel: employee.careerLevel,
+                      filerStatus: employee.filerStatus,
                       departmentId: employee.departmentId,
                       reportingManagerId: employee.reportingManagerId,
                       employeeType: employee.employeeType,

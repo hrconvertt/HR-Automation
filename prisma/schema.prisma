@@ -204,6 +204,10 @@ model Employee {
   // Level reads this. Kept on the employee (not only via the Position record)
   // so it can be assigned to anyone directly from the chart.
   careerLevel         String?     // L1 | L2 | L3 | L4 | L5
+  // FBR filer status — affects withholding on some heads; the salaried income
+  // tax slabs themselves are the same, but this is recorded for compliance and
+  // future non-filer surcharges. filer | non_filer | late_filer
+  filerStatus         String?     @default("filer")
   reportingManagerId  String?
   reportingManager    Employee?   @relation("Reports", fields: [reportingManagerId], references: [id])
   directReports       Employee[]  @relation("Reports")
@@ -2322,6 +2326,25 @@ model SalaryComponent {
   updatedAt       DateTime @updatedAt
 
   @@map("salary_components")
+}
+
+// FBR salaried income-tax slabs, one row per bracket per tax year. Progressive:
+// tax = fixedAmount + ratePercent% of (annual taxable income − incomeFrom).
+// incomeTo null means the top, open-ended bracket. Editable because the Finance
+// Act revises them yearly — never hardcode the rates.
+model TaxSlab {
+  id           String   @id @default(cuid())
+  taxYear      String   // e.g. "2025-26"
+  incomeFrom   Float    // annual taxable income at which this bracket starts (PKR)
+  incomeTo     Float?   // upper bound; null = "and above"
+  ratePercent  Float    // marginal rate on income above incomeFrom
+  fixedAmount  Float    @default(0) // tax carried from all lower brackets
+  orderIndex   Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([taxYear, incomeFrom])
+  @@map("tax_slabs")
 }
 
 // ─── Executive analytics inputs ─────────────────────────────────────
