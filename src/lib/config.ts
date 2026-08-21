@@ -33,6 +33,15 @@ export interface PayrollConfig {
   pfEmployeeRate: number         // fraction of Basic, default 0.0833 (one-twelfth)
   pfEmployerRate: number         // fraction of Basic, default 0.0833
   pfVestingMonths: number        // employer share forfeited if the employee leaves before this, default 24
+  // ── Provincial Social Security ──
+  // Each province runs its own institution (PESSI/SESSI/KPESSI/BESSI). Employer
+  // pays the larger share; contribution is on a capped "secured" wage, not full
+  // salary, and only for workers earning at or below the wage ceiling.
+  socialSecurityEnabled: boolean
+  socialSecurityInstitution: string // PESSI | SESSI | KPESSI | BESSI | ICT-ESSI
+  ssEmployeeRate: number         // fraction of secured wage, default 0.01
+  ssEmployerRate: number         // fraction of secured wage, default 0.06
+  ssWageCeiling: number          // PKR/month — only employees at/below this are covered, default 25000
   taxEnabled: boolean
   workingDays: string[]
   // ── Payroll calendar (day-of-month) ──
@@ -61,6 +70,11 @@ const DEFAULTS: PayrollConfig = {
   pfEmployeeRate: 0.0833,
   pfEmployerRate: 0.0833,
   pfVestingMonths: 24,
+  socialSecurityEnabled: false,
+  socialSecurityInstitution: 'PESSI',
+  ssEmployeeRate: 0.01,
+  ssEmployerRate: 0.06,
+  ssWageCeiling: 25000,
   taxEnabled: false,
   workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
   payrollCutoffDay: 25,
@@ -92,6 +106,11 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
           'pfEmployeeRate',
           'pfEmployerRate',
           'pfVestingMonths',
+          'socialSecurityEnabled',
+          'socialSecurityInstitution',
+          'ssEmployeeRate',
+          'ssEmployerRate',
+          'ssWageCeiling',
           'taxEnabled',
           'workingDays',
           'payrollCutoffDay',
@@ -124,6 +143,11 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
     pfEmployeeRate: map.pfEmployeeRate ? Number(map.pfEmployeeRate) : DEFAULTS.pfEmployeeRate,
     pfEmployerRate: map.pfEmployerRate ? Number(map.pfEmployerRate) : DEFAULTS.pfEmployerRate,
     pfVestingMonths: map.pfVestingMonths ? Number(map.pfVestingMonths) : DEFAULTS.pfVestingMonths,
+    socialSecurityEnabled: map.socialSecurityEnabled ? map.socialSecurityEnabled === 'true' : DEFAULTS.socialSecurityEnabled,
+    socialSecurityInstitution: map.socialSecurityInstitution || DEFAULTS.socialSecurityInstitution,
+    ssEmployeeRate: map.ssEmployeeRate ? Number(map.ssEmployeeRate) : DEFAULTS.ssEmployeeRate,
+    ssEmployerRate: map.ssEmployerRate ? Number(map.ssEmployerRate) : DEFAULTS.ssEmployerRate,
+    ssWageCeiling: map.ssWageCeiling ? Number(map.ssWageCeiling) : DEFAULTS.ssWageCeiling,
     taxEnabled: map.taxEnabled ? map.taxEnabled === 'true' : DEFAULTS.taxEnabled,
     workingDays: map.workingDays ? JSON.parse(map.workingDays) : DEFAULTS.workingDays,
     payrollCutoffDay: map.payrollCutoffDay ? Number(map.payrollCutoffDay) : DEFAULTS.payrollCutoffDay,

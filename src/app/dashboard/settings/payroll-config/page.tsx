@@ -22,6 +22,12 @@ export default function PayrollConfigSettingsPage() {
   const [pfEmployeeRate, setPfEmployeeRate] = useState(8.33) // shown as %
   const [pfEmployerRate, setPfEmployerRate] = useState(8.33) // shown as %
   const [pfVestingMonths, setPfVestingMonths] = useState(24)
+  // Provincial social security
+  const [ssEnabled, setSsEnabled] = useState(false)
+  const [ssInstitution, setSsInstitution] = useState('PESSI')
+  const [ssEmployeeRate, setSsEmployeeRate] = useState(1)  // shown as %
+  const [ssEmployerRate, setSsEmployerRate] = useState(6)  // shown as %
+  const [ssWageCeiling, setSsWageCeiling] = useState(25000)
   const [taxEnabled, setTaxEnabled] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -41,6 +47,11 @@ export default function PayrollConfigSettingsPage() {
       if (d.config?.pfEmployeeRate) setPfEmployeeRate(Number(d.config.pfEmployeeRate) * 100)
       if (d.config?.pfEmployerRate) setPfEmployerRate(Number(d.config.pfEmployerRate) * 100)
       if (d.config?.pfVestingMonths) setPfVestingMonths(Number(d.config.pfVestingMonths))
+      if (d.config?.socialSecurityEnabled !== undefined) setSsEnabled(d.config.socialSecurityEnabled === 'true')
+      if (d.config?.socialSecurityInstitution) setSsInstitution(d.config.socialSecurityInstitution)
+      if (d.config?.ssEmployeeRate) setSsEmployeeRate(Number(d.config.ssEmployeeRate) * 100)
+      if (d.config?.ssEmployerRate) setSsEmployerRate(Number(d.config.ssEmployerRate) * 100)
+      if (d.config?.ssWageCeiling) setSsWageCeiling(Number(d.config.ssWageCeiling))
       if (d.config?.eobiEnabled !== undefined) setEobiEnabled(d.config.eobiEnabled === 'true')
       if (d.config?.taxEnabled !== undefined) setTaxEnabled(d.config.taxEnabled === 'true')
     }).catch(() => {})
@@ -63,6 +74,11 @@ export default function PayrollConfigSettingsPage() {
         pfEmployeeRate: pfEmployeeRate / 100,
         pfEmployerRate: pfEmployerRate / 100,
         pfVestingMonths,
+        socialSecurityEnabled: ssEnabled,
+        socialSecurityInstitution: ssInstitution,
+        ssEmployeeRate: ssEmployeeRate / 100,
+        ssEmployerRate: ssEmployerRate / 100,
+        ssWageCeiling,
         taxEnabled,
       }),
     })
@@ -202,6 +218,47 @@ export default function PayrollConfigSettingsPage() {
           {endOfServiceScheme === 'none' && (
             <p className="text-xs text-slate-400">No end-of-service benefit is configured.</p>
           )}
+        </div>
+
+        {/* Provincial social security — PESSI/SESSI/etc. Employer-heavy split. */}
+        <div className={`rounded-lg border p-4 ${ssEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
+          <Toggle label="Provincial Social Security"
+            sub={ssEnabled ? `Active — ${ssInstitution} contributions on the secured wage` : 'Disabled — no contribution'}
+            checked={ssEnabled} onChange={setSsEnabled} />
+          <div className={`space-y-4 mt-4 ${ssEnabled ? '' : 'opacity-50 pointer-events-none'}`}>
+            <Field label="Institution" hint="Provincial body that collects the contribution">
+              <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                value={ssInstitution} onChange={(e) => setSsInstitution(e.target.value)}>
+                {['PESSI', 'SESSI', 'KPESSI', 'BESSI', 'ICT-ESSI'].map((i) => (
+                  <option key={i} value={i}>{i}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Wage Ceiling (PKR)" hint="Only employees earning at or below this are covered; contribution is calculated on it">
+              <Input type="number" min={0} step={1000}
+                value={ssWageCeiling} onChange={(e) => setSsWageCeiling(Number(e.target.value))} />
+            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Employee Rate (% of secured wage)">
+                <Input type="number" min={0} max={20} step={0.1}
+                  value={ssEmployeeRate} onChange={(e) => setSsEmployeeRate(Number(e.target.value))} />
+              </Field>
+              <Field label="Employer Rate (% of secured wage)">
+                <Input type="number" min={0} max={20} step={0.1}
+                  value={ssEmployerRate} onChange={(e) => setSsEmployerRate(Number(e.target.value))} />
+              </Field>
+            </div>
+            <div className="rounded-md bg-white border border-slate-200 p-3 text-sm text-slate-700 grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">Employee / month</p>
+                <p className="font-semibold tabular-nums">PKR {Math.round(ssWageCeiling * (ssEmployeeRate / 100)).toLocaleString('en-PK')}</p>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">Employer / month</p>
+                <p className="font-semibold tabular-nums">PKR {Math.round(ssWageCeiling * (ssEmployerRate / 100)).toLocaleString('en-PK')}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className={`rounded-lg border p-4 ${taxEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
