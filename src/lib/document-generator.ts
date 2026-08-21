@@ -327,8 +327,10 @@ function wrap(
     document.body.classList.toggle('editing', editing);
     document.getElementById('editBtn').textContent = editing ? 'Done editing' : 'Edit';
     document.getElementById('hint').textContent = editing
-      ? 'Editing — click into any text and type. Pressing Done saves it.'
+      ? 'Editing — change wording, or click a signature to remove it and sign again.'
       : 'Click Edit to change any wording before printing.';
+    // Entering edit mode re-offers "Click to sign" on any emptied slot.
+    if (typeof esignRefresh === 'function') esignRefresh();
     if (editing) { doc.focus(); return; }
     // Leaving edit mode is the save. Asking for a second, separate click was
     // how every amendment got lost — the tab gets closed after printing.
@@ -373,11 +375,37 @@ function wrap(
   // finger all draw through pointer events, so there is one code path.
   var esignTarget = null, esignDrawing = false, esignDirty = false;
 
+  // Return a slot to its unsigned state — drops any signature and shows the
+  // faint "Click to sign" prompt again.
+  function esignReset(slot) {
+    slot.classList.remove('signed');
+    slot.innerHTML = '<span class="esign-hint">Click to sign</span>';
+  }
+  // Normalise every slot: signed if it holds an image, otherwise show the
+  // prompt. Called whenever we enter edit mode so a signature the user deleted
+  // by hand (e.g. Backspace) offers "Click to sign" again.
+  function esignRefresh() {
+    var slots = document.querySelectorAll('.esign-slot');
+    for (var i = 0; i < slots.length; i++) {
+      if (slots[i].querySelector('img')) { slots[i].classList.add('signed'); }
+      else if (!slots[i].querySelector('.esign-hint')) { esignReset(slots[i]); }
+      else { slots[i].classList.remove('signed'); }
+    }
+  }
+
   function esignSetup() {
     var slots = document.querySelectorAll('.esign-slot');
     for (var i = 0; i < slots.length; i++) {
       slots[i].addEventListener('click', function () {
-        if (this.classList.contains('signed')) return;
+        // A placed signature is locked while just viewing. Click Edit first;
+        // then clicking the signature removes it and restores "Click to sign",
+        // so it can be signed again.
+        if (this.querySelector('img')) {
+          if (!editing) return;
+          esignReset(this);
+          if (typeof saveDraft === 'function' && SAVE) saveDraft();
+          return;
+        }
         esignTarget = this;
         var who = this.getAttribute('data-esign') || 'here';
         document.getElementById('esignWho').textContent =
