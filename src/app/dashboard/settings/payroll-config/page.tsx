@@ -28,6 +28,11 @@ export default function PayrollConfigSettingsPage() {
   const [ssEmployeeRate, setSsEmployeeRate] = useState(1)  // shown as %
   const [ssEmployerRate, setSsEmployerRate] = useState(6)  // shown as %
   const [ssWageCeiling, setSsWageCeiling] = useState(25000)
+  // Pay cycle
+  const [payFrequency, setPayFrequency] = useState<'monthly' | 'bi_weekly' | 'weekly'>('monthly')
+  const [payrollCutoffDay, setPayrollCutoffDay] = useState(25)
+  const [payrollReviewDays, setPayrollReviewDays] = useState(2)
+  const [payrollDisburseDay, setPayrollDisburseDay] = useState(28)
   const [taxEnabled, setTaxEnabled] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -53,6 +58,10 @@ export default function PayrollConfigSettingsPage() {
       if (d.config?.ssEmployerRate) setSsEmployerRate(Number(d.config.ssEmployerRate) * 100)
       if (d.config?.ssWageCeiling) setSsWageCeiling(Number(d.config.ssWageCeiling))
       if (d.config?.eobiEnabled !== undefined) setEobiEnabled(d.config.eobiEnabled === 'true')
+      if (d.config?.payFrequency) setPayFrequency(d.config.payFrequency)
+      if (d.config?.payrollCutoffDay) setPayrollCutoffDay(Number(d.config.payrollCutoffDay))
+      if (d.config?.payrollReviewDays) setPayrollReviewDays(Number(d.config.payrollReviewDays))
+      if (d.config?.payrollDisburseDay) setPayrollDisburseDay(Number(d.config.payrollDisburseDay))
       if (d.config?.taxEnabled !== undefined) setTaxEnabled(d.config.taxEnabled === 'true')
     }).catch(() => {})
   }, [])
@@ -79,6 +88,7 @@ export default function PayrollConfigSettingsPage() {
         ssEmployeeRate: ssEmployeeRate / 100,
         ssEmployerRate: ssEmployerRate / 100,
         ssWageCeiling,
+        payFrequency, payrollCutoffDay, payrollReviewDays, payrollDisburseDay,
         taxEnabled,
       }),
     })
@@ -109,6 +119,36 @@ export default function PayrollConfigSettingsPage() {
               value={lateThresholdMinute} onChange={(e) => setLateThresholdMinute(Number(e.target.value))} />
           </div>
         </Field>
+
+        {/* Pay cycle — frequency and the month's processing calendar. */}
+        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
+          <p className="text-sm font-semibold text-slate-800">Pay Cycle & Processing Calendar</p>
+          <Field label="Pay frequency">
+            <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+              value={payFrequency} onChange={(e) => setPayFrequency(e.target.value as typeof payFrequency)}>
+              <option value="monthly">Monthly</option>
+              <option value="bi_weekly">Bi-weekly (every 2 weeks)</option>
+              <option value="weekly">Weekly</option>
+            </select>
+          </Field>
+          <div className="grid grid-cols-3 gap-4">
+            <Field label="Cutoff day" hint="Inputs locked">
+              <Input type="number" min={1} max={31} value={payrollCutoffDay}
+                onChange={(e) => setPayrollCutoffDay(Number(e.target.value))} />
+            </Field>
+            <Field label="Review window (days)" hint="CEO/HR approval">
+              <Input type="number" min={0} max={15} value={payrollReviewDays}
+                onChange={(e) => setPayrollReviewDays(Number(e.target.value))} />
+            </Field>
+            <Field label="Disburse day" hint="Salaries paid">
+              <Input type="number" min={1} max={31} value={payrollDisburseDay}
+                onChange={(e) => setPayrollDisburseDay(Number(e.target.value))} />
+            </Field>
+          </div>
+          <p className="text-[11px] text-slate-400">
+            Each month: inputs finalise on the {ordinal(payrollCutoffDay)}, {payrollReviewDays} day(s) for review, salaries hit accounts on the {ordinal(payrollDisburseDay)}.
+          </p>
+        </div>
 
         {/* Province — minimum wage and social-security bodies vary by it. */}
         <Field label="Province / Branch location" hint="EOBI wage base and social security differ by province">
@@ -271,6 +311,12 @@ export default function PayrollConfigSettingsPage() {
       </CardContent>
     </Card>
   )
+}
+
+function ordinal(n: number): string {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return n + (s[(v - 20) % 10] || s[v] || s[0])
 }
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {

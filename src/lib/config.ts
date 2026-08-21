@@ -44,6 +44,8 @@ export interface PayrollConfig {
   ssWageCeiling: number          // PKR/month — only employees at/below this are covered, default 25000
   taxEnabled: boolean
   workingDays: string[]
+  // ── Pay cycle ──
+  payFrequency: 'monthly' | 'bi_weekly' | 'weekly' // default monthly
   // ── Payroll calendar (day-of-month) ──
   payrollCutoffDay: number       // default 25 — last day to finalise inputs
   payrollReviewDays: number      // default 2  — CEO review window (days)
@@ -77,6 +79,7 @@ const DEFAULTS: PayrollConfig = {
   ssWageCeiling: 25000,
   taxEnabled: false,
   workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+  payFrequency: 'monthly',
   payrollCutoffDay: 25,
   payrollReviewDays: 2,
   payrollDisburseDay: 28,
@@ -113,6 +116,7 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
           'ssWageCeiling',
           'taxEnabled',
           'workingDays',
+          'payFrequency',
           'payrollCutoffDay',
           'payrollReviewDays',
           'payrollDisburseDay',
@@ -150,6 +154,7 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
     ssWageCeiling: map.ssWageCeiling ? Number(map.ssWageCeiling) : DEFAULTS.ssWageCeiling,
     taxEnabled: map.taxEnabled ? map.taxEnabled === 'true' : DEFAULTS.taxEnabled,
     workingDays: map.workingDays ? JSON.parse(map.workingDays) : DEFAULTS.workingDays,
+    payFrequency: (map.payFrequency as PayrollConfig['payFrequency']) || DEFAULTS.payFrequency,
     payrollCutoffDay: map.payrollCutoffDay ? Number(map.payrollCutoffDay) : DEFAULTS.payrollCutoffDay,
     payrollReviewDays: map.payrollReviewDays ? Number(map.payrollReviewDays) : DEFAULTS.payrollReviewDays,
     payrollDisburseDay: map.payrollDisburseDay ? Number(map.payrollDisburseDay) : DEFAULTS.payrollDisburseDay,

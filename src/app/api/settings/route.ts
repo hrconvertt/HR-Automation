@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     pfEmployeeRate, pfEmployerRate, pfVestingMonths,
     socialSecurityEnabled, socialSecurityInstitution,
     ssEmployeeRate, ssEmployerRate, ssWageCeiling,
+    payFrequency, payrollCutoffDay, payrollReviewDays, payrollDisburseDay,
     taxEnabled,
   } = body
 
@@ -109,6 +110,10 @@ export async function POST(request: NextRequest) {
   if (ssEmployeeRate !== undefined) payrollUpdates.ssEmployeeRate = ssEmployeeRate
   if (ssEmployerRate !== undefined) payrollUpdates.ssEmployerRate = ssEmployerRate
   if (ssWageCeiling !== undefined) payrollUpdates.ssWageCeiling = ssWageCeiling
+  if (payFrequency !== undefined) payrollUpdates.payFrequency = payFrequency
+  if (payrollCutoffDay !== undefined) payrollUpdates.payrollCutoffDay = payrollCutoffDay
+  if (payrollReviewDays !== undefined) payrollUpdates.payrollReviewDays = payrollReviewDays
+  if (payrollDisburseDay !== undefined) payrollUpdates.payrollDisburseDay = payrollDisburseDay
   // The monthly EOBI cap is no longer typed by hand — it is the employee's
   // contribution: wage base × employee rate. Recompute it whenever either
   // input changes, so the value downstream payroll reads stays correct.
