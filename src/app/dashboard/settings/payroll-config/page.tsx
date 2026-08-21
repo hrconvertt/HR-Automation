@@ -11,8 +11,10 @@ export default function PayrollConfigSettingsPage() {
   const [lateThresholdHour, setLateThresholdHour] = useState(10)
   const [lateThresholdMinute, setLateThresholdMinute] = useState(15)
   const [eobiEnabled, setEobiEnabled] = useState(false)
-  const [eobiEmployeeRate, setEobiEmployeeRate] = useState(1)
-  const [eobiCap, setEobiCap] = useState(470)
+  const [eobiEmployeeRate, setEobiEmployeeRate] = useState(1)   // shown as %
+  const [eobiEmployerRate, setEobiEmployerRate] = useState(5)   // shown as %
+  const [eobiWageBase, setEobiWageBase] = useState(40000)
+  const [province, setProvince] = useState('Punjab')
   const [taxEnabled, setTaxEnabled] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -23,18 +25,27 @@ export default function PayrollConfigSettingsPage() {
       if (d.config?.lateThresholdHour) setLateThresholdHour(Number(d.config.lateThresholdHour))
       if (d.config?.lateThresholdMinute) setLateThresholdMinute(Number(d.config.lateThresholdMinute))
       if (d.config?.eobiEmployeeRate) setEobiEmployeeRate(Number(d.config.eobiEmployeeRate) * 100)
-      if (d.config?.eobiCap) setEobiCap(Number(d.config.eobiCap))
+      if (d.config?.eobiEmployerRate) setEobiEmployerRate(Number(d.config.eobiEmployerRate) * 100)
+      if (d.config?.eobiWageBase) setEobiWageBase(Number(d.config.eobiWageBase))
+      if (d.config?.province) setProvince(d.config.province)
       if (d.config?.eobiEnabled !== undefined) setEobiEnabled(d.config.eobiEnabled === 'true')
       if (d.config?.taxEnabled !== undefined) setTaxEnabled(d.config.taxEnabled === 'true')
     }).catch(() => {})
   }, [])
+
+  // The cap is no longer typed — it is the contribution: base × rate.
+  const employeeContribution = Math.round(eobiWageBase * (eobiEmployeeRate / 100))
+  const employerContribution = Math.round(eobiWageBase * (eobiEmployerRate / 100))
 
   async function save() {
     await fetch('/api/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         standardHoursPerDay, overtimeMultiplier, lateThresholdHour, lateThresholdMinute,
-        eobiEnabled, eobiEmployeeRate: eobiEmployeeRate / 100, eobiCap, taxEnabled,
+        eobiEnabled,
+        eobiEmployeeRate: eobiEmployeeRate / 100,
+        eobiEmployerRate: eobiEmployerRate / 100,
+        eobiWageBase, province, taxEnabled,
       }),
     })
     setSaved(true); setTimeout(() => setSaved(false), 2500)
@@ -65,19 +76,50 @@ export default function PayrollConfigSettingsPage() {
           </div>
         </Field>
 
+        {/* Province — minimum wage and social-security bodies vary by it. */}
+        <Field label="Province / Branch location" hint="EOBI wage base and social security differ by province">
+          <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+            value={province} onChange={(e) => setProvince(e.target.value)}>
+            {['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
+              'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Kashmir'].map((p) => (
+              <option key={p} value={p}>{p}</option>
+            ))}
+          </select>
+        </Field>
+
         <div className={`rounded-lg border p-4 ${eobiEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
-          <Toggle label="EOBI (Employee Old-Age Benefits)"
-            sub={eobiEnabled ? 'Active - deducted from each payslip' : 'Disabled - no deduction'}
+          <Toggle label="EOBI (Employees' Old-Age Benefits)"
+            sub={eobiEnabled ? 'Active - contributions on the statutory wage base' : 'Disabled - no contribution'}
             checked={eobiEnabled} onChange={setEobiEnabled} />
-          <div className={`grid grid-cols-2 gap-4 mt-4 ${eobiEnabled ? '' : 'opacity-50 pointer-events-none'}`}>
-            <Field label="Employee Rate (% of basic)">
-              <Input type="number" min={0} max={10} step={0.1}
-                value={eobiEmployeeRate} onChange={(e) => setEobiEmployeeRate(Number(e.target.value))} />
+          <div className={`space-y-4 mt-4 ${eobiEnabled ? '' : 'opacity-50 pointer-events-none'}`}>
+            <Field label="Wage Base (PKR)" hint="Provincial minimum wage EOBI is calculated on — not the salary. Editable; revised over time.">
+              <Input type="number" min={0} step={1000}
+                value={eobiWageBase} onChange={(e) => setEobiWageBase(Number(e.target.value))} />
             </Field>
-            <Field label="Monthly Cap (PKR)">
-              <Input type="number" min={0}
-                value={eobiCap} onChange={(e) => setEobiCap(Number(e.target.value))} />
-            </Field>
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Employee Rate (% of wage base)">
+                <Input type="number" min={0} max={20} step={0.1}
+                  value={eobiEmployeeRate} onChange={(e) => setEobiEmployeeRate(Number(e.target.value))} />
+              </Field>
+              <Field label="Employer Rate (% of wage base)">
+                <Input type="number" min={0} max={20} step={0.1}
+                  value={eobiEmployerRate} onChange={(e) => setEobiEmployerRate(Number(e.target.value))} />
+              </Field>
+            </div>
+            {/* Computed, not typed — the cap is the contribution. */}
+            <div className="rounded-md bg-white border border-slate-200 p-3 text-sm text-slate-700 grid grid-cols-2 gap-2">
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">Employee contribution / month</p>
+                <p className="font-semibold tabular-nums">PKR {employeeContribution.toLocaleString('en-PK')}</p>
+              </div>
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">Employer contribution / month</p>
+                <p className="font-semibold tabular-nums">PKR {employerContribution.toLocaleString('en-PK')}</p>
+              </div>
+              <p className="col-span-2 text-[11px] text-slate-400">
+                Computed as wage base × rate — no manual cap to keep in step.
+              </p>
+            </div>
           </div>
         </div>
 

@@ -11,8 +11,15 @@ export interface PayrollConfig {
   lateThresholdMinute: number    // default 15
   endOfDayHour: number           // default 18 — past this, no-show → Absent
   eobiEnabled: boolean
-  eobiEmployeeRate: number
-  eobiCap: number
+  eobiEmployeeRate: number       // fraction, e.g. 0.01 = 1% of the wage base
+  eobiEmployerRate: number       // fraction, e.g. 0.05 = 5% of the wage base
+  // The statutory wage base EOBI is calculated on — the provincial minimum
+  // wage, not the employee's actual salary. Editable because it is revised, and
+  // it differs by province (Balochistan currently differs from the others).
+  eobiWageBase: number           // PKR, default 40000
+  eobiCap: number                // computed = wageBase × employeeRate; kept for downstream calc
+  // Org/branch province. Minimum wage and social-security bodies vary by it.
+  province: string               // Punjab | Sindh | KPK | Balochistan | ICT | GB | AJK
   taxEnabled: boolean
   workingDays: string[]
   // ── Payroll calendar (day-of-month) ──
@@ -31,7 +38,10 @@ const DEFAULTS: PayrollConfig = {
   endOfDayHour: 18,
   eobiEnabled: false,
   eobiEmployeeRate: 0.01,
-  eobiCap: 470,
+  eobiEmployerRate: 0.05,
+  eobiWageBase: 40000,
+  eobiCap: 400,          // 40000 × 1%
+  province: 'Punjab',
   taxEnabled: false,
   workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
   payrollCutoffDay: 25,
@@ -53,7 +63,10 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
           'endOfDayHour',
           'eobiEnabled',
           'eobiEmployeeRate',
+          'eobiEmployerRate',
+          'eobiWageBase',
           'eobiCap',
+          'province',
           'taxEnabled',
           'workingDays',
           'payrollCutoffDay',
@@ -76,7 +89,10 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
     endOfDayHour: map.endOfDayHour ? Number(map.endOfDayHour) : DEFAULTS.endOfDayHour,
     eobiEnabled: map.eobiEnabled ? map.eobiEnabled === 'true' : DEFAULTS.eobiEnabled,
     eobiEmployeeRate: map.eobiEmployeeRate ? Number(map.eobiEmployeeRate) : DEFAULTS.eobiEmployeeRate,
+    eobiEmployerRate: map.eobiEmployerRate ? Number(map.eobiEmployerRate) : DEFAULTS.eobiEmployerRate,
+    eobiWageBase: map.eobiWageBase ? Number(map.eobiWageBase) : DEFAULTS.eobiWageBase,
     eobiCap: map.eobiCap ? Number(map.eobiCap) : DEFAULTS.eobiCap,
+    province: map.province ? map.province : DEFAULTS.province,
     taxEnabled: map.taxEnabled ? map.taxEnabled === 'true' : DEFAULTS.taxEnabled,
     workingDays: map.workingDays ? JSON.parse(map.workingDays) : DEFAULTS.workingDays,
     payrollCutoffDay: map.payrollCutoffDay ? Number(map.payrollCutoffDay) : DEFAULTS.payrollCutoffDay,

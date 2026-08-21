@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     // Payroll calculation settings
     standardHoursPerDay, overtimeMultiplier,
     lateThresholdHour, lateThresholdMinute,
-    eobiEnabled, eobiEmployeeRate, eobiCap,
+    eobiEnabled, eobiEmployeeRate, eobiEmployerRate, eobiWageBase, province,
     taxEnabled,
   } = body
 
@@ -91,7 +91,19 @@ export async function POST(request: NextRequest) {
   if (lateThresholdMinute !== undefined) payrollUpdates.lateThresholdMinute = lateThresholdMinute
   if (eobiEnabled !== undefined) payrollUpdates.eobiEnabled = eobiEnabled
   if (eobiEmployeeRate !== undefined) payrollUpdates.eobiEmployeeRate = eobiEmployeeRate
-  if (eobiCap !== undefined) payrollUpdates.eobiCap = eobiCap
+  if (eobiEmployerRate !== undefined) payrollUpdates.eobiEmployerRate = eobiEmployerRate
+  if (eobiWageBase !== undefined) payrollUpdates.eobiWageBase = eobiWageBase
+  if (province !== undefined) payrollUpdates.province = province
+  // The monthly EOBI cap is no longer typed by hand — it is the employee's
+  // contribution: wage base × employee rate. Recompute it whenever either
+  // input changes, so the value downstream payroll reads stays correct.
+  if (eobiWageBase !== undefined || eobiEmployeeRate !== undefined) {
+    const base = Number(eobiWageBase)
+    const rate = Number(eobiEmployeeRate)
+    if (Number.isFinite(base) && Number.isFinite(rate)) {
+      payrollUpdates.eobiCap = Math.round(base * rate)
+    }
+  }
   if (taxEnabled !== undefined) payrollUpdates.taxEnabled = taxEnabled
 
   if (Object.keys(payrollUpdates).length > 0) {
