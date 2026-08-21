@@ -11,6 +11,7 @@ import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { CultureHeader } from '../_components/culture-header'
+import { CultureTabs } from '../_components/culture-tabs'
 import { PromotionEvents } from './_components/promotion-events'
 
 export default async function PromotionEventsPage() {
@@ -56,6 +57,7 @@ export default async function PromotionEventsPage() {
   return (
     <div className="space-y-5">
       <CultureHeader subtitle="Announcement, certificate, cake, kudos — the whole small celebration." />
+      <CultureTabs />
       <PromotionEvents
         isHR={isHR}
         rows={promotions.map((p) => ({

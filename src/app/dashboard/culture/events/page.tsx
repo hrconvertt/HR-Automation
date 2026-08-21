@@ -12,6 +12,7 @@ import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { CultureHeader } from '../_components/culture-header'
+import { CultureTabs } from '../_components/culture-tabs'
 import { EventCatalogue } from './_components/event-catalogue'
 
 export default async function CultureEventsPage() {
@@ -48,6 +49,7 @@ export default async function CultureEventsPage() {
   return (
     <div className="space-y-5">
       <CultureHeader subtitle="Company events, retreats and town halls." />
+      <CultureTabs />
       <EventCatalogue events={rows} isHR={isHR} />
     </div>
   )

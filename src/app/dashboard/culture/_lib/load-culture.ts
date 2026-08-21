@@ -60,12 +60,18 @@ export async function loadCultureContext() {
     }),
   ])
 
-  const birthdays = employees
+  // Everyone with a birthday on file, in calendar order — the full register.
+  const allBirthdays = employees
     .filter((e) => e.dob)
     .map((e) => {
       const d = new Date(e.dob!)
       return { ...e, dobMonth: d.getMonth(), dobDay: d.getDate() }
     })
+    .sort((a, b) => a.dobMonth - b.dobMonth || a.dobDay - b.dobDay)
+
+  // The subset falling this month or next, ordered with this month first —
+  // the "coming up" list.
+  const birthdays = allBirthdays
     .filter((e) => e.dobMonth === thisMonth || e.dobMonth === nextMonth)
     .sort((a, b) => {
       const sa = a.dobMonth === thisMonth ? 0 : 1
@@ -99,6 +105,7 @@ export async function loadCultureContext() {
     pastEvents,
     kudos,
     birthdays,
+    allBirthdays,
     anniversaries,
     thisYear,
   }

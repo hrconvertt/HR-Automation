@@ -467,9 +467,9 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       label: 'People & Culture',
       items: [
         { href: '/dashboard/culture/overview', label: 'Overview', icon: BarChart3 },
-        { href: '/dashboard/culture/events', label: 'Events', icon: CalendarDays },
-        { href: '/dashboard/culture/promotions', label: 'Promotions', icon: TrendingUp },
-        { href: '/dashboard/culture/promotion-events', label: 'Promotion Events', icon: PartyPopper },
+        // Events, Promotions and Promotion Events are one section now, reached
+        // through the tab bar on the page — a single sidebar entry.
+        { href: '/dashboard/culture/events', label: 'Events & Promotions', icon: CalendarDays },
         { href: '/dashboard/culture/recognition', label: 'Recognition', icon: Heart },
         { href: '/dashboard/culture/birthdays', label: 'Birthdays', icon: Sparkles },
         { href: '/dashboard/culture/anniversaries', label: 'Anniversaries', icon: Award },

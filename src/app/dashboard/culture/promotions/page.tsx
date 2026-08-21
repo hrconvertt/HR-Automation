@@ -12,6 +12,7 @@ import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { CultureHeader } from '../_components/culture-header'
+import { CultureTabs } from '../_components/culture-tabs'
 import { PromotionsList } from './_components/promotions-list'
 
 export default async function PromotionsPage() {
@@ -47,6 +48,7 @@ export default async function PromotionsPage() {
   return (
     <div className="space-y-5">
       <CultureHeader subtitle="Promotions — evidence, sponsorship, fairness, then the letter." />
+      <CultureTabs />
       <PromotionsList
         staff={staff}
         rows={promotions.map((p) => ({
