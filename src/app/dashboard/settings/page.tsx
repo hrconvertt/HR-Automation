@@ -122,8 +122,8 @@ export default function SettingsOverviewPage() {
               <Item
                 label="Payroll"
                 value="No tax or EOBI deducted"
-                detail="Convertt pays the stated net figure"
-                href="/dashboard/settings/payroll-config"
+                detail="Configure under Payroll → Configuration"
+                href="/dashboard/payroll/configuration"
               />
             </dl>
           )}

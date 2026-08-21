@@ -382,7 +382,6 @@ const SETTINGS_NAV: NavGroup[] = [
       { href: '/dashboard/settings/holidays', label: 'Holidays & WFH', icon: CalendarDays },
       { href: '/dashboard/settings/leave-policies', label: 'Leave Policies', icon: PlaneIcon },
       { href: '/dashboard/settings/departments', label: 'Departments', icon: Users },
-      { href: '/dashboard/settings/payroll-config', label: 'Payroll Configuration', icon: Banknote },
       { href: '/dashboard/settings/salary-structure', label: 'Salary Structure', icon: Banknote },
       { href: '/dashboard/settings/tax-slabs', label: 'Income Tax Slabs', icon: Banknote },
       // The bank list payroll codes against — was a hardcoded map until now.
@@ -541,6 +540,8 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
           roles: ['HR_ADMIN'],
         },
         { href: '/dashboard/payroll/register', label: 'Slip Register', icon: FolderOpen },
+        { href: '/dashboard/payroll/advances', label: 'Loans & Advances', icon: Banknote, roles: ['HR_ADMIN'] },
+        { href: '/dashboard/payroll/configuration', label: 'Configuration', icon: Settings, roles: ['HR_ADMIN'] },
       ],
     },
   ],

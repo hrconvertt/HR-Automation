@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -113,29 +112,39 @@ export default function PayrollConfigSettingsPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="border-b border-slate-100"><CardTitle>Payroll Configuration</CardTitle></CardHeader>
-      <CardContent className="p-6 space-y-6 max-w-xl">
-        <div className="grid grid-cols-2 gap-4">
-          <Field label="Standard Hours / Day" hint="Used for OT threshold + hourly rate">
-            <Input type="number" min={1} max={24} step={0.5}
-              value={standardHoursPerDay} onChange={(e) => setStandardHoursPerDay(Number(e.target.value))} />
-          </Field>
-          <Field label="Overtime Multiplier" hint="Pakistan Factories Act default: 2x">
-            <Input type="number" min={1} max={5} step={0.5}
-              value={overtimeMultiplier} onChange={(e) => setOvertimeMultiplier(Number(e.target.value))} />
+    <div className="space-y-5 pb-24">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-semibold text-slate-900">Payroll Configuration</h1>
+          <p className="text-sm text-slate-500">Rates, statutory contributions and the pay calendar — every value editable.</p>
+        </div>
+        <Button onClick={save} className="hidden md:inline-flex">{saved ? 'Saved ✓' : 'Save Payroll Settings'}</Button>
+      </div>
+
+      {/* Full-width masonry — sections flow across the whole screen. */}
+      <div className="columns-1 md:columns-2 xl:columns-3 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
+        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
+          <p className="text-sm font-semibold text-slate-800">Working Hours & Attendance</p>
+          <div className="grid grid-cols-2 gap-4">
+            <Field label="Standard Hours / Day" hint="Used for OT threshold + hourly rate">
+              <Input type="number" min={1} max={24} step={0.5}
+                value={standardHoursPerDay} onChange={(e) => setStandardHoursPerDay(Number(e.target.value))} />
+            </Field>
+            <Field label="Overtime Multiplier" hint="Pakistan Factories Act default: 2x">
+              <Input type="number" min={1} max={5} step={0.5}
+                value={overtimeMultiplier} onChange={(e) => setOvertimeMultiplier(Number(e.target.value))} />
+            </Field>
+          </div>
+          <Field label="Late Arrival Threshold (24h)" hint="Clock-in after this time is marked Late">
+            <div className="flex items-center gap-2">
+              <Input type="number" min={0} max={23} className="w-20"
+                value={lateThresholdHour} onChange={(e) => setLateThresholdHour(Number(e.target.value))} />
+              <span className="text-slate-500">:</span>
+              <Input type="number" min={0} max={59} className="w-20"
+                value={lateThresholdMinute} onChange={(e) => setLateThresholdMinute(Number(e.target.value))} />
+            </div>
           </Field>
         </div>
-
-        <Field label="Late Arrival Threshold (24h)" hint="Clock-in after this time is marked Late">
-          <div className="flex items-center gap-2">
-            <Input type="number" min={0} max={23} className="w-20"
-              value={lateThresholdHour} onChange={(e) => setLateThresholdHour(Number(e.target.value))} />
-            <span className="text-slate-500">:</span>
-            <Input type="number" min={0} max={59} className="w-20"
-              value={lateThresholdMinute} onChange={(e) => setLateThresholdMinute(Number(e.target.value))} />
-          </div>
-        </Field>
 
         {/* Pay cycle — frequency and the month's processing calendar. */}
         <div className="rounded-lg border border-slate-200 p-4 space-y-4">
@@ -168,15 +177,17 @@ export default function PayrollConfigSettingsPage() {
         </div>
 
         {/* Province — minimum wage and social-security bodies vary by it. */}
-        <Field label="Province / Branch location" hint="EOBI wage base and social security differ by province">
-          <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
-            value={province} onChange={(e) => setProvince(e.target.value)}>
-            {['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
-              'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Kashmir'].map((p) => (
-              <option key={p} value={p}>{p}</option>
-            ))}
-          </select>
-        </Field>
+        <div className="rounded-lg border border-slate-200 p-4">
+          <Field label="Province / Branch location" hint="EOBI wage base and social security differ by province">
+            <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+              value={province} onChange={(e) => setProvince(e.target.value)}>
+              {['Punjab', 'Sindh', 'Khyber Pakhtunkhwa', 'Balochistan',
+                'Islamabad Capital Territory', 'Gilgit-Baltistan', 'Azad Kashmir'].map((p) => (
+                <option key={p} value={p}>{p}</option>
+              ))}
+            </select>
+          </Field>
+        </div>
 
         <div className={`rounded-lg border p-4 ${eobiEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
           <Toggle label="EOBI (Employees' Old-Age Benefits)"
@@ -377,11 +388,18 @@ export default function PayrollConfigSettingsPage() {
           <Toggle label="Income Tax Withholding (FBR)"
             sub={taxEnabled ? 'Active - FBR 2025-26 slabs applied' : 'Disabled'}
             checked={taxEnabled} onChange={setTaxEnabled} />
+          <a href="/dashboard/settings/tax-slabs" className="inline-block mt-3 text-xs font-medium text-slate-600 underline hover:text-slate-900">
+            Edit tax slabs →
+          </a>
         </div>
+      </div>
 
+      {/* Sticky save bar — always reachable no matter the column heights. */}
+      <div className="sticky bottom-0 flex items-center justify-end gap-3 bg-white/95 backdrop-blur border border-slate-200 rounded-xl px-4 py-2.5 shadow-sm">
+        {saved && <span className="text-xs text-emerald-600">Saved ✓</span>}
         <Button onClick={save}>{saved ? 'Saved' : 'Save Payroll Settings'}</Button>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 

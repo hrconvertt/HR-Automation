@@ -20,7 +20,6 @@ const SECTIONS = [
   { href: '/dashboard/settings/working-days',    label: 'Working Days & Hours',  icon: Calendar,     sub: 'Schedule + holidays' },
   { href: '/dashboard/settings/leave-policies',  label: 'Leave Policies',        icon: Plane,        sub: 'Days by leave type × tier' },
   { href: '/dashboard/settings/departments',     label: 'Departments',           icon: Users,        sub: 'Org units + heads' },
-  { href: '/dashboard/settings/payroll-config',  label: 'Payroll Configuration', icon: Calculator,   sub: 'EOBI, tax, OT, late rule' },
   { href: '/dashboard/settings/salary-structure', label: 'Salary Structure',      icon: Calculator,   sub: 'Basic % + component library' },
   { href: '/dashboard/settings/tax-slabs',       label: 'Income Tax Slabs',      icon: Calculator,   sub: 'FBR brackets by tax year' },
   { href: '/dashboard/settings/roles',           label: 'Roles',                 icon: ShieldCheck,  sub: 'Access matrix' },
