@@ -15,7 +15,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import SettingsSidebar from '@/components/settings-sidebar'
 import {
   Sun, Moon, Monitor, Volume2, VolumeX, Search, Check, Loader2, AlertTriangle,
 } from 'lucide-react'
@@ -150,9 +149,9 @@ export default function NotificationsSettingsPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
-        <SettingsSidebar role={role} />
-
+      {/* The settings section list already lives in the app sidebar, so this
+          page starts straight at Appearance rather than repeating the menu. */}
+      <div>
         <div className="min-w-0 space-y-5">
           {/* ── Appearance ─────────────────────────────────────── */}
           <Card>
