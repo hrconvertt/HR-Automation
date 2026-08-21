@@ -15,6 +15,13 @@ export default function PayrollConfigSettingsPage() {
   const [eobiEmployerRate, setEobiEmployerRate] = useState(5)   // shown as %
   const [eobiWageBase, setEobiWageBase] = useState(40000)
   const [province, setProvince] = useState('Punjab')
+  // End-of-service benefit — one scheme, not both.
+  const [endOfServiceScheme, setEndOfServiceScheme] = useState<'gratuity' | 'provident_fund' | 'none'>('gratuity')
+  const [gratuityDaysPerYear, setGratuityDaysPerYear] = useState(30)
+  const [gratuityEligibilityMonths, setGratuityEligibilityMonths] = useState(12)
+  const [pfEmployeeRate, setPfEmployeeRate] = useState(8.33) // shown as %
+  const [pfEmployerRate, setPfEmployerRate] = useState(8.33) // shown as %
+  const [pfVestingMonths, setPfVestingMonths] = useState(24)
   const [taxEnabled, setTaxEnabled] = useState(false)
   const [saved, setSaved] = useState(false)
 
@@ -28,6 +35,12 @@ export default function PayrollConfigSettingsPage() {
       if (d.config?.eobiEmployerRate) setEobiEmployerRate(Number(d.config.eobiEmployerRate) * 100)
       if (d.config?.eobiWageBase) setEobiWageBase(Number(d.config.eobiWageBase))
       if (d.config?.province) setProvince(d.config.province)
+      if (d.config?.endOfServiceScheme) setEndOfServiceScheme(d.config.endOfServiceScheme)
+      if (d.config?.gratuityDaysPerYear) setGratuityDaysPerYear(Number(d.config.gratuityDaysPerYear))
+      if (d.config?.gratuityEligibilityMonths) setGratuityEligibilityMonths(Number(d.config.gratuityEligibilityMonths))
+      if (d.config?.pfEmployeeRate) setPfEmployeeRate(Number(d.config.pfEmployeeRate) * 100)
+      if (d.config?.pfEmployerRate) setPfEmployerRate(Number(d.config.pfEmployerRate) * 100)
+      if (d.config?.pfVestingMonths) setPfVestingMonths(Number(d.config.pfVestingMonths))
       if (d.config?.eobiEnabled !== undefined) setEobiEnabled(d.config.eobiEnabled === 'true')
       if (d.config?.taxEnabled !== undefined) setTaxEnabled(d.config.taxEnabled === 'true')
     }).catch(() => {})
@@ -45,7 +58,12 @@ export default function PayrollConfigSettingsPage() {
         eobiEnabled,
         eobiEmployeeRate: eobiEmployeeRate / 100,
         eobiEmployerRate: eobiEmployerRate / 100,
-        eobiWageBase, province, taxEnabled,
+        eobiWageBase, province,
+        endOfServiceScheme, gratuityDaysPerYear, gratuityEligibilityMonths,
+        pfEmployeeRate: pfEmployeeRate / 100,
+        pfEmployerRate: pfEmployerRate / 100,
+        pfVestingMonths,
+        taxEnabled,
       }),
     })
     setSaved(true); setTimeout(() => setSaved(false), 2500)
@@ -121,6 +139,69 @@ export default function PayrollConfigSettingsPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* End-of-service benefit — Gratuity OR Provident Fund, never both. */}
+        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">End-of-Service Benefit</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              A company runs one scheme. Gratuity is the statutory Standing-Orders benefit; a Provident Fund is a contributory alternative.
+            </p>
+          </div>
+          <div className="inline-flex rounded-md border border-slate-300 overflow-hidden">
+            {([
+              ['gratuity', 'Gratuity'],
+              ['provident_fund', 'Provident Fund'],
+              ['none', 'None'],
+            ] as const).map(([val, label]) => (
+              <button key={val} type="button" onClick={() => setEndOfServiceScheme(val)}
+                className={`px-3 py-1.5 text-xs ${endOfServiceScheme === val
+                  ? 'bg-slate-900 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {endOfServiceScheme === 'gratuity' && (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Days' wages per year of service" hint="Standing Orders: 30 days per completed year">
+                <Input type="number" min={0} max={90} step={1}
+                  value={gratuityDaysPerYear} onChange={(e) => setGratuityDaysPerYear(Number(e.target.value))} />
+              </Field>
+              <Field label="Eligibility (months of service)" hint="Minimum service before gratuity accrues">
+                <Input type="number" min={0} max={120} step={1}
+                  value={gratuityEligibilityMonths} onChange={(e) => setGratuityEligibilityMonths(Number(e.target.value))} />
+              </Field>
+              <p className="col-span-2 text-[11px] text-slate-400">
+                Example: {gratuityDaysPerYear} days ÷ 30 = {(gratuityDaysPerYear / 30).toFixed(2)} month(s) of last-drawn Basic for every completed year, once past {gratuityEligibilityMonths} months.
+              </p>
+            </div>
+          )}
+
+          {endOfServiceScheme === 'provident_fund' && (
+            <div className="grid grid-cols-2 gap-4">
+              <Field label="Employee contribution (% of Basic)">
+                <Input type="number" min={0} max={30} step={0.01}
+                  value={pfEmployeeRate} onChange={(e) => setPfEmployeeRate(Number(e.target.value))} />
+              </Field>
+              <Field label="Employer contribution (% of Basic)">
+                <Input type="number" min={0} max={30} step={0.01}
+                  value={pfEmployerRate} onChange={(e) => setPfEmployerRate(Number(e.target.value))} />
+              </Field>
+              <Field label="Vesting period (months)" hint="Employer share forfeited if the employee leaves earlier">
+                <Input type="number" min={0} max={120} step={1}
+                  value={pfVestingMonths} onChange={(e) => setPfVestingMonths(Number(e.target.value))} />
+              </Field>
+              <p className="col-span-2 text-[11px] text-slate-400">
+                Both sides contribute to each month&apos;s fund; the employer&apos;s {pfEmployerRate}% vests to the employee after {pfVestingMonths} months.
+              </p>
+            </div>
+          )}
+
+          {endOfServiceScheme === 'none' && (
+            <p className="text-xs text-slate-400">No end-of-service benefit is configured.</p>
+          )}
         </div>
 
         <div className={`rounded-lg border p-4 ${taxEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>

@@ -20,6 +20,19 @@ export interface PayrollConfig {
   eobiCap: number                // computed = wageBase × employeeRate; kept for downstream calc
   // Org/branch province. Minimum wage and social-security bodies vary by it.
   province: string               // Punjab | Sindh | KPK | Balochistan | ICT | GB | AJK
+  // ── End-of-service benefit ──
+  // An employer runs ONE of these, not both: statutory Gratuity (Standing
+  // Orders) or a Provident Fund. Mutually exclusive by design.
+  endOfServiceScheme: 'gratuity' | 'provident_fund' | 'none'
+  // Gratuity = N days' wages per completed year of service. Standing Orders
+  // set 30; kept editable because some contracts/provinces are more generous.
+  gratuityDaysPerYear: number    // default 30
+  gratuityEligibilityMonths: number // min service before any gratuity accrues, default 12
+  // Provident Fund — employee and employer each contribute a % of Basic, and
+  // the employer's share vests to the employee after a minimum service period.
+  pfEmployeeRate: number         // fraction of Basic, default 0.0833 (one-twelfth)
+  pfEmployerRate: number         // fraction of Basic, default 0.0833
+  pfVestingMonths: number        // employer share forfeited if the employee leaves before this, default 24
   taxEnabled: boolean
   workingDays: string[]
   // ── Payroll calendar (day-of-month) ──
@@ -42,6 +55,12 @@ const DEFAULTS: PayrollConfig = {
   eobiWageBase: 40000,
   eobiCap: 400,          // 40000 × 1%
   province: 'Punjab',
+  endOfServiceScheme: 'gratuity',
+  gratuityDaysPerYear: 30,
+  gratuityEligibilityMonths: 12,
+  pfEmployeeRate: 0.0833,
+  pfEmployerRate: 0.0833,
+  pfVestingMonths: 24,
   taxEnabled: false,
   workingDays: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
   payrollCutoffDay: 25,
@@ -67,6 +86,12 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
           'eobiWageBase',
           'eobiCap',
           'province',
+          'endOfServiceScheme',
+          'gratuityDaysPerYear',
+          'gratuityEligibilityMonths',
+          'pfEmployeeRate',
+          'pfEmployerRate',
+          'pfVestingMonths',
           'taxEnabled',
           'workingDays',
           'payrollCutoffDay',
@@ -93,6 +118,12 @@ export async function getPayrollConfig(): Promise<PayrollConfig> {
     eobiWageBase: map.eobiWageBase ? Number(map.eobiWageBase) : DEFAULTS.eobiWageBase,
     eobiCap: map.eobiCap ? Number(map.eobiCap) : DEFAULTS.eobiCap,
     province: map.province ? map.province : DEFAULTS.province,
+    endOfServiceScheme: (map.endOfServiceScheme as PayrollConfig['endOfServiceScheme']) || DEFAULTS.endOfServiceScheme,
+    gratuityDaysPerYear: map.gratuityDaysPerYear ? Number(map.gratuityDaysPerYear) : DEFAULTS.gratuityDaysPerYear,
+    gratuityEligibilityMonths: map.gratuityEligibilityMonths ? Number(map.gratuityEligibilityMonths) : DEFAULTS.gratuityEligibilityMonths,
+    pfEmployeeRate: map.pfEmployeeRate ? Number(map.pfEmployeeRate) : DEFAULTS.pfEmployeeRate,
+    pfEmployerRate: map.pfEmployerRate ? Number(map.pfEmployerRate) : DEFAULTS.pfEmployerRate,
+    pfVestingMonths: map.pfVestingMonths ? Number(map.pfVestingMonths) : DEFAULTS.pfVestingMonths,
     taxEnabled: map.taxEnabled ? map.taxEnabled === 'true' : DEFAULTS.taxEnabled,
     workingDays: map.workingDays ? JSON.parse(map.workingDays) : DEFAULTS.workingDays,
     payrollCutoffDay: map.payrollCutoffDay ? Number(map.payrollCutoffDay) : DEFAULTS.payrollCutoffDay,

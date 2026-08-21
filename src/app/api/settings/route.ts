@@ -50,6 +50,8 @@ export async function POST(request: NextRequest) {
     standardHoursPerDay, overtimeMultiplier,
     lateThresholdHour, lateThresholdMinute,
     eobiEnabled, eobiEmployeeRate, eobiEmployerRate, eobiWageBase, province,
+    endOfServiceScheme, gratuityDaysPerYear, gratuityEligibilityMonths,
+    pfEmployeeRate, pfEmployerRate, pfVestingMonths,
     taxEnabled,
   } = body
 
@@ -94,6 +96,12 @@ export async function POST(request: NextRequest) {
   if (eobiEmployerRate !== undefined) payrollUpdates.eobiEmployerRate = eobiEmployerRate
   if (eobiWageBase !== undefined) payrollUpdates.eobiWageBase = eobiWageBase
   if (province !== undefined) payrollUpdates.province = province
+  if (endOfServiceScheme !== undefined) payrollUpdates.endOfServiceScheme = endOfServiceScheme
+  if (gratuityDaysPerYear !== undefined) payrollUpdates.gratuityDaysPerYear = gratuityDaysPerYear
+  if (gratuityEligibilityMonths !== undefined) payrollUpdates.gratuityEligibilityMonths = gratuityEligibilityMonths
+  if (pfEmployeeRate !== undefined) payrollUpdates.pfEmployeeRate = pfEmployeeRate
+  if (pfEmployerRate !== undefined) payrollUpdates.pfEmployerRate = pfEmployerRate
+  if (pfVestingMonths !== undefined) payrollUpdates.pfVestingMonths = pfVestingMonths
   // The monthly EOBI cap is no longer typed by hand — it is the employee's
   // contribution: wage base × employee rate. Recompute it whenever either
   // input changes, so the value downstream payroll reads stays correct.
