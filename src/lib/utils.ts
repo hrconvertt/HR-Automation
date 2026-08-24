@@ -11,10 +11,14 @@ export function formatCurrency(amount: number): string {
 
 export function formatDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date
+  // Dates are stored as UTC midnight (a calendar day, not a moment), so format
+  // in UTC. Without this, a viewer in a timezone behind UTC sees the day before
+  // — e.g. a 01-Jun joining date rendering as 31-May.
   return d.toLocaleDateString('en-GB', {
     day: '2-digit',
     month: 'short',
     year: 'numeric',
+    timeZone: 'UTC',
   })
 }
 
