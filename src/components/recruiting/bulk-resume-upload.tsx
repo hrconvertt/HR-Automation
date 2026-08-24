@@ -64,6 +64,7 @@ interface UploadResponse {
   success: number
   errors: number
   autoTalentPool: number
+  aiScored?: boolean
   results: CandidateResult[]
 }
 
@@ -284,6 +285,15 @@ export function BulkResumeUpload({ openRequisitions }: { openRequisitions: Requi
                   <p className="text-[10px] text-red-500">Auto-filtered</p>
                 </div>
               </div>
+
+              {results.aiScored === false && results.success > 0 && (
+                <div className="flex items-start gap-2 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <span className="text-amber-800">
+                    Uploaded without AI scoring (no Anthropic API key set). Candidates were added with name, email and phone for manual review. Set <strong>ANTHROPIC_API_KEY</strong> in Vercel to enable match scores.
+                  </span>
+                </div>
+              )}
 
               {results.autoTalentPool > 0 && (
                 <div className="flex items-center gap-2 text-xs bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">

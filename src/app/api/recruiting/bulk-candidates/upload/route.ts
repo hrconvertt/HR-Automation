@@ -124,6 +124,29 @@ async function scoreCandidateWithAI(resumeText: string, jdContent: string): Prom
   }
 }
 
+// No-AI fallback: pull the obvious contact details out of the resume text with
+// plain regex so a bulk upload still files real candidates (just without a
+// match score) when ANTHROPIC_API_KEY is not configured.
+function basicParseResume(text: string, filename: string): ParsedResume {
+  const emailMatch = text.match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/)
+  // A loose phone matcher — Pakistani and international formats, 9+ digits.
+  const phoneMatch = text.match(/(\+?\d[\d\s().-]{8,}\d)/)
+  // Name: first tidy line that reads like a person's name; else the filename.
+  const nameLine = text
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .find((l) => /^[A-Za-z][A-Za-z.'-]+(?:\s+[A-Za-z.'-]+){1,3}$/.test(l) && l.length <= 40)
+  const fullName = nameLine || filename.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ').trim()
+  return {
+    fullName,
+    email: emailMatch ? emailMatch[0] : undefined,
+    phone: phoneMatch ? phoneMatch[0].trim() : undefined,
+    // No score without AI — the candidate lands in the pipeline as APPLIED for
+    // manual review.
+    summary: 'Bulk-uploaded (no AI scoring). Review manually.',
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const token = request.cookies.get('hr_token')?.value
@@ -143,16 +166,11 @@ export async function POST(request: NextRequest) {
     })
     if (!requisition) return NextResponse.json({ error: 'Requisition not found' }, { status: 404 })
 
-    // Screening is an AI call per CV, so without a key nothing can work. Said
-    // plainly and up front, because the alternative is a row of files each
-    // reporting its own opaque failure and no way to tell they share a cause.
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({
-        error: 'CV screening needs an Anthropic API key. Set ANTHROPIC_API_KEY '
-          + 'in the Vercel project settings and redeploy — until then, add '
-          + 'candidates with the Add Candidate button.',
-      }, { status: 503 })
-    }
+    // AI scoring is optional. With a key we score each CV against the JD; without
+    // one we still do a plain bulk upload — extract name/email/phone and file the
+    // candidate under the role, just with no match score. So the tool works even
+    // before ANTHROPIC_API_KEY is set in Vercel.
+    const aiAvailable = !!process.env.ANTHROPIC_API_KEY
 
     const jdText = requisition.jdContent || requisition.description || requisition.requirements || 'Title: ' + requisition.title
 
@@ -174,7 +192,9 @@ export async function POST(request: NextRequest) {
           continue
         }
 
-        const parsed = await scoreCandidateWithAI(rawText, jdText)
+        const parsed = aiAvailable
+          ? await scoreCandidateWithAI(rawText, jdText)
+          : basicParseResume(rawText, filename)
         const knockoutEval = parsed.knockoutEvaluation as { passed?: boolean; failures?: string[] } | undefined
         const knockoutStatus = knockoutEval?.passed === false ? 'FAILED' : 'PASSED'
         const knockoutReasons = knockoutEval?.failures?.length
@@ -237,6 +257,7 @@ export async function POST(request: NextRequest) {
       success: results.filter((r) => r.status === 'success').length,
       errors: results.filter((r) => r.status === 'error').length,
       autoTalentPool: strongIds.length,
+      aiScored: aiAvailable,
       results,
     })
   } catch (error) {

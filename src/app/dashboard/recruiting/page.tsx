@@ -171,6 +171,12 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   const openRoles = requisitions
     .filter((r) => r.status === 'OPEN')
     .map((r) => ({ id: r.id, title: r.title }))
+  // Roles you can add/screen candidates against — every live requisition, not
+  // just OPEN ones. A paused or filled role still takes pipeline/backfill
+  // candidates, and gating the dropdown to OPEN left it empty (and unusable).
+  const screenableRoles = requisitions
+    .filter((r) => r.status !== 'PENDING' && r.status !== 'REJECTED')
+    .map((r) => ({ id: r.id, title: r.title }))
 
   return (
     <div className="space-y-5">
@@ -196,7 +202,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           <ViewHeader
             title="Pipeline"
             blurb="Shortlisted candidates by stage. Anyone who failed a hard filter is in Knockouts, not here."
-            actions={(isHR || isManager) && <BulkResumeUpload openRequisitions={openRoles} />}
+            actions={(isHR || isManager) && <BulkResumeUpload openRequisitions={screenableRoles} />}
           />
           <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
             <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between flex-wrap gap-2">
@@ -228,7 +234,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                   />
                 )}
                 {(isHR || isManager) && (
-                  <AddCandidateButton openRequisitions={openRoles} />
+                  <AddCandidateButton openRequisitions={screenableRoles} />
                 )}
               </div>
             </div>
