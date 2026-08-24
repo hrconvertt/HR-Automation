@@ -120,12 +120,13 @@ export default function PayrollConfigSettingsPage() {
         </div>
       </div>
 
-      {/* Aligned grid — cards start on a shared row baseline rather than
-          flowing masonry-style, which read as scattered. */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">
+      {/* One section at a time: each card spans the full width and they stack
+          top to bottom, so a section finishes before the next one begins.
+          The horizontal space is used inside each card, not beside it. */}
+      <div className="flex flex-col gap-4">
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
           <p className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Working Hours &amp; Attendance</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             <Field label="Standard Hours / Day" hint="Used for OT threshold + hourly rate">
               <Input type="number" min={1} max={24} step={0.5}
                 value={standardHoursPerDay} onChange={(e) => setStandardHoursPerDay(Number(e.target.value))} />
@@ -157,7 +158,7 @@ export default function PayrollConfigSettingsPage() {
               <option value="weekly">Weekly</option>
             </select>
           </Field>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             <Field label="Cutoff day" hint="Inputs locked">
               <Input type="number" min={1} max={31} value={payrollCutoffDay}
                 onChange={(e) => setPayrollCutoffDay(Number(e.target.value))} />
@@ -198,7 +199,7 @@ export default function PayrollConfigSettingsPage() {
               <Input type="number" min={0} step={1000}
                 value={eobiWageBase} onChange={(e) => setEobiWageBase(Number(e.target.value))} />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
               <Field label="Employee Rate (% of wage base)">
                 <Input type="number" min={0} max={20} step={0.1}
                   value={eobiEmployeeRate} onChange={(e) => setEobiEmployeeRate(Number(e.target.value))} />
@@ -218,7 +219,7 @@ export default function PayrollConfigSettingsPage() {
                 <p className="text-[11px] uppercase tracking-wide text-slate-400">Employer contribution / month</p>
                 <p className="font-semibold tabular-nums">PKR {employerContribution.toLocaleString('en-PK')}</p>
               </div>
-              <p className="col-span-2 text-[11px] text-slate-400">
+              <p className="col-span-full text-[11px] text-slate-400">
                 Computed as wage base × rate — no manual cap to keep in step.
               </p>
             </div>
@@ -248,7 +249,7 @@ export default function PayrollConfigSettingsPage() {
           </div>
 
           {endOfServiceScheme === 'gratuity' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
               <Field label="Days' wages per year of service" hint="Standing Orders: 30 days per completed year">
                 <Input type="number" min={0} max={90} step={1}
                   value={gratuityDaysPerYear} onChange={(e) => setGratuityDaysPerYear(Number(e.target.value))} />
@@ -257,14 +258,14 @@ export default function PayrollConfigSettingsPage() {
                 <Input type="number" min={0} max={120} step={1}
                   value={gratuityEligibilityMonths} onChange={(e) => setGratuityEligibilityMonths(Number(e.target.value))} />
               </Field>
-              <p className="col-span-2 text-[11px] text-slate-400">
+              <p className="col-span-full text-[11px] text-slate-400">
                 Example: {gratuityDaysPerYear} days ÷ 30 = {(gratuityDaysPerYear / 30).toFixed(2)} month(s) of last-drawn Basic for every completed year, once past {gratuityEligibilityMonths} months.
               </p>
             </div>
           )}
 
           {endOfServiceScheme === 'provident_fund' && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
               <Field label="Employee contribution (% of Basic)">
                 <Input type="number" min={0} max={30} step={0.01}
                   value={pfEmployeeRate} onChange={(e) => setPfEmployeeRate(Number(e.target.value))} />
@@ -277,7 +278,7 @@ export default function PayrollConfigSettingsPage() {
                 <Input type="number" min={0} max={120} step={1}
                   value={pfVestingMonths} onChange={(e) => setPfVestingMonths(Number(e.target.value))} />
               </Field>
-              <p className="col-span-2 text-[11px] text-slate-400">
+              <p className="col-span-full text-[11px] text-slate-400">
                 Both sides contribute to each month&apos;s fund; the employer&apos;s {pfEmployerRate}% vests to the employee after {pfVestingMonths} months.
               </p>
             </div>
@@ -306,7 +307,7 @@ export default function PayrollConfigSettingsPage() {
               <Input type="number" min={0} step={1000}
                 value={ssWageCeiling} onChange={(e) => setSsWageCeiling(Number(e.target.value))} />
             </Field>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
               <Field label="Employee Rate (% of secured wage)">
                 <Input type="number" min={0} max={20} step={0.1}
                   value={ssEmployeeRate} onChange={(e) => setSsEmployeeRate(Number(e.target.value))} />
@@ -332,7 +333,7 @@ export default function PayrollConfigSettingsPage() {
         {/* Leave-linked pay: how unpaid leave is priced, and encashment. */}
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
           <p className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Leave-Linked Deductions</p>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4">
             <Field label="Leave-without-pay is deducted from" hint="Which salary figure a day of LWP is priced on">
               <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
                 value={lwpRateBasis} onChange={(e) => setLwpRateBasis(e.target.value as 'gross' | 'basic')}>
