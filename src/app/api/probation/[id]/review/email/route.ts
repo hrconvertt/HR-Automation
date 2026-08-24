@@ -91,31 +91,49 @@ export async function POST(
     : `Probation Review Outcome — ${e.fullName}`
   )
 
+  const first = e.fullName.split(' ')[0]
+  const reviewer = e.reportingManager?.fullName ?? 'your manager'
+
+  const reLine =
+    confirming ? 'Re: Confirmation of Employment Following Probation'
+    : extending ? 'Re: Probation Review Outcome — Extension of Probation'
+    : 'Re: Probation Review Outcome'
+
+  // Overall assessment and the per-dimension ratings, gathered under one heading.
+  const summaryBullets = [
+    assessment ? `Overall assessment: <strong>${label}</strong>` : null,
+    `Reviewed by: ${reviewer}`,
+    ...ratings,
+  ].filter(Boolean) as string[]
+
   const paragraphs: (string | null)[] = [
-    `Dear ${e.fullName.split(' ')[0]},`,
+    `Dear ${first},`,
+
+    `<strong>${reLine}</strong>`,
 
     confirming
-      ? `Following your probationary review, we are pleased to confirm your employment as ${e.designation ?? 'a member of the team'}`
-        + `${e.department?.name ? ` in ${e.department.name}` : ''}, effective ${longDate(rec.endDate)}.`
+      ? `We are pleased to inform you that, following the successful completion and review of your probationary period, your employment with Convertt is hereby confirmed in the position of <strong>${e.designation ?? 'a member of the team'}</strong>${e.department?.name ? `, ${e.department.name}` : ''}, with effect from <strong>${longDate(rec.endDate)}</strong>.`
       : extending
-        ? `Following your probationary review, your probation is being extended by ${review.extensionDays ?? 30} days.`
-        : `This is to confirm the outcome of your probationary review.`,
+        ? `Following the review of your probationary period, your probation has been extended by <strong>${review.extensionDays ?? 30} days</strong> to allow for further assessment against the areas set out below.`
+        : `This letter confirms the outcome of the review of your probationary period.`,
 
-    ratings.length
-      ? `Your review was completed by ${e.reportingManager?.fullName ?? 'your manager'} across five areas:<br>&bull; `
-        + ratings.join('<br>&bull; ')
+    summaryBullets.length
+      ? `<strong>Summary of Review</strong><br>&bull; ${summaryBullets.join('<br>&bull; ')}`
       : null,
 
-    assessment ? `Your overall assessment is <strong>${label}</strong>.` : null,
-
-    review.managerRemarks?.trim() || null,
+    // The manager's note, framed as an attributed quote rather than dropped in
+    // as a bare sentence — so a one-line remark still reads deliberately.
+    review.managerRemarks?.trim()
+      ? `<strong>Reviewer's Remarks</strong><br>"${review.managerRemarks.trim().replace(/\n/g, '<br>')}"`
+      : null,
 
     // The arithmetic, stated. This is the part that was missing when someone
     // was told "exceptional" and handed a mid-bracket number.
     confirming && pct > 0 && current > 0
-      ? `Convertt reviews compensation at the end of probation and again after the following six months, `
-        + `within a 10%–15% band. ${bracket ? `A rating of ${label} falls in the ${bracket.label} band. ` : ''}`
-        + `Your revision has been set at <strong>${pct}%</strong>:`
+      ? `<strong>Salary Revision</strong><br>`
+        + `In line with Convertt's policy of reviewing compensation at the end of probation within a 10%–15% band`
+        + `${bracket ? ` (a rating of ${label} falls in the ${bracket.label} band)` : ''}, `
+        + `your monthly salary has been revised by <strong>${pct}%</strong> as follows:`
         + `<br>&bull; Current monthly salary: ${money(current)}`
         + `<br>&bull; Increment: ${money(amount)}`
         + `<br>&bull; Revised monthly salary: <strong>${money(proposed)}</strong>`
@@ -123,18 +141,18 @@ export async function POST(
       : null,
 
     extending && review.improvementAreas?.trim()
-      ? `The areas to focus on during the extension are:<br>${review.improvementAreas.trim().replace(/\n/g, '<br>')}`
+      ? `<strong>Areas of Focus During the Extension</strong><br>${review.improvementAreas.trim().replace(/\n/g, '<br>')}`
       : null,
 
     body.extraNote?.trim() || null,
 
     confirming
-      ? 'Thank you for the work you have put in so far. We are glad to have you with us.'
+      ? 'On behalf of Convertt, thank you for your contribution during your probationary period. We are glad to have you on the team and look forward to your continued growth with us.'
       : extending
-        ? 'We will review again at the end of the extension. Your manager will go through the specifics with you.'
+        ? 'A further review will be conducted at the end of the extension period, and your manager will discuss the specific expectations with you.'
         : null,
 
-    'Warm regards,',
+    'Yours sincerely,',
     'Human Resources<br>Convertt',
   ]
 
