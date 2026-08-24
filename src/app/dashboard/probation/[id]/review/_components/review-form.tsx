@@ -354,6 +354,31 @@ export function ProbationReviewForm({ id }: { id: string }) {
             </FieldBox>
           </div>
 
+          {/* Quick % picker — every step shows the new salary it produces, so
+              HR can choose by the resulting figure, not just the band ends. */}
+          <div className="mb-2">
+            <select
+              value={review.recommendedPct ?? ''}
+              onChange={(e) => {
+                const v = e.target.value === '' ? null : Number(e.target.value)
+                const c = v && salary ? incrementFor(salary, v) : null
+                patch({
+                  recommendedPct: v,
+                  incrementAmount: c?.amount ?? null,
+                  proposedSalary: c?.proposed ?? null,
+                })
+              }}
+              className="border border-slate-300 rounded-md px-2 py-1.5 text-sm bg-white"
+            >
+              <option value="">Pick a % — shows the new salary…</option>
+              {Array.from({ length: 11 }, (_, i) => 10 + i).map((p) => (
+                <option key={p} value={p}>
+                  {p}%{salary ? ` → ${money(incrementFor(salary, p).proposed)}` : ''}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {bracket && (
             <div className="flex gap-2 flex-wrap mb-2">
               {bracket.max > 0 && [bracket.min, bracket.max].map((p) => (
