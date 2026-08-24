@@ -28,6 +28,7 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
     departmentId: '',
     type: 'FULL_TIME',
     vacancies: 1,
+    minExperienceYears: 0,
     requestReason: 'REPLACEMENT',
     requestNote: '',
     closingDate: '',
@@ -61,6 +62,7 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
       setOpen(false)
       setForm({
         title: '', departmentId: '', type: 'FULL_TIME', vacancies: 1,
+        minExperienceYears: 0,
         requestReason: 'REPLACEMENT', requestNote: '', closingDate: '',
         scoreThreshold: 60,
       })
@@ -156,6 +158,18 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Minimum Years of Experience</label>
+              <Input
+                type="number"
+                min={0}
+                max={50}
+                value={form.minExperienceYears}
+                onChange={(e) => setForm({ ...form, minExperienceYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })}
+              />
+              <p className="text-xs text-slate-400 mt-1">0 = no minimum. Used on the JD and when screening resumes.</p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

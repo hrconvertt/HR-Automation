@@ -1405,6 +1405,9 @@ model JobRequisition {
   positionLevel  String?
   type           String      // FULL_TIME | PART_TIME | INTERNSHIP | TRAINEE | CONTRACT
   vacancies      Int         @default(1)
+  // Minimum years of experience the role requires — surfaced on the JD and used
+  // when screening resumes against this requisition.
+  minExperienceYears Int?
   description    String?
   requirements   String?
   salaryMin      Float?

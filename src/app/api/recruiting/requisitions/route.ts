@@ -47,6 +47,9 @@ export async function POST(request: NextRequest) {
   const positionLevel = body.positionLevel ? String(body.positionLevel) : null
   const type          = String(body.type || 'FULL_TIME')
   const vacancies     = Math.max(1, Number(body.vacancies) || 1)
+  const minExperienceYears = body.minExperienceYears != null && body.minExperienceYears !== ''
+    ? Math.max(0, Math.min(50, Math.round(Number(body.minExperienceYears)) || 0))
+    : null
   const requestReason = body.requestReason ? String(body.requestReason) : null
   const requestNote   = body.requestNote ? String(body.requestNote).trim().slice(0, 2000) : null
   const closingDate   = body.closingDate ? new Date(body.closingDate) : null
@@ -74,6 +77,7 @@ export async function POST(request: NextRequest) {
   const created = await prisma.jobRequisition.create({
     data: {
       title, type, vacancies,
+      minExperienceYears,
       departmentId, positionLevel,
       requestedById,
       requestReason, requestNote,
