@@ -12,7 +12,13 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { LearningClient } from './learning-client'
 
-export default async function LearningPage() {
+export default async function LearningPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ tab?: string }>
+}) {
+  const sp = (await searchParams) ?? {}
+  const tab = sp.tab === 'records' || sp.tab === 'certs' ? sp.tab : 'programs'
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
   if (!payload) redirect('/login')
@@ -45,6 +51,7 @@ export default async function LearningPage() {
   return (
     <LearningClient
       isHR={isHR}
+      tab={tab}
       staff={staff}
       programs={programs.map((p) => ({
         id: p.id, title: p.title, type: p.type, provider: p.provider,

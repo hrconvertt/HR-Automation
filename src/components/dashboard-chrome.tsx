@@ -545,6 +545,16 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       ],
     },
   ],
+  '/dashboard/learning': [
+    {
+      label: 'Training & Development',
+      items: [
+        { href: '/dashboard/learning', label: 'Programs', icon: GraduationCap },
+        { href: '/dashboard/learning?tab=records', label: 'Enrolments', icon: Users },
+        { href: '/dashboard/learning?tab=certs', label: 'Certifications', icon: Award },
+      ],
+    },
+  ],
   '/dashboard/leave': [
     {
       label: 'Leave',

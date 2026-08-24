@@ -10,7 +10,6 @@
 import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import {
   GraduationCap, Plus, Loader2, Trash2, Users, Award, BookOpen, AlertTriangle, ExternalLink, Search,
@@ -42,8 +41,8 @@ const inputCls =
 const day = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : '—'
 
-export function LearningClient({ isHR, staff, programs, records, certs }: {
-  isHR: boolean; staff: Staff[]; programs: Program[]; records: Record[]; certs: Cert[]
+export function LearningClient({ isHR, tab = 'programs', staff, programs, records, certs }: {
+  isHR: boolean; tab?: string; staff: Staff[]; programs: Program[]; records: Record[]; certs: Cert[]
 }) {
   const router = useRouter()
   const [err, setErr] = useState<string | null>(null)
@@ -76,23 +75,15 @@ export function LearningClient({ isHR, staff, programs, records, certs }: {
         <Stat icon={<Award className="w-4 h-4" />} label="Certifications" value={String(certs.length)} />
       </div>
 
-      <Tabs defaultValue="programs" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="programs">Programs</TabsTrigger>
-          <TabsTrigger value="records">Enrolments</TabsTrigger>
-          <TabsTrigger value="certs">Certifications</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="programs">
-          <ProgramsTab isHR={isHR} programs={programs} staff={staff} onErr={setErr} onDone={() => router.refresh()} />
-        </TabsContent>
-        <TabsContent value="records">
-          <RecordsTab isHR={isHR} records={records} onErr={setErr} onDone={() => router.refresh()} />
-        </TabsContent>
-        <TabsContent value="certs">
-          <CertsTab isHR={isHR} certs={certs} staff={staff} onErr={setErr} onDone={() => router.refresh()} />
-        </TabsContent>
-      </Tabs>
+      {/* The three areas are reached from the sidebar (Programs / Enrolments /
+          Certifications), not in-page tabs — the ?tab= param picks the view. */}
+      {tab === 'records' ? (
+        <RecordsTab isHR={isHR} records={records} onErr={setErr} onDone={() => router.refresh()} />
+      ) : tab === 'certs' ? (
+        <CertsTab isHR={isHR} certs={certs} staff={staff} onErr={setErr} onDone={() => router.refresh()} />
+      ) : (
+        <ProgramsTab isHR={isHR} programs={programs} staff={staff} onErr={setErr} onDone={() => router.refresh()} />
+      )}
     </div>
   )
 }
