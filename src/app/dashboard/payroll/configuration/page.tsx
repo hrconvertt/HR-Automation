@@ -118,13 +118,13 @@ export default function PayrollConfigSettingsPage() {
           <h1 className="text-xl font-semibold text-slate-900">Payroll Configuration</h1>
           <p className="text-sm text-slate-500">Rates, statutory contributions and the pay calendar — every value editable.</p>
         </div>
-        <Button onClick={save} className="hidden md:inline-flex">{saved ? 'Saved ✓' : 'Save Payroll Settings'}</Button>
       </div>
 
-      {/* Full-width masonry — sections flow across the whole screen. */}
-      <div className="columns-1 md:columns-2 xl:columns-3 gap-4 [&>*]:mb-4 [&>*]:break-inside-avoid">
-        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
-          <p className="text-sm font-semibold text-slate-800">Working Hours & Attendance</p>
+      {/* Aligned grid — cards start on a shared row baseline rather than
+          flowing masonry-style, which read as scattered. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 items-start">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
+          <p className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Working Hours &amp; Attendance</p>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Standard Hours / Day" hint="Used for OT threshold + hourly rate">
               <Input type="number" min={1} max={24} step={0.5}
@@ -147,8 +147,8 @@ export default function PayrollConfigSettingsPage() {
         </div>
 
         {/* Pay cycle — frequency and the month's processing calendar. */}
-        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
-          <p className="text-sm font-semibold text-slate-800">Pay Cycle & Processing Calendar</p>
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
+          <p className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Pay Cycle &amp; Processing Calendar</p>
           <Field label="Pay frequency">
             <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
               value={payFrequency} onChange={(e) => setPayFrequency(e.target.value as typeof payFrequency)}>
@@ -177,7 +177,7 @@ export default function PayrollConfigSettingsPage() {
         </div>
 
         {/* Province — minimum wage and social-security bodies vary by it. */}
-        <div className="rounded-lg border border-slate-200 p-4">
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5">
           <Field label="Province / Branch location" hint="EOBI wage base and social security differ by province">
             <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
               value={province} onChange={(e) => setProvince(e.target.value)}>
@@ -189,7 +189,7 @@ export default function PayrollConfigSettingsPage() {
           </Field>
         </div>
 
-        <div className={`rounded-lg border p-4 ${eobiEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
+        <div className={`rounded-xl border bg-white shadow-sm p-5 ${eobiEnabled ? 'border-slate-300' : 'border-slate-200'}`}>
           <Toggle label="EOBI (Employees' Old-Age Benefits)"
             sub={eobiEnabled ? 'Active - contributions on the statutory wage base' : 'Disabled - no contribution'}
             checked={eobiEnabled} onChange={setEobiEnabled} />
@@ -226,9 +226,9 @@ export default function PayrollConfigSettingsPage() {
         </div>
 
         {/* End-of-service benefit — Gratuity OR Provident Fund, never both. */}
-        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
-          <div>
-            <p className="text-sm font-semibold text-slate-800">End-of-Service Benefit</p>
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
+          <div className="border-b border-slate-100 pb-2">
+            <p className="text-sm font-semibold text-slate-900">End-of-Service Benefit</p>
             <p className="text-xs text-slate-500 mt-0.5">
               A company runs one scheme. Gratuity is the statutory Standing-Orders benefit; a Provident Fund is a contributory alternative.
             </p>
@@ -289,7 +289,7 @@ export default function PayrollConfigSettingsPage() {
         </div>
 
         {/* Provincial social security — PESSI/SESSI/etc. Employer-heavy split. */}
-        <div className={`rounded-lg border p-4 ${ssEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
+        <div className={`rounded-xl border bg-white shadow-sm p-5 ${ssEnabled ? 'border-slate-300' : 'border-slate-200'}`}>
           <Toggle label="Provincial Social Security"
             sub={ssEnabled ? `Active — ${ssInstitution} contributions on the secured wage` : 'Disabled — no contribution'}
             checked={ssEnabled} onChange={setSsEnabled} />
@@ -330,8 +330,8 @@ export default function PayrollConfigSettingsPage() {
         </div>
 
         {/* Leave-linked pay: how unpaid leave is priced, and encashment. */}
-        <div className="rounded-lg border border-slate-200 p-4 space-y-4">
-          <p className="text-sm font-semibold text-slate-800">Leave-Linked Deductions</p>
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
+          <p className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Leave-Linked Deductions</p>
           <div className="grid grid-cols-2 gap-4">
             <Field label="Leave-without-pay is deducted from" hint="Which salary figure a day of LWP is priced on">
               <select className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
@@ -370,8 +370,8 @@ export default function PayrollConfigSettingsPage() {
         </div>
 
         {/* Full & Final settlement — what an exit payout includes. */}
-        <div className="rounded-lg border border-slate-200 p-4 space-y-3">
-          <p className="text-sm font-semibold text-slate-800">Full &amp; Final Settlement</p>
+        <div className="rounded-xl border border-slate-200 bg-white shadow-sm p-5 space-y-3">
+          <p className="text-sm font-semibold text-slate-900 border-b border-slate-100 pb-2">Full &amp; Final Settlement</p>
           <p className="text-xs text-slate-500 -mt-1">What an employee&apos;s exit settlement includes.</p>
           <Toggle label="Recover unserved notice"
             sub="Deduct salary in lieu of notice not served"
@@ -384,7 +384,7 @@ export default function PayrollConfigSettingsPage() {
             checked={fnfIncludeGratuity} onChange={setFnfIncludeGratuity} />
         </div>
 
-        <div className={`rounded-lg border p-4 ${taxEnabled ? 'border-slate-100 bg-slate-50/30' : 'border-slate-200'}`}>
+        <div className={`rounded-xl border bg-white shadow-sm p-5 ${taxEnabled ? 'border-slate-300' : 'border-slate-200'}`}>
           <Toggle label="Income Tax Withholding (FBR)"
             sub={taxEnabled ? 'Active - FBR 2025-26 slabs applied' : 'Disabled'}
             checked={taxEnabled} onChange={setTaxEnabled} />
