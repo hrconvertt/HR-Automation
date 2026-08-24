@@ -311,20 +311,28 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
       signedByName,
       signedByTitle,
     })
-    const letter = await prisma.letterRequest.create({
-      data: {
-        letterNumber,
-        employeeId: rec.employee.id,
-        letterType: 'CONFIRMATION',
-        status: 'APPROVED',
-        letterBody,
-        signedByName,
-        signedByTitle,
-        reviewedAt: now,
-        reviewedById: actorUserId ?? undefined,
-        purpose: 'Probation confirmation',
-      },
-    })
+    // The letter is a nice-to-have artefact — if it fails to write, the
+    // confirmation itself must still go through. Never let it abort the enact.
+    let letterId: string | null = null
+    try {
+      const letter = await prisma.letterRequest.create({
+        data: {
+          letterNumber,
+          employeeId: rec.employee.id,
+          letterType: 'CONFIRMATION',
+          status: 'APPROVED',
+          letterBody,
+          signedByName,
+          signedByTitle,
+          reviewedAt: now,
+          reviewedById: actorUserId ?? undefined,
+          purpose: 'Probation confirmation',
+        },
+      })
+      letterId = letter.id
+    } catch (e) {
+      console.error('[probation confirm] confirmation letter failed', e)
+    }
 
     // ── 3. Update employee → PERMANENT ──
     await prisma.employee.update({
@@ -391,26 +399,30 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
         outcome: 'CONFIRMED',
         outcomeDate: now,
         outcomeEnactedAt: now,
-        confirmationLetterId: letter.id,
+        confirmationLetterId: letterId ?? undefined,
       },
     })
 
-    // ── 5. Notify ──
-    await notify({
-      employeeId: rec.employee.id,
-      type: 'PROBATION_ALERT',
-      title: '🎉 Probation confirmed — welcome aboard permanently!',
-      message: `Congratulations! Your employment with Convertt has been confirmed${bump ? ` with a salary increase of PKR ${Math.round(bump).toLocaleString('en-PK')}` : ''}. Your confirmation letter (${letterNumber}) is ready.`,
-      link: `/dashboard/letters`,
-    })
-    if (rec.employee.reportingManagerId) {
+    // ── 5. Notify ── also non-fatal; the confirmation is already committed.
+    try {
       await notify({
-        employeeId: rec.employee.reportingManagerId,
+        employeeId: rec.employee.id,
         type: 'PROBATION_ALERT',
-        title: 'Team member confirmed',
-        message: `${rec.employee.fullName} has been confirmed permanently.`,
-        link: `/dashboard/probation/${rec.id}`,
+        title: '🎉 Probation confirmed — welcome aboard permanently!',
+        message: `Congratulations! Your employment with Convertt has been confirmed${bump ? ` with a salary increase of PKR ${Math.round(bump).toLocaleString('en-PK')}` : ''}. Your confirmation letter (${letterNumber}) is ready.`,
+        link: `/dashboard/letters`,
       })
+      if (rec.employee.reportingManagerId) {
+        await notify({
+          employeeId: rec.employee.reportingManagerId,
+          type: 'PROBATION_ALERT',
+          title: 'Team member confirmed',
+          message: `${rec.employee.fullName} has been confirmed permanently.`,
+          link: `/dashboard/probation/${rec.id}`,
+        })
+      }
+    } catch (e) {
+      console.error('[probation confirm] notification failed', e)
     }
     return
   }

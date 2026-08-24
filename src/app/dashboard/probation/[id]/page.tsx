@@ -94,16 +94,24 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
 
   async function patch(body: Record<string, unknown>) {
     setBusy(true); setErr('')
-    const r = await fetch(`/api/probation/${id}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    })
-    const d = await r.json()
-    setBusy(false)
-    if (!r.ok) { setErr(d.error || 'Failed'); return false }
-    await reload()
-    return true
+    try {
+      const r = await fetch(`/api/probation/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      // A crashed handler can return non-JSON (an HTML error page); parse safely
+      // so this never throws and strands the button in its disabled state.
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setErr(d.error || `Request failed (${r.status})`); return false }
+      await reload()
+      return true
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : 'Network error')
+      return false
+    } finally {
+      setBusy(false)
+    }
   }
 
   if (loading) return <div className="p-8 text-slate-500">Loading…</div>

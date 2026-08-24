@@ -263,7 +263,15 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (!isHR) return NextResponse.json({ error: 'HR only' }, { status: 403 })
     if (!rec.hrDecision) return NextResponse.json({ error: 'HR decision must be set first' }, { status: 400 })
     if (rec.outcomeEnactedAt) return NextResponse.json({ error: 'Already enacted' }, { status: 400 })
-    await enactOutcome(rec.id, access.userId)
+    try {
+      await enactOutcome(rec.id, access.userId)
+    } catch (e) {
+      console.error('[probation ENACT] failed', e)
+      return NextResponse.json(
+        { error: e instanceof Error ? `Could not enact: ${e.message}` : 'Could not enact the outcome.' },
+        { status: 500 },
+      )
+    }
     const fresh = await loadRecord(id)
     return NextResponse.json({ record: fresh })
   }
