@@ -1728,6 +1728,12 @@ model TrainingProgram {
   description String?
   duration    Float?          // hours
   cost        Float?
+  // Course content. Teaching material comes first, then an MCQ quiz.
+  // lessons: [{ title, body }]  — ordered teaching sections (body is plain text).
+  // quiz:    [{ question, options: string[], correct: number }]  — MCQs.
+  lessons     Json?
+  quiz        Json?
+  passingScore Int            @default(70) // % needed on the quiz to complete
   records     TrainingRecord[]
   createdAt   DateTime        @default(now())
 

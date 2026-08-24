@@ -8,6 +8,7 @@
  */
 
 import { useMemo, useState } from 'react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
@@ -133,7 +134,7 @@ function ProgramsTab({ isHR, programs, staff, onErr, onDone }: {
             <div key={p.id} className="px-4 py-3 flex items-start justify-between gap-4 flex-wrap">
               <div className="min-w-0">
                 <p className="text-sm font-medium text-slate-900 flex items-center gap-2 flex-wrap">
-                  {p.title}
+                  <Link href={`/dashboard/learning/programs/${p.id}`} className="hover:underline">{p.title}</Link>
                   <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-slate-50 text-slate-600 border-slate-200">
                     {PROGRAM_TYPE_LABELS[p.type as ProgramType] ?? p.type}
                   </span>
@@ -146,16 +147,23 @@ function ProgramsTab({ isHR, programs, staff, onErr, onDone }: {
                 </p>
                 {p.description && <p className="text-[11px] text-slate-400 mt-1 line-clamp-2">{p.description}</p>}
               </div>
-              {isHR && (
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  <Button size="sm" variant="outline" onClick={() => setEnrolFor(p)}>
-                    <Users className="w-3.5 h-3.5 mr-1.5" /> Enrol
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Link href={`/dashboard/learning/programs/${p.id}`}>
+                  <Button size="sm" variant="outline">
+                    <BookOpen className="w-3.5 h-3.5 mr-1.5" /> {isHR ? 'Open / Build' : 'Open'}
                   </Button>
-                  <button type="button" aria-label="Delete" className="text-slate-400 hover:text-red-600 p-1" onClick={() => remove(p)}>
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
+                </Link>
+                {isHR && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => setEnrolFor(p)}>
+                      <Users className="w-3.5 h-3.5 mr-1.5" /> Enrol
+                    </Button>
+                    <button type="button" aria-label="Delete" className="text-slate-400 hover:text-red-600 p-1" onClick={() => remove(p)}>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </>
+                )}
+              </div>
             </div>
           ))}
         </div>

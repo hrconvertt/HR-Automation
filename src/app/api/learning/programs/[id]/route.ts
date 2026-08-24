@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
-import { PROGRAM_TYPES } from '@/lib/learning'
+import { PROGRAM_TYPES, parseLessons, parseQuiz } from '@/lib/learning'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -36,6 +36,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     if (body[k] === undefined) continue
     const n = Number(body[k])
     data[k] = body[k] === '' || body[k] == null || !Number.isFinite(n) || n < 0 ? null : n
+  }
+  // Course content — sanitise the lesson/quiz shapes before storing.
+  if (body.lessons !== undefined) {
+    data.lessons = parseLessons(body.lessons).map((l) => ({ title: l.title.slice(0, 200), body: l.body.slice(0, 20000) }))
+  }
+  if (body.quiz !== undefined) {
+    data.quiz = parseQuiz(body.quiz).map((q) => ({
+      question: q.question.slice(0, 500),
+      options: q.options.slice(0, 6).map((o) => o.slice(0, 300)),
+      correct: Math.max(0, Math.min(q.options.length - 1, q.correct)),
+    }))
+  }
+  if (body.passingScore !== undefined) {
+    const n = Number(body.passingScore)
+    data.passingScore = Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 70
   }
 
   const program = await prisma.trainingProgram.update({ where: { id }, data })
