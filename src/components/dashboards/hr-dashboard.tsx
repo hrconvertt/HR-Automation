@@ -196,6 +196,66 @@ async function loadData() {
     overallAttritionPct,
   }
 
+  // ─── Workforce analytics — trends & composition for the dashboard band ───
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
+  const sixMonthsStart = new Date(year, month - 6, 1)
+  const buckets: { y: number; m: number; label: string }[] = []
+  for (let i = 5; i >= 0; i--) {
+    const dt = new Date(year, month - 1 - i, 1)
+    buckets.push({ y: dt.getFullYear(), m: dt.getMonth() + 1, label: MONTHS_SHORT[dt.getMonth()] })
+  }
+  const [hiresRaw, exitsRaw, deptCounts, typeCounts, genderCounts, activeTenure, payrollRuns, departments] =
+    await Promise.all([
+      prisma.employee.findMany({ where: { joiningDate: { gte: sixMonthsStart } }, select: { joiningDate: true } }),
+      prisma.employee.findMany({ where: { exitDate: { gte: sixMonthsStart, not: null } }, select: { exitDate: true } }),
+      prisma.employee.groupBy({ by: ['departmentId'], where: { status: 'ACTIVE' }, _count: { _all: true } }),
+      prisma.employee.groupBy({ by: ['employeeType'], where: { status: 'ACTIVE' }, _count: { _all: true } }),
+      prisma.employee.groupBy({ by: ['gender'], where: { status: 'ACTIVE' }, _count: { _all: true } }),
+      prisma.employee.findMany({ where: { status: 'ACTIVE' }, select: { joiningDate: true } }),
+      prisma.payrollRun.findMany({
+        where: { runType: 'REGULAR' }, orderBy: [{ year: 'desc' }, { month: 'desc' }],
+        take: 6, select: { month: true, year: true, totalNet: true },
+      }),
+      prisma.department.findMany({ select: { id: true, name: true } }),
+    ])
+
+  const inBucket = (date: Date, b: { y: number; m: number }) =>
+    date.getFullYear() === b.y && date.getMonth() + 1 === b.m
+  const hiresByMonth = buckets.map((b) => hiresRaw.filter((e) => inBucket(new Date(e.joiningDate), b)).length)
+  const exitsByMonth = buckets.map((b) =>
+    exitsRaw.filter((e) => e.exitDate && inBucket(new Date(e.exitDate), b)).length)
+
+  const deptNameById = new Map(departments.map((dp) => [dp.id, dp.name]))
+  const deptData = deptCounts
+    .map((c) => ({ name: c.departmentId ? (deptNameById.get(c.departmentId) ?? 'Unknown') : 'Unassigned', count: c._count._all }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 7)
+
+  const TYPE_LABELS: Record<string, string> = {
+    PERMANENT: 'Permanent', PROBATION: 'Probation', INTERNSHIP: 'Internship', TRAINING: 'Training',
+  }
+  const typeData = typeCounts
+    .map((c) => ({ label: TYPE_LABELS[c.employeeType] ?? c.employeeType, count: c._count._all }))
+    .sort((a, b) => b.count - a.count)
+  const genderData = genderCounts
+    .map((c) => ({ label: c.gender ? c.gender[0].toUpperCase() + c.gender.slice(1).toLowerCase() : 'Unspecified', count: c._count._all }))
+    .sort((a, b) => b.count - a.count)
+
+  const avgTenureYears = activeTenure.length
+    ? Math.round(
+        (activeTenure.reduce((acc, e) => acc + (now.getTime() - new Date(e.joiningDate).getTime()), 0) /
+          activeTenure.length / (365.25 * 86400000)) * 10,
+      ) / 10
+    : 0
+  const payrollTrend = [...payrollRuns].reverse().map((r) => ({ label: MONTHS_SHORT[r.month - 1], value: r.totalNet }))
+  const netGrowth6mo = hiresByMonth.reduce((a, b) => a + b, 0) - exitsByMonth.reduce((a, b) => a + b, 0)
+
+  const analytics = {
+    months: buckets.map((b) => b.label),
+    hiresByMonth, exitsByMonth, netGrowth6mo,
+    deptData, typeData, genderData, avgTenureYears, payrollTrend,
+  }
+
   // ─── Possible Absconding (T10) — active employees with no attendance log
   //     in the past 9 days and no approved leave overlapping. ───
   const sevenDaysAgo = new Date(today); sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 9)
@@ -231,7 +291,7 @@ async function loadData() {
     onLeaveToday, joiningToday, upcomingProbationDecisions, pendingPayslipAdjustments,
     currentPayrollRun, openRoles, newApplicantsLast7,
     birthdaysToday, anniversariesToday, weekItems, activeCount, pendingPolicyAcks, talentPoolCount,
-    lifecycleFunnel, absconding,
+    lifecycleFunnel, absconding, analytics,
   }
 }
 
@@ -427,6 +487,81 @@ export async function HRDashboard({ userName }: Props) {
           <FunnelTile label="Attrition (12mo)" value={`${d.lifecycleFunnel.overallAttritionPct}%`} tone="slate" />
         </div>
       </Card>
+
+      {/* ─── WORKFORCE ANALYTICS ─────────────────────────────────── */}
+      <div>
+        <div className="flex items-center gap-2.5 mb-3">
+          <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center">
+            <TrendingUp className="w-4 h-4" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-900">Workforce Analytics</p>
+            <p className="text-[11px] text-slate-500">Trends and composition across the last 6 months</p>
+          </div>
+        </div>
+
+        {/* KPI strip */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-3">
+          <AnalyticTile label="Avg tenure" value={`${d.analytics.avgTenureYears} yr`} sub="Active employees" tone="blue" />
+          <AnalyticTile
+            label="Net headcount (6mo)"
+            value={`${d.analytics.netGrowth6mo >= 0 ? '+' : ''}${d.analytics.netGrowth6mo}`}
+            sub={`${d.analytics.hiresByMonth.reduce((a, b) => a + b, 0)} in · ${d.analytics.exitsByMonth.reduce((a, b) => a + b, 0)} out`}
+            tone={d.analytics.netGrowth6mo >= 0 ? 'emerald' : 'rose'}
+          />
+          <AnalyticTile
+            label="Gender split"
+            value={genderRatio(d.analytics.genderData)}
+            sub={d.analytics.genderData.map((g) => `${g.count} ${g.label[0]}`).join(' · ') || '—'}
+            tone="purple"
+          />
+          <AnalyticTile
+            label="Payroll net (latest)"
+            value={d.analytics.payrollTrend.length ? formatCurrency(d.analytics.payrollTrend[d.analytics.payrollTrend.length - 1].value) : '—'}
+            sub={d.analytics.payrollTrend.length ? d.analytics.payrollTrend[d.analytics.payrollTrend.length - 1].label : 'No runs yet'}
+            tone="slate"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {/* Hires vs Exits trend */}
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-slate-900">Hires vs Exits</p>
+              <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-500" /> Hires</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-rose-400" /> Exits</span>
+              </div>
+            </div>
+            <GroupedBars months={d.analytics.months} a={d.analytics.hiresByMonth} b={d.analytics.exitsByMonth} />
+          </Card>
+
+          {/* Payroll cost trend */}
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900 mb-4">Payroll Net Cost</p>
+            {d.analytics.payrollTrend.length === 0 ? (
+              <p className="text-sm text-slate-400 py-8 text-center">No finalized payroll runs yet.</p>
+            ) : (
+              <TrendBars data={d.analytics.payrollTrend} />
+            )}
+          </Card>
+
+          {/* Headcount by department */}
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900 mb-4">Headcount by Department</p>
+            <BarList items={d.analytics.deptData.map((x) => ({ label: x.name, value: x.count }))} tone="blue" />
+          </Card>
+
+          {/* Composition */}
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900 mb-4">Workforce Composition</p>
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1.5">By employment type</p>
+            <StackedBar segments={d.analytics.typeData} />
+            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">By gender</p>
+            <StackedBar segments={d.analytics.genderData} />
+          </Card>
+        </div>
+      </div>
 
       {/* ─── ABSCONDING ──────────────────────────────────────────── */}
       {d.absconding.length > 0 && (
@@ -668,4 +803,116 @@ function timeOfDay(): string {
 }
 function monthLabel(): string {
   return new Date().toLocaleDateString('en-GB', { month: 'long' })
+}
+
+// ─── Analytics primitives ─────────────────────────────────────────────────
+function genderRatio(data: { label: string; count: number }[]): string {
+  const total = data.reduce((a, b) => a + b.count, 0)
+  if (!total) return '—'
+  const m = data.find((g) => g.label.toLowerCase().startsWith('m'))?.count ?? 0
+  const f = data.find((g) => g.label.toLowerCase().startsWith('f'))?.count ?? 0
+  return `${Math.round((m / total) * 100)} / ${Math.round((f / total) * 100)}`
+}
+
+function AnalyticTile({ label, value, sub, tone }: {
+  label: string; value: string; sub: string; tone: 'blue' | 'emerald' | 'rose' | 'purple' | 'slate'
+}) {
+  const ACCENT: Record<string, string> = {
+    blue: 'text-blue-600', emerald: 'text-emerald-600', rose: 'text-rose-600',
+    purple: 'text-purple-600', slate: 'text-slate-700',
+  }
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-4">
+      <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wide">{label}</p>
+      <p className={`text-xl font-bold mt-1 tabular-nums ${ACCENT[tone]}`}>{value}</p>
+      <p className="text-[11px] text-slate-400 mt-1 truncate">{sub}</p>
+    </div>
+  )
+}
+
+// Grouped vertical bars — two series over the same month labels.
+function GroupedBars({ months, a, b }: { months: string[]; a: number[]; b: number[] }) {
+  const max = Math.max(1, ...a, ...b)
+  return (
+    <div className="flex items-end justify-between gap-2 h-36">
+      {months.map((mo, i) => (
+        <div key={mo + i} className="flex-1 flex flex-col items-center gap-1.5">
+          <div className="w-full flex items-end justify-center gap-1 h-28">
+            <div className="w-1/2 max-w-[16px] bg-emerald-500 rounded-t" style={{ height: `${(a[i] / max) * 100}%` }} title={`${a[i]} hires`} />
+            <div className="w-1/2 max-w-[16px] bg-rose-400 rounded-t" style={{ height: `${(b[i] / max) * 100}%` }} title={`${b[i]} exits`} />
+          </div>
+          <span className="text-[10px] text-slate-400">{mo}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Vertical bars with a value label — used for the payroll cost trend.
+function TrendBars({ data }: { data: { label: string; value: number }[] }) {
+  const max = Math.max(1, ...data.map((d) => d.value))
+  return (
+    <div className="flex items-end justify-between gap-2 h-36">
+      {data.map((d, i) => (
+        <div key={d.label + i} className="flex-1 flex flex-col items-center gap-1.5">
+          <span className="text-[9px] text-slate-500 tabular-nums">{compactPkr(d.value)}</span>
+          <div className="w-full flex items-end justify-center h-24">
+            <div className="w-full max-w-[26px] bg-blue-500/80 rounded-t" style={{ height: `${(d.value / max) * 100}%` }} />
+          </div>
+          <span className="text-[10px] text-slate-400">{d.label}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Horizontal bar list — label + proportional bar + count.
+function BarList({ items, tone }: { items: { label: string; value: number }[]; tone: 'blue' }) {
+  const max = Math.max(1, ...items.map((i) => i.value))
+  const COLOR: Record<string, string> = { blue: 'bg-blue-500' }
+  if (items.length === 0) return <p className="text-sm text-slate-400 py-6 text-center">No data.</p>
+  return (
+    <div className="space-y-2">
+      {items.map((it) => (
+        <div key={it.label} className="flex items-center gap-3">
+          <span className="w-28 shrink-0 text-xs text-slate-600 truncate" title={it.label}>{it.label}</span>
+          <div className="flex-1 bg-slate-100 rounded-full h-2.5 overflow-hidden">
+            <div className={`h-full rounded-full ${COLOR[tone]}`} style={{ width: `${(it.value / max) * 100}%` }} />
+          </div>
+          <span className="w-6 text-right text-xs font-semibold text-slate-700 tabular-nums">{it.value}</span>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// One horizontal bar split into proportional segments with a legend.
+function StackedBar({ segments }: { segments: { label: string; count: number }[] }) {
+  const total = segments.reduce((a, b) => a + b.count, 0)
+  const COLORS = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-400', 'bg-purple-500', 'bg-slate-400']
+  if (!total) return <p className="text-xs text-slate-400">No data.</p>
+  return (
+    <div>
+      <div className="flex h-3 rounded-full overflow-hidden bg-slate-100">
+        {segments.map((s, i) => (
+          <div key={s.label} className={COLORS[i % COLORS.length]} style={{ width: `${(s.count / total) * 100}%` }} title={`${s.label}: ${s.count}`} />
+        ))}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2">
+        {segments.map((s, i) => (
+          <span key={s.label} className="flex items-center gap-1.5 text-[11px] text-slate-500">
+            <span className={`w-2 h-2 rounded-sm ${COLORS[i % COLORS.length]}`} />
+            {s.label} <span className="text-slate-400 tabular-nums">{s.count}</span>
+          </span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Compact PKR for tight axis labels: 1.6M, 480K.
+function compactPkr(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${Math.round(n / 1_000)}K`
+  return String(Math.round(n))
 }
