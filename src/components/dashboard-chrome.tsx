@@ -153,7 +153,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/performance', label: 'Performance', icon: TrendingUp },
         { href: '/dashboard/lifecycle', label: 'Employee Lifecycle', icon: UserPlus },
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
-        { href: '/dashboard/learning', label: 'Learning & Dev', icon: GraduationCap },
+        { href: '/dashboard/learning', label: 'Training & Development', icon: GraduationCap },
         { href: '/dashboard/org-chart', label: 'Org Chart', icon: Network },
       ],
     },
@@ -205,7 +205,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'My Workspace',
       items: [
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
-        { href: '/dashboard/learning', label: 'Learning', icon: GraduationCap },
+        { href: '/dashboard/learning', label: 'Training & Development', icon: GraduationCap },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
@@ -237,7 +237,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'My Growth',
       items: [
         { href: '/dashboard/performance', label: 'My Reviews', icon: TrendingUp },
-        { href: '/dashboard/learning', label: 'My Learning', icon: GraduationCap },
+        { href: '/dashboard/learning', label: 'My Training', icon: GraduationCap },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
       ],
     },
