@@ -250,10 +250,24 @@ async function loadData() {
   const payrollTrend = [...payrollRuns].reverse().map((r) => ({ label: MONTHS_SHORT[r.month - 1], value: r.totalNet }))
   const netGrowth6mo = hiresByMonth.reduce((a, b) => a + b, 0) - exitsByMonth.reduce((a, b) => a + b, 0)
 
+  // Attendance-derived trends. status='PRESENT' with workType='WFH' is a
+  // work-from-home day; a plain LEAVE row is a leave day; overtimeHours sums OT.
+  const attnLogs = await prisma.attendanceLog.findMany({
+    where: { date: { gte: sixMonthsStart } },
+    select: { date: true, status: true, workType: true, overtimeHours: true },
+  })
+  const otByMonth = buckets.map((b) =>
+    Math.round(attnLogs.filter((l) => inBucket(new Date(l.date), b)).reduce((a, l) => a + (l.overtimeHours || 0), 0)))
+  const leaveByMonth = buckets.map((b) =>
+    attnLogs.filter((l) => inBucket(new Date(l.date), b) && l.status === 'LEAVE').length)
+  const wfhByMonth = buckets.map((b) =>
+    attnLogs.filter((l) => inBucket(new Date(l.date), b) && l.status === 'PRESENT' && l.workType === 'WFH').length)
+
   const analytics = {
     months: buckets.map((b) => b.label),
     hiresByMonth, exitsByMonth, netGrowth6mo,
     deptData, typeData, genderData, avgTenureYears, payrollTrend,
+    otByMonth, leaveByMonth, wfhByMonth,
   }
 
   // ─── Possible Absconding (T10) — active employees with no attendance log
@@ -560,6 +574,40 @@ export async function HRDashboard({ userName }: Props) {
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mt-4 mb-1.5">By gender</p>
             <StackedBar segments={d.analytics.genderData} />
           </Card>
+
+          {/* Overtime hours trend */}
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <p className="text-sm font-semibold text-slate-900 mb-4">Overtime Hours</p>
+            {d.analytics.otByMonth.every((h) => h === 0) ? (
+              <p className="text-sm text-slate-400 py-8 text-center">No overtime logged in this window.</p>
+            ) : (
+              <TrendBars
+                data={d.analytics.months.map((m, i) => ({ label: m, value: d.analytics.otByMonth[i] }))}
+                color="bg-amber-400"
+                format={(n) => `${n}h`}
+              />
+            )}
+          </Card>
+
+          {/* Leave vs WFH days */}
+          <Card className="rounded-2xl border-slate-200 p-5 shadow-sm">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-sm font-semibold text-slate-900">Leave vs WFH Days</p>
+              <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-purple-500" /> Leave</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-sky-400" /> WFH</span>
+              </div>
+            </div>
+            {d.analytics.leaveByMonth.every((v) => v === 0) && d.analytics.wfhByMonth.every((v) => v === 0) ? (
+              <p className="text-sm text-slate-400 py-8 text-center">No leave or WFH days in this window.</p>
+            ) : (
+              <GroupedBars
+                months={d.analytics.months}
+                a={d.analytics.leaveByMonth} b={d.analytics.wfhByMonth}
+                colorA="bg-purple-500" colorB="bg-sky-400" nameA="leave days" nameB="WFH days"
+              />
+            )}
+          </Card>
         </div>
       </div>
 
@@ -831,15 +879,18 @@ function AnalyticTile({ label, value, sub, tone }: {
 }
 
 // Grouped vertical bars — two series over the same month labels.
-function GroupedBars({ months, a, b }: { months: string[]; a: number[]; b: number[] }) {
+function GroupedBars({ months, a, b, colorA = 'bg-emerald-500', colorB = 'bg-rose-400', nameA = 'hires', nameB = 'exits' }: {
+  months: string[]; a: number[]; b: number[]
+  colorA?: string; colorB?: string; nameA?: string; nameB?: string
+}) {
   const max = Math.max(1, ...a, ...b)
   return (
     <div className="flex items-end justify-between gap-2 h-36">
       {months.map((mo, i) => (
         <div key={mo + i} className="flex-1 flex flex-col items-center gap-1.5">
           <div className="w-full flex items-end justify-center gap-1 h-28">
-            <div className="w-1/2 max-w-[16px] bg-emerald-500 rounded-t" style={{ height: `${(a[i] / max) * 100}%` }} title={`${a[i]} hires`} />
-            <div className="w-1/2 max-w-[16px] bg-rose-400 rounded-t" style={{ height: `${(b[i] / max) * 100}%` }} title={`${b[i]} exits`} />
+            <div className={`w-1/2 max-w-[16px] rounded-t ${colorA}`} style={{ height: `${(a[i] / max) * 100}%` }} title={`${a[i]} ${nameA}`} />
+            <div className={`w-1/2 max-w-[16px] rounded-t ${colorB}`} style={{ height: `${(b[i] / max) * 100}%` }} title={`${b[i]} ${nameB}`} />
           </div>
           <span className="text-[10px] text-slate-400">{mo}</span>
         </div>
@@ -848,16 +899,18 @@ function GroupedBars({ months, a, b }: { months: string[]; a: number[]; b: numbe
   )
 }
 
-// Vertical bars with a value label — used for the payroll cost trend.
-function TrendBars({ data }: { data: { label: string; value: number }[] }) {
+// Vertical bars with a value label — used for the payroll cost / OT trends.
+function TrendBars({ data, color = 'bg-blue-500/80', format = compactPkr }: {
+  data: { label: string; value: number }[]; color?: string; format?: (n: number) => string
+}) {
   const max = Math.max(1, ...data.map((d) => d.value))
   return (
     <div className="flex items-end justify-between gap-2 h-36">
       {data.map((d, i) => (
         <div key={d.label + i} className="flex-1 flex flex-col items-center gap-1.5">
-          <span className="text-[9px] text-slate-500 tabular-nums">{compactPkr(d.value)}</span>
+          <span className="text-[9px] text-slate-500 tabular-nums">{format(d.value)}</span>
           <div className="w-full flex items-end justify-center h-24">
-            <div className="w-full max-w-[26px] bg-blue-500/80 rounded-t" style={{ height: `${(d.value / max) * 100}%` }} />
+            <div className={`w-full max-w-[26px] rounded-t ${color}`} style={{ height: `${(d.value / max) * 100}%` }} />
           </div>
           <span className="text-[10px] text-slate-400">{d.label}</span>
         </div>
