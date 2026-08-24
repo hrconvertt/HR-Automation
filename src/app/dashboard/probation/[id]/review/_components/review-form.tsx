@@ -163,7 +163,7 @@ export function ProbationReviewForm({ id }: { id: string }) {
     !!bracket && pct > 0 && (pct < bracket.min || pct > bracket.max)
 
   return (
-    <div className="space-y-4 max-w-4xl print:max-w-none">
+    <div className="space-y-4 print:max-w-none">
       <div className="flex items-center justify-between gap-3 print:hidden">
         <Back id={id} />
         <div className="flex items-center gap-2">
@@ -212,7 +212,7 @@ export function ProbationReviewForm({ id }: { id: string }) {
 
         {/* 1 — details, all of them already known */}
         <Section n={1} title="Employee & Review Details">
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-2 text-sm">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-2 text-sm">
             <Row label="Employee Name" value={ctx.employee.fullName} />
             <Row label="Job Title / Department"
               value={`${ctx.employee.designation ?? '—'} / ${ctx.employee.department ?? '—'}`} />
@@ -228,7 +228,7 @@ export function ProbationReviewForm({ id }: { id: string }) {
           <p className="text-[11px] text-slate-500 mb-3">
             {RATING_SCALE.map((r) => `${r.value} = ${r.label}`).join('  |  ')}
           </p>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
             {DIMENSIONS.map((d) => {
               const rk = `rating${d.key}` as keyof Review
               const nk = `notes${d.key}` as keyof Review
