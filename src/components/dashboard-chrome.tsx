@@ -86,6 +86,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/onboarding',
   '/dashboard/lifecycle',
   '/dashboard/performance',
+  '/dashboard/learning',
   '/dashboard/probation',
   '/dashboard/assets',
   '/dashboard/documents',
