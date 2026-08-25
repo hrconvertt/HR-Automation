@@ -618,6 +618,14 @@ function offerLetter({ emp, extras }: Ctx) {
   }
 }
 
+/**
+ * Convertt – Employment Agreement.
+ *
+ * Reproduces the issued document word for word. Only the person-specific
+ * blanks are filled from the record (name, CNIC, address, designation, salary,
+ * dates); the clause text is not paraphrased, reordered or "improved" — this
+ * is a signed legal document, so it has to read exactly as HR issues it.
+ */
 function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern') {
   const salary = emp.salary
   const gross = salary
@@ -625,107 +633,153 @@ function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern')
     : 0
   const startDate = extras.effectiveDate ? new Date(extras.effectiveDate) : emp.joiningDate ?? new Date()
   const intern = kind === 'intern'
-
-  const componentRows = salary ? `
-      <table class="kv">
-        <tr><td>Basic Salary</td><td>${fmtMoney(salary.basic)}</td></tr>
-        <tr><td>House Rent</td><td>${fmtMoney(salary.houseRent)}</td></tr>
-        <tr><td>Utilities</td><td>${fmtMoney(salary.utilities)}</td></tr>
-        <tr><td>Food Allowance</td><td>${fmtMoney(salary.food)}</td></tr>
-        <tr><td>Fuel Allowance</td><td>${fmtMoney(salary.fuel)}</td></tr>
-        <tr><td>Medical Allowance</td><td>${fmtMoney(salary.medicalAllowance)}</td></tr>
-        <tr><td>Other Allowances</td><td>${fmtMoney(salary.otherAllowance)}</td></tr>
-        <tr><td><strong>Gross Monthly</strong></td><td><strong>${fmtMoney(gross)}</strong></td></tr>
-      </table>` : '<p style="color:#94a3b8;font-style:italic">[Salary breakdown to be inserted]</p>'
+  const longDate = (d: Date) =>
+    d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  const blank = (v: string | null | undefined, w = 28) => (v ? escapeHtml(v) : '_'.repeat(w))
+  const hours = emp.timings ?? '10:00 AM to 7:00 PM, Monday to Friday'
 
   const body = `
-    <div class="doc-title">${intern ? 'Employment Agreement — Training &amp; Internship' : 'Employment Agreement — Permanent Employee'}</div>
-    <p>This Employment Agreement (the "Agreement") is made and entered into on <strong>${fmtDate(startDate)}</strong> between:</p>
-    <p><strong>Convertt</strong> (the "Company"), a sole proprietorship with its office at Office #201, 5th Floor, Mega Tower, Main Gulberg, Lahore, Punjab, Pakistan; and</p>
-    <p><strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? `, CNIC ${escapeHtml(emp.cnic)}` : ''}${emp.address ? `, residing at ${escapeHtml(emp.address)}` : ''} (hereinafter the "Employee").</p>
+    <div class="doc-title">Convertt &ndash; Employment Agreement</div>
+    <p style="text-align:center;font-style:italic;margin-top:-6px">(Private &amp; Confidential)</p>
 
-    <h3 style="font-size:12pt;margin-top:18px">1. Position &amp; Duties</h3>
-    <p>The Employee is appointed as <strong>${escapeHtml(emp.designation)}</strong> in the ${escapeHtml(emp.department?.name ?? '—')} department, reporting to ${escapeHtml(emp.reportingManager?.fullName ?? '[Reporting Manager]')}. The Employee agrees to perform such duties and responsibilities as are customarily associated with this role and as may be assigned by the Company from time to time.</p>
+    <p><strong>Date:</strong> ${longDate(startDate)}<br>
+    <strong>Employee ID:</strong> ${blank(emp.employeeCode, 18)}</p>
 
-    <h3 style="font-size:12pt">2. Term &amp; Probation</h3>
-    ${intern
-      ? '<p>This Agreement is for a fixed training/internship period as determined by the Company, beginning on the date stated above. Continuation, conversion to a permanent role, or termination at the end of this period is at the Company\'s sole discretion.</p>'
-      : '<p>This Agreement is for an indefinite term, commencing on the date stated above, subject to a probationary period of three (3) months during which either party may terminate the Agreement with one (1) week\'s written notice. Upon successful confirmation, the standard one (1) month notice period shall apply.</p>'}
+    <p>This Employment Agreement (&ldquo;Agreement&rdquo;) is made between:</p>
+    <p><strong>Convertt</strong> (the &ldquo;Company&rdquo;), a sole proprietorship with its office at Office #201, 5th Floor Mega Tower, Main Gulberg, Lahore, Punjab, Pakistan,</p>
+    <p><strong>AND</strong></p>
+    <p><strong>${escapeHtml(emp.fullName)}</strong>, CNIC: ${blank(emp.cnic, 20)}, ${emp.fatherOrHusbandName ? `S/O ${escapeHtml(emp.fatherOrHusbandName)}` : 'S/O ______________________'}, residing at ${blank(emp.address, 34)} (the &ldquo;Employee&rdquo;).</p>
+    <p>Together referred to as the &ldquo;Parties.&rdquo;</p>
 
-    <h3 style="font-size:12pt">3. Compensation</h3>
-    <p>The Employee shall be paid the following monthly compensation, less applicable statutory deductions:</p>
-    ${componentRows}
-    <p>Salary shall be paid on or around the last working day of each month, subject to attendance.</p>
+    <h3 style="font-size:12pt;margin-top:18px">Part I &ndash; Appointment &amp; Position</h3>
+    <p>Convertt is pleased to appoint you as a <strong>${escapeHtml(extras.designation?.trim() || emp.designation || '[Designation]')}</strong>. We value your skills and dedication, and we look forward to a productive and successful association. This agreement outlines the terms and conditions of your ${intern ? 'traineeship' : 'employment'}, balancing the Company&rsquo;s operational requirements with our commitment to supporting your professional development.</p>
+    <p>Your employment shall commence on ${longDate(startDate)}, subject to the terms herein.</p>
 
-    <h3 style="font-size:12pt">4. Working Hours &amp; Location</h3>
-    <p>Standard working hours are ${escapeHtml(emp.timings ?? '10:00 AM – 7:00 PM, Monday to Friday')} at ${escapeHtml(emp.workLocationAddress ?? emp.workLocation ?? 'the Company\'s Lahore office')}. The Employee may be required to work additional hours as business needs require.</p>
+    <h3 style="font-size:12pt">2. Probation and Confirmation</h3>
+    <p>2.1 The first three (3) months of service will constitute a probationary period.</p>
+    <p>2.2 During probation, either party may terminate employment within the period of 15 days.</p>
+    <p>2.3 Upon satisfactory completion of the probation period, your employment will be confirmed in writing. Probation may be extended once for one (1) month at the Company&rsquo;s discretion.</p>
 
-    <h3 style="font-size:12pt">5. Leave</h3>
-    ${intern
-      ? '<p>The Employee shall be entitled to one (1) emergency leave per the training period. Other absences shall be unpaid.</p>'
-      : '<p>The Employee shall be entitled to 24 days of paid leave per calendar year (12 Casual + 12 Sick), accrued monthly. Leave shall be applied through the HR system and is subject to manager approval.</p>'}
+    <h3 style="font-size:12pt">Part II &ndash; Role, Remuneration &amp; Benefits</h3>
+    <h3 style="font-size:12pt">3. Duties &amp; Responsibilities</h3>
+    <p>You shall perform your duties diligently, maintain professional conduct and comply with the lawful directions of the Company. Your responsibilities will evolve as the Company grows and you may be assigned additional tasks aligned with your skills.</p>
 
-    <h3 style="font-size:12pt">6. Confidentiality &amp; Intellectual Property</h3>
-    <p>The Employee agrees to maintain absolute confidentiality of all proprietary information, client data, financial data, trade secrets, and any other information that is not in the public domain, both during and after the term of employment. All work product, code, designs, and creative output produced in the course of employment shall remain the exclusive intellectual property of Convertt.</p>
+    <h3 style="font-size:12pt">4. Exclusivity of Service</h3>
+    <p>During employment, you shall not engage in any outside work, consultancy or business, whether paid or unpaid, that may conflict with your responsibilities to Convertt, without prior written consent.</p>
 
-    <h3 style="font-size:12pt">7. Code of Conduct</h3>
-    <p>The Employee shall conduct themselves professionally at all times and abide by the Company's Code of Conduct, IT Policy, Anti-Harassment Policy, and any other policies issued by the Company from time to time.</p>
+    <h3 style="font-size:12pt">5. Hours of Work</h3>
+    <p>Normal working hours are ${escapeHtml(hours)}, with one (1) hour for lunch. The Company expects punctuality and consistent attendance.</p>
 
-    <h3 style="font-size:12pt">8. Termination</h3>
-    ${intern
-      ? '<p>The Company may terminate this Agreement at any time during the training period without notice for unsatisfactory performance, misconduct, or any other valid reason.</p>'
-      : '<p>Either party may terminate this Agreement by giving one (1) month\'s written notice or payment in lieu thereof. The Company reserves the right to terminate without notice in cases of gross misconduct or breach of this Agreement.</p>'}
+    <h3 style="font-size:12pt">6. Compensation</h3>
+    <p>6.1 You will be paid a gross monthly salary of <strong>${gross > 0 ? fmtMoney(gross) : 'PKR ______________'}</strong>, payable at the end of each calendar month, subject to lawful deductions under the Income Tax Ordinance, 2001.</p>
+    <p>6.2 The Company may, at its discretion, provide bonuses, incentives or salary revisions. Such benefits are discretionary and may be varied.</p>
 
-    <h3 style="font-size:12pt">9. Disciplinary Process</h3>
-    <p>In line with the Standing Orders Ordinance, 1968, no employee shall be dismissed without due process. The process shall include a written Show Cause Notice (3–7 working days to reply), a domestic inquiry if the explanation is unsatisfactory, and a fair hearing before disciplinary action. Gross misconduct (fraud, theft, harassment, insubordination, reputational harm, breach of confidentiality) may result in summary dismissal without notice.</p>
+    <h3 style="font-size:12pt">7. Benefits</h3>
+    <p>The Company is a growing organization committed to providing equal opportunities for career development and professional growth. In addition to your salary, you may be considered for performance-based bonuses, appraisals or other incentives, as determined by the Company from time to time at its sole discretion.</p>
+    <p>Any additional benefits or programs that may be introduced in the future shall be communicated separately and shall apply equally to all eligible employees. These benefits are discretionary and do not form part of the guaranteed terms of employment.</p>
 
-    <h3 style="font-size:12pt">10. Return of Property &amp; Exit Clearance</h3>
-    <p>On termination, the Employee shall return all Company property (devices, documents, data). Final settlement shall be processed after completion of Exit Clearance.</p>
+    <h3 style="font-size:12pt">8. Leave and Holidays</h3>
+    <p>8.1 You will be entitled to three (3) paid leave days per month in case of a permanent employee and you will be entitled to two (2) paid leave days per month in the probation period, which may be used as sick or casual leave.</p>
+    <p>8.2 After completing fourteen (14) months of service, you will be entitled to a minimum of fourteen (24) days paid annual leave, as per Factories Act 1934 and Standing Orders Ordinance 1968.</p>
+    <p>8.3 The Sandwich Rule applies: if you take leave on either side of a weekend/public holiday, the intervening days will also be counted as leave.</p>
+    <p>8.4 All leave requires approval first by your Manager and then HR.</p>
+    <p>8.5 Public holidays declared by the Government of Pakistan will be observed.</p>
 
-    <h3 style="font-size:12pt">11. Post-Employment Restrictions</h3>
-    <p>For six (6) months after leaving, the Employee shall not solicit Company clients for competing business, nor poach Company employees. Confidentiality and non-disparagement obligations survive termination indefinitely.</p>
+    <h3 style="font-size:12pt">Part III &ndash; Policies &amp; Conduct</h3>
+    <h3 style="font-size:12pt">9. Confidentiality</h3>
+    <p>You shall maintain confidentiality of all Company, client and partner information during and after employment. Any unauthorised disclosure may lead to termination and legal proceedings under the Prevention of Electronic Crimes Act, 2016 (PECA) and other applicable laws.</p>
 
-    <h3 style="font-size:12pt">12. Social Media &amp; Non-Disparagement</h3>
-    <p>The Employee shall not, during or after employment, make defamatory or disparaging remarks about the Company, its employees or clients, whether verbally or online (LinkedIn, Facebook, Instagram, Twitter/X, WhatsApp etc.). Participation in hostile social media campaigns shall constitute misconduct and may invite civil or criminal action under the Prevention of Electronic Crimes Act, 2016 (PECA) and the Defamation Ordinance, 2002.</p>
+    <h3 style="font-size:12pt">10. Intellectual Property</h3>
+    <p>All work produced by you during employment, including code, designs, content and documentation, shall be the property of the Company. You irrevocably assign all intellectual property rights to the Company. This obligation survives termination.</p>
 
-    <h3 style="font-size:12pt">13. Background Verification</h3>
+    <h3 style="font-size:12pt">11. Code of Conduct</h3>
+    <p>The Company expects you to:</p>
+    <ul>
+      <li>Act with integrity, professionalism and respect.</li>
+      <li>Avoid harassment, discrimination or misconduct.</li>
+      <li>Uphold ethical behaviour in dealings with colleagues, clients and vendors.</li>
+    </ul>
+
+    <h3 style="font-size:12pt">12. IT &amp; Security</h3>
+    <p>You shall comply with Company IT and data security policies. All devices, systems and accounts remain Company property. The Company reserves the right to monitor its systems in compliance with law.</p>
+
+    <h3 style="font-size:12pt">13. Social Media &amp; Non-Disparagement</h3>
+    <p>You shall not, during or after employment, make defamatory or disparaging remarks about the Company, its employees or clients, whether verbally or online (LinkedIn, Facebook, Instagram, Twitter/X, WhatsApp etc.). Participation in hostile social media campaigns shall constitute misconduct and may invite civil/criminal action under PECA and Defamation Ordinance, 2002.</p>
+
+    <h3 style="font-size:12pt">Part IV &ndash; Discipline, Termination &amp; Exit</h3>
+    <h3 style="font-size:12pt">14. Disciplinary Process</h3>
+    <p>14.1 In line with the Standing Orders Ordinance, 1968, no Employee shall be dismissed without due process.</p>
+    <p>14.2 The process shall include:</p>
+    <ul>
+      <li>Written Show Cause Notice (3&ndash;7 working days to reply).</li>
+      <li>Domestic Inquiry if explanation unsatisfactory.</li>
+      <li>Fair hearing before disciplinary action.</li>
+    </ul>
+    <p>14.3 Gross misconduct (fraud, theft, harassment, insubordination, reputational harm, breach of confidentiality) may result in summary dismissal without notice.</p>
+
+    <h3 style="font-size:12pt">15. Termination</h3>
+    <p>15.1 During probation: termination by either party within 15 days of notice period.</p>
+    <p>15.2 After confirmation: termination by either party with one (1) month written notice or salary in lieu.</p>
+    <p>15.3 Immediate termination for gross misconduct.</p>
+
+    <h3 style="font-size:12pt">16. Return of Property &amp; Exit Clearance</h3>
+    <p>On termination, you shall return all Company property (devices, documents, data). Final settlement shall be processed after completion of Exit Clearance (Annexure E).</p>
+
+    <h3 style="font-size:12pt">17. Post-Employment Restrictions</h3>
+    <p>For six (6) months after leaving, you shall not:</p>
+    <ul>
+      <li>Solicit Company clients for competing business.</li>
+      <li>Poach Company employees.</li>
+    </ul>
+    <p>Your confidentiality and non-disparagement obligations survive termination indefinitely.</p>
+
+    <h3 style="font-size:12pt">Part V &ndash; Legal &amp; General</h3>
+    <h3 style="font-size:12pt">18. Background Verification</h3>
     <p>Employment is subject to verification of CNIC, credentials and references. False information shall result in dismissal.</p>
 
-    <h3 style="font-size:12pt">14. Governing Law &amp; Jurisdiction</h3>
-    <p>This Agreement is governed by the laws of the Islamic Republic of Pakistan. The courts of Lahore, Punjab shall have exclusive jurisdiction. Failure to enforce a right shall not constitute waiver; if any clause is found invalid, the remainder shall continue in effect.</p>
+    <h3 style="font-size:12pt">19. Force Majeure</h3>
+    <p>The Company shall not be liable for delays or failures caused by events beyond its control (natural disasters, government action, pandemics, strikes).</p>
 
-    <h3 style="font-size:12pt">15. Entire Agreement</h3>
-    <p>This Agreement constitutes the entire agreement between the Parties. No amendment is valid unless made in writing and signed by the Company.</p>
+    <h3 style="font-size:12pt">20. Waiver &amp; Severability</h3>
+    <p>Failure to enforce a right shall not constitute waiver. If any clause is found invalid, the remainder shall continue in effect.</p>
+
+    <h3 style="font-size:12pt">21. Governing Law &amp; Jurisdiction</h3>
+    <p>This Agreement is governed by the laws of the Islamic Republic of Pakistan. The courts of Lahore, Punjab shall have exclusive jurisdiction.</p>
+
+    <h3 style="font-size:12pt">22. Entire Agreement</h3>
+    <p>This Agreement, together with Annexures A&ndash;E, constitutes the entire agreement. No amendment is valid unless made in writing and signed by the Company.</p>
 
     <h3 style="font-size:12pt">HR Closing Statement</h3>
     <p>Convertt is committed to providing a professional, ethical and growth-oriented workplace. By joining, you become part of a team that values excellence, integrity and innovation. We welcome you and look forward to a successful association.</p>
 
     <h3 style="font-size:12pt">Employee Declaration &amp; Acceptance</h3>
-    <p>I, <strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? `, CNIC ${escapeHtml(emp.cnic)}` : ''}, hereby confirm and declare that:</p>
+    <p>I, <strong>${escapeHtml(emp.fullName)}</strong>, CNIC: ${blank(emp.cnic, 20)}, hereby confirm and declare that:</p>
     <ol>
       <li>All documents, credentials and information I have provided are true and accurate. I understand that any false or misleading information shall constitute misconduct and may result in dismissal.</li>
-      <li>I have read, understood and accepted this Employment Agreement and its Annexures, including the Company's Code of Conduct, Confidentiality, Intellectual Property, Non-Disparagement and Disciplinary Policies.</li>
+      <li>I have read, understood and accepted this Employment Agreement and its Annexures, including the Company&rsquo;s Code of Conduct, Confidentiality, Intellectual Property, Non-Disparagement and Disciplinary Policies.</li>
       <li>I agree to abide by all present and future Company policies and acknowledge that the Company may amend its policies in line with applicable law.</li>
     </ol>
     <p>I reaffirm that any work created during employment is the exclusive property of the Company and that confidentiality and non-disparagement obligations survive termination.</p>
 
-    <p style="margin-top:18px">Signed and accepted on ${fmtDate(startDate)}.</p>
+    <p style="margin-top:18px">Signed and accepted on ${longDate(startDate)}.</p>
 
     <table class="sig-grid">
       <tr>
         <td>
+          <div class="sig-role" style="margin-bottom:6pt"><strong>For Convertt:</strong></div>
           <div class="esign-slot" data-esign="Syed Khawer"><span class="esign-hint">Click to sign</span></div>
           <div class="sig-line"></div>
-          <div class="sig-name">Syed Khawer</div>
-          <div class="sig-role">Director Administration, Convertt</div>
+          <div class="sig-role">Signature</div>
+          <div class="sig-date">Title: _____________________</div>
           <div class="sig-date">Date: _____________________</div>
         </td>
         <td>
+          <div class="sig-role" style="margin-bottom:6pt"><strong>For Employee:</strong></div>
           <div class="esign-slot" data-esign="${escapeHtml(emp.fullName)}"><span class="esign-hint">Click to sign</span></div>
           <div class="sig-line"></div>
-          <div class="sig-name">${escapeHtml(emp.fullName)}</div>
-          <div class="sig-role">CNIC: ${emp.cnic ? escapeHtml(emp.cnic) : '_____________________'}</div>
+          <div class="sig-role">Signature</div>
           <div class="sig-date">Date: _____________________</div>
+          <div class="sig-date">CNIC: ${emp.cnic ? escapeHtml(emp.cnic) : '_____________________'}</div>
         </td>
       </tr>
     </table>
@@ -747,94 +801,136 @@ function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern')
  * destruction with written certification, and the liquidated-damages figure.
  * Signed separately from, and in addition to, the Employment Agreement.
  */
+/**
+ * NDA – Employee Non-Disclosure & Intellectual Property Agreement.
+ *
+ * Reproduces the issued document word for word. Only the Employee Details
+ * block is filled from the record; every clause is verbatim, because this is
+ * a signed legal document and paraphrasing it changes what was agreed.
+ */
 function nda({ emp }: Ctx) {
   const start = emp.joiningDate ?? new Date()
+  const longDate = (d: Date) =>
+    d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+  const line = (v: string | null | undefined, w = 30) => (v ? escapeHtml(v) : '_'.repeat(w))
+
   const body = `
-    <div class="doc-title">Employee Non-Disclosure &amp; Intellectual Property Agreement</div>
+    <div class="doc-title">NDA &ndash; Employee Non-Disclosure &amp; Intellectual Property Agreement</div>
     <p style="text-align:center;font-style:italic;margin-top:-6px">(Private &amp; Confidential)</p>
 
-    <p><strong>Date:</strong> ${fmtDate(start)}</p>
+    <p><strong>Date:</strong> ${longDate(start)}</p>
+
     <p>This Non-Disclosure and Intellectual Property Agreement (&ldquo;Agreement&rdquo;) is entered into between:</p>
-    <p><strong>Convertt</strong>, a sole proprietorship organised under the laws of the Islamic Republic of Pakistan, having its office at Office #201, 5th Floor, Mega Tower, Main Gulberg, Lahore, Pakistan (the &ldquo;Company&rdquo;),</p>
+    <p><strong>Convertt</strong>, a sole proprietorship organized under the laws of the Islamic Republic of Pakistan, having its office at Office #201, 5th Floor, Mega Tower, Main Gulberg, Lahore, Pakistan (hereinafter referred to as the &ldquo;Company&rdquo;),</p>
     <p><strong>AND</strong></p>
-    <p><strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? `, CNIC ${escapeHtml(emp.cnic)}` : ''}${emp.designation ? `, ${escapeHtml(emp.designation)}` : ''}${emp.address ? `, residing at ${escapeHtml(emp.address)}` : ''} (the &ldquo;Employee&rdquo;).</p>
-    <p>The Company and the Employee are collectively referred to as the &ldquo;Parties&rdquo;.</p>
-
-    <h3 style="font-size:12pt;margin-top:18px">1. Purpose</h3>
-    <p>The Employee acknowledges that during employment they will have access to sensitive, confidential and proprietary information of the Company and its clients. This Agreement governs protection of such information, assignment of intellectual property, and restrictions on use or disclosure during and after employment.</p>
-
-    <h3 style="font-size:12pt">2. Confidential Information</h3>
-    <p>2.1 &ldquo;Confidential Information&rdquo; includes all non-public information relating to the Company&rsquo;s business, clients, products, designs, codes, strategies, financials, marketing plans, trade secrets, systems and other proprietary data, whether in written, oral, digital or any other form.</p>
-    <p>2.2 The Employee shall:</p>
+    <p><strong>Employee Details</strong></p>
     <ul>
-      <li>Keep all Confidential Information strictly confidential;</li>
-      <li>Not disclose it to any third party without prior written authorisation;</li>
-      <li>Not copy, duplicate, store, download or retain Confidential Information on any personal device, cloud account, email or storage media;</li>
-      <li>Not use it for personal gain or for the benefit of any third party.</li>
+      <li>Full Name: ${line(emp.fullName, 32)}</li>
+      <li>Father/Spouse Name: ${line(emp.fatherOrHusbandName, 28)}</li>
+      <li>CNIC: ${line(emp.cnic, 26)}</li>
+      <li>Designation: ${line(emp.designation, 26)}</li>
+      <li>Residential Address: ${line(emp.address, 40)}</li>
+      <li>Email: ${line(emp.email, 36)} (hereinafter referred to as the &ldquo;Employee&rdquo;).</li>
     </ul>
-    <p>2.3 Upon termination of employment, the Employee shall immediately return all Confidential Information and delete any copies from personal devices, emails or accounts.</p>
-    <p>2.4 These obligations survive termination of employment and remain indefinite.</p>
+    <p>The Company and the Employee are collectively referred to as the &ldquo;Parties.&rdquo;</p>
 
-    <h3 style="font-size:12pt">3. Exclusions</h3>
-    <p>Confidential Information does not include information that:</p>
+    <h3 style="font-size:12pt;margin-top:18px">1. Purpose of Agreement</h3>
+    <p>During the course of employment, the Employee will have access to confidential, proprietary, and sensitive information relating to the Company, its clients, operations, systems, and business affairs. This Agreement sets out the Employee&rsquo;s obligations regarding confidentiality, intellectual property ownership, non-disparagement, and post-employment conduct, both during and after the term of employment.</p>
+
+    <h3 style="font-size:12pt">2. Definition of Confidential Information</h3>
+    <p>&ldquo;Confidential Information&rdquo; includes, without limitation, all information that is not publicly available and that relates to the Company or its clients, whether disclosed directly or indirectly, including but not limited to:</p>
     <ul>
-      <li>Is or becomes public through no fault of the Employee;</li>
-      <li>Was lawfully obtained by the Employee prior to disclosure by the Company; or</li>
-      <li>Must be disclosed under law, provided the Employee gives prior notice to the Company.</li>
+      <li>Client identities, data, credentials, communications, and CRM records</li>
+      <li>Designs, layouts, wireframes, code, scripts, automations, workflows, SOPs</li>
+      <li>Business strategies, pricing, proposals, margins, forecasts, and financial data</li>
+      <li>Internal tools, systems, methodologies, processes, and know-how</li>
+      <li>HR matters, internal discussions, disputes, policies, and decisions</li>
+      <li>Any information learned, observed, inferred, or accessed as a result of employment</li>
     </ul>
+    <p>Confidential Information includes information in written, oral, visual, electronic, digital, or any other form, regardless of whether marked as confidential.</p>
 
-    <h3 style="font-size:12pt">4. Intellectual Property Ownership</h3>
-    <p>4.1 All work, inventions, designs, content, code, documentation and creative output produced during employment (&ldquo;Work Product&rdquo;) shall be the sole and exclusive property of the Company.</p>
-    <p>4.2 The Employee irrevocably assigns all rights, title and interest in the Work Product to the Company, including copyright, patents, trademarks, designs and trade secrets.</p>
-    <p>4.3 The Employee waives any claim to ownership, royalties or additional compensation beyond salary for such Work Product.</p>
-    <p>4.4 These obligations survive termination of employment.</p>
-
-    <h3 style="font-size:12pt">5. Non-Disparagement &amp; Social Media</h3>
-    <p>5.1 The Employee shall not, during or after employment, post, publish, circulate or endorse any defamatory, disparaging or negative statements about the Company, its management, employees or clients, including but not limited to LinkedIn, Facebook, Instagram, Twitter/X, WhatsApp, blogs, forums or any digital platform.</p>
-    <p>5.2 Any grievance must be raised internally with the Company. Public commentary or online campaigns against the Company shall constitute misconduct and reputational harm.</p>
-    <p>5.3 Breach of this clause may constitute cyber harassment or cyber bullying under the Prevention of Electronic Crimes Act, 2016 (PECA) and defamation under the Defamation Ordinance, 2002, entitling the Company to civil and criminal remedies.</p>
-
-    <h3 style="font-size:12pt">6. Return &amp; Destruction of Materials</h3>
-    <p>6.1 The Employee shall not retain, copy or store any Company-owned information, documents or property after termination of employment.</p>
-    <p>6.2 Upon termination, the Employee shall:</p>
+    <h3 style="font-size:12pt">3. Confidentiality Obligations</h3>
+    <p>The Employee agrees that they shall, during employment and at all times thereafter:</p>
     <ul>
-      <li>Return all Company devices, data, credentials and documents;</li>
-      <li>Permanently delete any Company-related files, emails or data stored on personal devices or cloud accounts;</li>
-      <li>Provide written certification that no Company information remains in their possession.</li>
+      <li>Maintain strict confidentiality of all Confidential Information</li>
+      <li>Not disclose, publish, share, transmit, or make available any Confidential Information to any third party without prior written authorization from the Company</li>
+      <li>Not copy, download, store, retain, or back up Confidential Information on personal devices, email accounts, cloud storage, or external media</li>
+      <li>Not use Confidential Information for personal benefit or for the benefit of any third party</li>
+    </ul>
+    <p>These obligations survive termination of employment without limitation in time, unless the information lawfully enters the public domain through no fault of the Employee.</p>
+
+    <h3 style="font-size:12pt">4. Exclusions</h3>
+    <p>Confidential Information does not include information that the Employee can clearly demonstrate:</p>
+    <ul>
+      <li>Was lawfully known to the Employee prior to disclosure by the Company</li>
+      <li>Becomes publicly available without breach of this Agreement</li>
+      <li>Is required to be disclosed by law or court order, provided prior written notice is given to the Company where legally permissible</li>
     </ul>
 
-    <h3 style="font-size:12pt">7. Remedies &amp; Liquidated Damages</h3>
-    <p>7.1 The Employee acknowledges that breach of this Agreement will cause irreparable harm to the Company, for which monetary damages alone may be insufficient.</p>
-    <p>7.2 The Company shall be entitled to:</p>
+    <h3 style="font-size:12pt">5. Intellectual Property &amp; Work Product</h3>
     <ul>
-      <li>Injunctive relief (stay orders) from court to stop or prevent further breach;</li>
-      <li>Recovery of actual damages suffered due to breach, including loss of business, clients or reputation;</li>
-      <li>Recovery of legal costs and expenses.</li>
+      <li>All work, materials, inventions, designs, developments, code, content, documentation, and creative output created or contributed to by the Employee during employment (&ldquo;Work Product&rdquo;) shall be deemed work-for-hire and shall be the exclusive property of the Company.</li>
+      <li>To the extent any Work Product is not deemed work-for-hire, the Employee hereby irrevocably assigns all rights, title, and interest, including intellectual property rights, to the Company.</li>
+      <li>The Employee waives any moral rights, claims to ownership, royalties, or additional compensation in respect of such Work Product, beyond agreed remuneration.</li>
     </ul>
-    <p>7.3 In addition, the Employee agrees that for any proven breach of this Agreement, the Company shall be entitled to liquidated damages of <strong>PKR 2,000,000 (Two Million Pakistani Rupees)</strong>, in addition to actual damages and other remedies available under law.</p>
+    <p>These obligations survive termination of employment.</p>
 
-    <h3 style="font-size:12pt">8. Governing Law &amp; Jurisdiction</h3>
-    <p>This Agreement shall be governed by the laws of the Islamic Republic of Pakistan. Courts at Lahore, Punjab shall have exclusive jurisdiction.</p>
+    <h3 style="font-size:12pt">6. Non-Solicitation and Post-Employment Restrictions</h3>
+    <p>The Employee acknowledges that the Company&rsquo;s client base and staff are proprietary assets. Therefore, for a period of twelve (12) months following the termination of employment for any reason, the Employee shall not, directly or indirectly:</p>
+    <ul>
+      <li>Solicit, provide services to, or accept any business from any client of the Company with whom the Employee had contact or performed work for during their employment.</li>
+      <li>Induce, encourage, or attempt to solicit any employee or contractor of the Company to leave their employment or engagement with Convertt.</li>
+    </ul>
 
-    <h3 style="font-size:12pt">9. Entire Agreement</h3>
-    <p>This Agreement constitutes the entire understanding between the Parties regarding confidentiality, intellectual property and non-disparagement, and supersedes any prior discussions or agreements.</p>
+    <h3 style="font-size:12pt">7. Non-Disparagement &amp; Public Communications</h3>
+    <ul>
+      <li>The Employee agrees not to make, publish, or circulate any false, misleading, defamatory, or harmful statements regarding the Company, its management, employees, clients, or business affairs, during or after employment.</li>
+      <li>This includes statements made on social media platforms, messaging applications, blogs, forums, interviews, or any public or semi-public medium.</li>
+      <li>Legitimate grievances must be raised internally through appropriate Company channels. Public disclosure of internal matters or disputes constitutes a breach of this Agreement.</li>
+      <li>The Parties acknowledge that breaches may attract civil and criminal liability under applicable laws, including the <strong>Prevention of Electronic Crimes Act, 2016</strong> and <strong>Defamation Ordinance, 2002</strong>.</li>
+    </ul>
 
-    <p style="margin-top:18px">Signed and accepted on ${fmtDate(start)}.</p>
+    <h3 style="font-size:12pt">8. Return and Destruction of Company Property</h3>
+    <p>Upon termination of employment, or upon request:</p>
+    <ul>
+      <li>The Employee shall immediately return all Company property, devices, documents, data, credentials, and materials</li>
+      <li>Permanently delete all Company-related information from personal devices and accounts</li>
+      <li>Confirm in writing that no Company information remains in their possession or control</li>
+    </ul>
 
+    <h3 style="font-size:12pt">9. Remedies for Breach</h3>
+    <ul>
+      <li>The Employee acknowledges that breach of this Agreement may cause irreparable harm to the Company.</li>
+      <li>The Company shall be entitled to seek: (i) Injunctive relief; (ii) Recovery of actual damages; (iii) Recovery of legal costs and expenses.</li>
+      <li>Any monetary compensation agreed herein is a genuine pre-estimate of loss and not a penalty, and does not limit the Company&rsquo;s right to seek additional remedies available under law.</li>
+    </ul>
+
+    <h3 style="font-size:12pt">10. Governing Law &amp; Jurisdiction</h3>
+    <p>This Agreement shall be governed by and construed in accordance with the laws of the Islamic Republic of Pakistan. Courts at Lahore, Punjab shall have exclusive jurisdiction.</p>
+
+    <h3 style="font-size:12pt">11. Severability</h3>
+    <p>If any provision of this Agreement is held to be invalid or unenforceable, the remaining provisions shall continue in full force and effect.</p>
+
+    <h3 style="font-size:12pt">12. Entire Agreement</h3>
+    <p>This Agreement constitutes the entire understanding between the Parties and supersedes all prior agreements or understandings relating to confidentiality and intellectual property.</p>
+
+    <h3 style="font-size:12pt">Signatures</h3>
     <table class="sig-grid">
       <tr>
         <td>
-          <div class="esign-slot" data-esign="Syed Khawer"><span class="esign-hint">Click to sign</span></div>
+          <div class="sig-role" style="margin-bottom:6pt"><strong>For Employee:</strong></div>
+          <div class="esign-slot" data-esign="${escapeHtml(emp.fullName)}"><span class="esign-hint">Click to sign</span></div>
           <div class="sig-line"></div>
-          <div class="sig-name">Syed Khawer</div>
-          <div class="sig-role">Director Administration, Convertt</div>
+          <div class="sig-role">Signature</div>
+          <div class="sig-date">Name: ${emp.fullName ? escapeHtml(emp.fullName) : '_____________________'}</div>
           <div class="sig-date">Date: _____________________</div>
         </td>
         <td>
-          <div class="esign-slot" data-esign="${escapeHtml(emp.fullName)}"><span class="esign-hint">Click to sign</span></div>
+          <div class="sig-role" style="margin-bottom:6pt"><strong>For Convertt (Employer):</strong></div>
+          <div class="esign-slot" data-esign="Syed Khawer"><span class="esign-hint">Click to sign</span></div>
           <div class="sig-line"></div>
-          <div class="sig-name">${escapeHtml(emp.fullName)}</div>
-          <div class="sig-role">CNIC: ${emp.cnic ? escapeHtml(emp.cnic) : '_____________________'}</div>
+          <div class="sig-role">Signature</div>
+          <div class="sig-date">Full Name: _____________________</div>
           <div class="sig-date">Date: _____________________</div>
         </td>
       </tr>
