@@ -164,7 +164,7 @@ export async function ExecutivePayrollView() {
         />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="flex flex-col gap-6">
         {/* 12-Month Trend */}
         <Card className="rounded-2xl">
           <CardHeader>

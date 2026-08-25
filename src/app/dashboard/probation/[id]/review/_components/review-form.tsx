@@ -228,7 +228,7 @@ export function ProbationReviewForm({ id }: { id: string }) {
           <p className="text-[11px] text-slate-500 mb-3">
             {RATING_SCALE.map((r) => `${r.value} = ${r.label}`).join('  |  ')}
           </p>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <div className="flex flex-col gap-3">
             {DIMENSIONS.map((d) => {
               const rk = `rating${d.key}` as keyof Review
               const nk = `notes${d.key}` as keyof Review

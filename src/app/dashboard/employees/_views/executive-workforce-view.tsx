@@ -117,7 +117,7 @@ export async function ExecutiveWorkforceView() {
         <KPI label="Avg Tenure" value={`${avgTenure.toFixed(1)} yr`} icon={TrendingUp} color="text-slate-700 bg-slate-50" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="flex flex-col gap-4">
         {/* Headcount by Department */}
         <Card>
           <CardHeader><CardTitle>Headcount by Department</CardTitle></CardHeader>

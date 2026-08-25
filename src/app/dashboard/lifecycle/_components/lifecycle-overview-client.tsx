@@ -97,7 +97,7 @@ export function LifecycleOverviewClient() {
           </Card>
 
           {/* Trend charts */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
             <Card>
               <CardHeader className="border-b border-slate-100">
                 <CardTitle className="text-base">Headcount — last 12 months</CardTitle>
@@ -116,7 +116,7 @@ export function LifecycleOverviewClient() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-4">
             {/* Tenure */}
             <Card>
               <CardHeader className="border-b border-slate-100">
@@ -178,7 +178,7 @@ export function LifecycleOverviewClient() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="flex flex-col gap-4">
             {/* Upcoming 30 days */}
             <Card>
               <CardHeader className="border-b border-slate-100 flex flex-row items-center gap-2">
