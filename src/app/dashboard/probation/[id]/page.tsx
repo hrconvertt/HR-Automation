@@ -199,6 +199,39 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </Card>
 
+      {/* Day-3 paperwork — the Employment Agreement and the NDA are signed in
+          the first days on the job, well before the Day-30 check-in. Both open
+          in a new tab with click-to-sign slots for the company and employee. */}
+      <Card className="p-5">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
+              Day-3 Documents — Employment Agreement &amp; NDA
+            </h2>
+            <p className="text-sm text-slate-500 mt-1">
+              {elapsed >= 3
+                ? 'Due now — issue both for signature.'
+                : `Due on Day 3 (in ${3 - elapsed} day${3 - elapsed === 1 ? '' : 's'}).`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <a
+              href={`/api/documents/generate?type=employment_agreement&employeeId=${rec.employee.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm">Employment Agreement</Button>
+            </a>
+            <a
+              href={`/api/documents/generate?type=nda&employeeId=${rec.employee.id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" size="sm">NDA</Button>
+            </a>
+          </div>
+        </div>
+      </Card>
       {/* Settling check-in */}
       <Card className="p-5">
         <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-3">Day-30 Settling Check-in</h2>
