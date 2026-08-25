@@ -25,6 +25,7 @@ interface Props {
   employees: { id: string; fullName: string; dob: string | null; joiningDate: string }[]
   companyEvents: { id: string; title: string; eventDate: string; category: string; location: string | null }[]
   probationEnds: { id: string; endDate: string; employeeName: string }[]
+  probationMeetings?: { id: string; meetingDate: string; employeeName: string }[]
   leaves: { id: string; fromDate: string; toDate: string; leaveType: string; employeeName: string }[]
   dbHolidays: { id: string; name: string; date: string; type: string }[]
   pkHolidays: { date: string; name: string; type: 'PUBLIC' | 'OPTIONAL' }[]
@@ -52,7 +53,7 @@ const FILTER_LABELS: Record<ChipKind, string> = {
 
 export function CalendarGrid({
   year, month, isHR,
-  employees, companyEvents, probationEnds, leaves, dbHolidays, pkHolidays,
+  employees, companyEvents, probationEnds, probationMeetings = [], leaves, dbHolidays, pkHolidays,
 }: Props) {
   const router = useRouter()
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
@@ -110,6 +111,10 @@ export function CalendarGrid({
         const key = p.endDate.slice(0, 10)
         push(key, { kind: 'probation', label: p.employeeName, detail: 'Probation ends' })
       }
+      for (const m of probationMeetings) {
+        const key = m.meetingDate.slice(0, 10)
+        push(key, { kind: 'probation', label: m.employeeName, detail: 'Probation review meeting' })
+      }
     }
 
     // Leaves — paint every day in [fromDate, toDate] that falls in this month
@@ -124,7 +129,7 @@ export function CalendarGrid({
     }
 
     return map
-  }, [year, month, isHR, employees, companyEvents, probationEnds, leaves, dbHolidays, pkHolidays])
+  }, [year, month, isHR, employees, companyEvents, probationEnds, probationMeetings, leaves, dbHolidays, pkHolidays])
 
   function ymd(y: number, m: number, d: number) {
     return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`

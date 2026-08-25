@@ -48,7 +48,7 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
   const monthStart = new Date(year, month, 1)
   const monthEnd = new Date(year, month + 1, 0, 23, 59, 59)
 
-  const [employees, companyEvents, probationRecords, leaveRequests, holidaysDb, wfhLogs, loaRecords] = await Promise.all([
+  const [employees, companyEvents, probationRecords, probationMeetings, leaveRequests, holidaysDb, wfhLogs, loaRecords] = await Promise.all([
     prisma.employee.findMany({
       where: {
         status: 'ACTIVE',
@@ -64,6 +64,14 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
       ? prisma.probationRecord.findMany({
           where: { endDate: { gte: monthStart, lte: monthEnd }, status: { in: ['ACTIVE', 'UNDER_REVIEW'] } },
           select: { id: true, endDate: true, employee: { select: { fullName: true } } },
+        })
+      : Promise.resolve([]),
+    // Probation review meetings HR has scheduled. Kept on the calendar so the
+    // date does not live only on the probation record, where it is missed.
+    isHR
+      ? prisma.probationRecord.findMany({
+          where: { meetingScheduledFor: { gte: monthStart, lte: monthEnd }, outcomeEnactedAt: null },
+          select: { id: true, meetingScheduledFor: true, employee: { select: { fullName: true } } },
         })
       : Promise.resolve([]),
     // Approved leaves; manager sees own team, HR sees all, employee sees own
@@ -160,6 +168,13 @@ export default async function CalendarPage({ searchParams }: { searchParams?: Pr
         endDate: p.endDate.toISOString(),
         employeeName: p.employee.fullName,
       }))}
+      probationMeetings={probationMeetings
+        .filter((p) => p.meetingScheduledFor)
+        .map((p) => ({
+          id: p.id,
+          meetingDate: p.meetingScheduledFor!.toISOString(),
+          employeeName: p.employee.fullName,
+        }))}
       leaves={[
         ...visibleLeaves.map((l) => ({
           id: l.id,

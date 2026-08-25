@@ -255,6 +255,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         salaryBumpEffective: bump?.effective ?? null,
       },
     })
+
+    // Tell the people who have to be in the room. The date otherwise lived only
+    // on this record, where the employee never sees it and the manager forgets.
+    // Non-fatal: a notification failure must not undo a recorded decision.
+    if (meeting) {
+      const when = meeting.toLocaleDateString('en-GB', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+      })
+      const at = meeting.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      try {
+        const recipients = [rec.employeeId, rec.employee.reportingManagerId].filter(
+          (x): x is string => !!x,
+        )
+        await notifyMany(recipients, {
+          type: 'PROBATION_ALERT',
+          title: 'Probation review meeting scheduled',
+          message: `${rec.employee.fullName}'s probation review meeting is on ${when} at ${at}.`,
+          link: `/dashboard/probation/${rec.id}`,
+        })
+      } catch (e) {
+        console.error('[probation HR_DECIDE] meeting notification failed', e)
+      }
+    }
+
     return NextResponse.json({ record: updated })
   }
 
