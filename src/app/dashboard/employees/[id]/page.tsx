@@ -373,6 +373,32 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                   </a>
                 )}
                 {canEditFull && (
+                  /* The agreement and the NDA are signed within the first days
+                     of joining, so they belong next to the letter rather than
+                     buried in a dialog on another screen. Both open editable
+                     with click-to-sign slots. */
+                  <a
+                    href={`/api/documents/generate?type=employment_agreement&employeeId=${employee.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-2 hover:bg-slate-50"
+                    title="Generate the employment agreement from this record"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> Employment Agreement
+                  </a>
+                )}
+                {canEditFull && (
+                  <a
+                    href={`/api/documents/generate?type=nda&employeeId=${employee.id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-2 hover:bg-slate-50"
+                    title="Generate the NDA from this record"
+                  >
+                    <FileText className="w-3.5 h-3.5" /> NDA
+                  </a>
+                )}
+                {canEditFull && (
                   <DeleteEmployeeButton
                     employeeId={employee.id}
                     employeeName={employee.fullName}
