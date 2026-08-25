@@ -158,6 +158,8 @@ export function tallyStatus(status: CellStatus, t: AttendanceTotals): void {
 
 export interface ComputedDay {
   day: number
+  /** What the leave was for — shown on hover instead of "Leave (Full Day)". */
+  note?: string
   iso: string
   status: CellStatus
   isWeekend: boolean
@@ -175,6 +177,8 @@ export interface MonthComputeCtx {
   getLog(iso: string): { status: string; workType: string } | undefined
   /** Approved-leave lookup: undefined = not on leave; boolean = halfDay flag. */
   getLeaveHalf(iso: string): boolean | undefined
+  /** The leave type + reason for this day, when the day is leave. */
+  getLeaveNote?(iso: string): string | undefined
   isHoliday(iso: string): boolean
   onLOA(iso: string): boolean
 }
@@ -217,7 +221,7 @@ export function computeEmployeeMonth(ctx: MonthComputeCtx): { days: ComputedDay[
       // logs) DOES count — matches payroll's presentDays counting.
       if (!(status === 'A' && isWeekend)) tallyStatus(status, totals)
     }
-    days.push({ day: d, iso, status, isWeekend, isFuture, preJoin })
+    days.push({ day: d, iso, status, isWeekend, isFuture, preJoin, note: ctx.getLeaveNote?.(iso) })
   }
   return { days, totals }
 }
@@ -229,6 +233,8 @@ interface RangeBuckets {
   logBucket: Map<string, { status: string; workType: string }>
   /** `${empId}|${iso}` → halfDay flag */
   leaveDayBucket: Map<string, boolean>
+  /** `${empId}|${iso}` → the leave type + reason, for the hover tooltip */
+  leaveNoteBucket: Map<string, string>
   /** iso → true for PUBLIC holidays */
   holidaySet: Set<string>
   /** `${empId}|${iso}` covered by an LOA (start → actual/expected return, exclusive) */
@@ -253,7 +259,7 @@ async function loadRangeBuckets(
         fromDate: { lte: rangeEnd },
         toDate: { gte: rangeStart },
       },
-      select: { employeeId: true, fromDate: true, toDate: true, firstDayHalf: true, lastDayHalf: true },
+      select: { employeeId: true, fromDate: true, toDate: true, firstDayHalf: true, lastDayHalf: true, leaveType: true, reason: true },
     }),
     prisma.holiday.findMany({
       where: { type: 'PUBLIC', date: { gte: rangeStart, lte: rangeEnd } },
@@ -276,6 +282,10 @@ async function loadRangeBuckets(
   }
 
   const leaveDayBucket = new Map<string, boolean>()
+  // What the leave was actually for, keyed employeeId|day. "Leave (Full Day)"
+  // on hover says nothing about which leave — this carries the type and the
+  // reason through to the grid tooltip.
+  const leaveNoteBucket = new Map<string, string>()
   for (const lv of leaves) {
     const cur = new Date(lv.fromDate)
     cur.setHours(0, 0, 0, 0)
@@ -286,6 +296,11 @@ async function loadRangeBuckets(
       const isLast = cur.getTime() === new Date(lv.toDate).setHours(0, 0, 0, 0)
       const half = (isFirst && lv.firstDayHalf) || (isLast && lv.lastDayHalf)
       leaveDayBucket.set(`${lv.employeeId}|${dayKey(cur)}`, half)
+      const typeLabel = lv.leaveType.charAt(0) + lv.leaveType.slice(1).toLowerCase()
+      leaveNoteBucket.set(
+        `${lv.employeeId}|${dayKey(cur)}`,
+        lv.reason ? `${typeLabel} leave — ${lv.reason}` : `${typeLabel} leave`,
+      )
       cur.setDate(cur.getDate() + 1)
     }
   }
@@ -305,7 +320,7 @@ async function loadRangeBuckets(
     }
   }
 
-  return { logBucket, leaveDayBucket, holidaySet, loaSet }
+  return { logBucket, leaveDayBucket, leaveNoteBucket, holidaySet, loaSet }
 }
 
 /** Build a MonthComputeCtx for one employee out of the bulk range buckets. */
@@ -324,6 +339,7 @@ function empMonthCtx(
     joiningDate,
     getLog: (iso) => buckets.logBucket.get(`${empId}|${iso}`),
     getLeaveHalf: (iso) => buckets.leaveDayBucket.get(`${empId}|${iso}`),
+    getLeaveNote: (iso) => buckets.leaveNoteBucket.get(`${empId}|${iso}`),
     isHoliday: (iso) => buckets.holidaySet.has(iso),
     onLOA: (iso) => buckets.loaSet.has(`${empId}|${iso}`),
   }

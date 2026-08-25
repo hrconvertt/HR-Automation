@@ -16,7 +16,7 @@ import { getInitials } from '@/lib/utils'
 import { TodayBoard } from './today-board'
 import { MonthEditorDrawer } from './month-editor'
 
-interface DayCell { day: number; status: Status; isWeekend: boolean; preJoin?: boolean }
+interface DayCell { day: number; status: Status; isWeekend: boolean; preJoin?: boolean; note?: string }
 interface GridEmployee {
   id: string
   fullName: string
@@ -563,9 +563,14 @@ function GridTable({ data, today, canEdit, density, onNameClick, onRowClick, onC
                   // HR can edit any non-weekend, non-holiday, non-future, post-joining cell
                   const isEditable = canEdit && !d.isWeekend && d.status !== 'HO' && !isFuture && !d.preJoin
                   const recede = d.isWeekend || d.status === 'HO'
+                  // Prefer what the day actually was. "Leave (Full Day)" names
+                  // the kind of day and nothing about which leave, so when the
+                  // day carries a leave note (type + reason) show that instead.
                   const tip = hasPendingCorrection
                     ? 'Correction request pending — review in Corrections'
-                    : `${STATUS_TITLE[d.status] ?? d.status} · ${iso}`
+                    : d.note
+                      ? `${d.note} · ${iso}`
+                      : `${STATUS_TITLE[d.status] ?? d.status} · ${iso}`
                   return (
                     <td
                       key={d.day}
@@ -582,7 +587,7 @@ function GridTable({ data, today, canEdit, density, onNameClick, onRowClick, onC
                       } ${flashing ? 'bg-slate-200 transition-colors' : ''}`}
                       title={tip}
                     >
-                      <StatusBadge status={d.status} future={renderBlank} />
+                      <StatusBadge status={d.status} future={renderBlank} note={d.note} />
                       {hasPendingCorrection && (
                         <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-slate-900 ring-2 ring-white" />
                       )}
