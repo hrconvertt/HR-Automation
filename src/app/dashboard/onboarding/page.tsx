@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { ChecklistGrid, type GridRow } from './_components/checklist-grid'
+import { unevidencedTicks } from '@/lib/onboarding-checklist'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
@@ -53,6 +54,9 @@ async function getData() {
       employeeType: true, status: true,
       department: { select: { name: true } },
       onboarding: true,
+      // A tick is a claim; the uploaded file is the proof. Fetch what each
+      // person actually has on file so ticks without evidence can be flagged.
+      documents: { select: { type: true } },
     },
   })
 
@@ -110,6 +114,11 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
     checklist: e.onboarding
       ? (e.onboarding as unknown as Record<string, boolean>)
       : null,
+    unevidenced: unevidencedTicks(
+      e.onboarding ? (e.onboarding as unknown as Record<string, boolean>) : null,
+      e.documents.map((d) => d.type),
+      e.employeeType,
+    ),
   }))
 
   function daysLeft(date: Date) {

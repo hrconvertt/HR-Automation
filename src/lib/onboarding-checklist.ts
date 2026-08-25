@@ -63,6 +63,50 @@ export const CHECKLIST_COLUMNS: ChecklistColumn[] = [
 
 export const CHECKLIST_KEYS = CHECKLIST_COLUMNS.map((c) => c.key)
 
+/**
+ * Which EmployeeDocument types stand as evidence for a ticked column.
+ *
+ * A tick is a claim; the uploaded file is the proof. Columns absent from this
+ * map are ticked from something other than a file (a countersignature, a photo
+ * taken in the office) and are never flagged — flagging what cannot be
+ * evidenced would cry wolf on every row.
+ */
+export const CHECKLIST_EVIDENCE: Record<string, ReadonlyArray<string>> = {
+  ndaSigned: ['NDA'],
+  agreementSigned: ['AGREEMENT', 'EMPLOYMENT_AGREEMENT', 'CONTRACT'],
+  internshipLetterSigned: ['INTERNSHIP_LETTER', 'APPOINTMENT_LETTER', 'OFFER_LETTER'],
+  cnicCopied: ['CNIC'],
+  educationDocsCopied: ['EDUCATIONAL_CERTIFICATE', 'EDUCATION', 'DEGREE'],
+  experienceLettersCopied: ['EXPERIENCE', 'EXPERIENCE_LETTER'],
+  photoTaken: ['PHOTO'],
+  certificationOnFile: ['CERTIFICATION', 'CERTIFICATE'],
+}
+
+/** Columns that can be evidenced by an upload. */
+export const EVIDENCED_KEYS = Object.keys(CHECKLIST_EVIDENCE)
+
+/**
+ * Ticked columns with no matching document on file. `docTypes` is what the
+ * employee actually has uploaded.
+ */
+export function unevidencedTicks(
+  checklist: Record<string, boolean> | null | undefined,
+  docTypes: ReadonlyArray<string>,
+  employeeType: string | null | undefined,
+): string[] {
+  if (!checklist) return []
+  const have = new Set(docTypes.map((t) => t.toUpperCase()))
+  const out: string[] = []
+  for (const col of CHECKLIST_COLUMNS) {
+    if (!applies(col, employeeType)) continue
+    if (checklist[col.key] !== true) continue
+    const accepts = CHECKLIST_EVIDENCE[col.key]
+    if (!accepts) continue
+    if (!accepts.some((t) => have.has(t))) out.push(col.key)
+  }
+  return out
+}
+
 export const GROUP_LABELS: Record<ChecklistColumn['group'], string> = {
   NDA: 'NDA',
   INTERNSHIP: 'Internship appointment letter',

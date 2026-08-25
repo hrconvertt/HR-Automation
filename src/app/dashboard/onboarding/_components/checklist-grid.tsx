@@ -31,6 +31,9 @@ export interface GridRow {
   department: string | null
   status: string
   checklist: Record<string, boolean> | null
+  /** Ticked columns with no matching document uploaded — flagged, not counted
+   *  as missing: the tick may well be right, it just has nothing behind it. */
+  unevidenced?: string[]
 }
 
 const day = (iso: string | null) =>
@@ -177,6 +180,7 @@ export function ChecklistGrid({ rows, isHR }: { rows: GridRow[]; isHR: boolean }
   })).filter((g) => g.missing > 0).sort((a, b) => b.missing - a.missing)
 
   const fullyDone = view.filter((r) => rowProgress(merged(r), r.employeeType).pct === 100).length
+  const flaggedCount = view.reduce((n, r) => n + (r.unevidenced?.length ?? 0), 0)
 
   return (
     <div className="space-y-3">
@@ -192,6 +196,12 @@ export function ChecklistGrid({ rows, isHR }: { rows: GridRow[]; isHR: boolean }
             {gaps.length > 0 && (
               <p className="text-[11px] text-slate-400 mt-0.5">
                 Most missing: {gaps.slice(0, 3).map((g) => `${g.col.label} (${g.missing})`).join(' · ')}
+              </p>
+            )}
+            {flaggedCount > 0 && (
+              <p className="text-[11px] text-amber-700 mt-0.5 flex items-center gap-1">
+                <AlertTriangle className="w-3 h-3" />
+                {flaggedCount} tick{flaggedCount === 1 ? '' : 's'} with no document on file
               </p>
             )}
           </div>
@@ -305,18 +315,29 @@ export function ChecklistGrid({ rows, isHR }: { rows: GridRow[]; isHR: boolean }
                       const na = !applies(c, r.employeeType)
                       const on = m[c.key]
                       const changed = cellKey(r.employeeId, c.key) in edits
+                      // Ticked, but nothing uploaded to back it up. Only shown
+                      // for a stored tick — a pending edit has not been saved,
+                      // so it cannot have evidence yet either way.
+                      const unevidenced =
+                        on && !changed && (r.unevidenced?.includes(c.key) ?? false)
                       return (
                         <td key={c.key} className="border-b border-slate-100 p-0 text-center">
                           <button
                             type="button"
                             disabled={na || !isHR}
                             onClick={() => toggle(r, c)}
-                            title={na ? `${c.meaning} — does not apply` : c.meaning}
+                            title={na
+                              ? `${c.meaning} — does not apply`
+                              : unevidenced
+                                ? `${c.meaning} — ticked, but no document is on file`
+                                : c.meaning}
                             className={`w-full h-9 flex items-center justify-center transition-colors ${
                               na
                                 ? 'text-slate-200 cursor-default'
                                 : on
-                                  ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                                  ? unevidenced
+                                    ? 'bg-amber-50 text-amber-700 hover:bg-amber-100'
+                                    : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
                                   : 'text-slate-300 hover:bg-slate-100'
                             } ${changed ? 'ring-2 ring-inset ring-slate-900/25' : ''} ${
                               !isHR ? 'cursor-default' : ''
@@ -325,7 +346,9 @@ export function ChecklistGrid({ rows, isHR }: { rows: GridRow[]; isHR: boolean }
                             {na
                               ? <span className="text-[11px] line-through">n/a</span>
                               : on
-                                ? <Check className="w-4 h-4" />
+                                ? unevidenced
+                                  ? <AlertTriangle className="w-3.5 h-3.5" />
+                                  : <Check className="w-4 h-4" />
                                 : <span className="w-3.5 h-3.5 rounded border border-current" />}
                           </button>
                         </td>
