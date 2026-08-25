@@ -150,17 +150,11 @@ function wrap(
   }
   .doc::before { top: 0; }
   .doc::after  { bottom: 0; }
-  /* Paged view: the sheet grows to whatever the document needs, with a hairline
-     every A4 page so on screen it reads the way it prints. */
-  .doc.paged {
-    min-height: 297mm;
-    background-image: repeating-linear-gradient(
-      to bottom,
-      transparent 0, transparent calc(297mm - 1px),
-      #cbd5e1 calc(297mm - 1px), #cbd5e1 297mm
-    );
-  }
-  @media print { .doc.paged { background-image: none; box-shadow: none; } }
+  /* A plain agreement sheet. Page seams were drawn here for a moment and they
+     sliced through mid-sentence, so the screen just shows a clean sheet; the
+     printer still paginates it to A4 via @page. */
+  .doc.paged { min-height: 297mm; }
+  @media print { .doc.paged { box-shadow: none; } }
   /* Never split a clause off its heading across a page break. */
   .doc h3 { break-after: avoid; page-break-after: avoid; }
   .doc table.sig-grid { break-inside: avoid; page-break-inside: avoid; }
