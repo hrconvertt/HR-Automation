@@ -98,6 +98,10 @@ interface WrapMeta {
   /** Suppress the default single company sign-off — for letters that carry
    *  their own dual (employee + company) acceptance block in the body. */
   noSignOff?: boolean
+  /** Agreements are not letters. The Employment Agreement and the NDA are
+   *  issued as plain paged documents — no gradient bars, no letterhead block,
+   *  and A4 page seams so the screen matches the printed copy. */
+  plain?: boolean
 }
 
 function wrap(
@@ -108,6 +112,7 @@ function wrap(
   meta: WrapMeta = {},
 ): string {
   const isForm = variant === 'form'
+  const isPlain = !!meta.plain
   const canSave = !!(meta.employeeId && meta.docType)
   return `<!DOCTYPE html>
 <html lang="en">
@@ -141,10 +146,24 @@ function wrap(
     content: ''; position: absolute; left: 29pt; right: 29pt; height: 12.8pt;
     background: linear-gradient(90deg, #0857E5 0%, #277FB1 100%);
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
-    ${isForm ? 'display: none;' : ''}
+    ${isForm || isPlain ? 'display: none;' : ''}
   }
   .doc::before { top: 0; }
   .doc::after  { bottom: 0; }
+  /* Paged view: the sheet grows to whatever the document needs, with a hairline
+     every A4 page so on screen it reads the way it prints. */
+  .doc.paged {
+    min-height: 297mm;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0, transparent calc(297mm - 1px),
+      #cbd5e1 calc(297mm - 1px), #cbd5e1 297mm
+    );
+  }
+  @media print { .doc.paged { background-image: none; box-shadow: none; } }
+  /* Never split a clause off its heading across a page break. */
+  .doc h3 { break-after: avoid; page-break-after: avoid; }
+  .doc table.sig-grid { break-inside: avoid; page-break-inside: avoid; }
   .letterhead { display: flex; justify-content: space-between; align-items: flex-start; margin: 18pt 0 30pt; }
   /* Convertt's actual mark. This was a text wordmark with the last two letters
      coloured blue — a guess at the logo that was never the logo. */
@@ -285,12 +304,12 @@ function wrap(
       ? 'Showing your edited version. Click a signature line to sign, or Edit to change wording.'
       : 'Click a signature line to sign, or Edit to change any wording before printing.'}</span>
   </div>
-  <div class="doc" id="doc">
-    <div class="letterhead">
+  <div class="doc${isPlain ? ' paged' : ''}" id="doc">
+    ${isPlain ? '' : `<div class="letterhead">
       <div class="logo"><img src="${LOGO_DATA_URI}" alt="Convertt"></div>
       <div class="addr">${LETTERHEAD_ADDRESS_LINES.join('<br>')}</div>
     </div>
-    <div class="letter-date">${letterDate(new Date())}</div>
+    <div class="letter-date">${letterDate(new Date())}</div>`}
     ${body}
     ${meta.noSignOff ? '' : `<div class="sign-off">
       ${signatory.above ? `<p>${escapeHtml(signatory.above)}</p>` : ''}
@@ -786,7 +805,7 @@ function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern')
   `
   return {
     html: wrap('Employment Agreement', body, DEFAULT_SIGNATORY, 'letter', {
-      employeeId: emp.id, docType: intern ? 'employment_agreement_intern' : 'employment_agreement', noSignOff: true,
+      employeeId: emp.id, docType: intern ? 'employment_agreement_intern' : 'employment_agreement', noSignOff: true, plain: true,
     }),
     title: `Employment Agreement - ${emp.fullName}`,
   }
@@ -815,6 +834,13 @@ function nda({ emp }: Ctx) {
   const line = (v: string | null | undefined, w = 30) => (v ? escapeHtml(v) : '_'.repeat(w))
 
   const body = `
+    <div style="font-size:10.5pt;line-height:1.45;margin-bottom:18pt">
+      Mega Tower 5th floor, Office<br>
+      #201 Gulberg Lahore,<br>
+      Pakistan<br>
+      +92 4237458015<br>
+      +92 3700488685
+    </div>
     <div class="doc-title">NDA &ndash; Employee Non-Disclosure &amp; Intellectual Property Agreement</div>
     <p style="text-align:center;font-style:italic;margin-top:-6px">(Private &amp; Confidential)</p>
 
@@ -938,7 +964,7 @@ function nda({ emp }: Ctx) {
   `
   return {
     html: wrap('NDA', body, DEFAULT_SIGNATORY, 'letter', {
-      employeeId: emp.id, docType: 'nda', noSignOff: true,
+      employeeId: emp.id, docType: 'nda', noSignOff: true, plain: true,
     }),
     title: `NDA - ${emp.fullName}`,
   }

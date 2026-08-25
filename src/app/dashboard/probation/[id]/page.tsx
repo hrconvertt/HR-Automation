@@ -200,36 +200,61 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
       </Card>
 
       {/* Day-3 paperwork — the Employment Agreement and the NDA are signed in
-          the first days on the job, well before the Day-30 check-in. Both open
-          in a new tab with click-to-sign slots for the company and employee. */}
-      <Card className="p-5">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
-              Day-3 Documents — Employment Agreement &amp; NDA
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              {elapsed >= 3
-                ? 'Due now — issue both for signature.'
-                : `Due on Day 3 (in ${3 - elapsed} day${3 - elapsed === 1 ? '' : 's'}).`}
-            </p>
+          the first days on the job, well before the Day-30 check-in. Each
+          document is its own row so it reads as a checklist, not two anonymous
+          buttons pinned to the corner. */}
+      <Card className="overflow-hidden">
+        <div className="flex items-start justify-between gap-4 px-5 py-4 border-b border-slate-100">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <h2 className="text-sm font-semibold text-slate-900">Day-3 Documents</h2>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Signed in the first days on the job. Both open with signature slots for Convertt and the employee.
+              </p>
+            </div>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <a
-              href={`/api/documents/generate?type=employment_agreement&employeeId=${rec.employee.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="outline" size="sm">Employment Agreement</Button>
-            </a>
-            <a
-              href={`/api/documents/generate?type=nda&employeeId=${rec.employee.id}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Button variant="outline" size="sm">NDA</Button>
-            </a>
-          </div>
+          <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full border whitespace-nowrap flex-shrink-0 ${
+            elapsed >= 3
+              ? 'bg-amber-50 text-amber-800 border-amber-200'
+              : 'bg-slate-50 text-slate-600 border-slate-200'
+          }`}>
+            {elapsed >= 3
+              ? 'Due now'
+              : `Due in ${3 - elapsed} day${3 - elapsed === 1 ? '' : 's'}`}
+          </span>
+        </div>
+
+        <div className="divide-y divide-slate-100">
+          {[
+            {
+              type: 'employment_agreement',
+              name: 'Employment Agreement',
+              sub: 'Appointment, salary, probation, leave and conduct policies',
+            },
+            {
+              type: 'nda',
+              name: 'Non-Disclosure Agreement',
+              sub: 'Confidentiality, intellectual property and non-solicitation',
+            },
+          ].map((doc) => (
+            <div key={doc.type} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-900">{doc.name}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{doc.sub}</p>
+              </div>
+              <a
+                href={`/api/documents/generate?type=${doc.type}&employeeId=${rec.employee.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex-shrink-0"
+              >
+                <Button variant="outline" size="sm">Open</Button>
+              </a>
+            </div>
+          ))}
         </div>
       </Card>
       {/* Settling check-in */}
