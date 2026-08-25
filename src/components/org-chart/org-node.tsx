@@ -76,8 +76,8 @@ export default function OrgNodeCard({
   // Employee.photoUrl); fall back to the /api/employees/{id}/photo endpoint
   // if/when it exists. The <img> onError swallows broken loads silently.
   const photoSrc = node.photoUrl || `/api/employees/${node.id}/photo`
-  const avatarSize = mode === 'compact' ? 'w-8 h-8' : 'w-10 h-10'
-  const avatarPx = mode === 'compact' ? 32 : 40
+  const avatarSize = mode === 'compact' ? 'w-10 h-10' : 'w-14 h-14'
+  const avatarPx = mode === 'compact' ? 40 : 56
 
   return (
     <div
@@ -125,7 +125,7 @@ export default function OrgNodeCard({
           // ── Compact: photo + name only ─────────────────────────────────
           <div className="flex items-center gap-2 h-full">
             <Avatar src={photoSrc} name={node.fullName} className={`${avatarSize} ${avatarColor}`} size={avatarPx} />
-            <p className="text-[12px] font-semibold text-gray-900 truncate leading-tight flex-1">
+            <p className="text-[14px] font-semibold text-gray-900 truncate leading-tight flex-1">
               {node.fullName}
             </p>
           </div>
@@ -138,7 +138,7 @@ export default function OrgNodeCard({
                 <p className="text-[13px] font-semibold text-gray-900 truncate leading-tight">
                   {node.fullName}
                 </p>
-                <p className="text-[11px] text-gray-500 truncate leading-snug mt-0.5">
+                <p className="text-[12px] text-gray-600 truncate leading-snug mt-0.5">
                   {node.designation}
                 </p>
               </div>

@@ -203,9 +203,9 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
   // Card dimensions per mode.
   const dims = useMemo(() => {
     if (mode === 'compact') {
-      return { w: 180, h: 56, hGap: 18, vGap: 44 }
+      return { w: 200, h: 64, hGap: 20, vGap: 46 }
     }
-    return { w: 220, h: 116, hGap: 28, vGap: 70 }
+    return { w: 260, h: 132, hGap: 30, vGap: 74 }
   }, [mode])
 
   const laidOut = useMemo(() => {
@@ -271,7 +271,12 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
     const padding = 40
     const sx = (vp.width - padding) / laidOut.width
     const sy = (vp.height - padding) / laidOut.height
-    const next = Math.max(0.25, Math.min(2, Math.min(sx, sy)))
+    // Never shrink past legibility. A 26-person tree fitted to the viewport
+    // landed at 30%, where names and photos are unreadable — the chart has to
+    // be readable first and complete second, so below this floor you pan
+    // instead of squint.
+    const LEGIBLE_MIN = 0.7
+    const next = Math.max(LEGIBLE_MIN, Math.min(2, Math.min(sx, sy)))
     setZoom(+next.toFixed(2))
     setPan({ x: 0, y: 0 })
   }
