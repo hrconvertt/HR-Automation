@@ -440,6 +440,27 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
             />
           </Field>
 
+          {/* Who signed it off. Recorded after the fact for leaves agreed over
+              email, so the register names the lead and the HR rather than a dash. */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Approved by (Lead / Manager)">
+              <select className={inputCls} value={leadId} onChange={(e) => setLeadId(e.target.value)}>
+                <option value="">— Not recorded —</option>
+                {staff.map((p) => (
+                  <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Approved by (HR)">
+              <select className={inputCls} value={hrId} onChange={(e) => setHrId(e.target.value)}>
+                <option value="">— Not recorded —</option>
+                {staff.map((p) => (
+                  <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Approved by (Lead / Manager)" hint="Stage 1 sign-off">
               <select value={leadId} onChange={(e) => setLeadId(e.target.value)} className={inputCls}>

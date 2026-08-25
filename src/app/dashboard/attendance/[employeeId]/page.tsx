@@ -77,10 +77,13 @@ export default async function EmployeeAttendanceDetailPage({ params }: PageProps
       joiningDate: employee.joiningDate,
       timings: employee.timings,
     }),
+    // Feeds both the "recent leaves" list and the calendar hover note. Taking
+    // only the newest 5 left older leave days hovering as a bare "Leave (Full
+    // Day)" with no reason, so take enough to cover the months on screen.
     prisma.leaveRequest.findMany({
       where: { employeeId },
-      orderBy: { createdAt: 'desc' },
-      take: 5,
+      orderBy: { fromDate: 'desc' },
+      take: 200,
       select: { id: true, leaveType: true, fromDate: true, toDate: true, days: true, status: true, reason: true },
     }),
     prisma.leaveBalance.findMany({

@@ -284,7 +284,7 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
               <p className="text-sm text-slate-500">No leave requests on record.</p>
             ) : (
               <ul className="space-y-2">
-                {recentLeaves.map((l) => (
+                {recentLeaves.slice(0, 5).map((l) => (
                   <li key={l.id} className="text-xs border-b border-slate-100 last:border-0 pb-2 last:pb-0">
                     <div className="flex items-center justify-between">
                       <span className="font-medium text-slate-900">{l.leaveType}</span>
