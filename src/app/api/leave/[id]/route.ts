@@ -133,6 +133,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     leaveType?: string; reason?: string; category?: string; status?: string
     fromDate?: string; toDate?: string; days?: number
     firstDayHalf?: boolean; lastDayHalf?: boolean
+    // Who signed it off. Employee ids — '' clears the approver.
+    managerApprovedById?: string; approvedById?: string
   } = {}
   try { body = await request.json() } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -242,6 +244,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         firstDayHalf,
         lastDayHalf,
         ...(typeof body.reason === 'string' ? { reason: body.reason.trim().slice(0, 2000) } : {}),
+        // Approvers, recorded after the fact — a leave agreed over email still
+        // needs the lead and HR who signed it off named on the record.
+        ...(typeof body.managerApprovedById === 'string'
+          ? body.managerApprovedById
+            ? { managerApprovedById: body.managerApprovedById, managerApprovedAt: existing.managerApprovedAt ?? new Date() }
+            : { managerApprovedById: null, managerApprovedAt: null }
+          : {}),
+        ...(typeof body.approvedById === 'string'
+          ? body.approvedById
+            ? { approvedById: body.approvedById, approvedAt: existing.approvedAt ?? new Date() }
+            : { approvedById: null, approvedAt: null }
+          : {}),
       },
     })
 

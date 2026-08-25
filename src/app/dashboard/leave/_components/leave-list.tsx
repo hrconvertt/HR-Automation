@@ -36,6 +36,8 @@ type LeaveRow = {
   attachmentName?: string | null
   approvedByLead?: string | null
   approvedByHr?: string | null
+  managerApprovedById?: string | null
+  approvedById?: string | null
   employee: { fullName: string; employeeCode: string; designation: string | null }
 }
 
@@ -281,6 +283,17 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
   const [reason, setReason] = useState(row.reason?.includes(UNCONFIRMED) ? '' : (row.reason ?? ''))
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState<string | null>(null)
+  // Who signed it off. A leave agreed over email still has a lead and an HR
+  // behind it; without these the record shows a dash where the approver goes.
+  const [leadId, setLeadId] = useState(row.managerApprovedById ?? '')
+  const [hrId, setHrId] = useState(row.approvedById ?? '')
+  const [staff, setStaff] = useState<{ id: string; fullName: string; employeeCode: string }[]>([])
+  useEffect(() => {
+    fetch('/api/employees?limit=500&status=ACTIVE')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.employees) setStaff(d.employees) })
+      .catch(() => {})
+  }, [])
 
   // Sandwich
   const [sand, setSand] = useState<SandwichInfo | null>(null)
@@ -314,6 +327,7 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
         leaveType, category, status, fromDate, toDate,
         days: Number(days),
         firstDayHalf, lastDayHalf, reason,
+        managerApprovedById: leadId, approvedById: hrId,
       }),
     })
     if (!res.ok) {
@@ -425,6 +439,25 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
               className={inputCls}
             />
           </Field>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Approved by (Lead / Manager)" hint="Stage 1 sign-off">
+              <select value={leadId} onChange={(e) => setLeadId(e.target.value)} className={inputCls}>
+                <option value="">— Not recorded —</option>
+                {staff.map((p) => (
+                  <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Approved by (HR)" hint="Final sign-off">
+              <select value={hrId} onChange={(e) => setHrId(e.target.value)} className={inputCls}>
+                <option value="">— Not recorded —</option>
+                {staff.map((p) => (
+                  <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
+                ))}
+              </select>
+            </Field>
+          </div>
 
           {sand?.applies && money && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 space-y-2">
