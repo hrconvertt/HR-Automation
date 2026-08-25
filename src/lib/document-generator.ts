@@ -641,7 +641,7 @@ function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern')
   const body = `
     <div class="doc-title">${intern ? 'Employment Agreement — Training &amp; Internship' : 'Employment Agreement — Permanent Employee'}</div>
     <p>This Employment Agreement (the "Agreement") is made and entered into on <strong>${fmtDate(startDate)}</strong> between:</p>
-    <p><strong>Convertt Ltd</strong>, a company duly registered under the laws of Pakistan with offices at Office 201, 5th Floor, Mega Tower, Gulberg Main Boulevard, Lahore (hereinafter the "Company"); and</p>
+    <p><strong>Convertt</strong> (the "Company"), a sole proprietorship with its office at Office #201, 5th Floor, Mega Tower, Main Gulberg, Lahore, Punjab, Pakistan; and</p>
     <p><strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? `, CNIC ${escapeHtml(emp.cnic)}` : ''}${emp.address ? `, residing at ${escapeHtml(emp.address)}` : ''} (hereinafter the "Employee").</p>
 
     <h3 style="font-size:12pt;margin-top:18px">1. Position &amp; Duties</h3>
@@ -666,7 +666,7 @@ function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern')
       : '<p>The Employee shall be entitled to 24 days of paid leave per calendar year (12 Casual + 12 Sick), accrued monthly. Leave shall be applied through the HR system and is subject to manager approval.</p>'}
 
     <h3 style="font-size:12pt">6. Confidentiality &amp; Intellectual Property</h3>
-    <p>The Employee agrees to maintain absolute confidentiality of all proprietary information, client data, financial data, trade secrets, and any other information that is not in the public domain, both during and after the term of employment. All work product, code, designs, and creative output produced in the course of employment shall remain the exclusive intellectual property of Convertt Ltd.</p>
+    <p>The Employee agrees to maintain absolute confidentiality of all proprietary information, client data, financial data, trade secrets, and any other information that is not in the public domain, both during and after the term of employment. All work product, code, designs, and creative output produced in the course of employment shall remain the exclusive intellectual property of Convertt.</p>
 
     <h3 style="font-size:12pt">7. Code of Conduct</h3>
     <p>The Employee shall conduct themselves professionally at all times and abide by the Company's Code of Conduct, IT Policy, Anti-Harassment Policy, and any other policies issued by the Company from time to time.</p>
@@ -676,65 +676,176 @@ function employmentAgreement({ emp, extras }: Ctx, kind: 'permanent' | 'intern')
       ? '<p>The Company may terminate this Agreement at any time during the training period without notice for unsatisfactory performance, misconduct, or any other valid reason.</p>'
       : '<p>Either party may terminate this Agreement by giving one (1) month\'s written notice or payment in lieu thereof. The Company reserves the right to terminate without notice in cases of gross misconduct or breach of this Agreement.</p>'}
 
-    <h3 style="font-size:12pt">9. Governing Law</h3>
-    <p>This Agreement shall be governed by and construed in accordance with the laws of the Islamic Republic of Pakistan. Any disputes shall be subject to the exclusive jurisdiction of the courts of Lahore.</p>
+    <h3 style="font-size:12pt">9. Disciplinary Process</h3>
+    <p>In line with the Standing Orders Ordinance, 1968, no employee shall be dismissed without due process. The process shall include a written Show Cause Notice (3–7 working days to reply), a domestic inquiry if the explanation is unsatisfactory, and a fair hearing before disciplinary action. Gross misconduct (fraud, theft, harassment, insubordination, reputational harm, breach of confidentiality) may result in summary dismissal without notice.</p>
 
-    <p style="margin-top:24px">By signing below, both parties confirm they have read, understood, and agreed to the terms set out in this Agreement.</p>
+    <h3 style="font-size:12pt">10. Return of Property &amp; Exit Clearance</h3>
+    <p>On termination, the Employee shall return all Company property (devices, documents, data). Final settlement shall be processed after completion of Exit Clearance.</p>
 
-    <div class="signature-block">
-      <div class="signature">
-        <div class="line">For Convertt Ltd</div>
-        <div class="name">Authorised Signatory</div>
-      </div>
-      <div class="signature">
-        <div class="line">Employee</div>
-        <div class="name">${escapeHtml(emp.fullName)}</div>
-      </div>
-    </div>
+    <h3 style="font-size:12pt">11. Post-Employment Restrictions</h3>
+    <p>For six (6) months after leaving, the Employee shall not solicit Company clients for competing business, nor poach Company employees. Confidentiality and non-disparagement obligations survive termination indefinitely.</p>
+
+    <h3 style="font-size:12pt">12. Social Media &amp; Non-Disparagement</h3>
+    <p>The Employee shall not, during or after employment, make defamatory or disparaging remarks about the Company, its employees or clients, whether verbally or online (LinkedIn, Facebook, Instagram, Twitter/X, WhatsApp etc.). Participation in hostile social media campaigns shall constitute misconduct and may invite civil or criminal action under the Prevention of Electronic Crimes Act, 2016 (PECA) and the Defamation Ordinance, 2002.</p>
+
+    <h3 style="font-size:12pt">13. Background Verification</h3>
+    <p>Employment is subject to verification of CNIC, credentials and references. False information shall result in dismissal.</p>
+
+    <h3 style="font-size:12pt">14. Governing Law &amp; Jurisdiction</h3>
+    <p>This Agreement is governed by the laws of the Islamic Republic of Pakistan. The courts of Lahore, Punjab shall have exclusive jurisdiction. Failure to enforce a right shall not constitute waiver; if any clause is found invalid, the remainder shall continue in effect.</p>
+
+    <h3 style="font-size:12pt">15. Entire Agreement</h3>
+    <p>This Agreement constitutes the entire agreement between the Parties. No amendment is valid unless made in writing and signed by the Company.</p>
+
+    <h3 style="font-size:12pt">HR Closing Statement</h3>
+    <p>Convertt is committed to providing a professional, ethical and growth-oriented workplace. By joining, you become part of a team that values excellence, integrity and innovation. We welcome you and look forward to a successful association.</p>
+
+    <h3 style="font-size:12pt">Employee Declaration &amp; Acceptance</h3>
+    <p>I, <strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? `, CNIC ${escapeHtml(emp.cnic)}` : ''}, hereby confirm and declare that:</p>
+    <ol>
+      <li>All documents, credentials and information I have provided are true and accurate. I understand that any false or misleading information shall constitute misconduct and may result in dismissal.</li>
+      <li>I have read, understood and accepted this Employment Agreement and its Annexures, including the Company's Code of Conduct, Confidentiality, Intellectual Property, Non-Disparagement and Disciplinary Policies.</li>
+      <li>I agree to abide by all present and future Company policies and acknowledge that the Company may amend its policies in line with applicable law.</li>
+    </ol>
+    <p>I reaffirm that any work created during employment is the exclusive property of the Company and that confidentiality and non-disparagement obligations survive termination.</p>
+
+    <p style="margin-top:18px">Signed and accepted on ${fmtDate(startDate)}.</p>
+
+    <table class="sig-grid">
+      <tr>
+        <td>
+          <div class="esign-slot" data-esign="Syed Khawer"><span class="esign-hint">Click to sign</span></div>
+          <div class="sig-line"></div>
+          <div class="sig-name">Syed Khawer</div>
+          <div class="sig-role">Director Administration, Convertt</div>
+          <div class="sig-date">Date: _____________________</div>
+        </td>
+        <td>
+          <div class="esign-slot" data-esign="${escapeHtml(emp.fullName)}"><span class="esign-hint">Click to sign</span></div>
+          <div class="sig-line"></div>
+          <div class="sig-name">${escapeHtml(emp.fullName)}</div>
+          <div class="sig-role">CNIC: ${emp.cnic ? escapeHtml(emp.cnic) : '_____________________'}</div>
+          <div class="sig-date">Date: _____________________</div>
+        </td>
+      </tr>
+    </table>
   `
-  return { html: wrap('Employment Agreement', body), title: `Employment Agreement - ${emp.fullName}` }
+  return {
+    html: wrap('Employment Agreement', body, DEFAULT_SIGNATORY, 'letter', {
+      employeeId: emp.id, docType: intern ? 'employment_agreement_intern' : 'employment_agreement', noSignOff: true,
+    }),
+    title: `Employment Agreement - ${emp.fullName}`,
+  }
 }
 
+/**
+ * Employee Non-Disclosure & Intellectual Property Agreement.
+ *
+ * Follows Convertt's issued NDA: the company is a sole proprietorship (not
+ * "Ltd"), and the clause set is the real one — confidentiality with its
+ * exclusions, IP assignment, non-disparagement under PECA, return and
+ * destruction with written certification, and the liquidated-damages figure.
+ * Signed separately from, and in addition to, the Employment Agreement.
+ */
 function nda({ emp }: Ctx) {
+  const start = emp.joiningDate ?? new Date()
   const body = `
-    <div class="doc-title">Non-Disclosure Agreement</div>
-    <p>This Non-Disclosure Agreement (the "Agreement") is entered into between <strong>Convertt Ltd</strong> ("the Company") and <strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? ` (CNIC ${escapeHtml(emp.cnic)})` : ''} ("the Recipient"), effective from ${fmtDate(emp.joiningDate ?? new Date())}.</p>
+    <div class="doc-title">Employee Non-Disclosure &amp; Intellectual Property Agreement</div>
+    <p style="text-align:center;font-style:italic;margin-top:-6px">(Private &amp; Confidential)</p>
 
-    <h3 style="font-size:12pt">1. Confidential Information</h3>
-    <p>"Confidential Information" includes but is not limited to: client lists and contact details, business strategies and forecasts, financial information, source code, designs, technical know-how, employee compensation, internal processes, and any information marked confidential or that a reasonable person would understand to be confidential.</p>
+    <p><strong>Date:</strong> ${fmtDate(start)}</p>
+    <p>This Non-Disclosure and Intellectual Property Agreement (&ldquo;Agreement&rdquo;) is entered into between:</p>
+    <p><strong>Convertt</strong>, a sole proprietorship organised under the laws of the Islamic Republic of Pakistan, having its office at Office #201, 5th Floor, Mega Tower, Main Gulberg, Lahore, Pakistan (the &ldquo;Company&rdquo;),</p>
+    <p><strong>AND</strong></p>
+    <p><strong>${escapeHtml(emp.fullName)}</strong>${emp.cnic ? `, CNIC ${escapeHtml(emp.cnic)}` : ''}${emp.designation ? `, ${escapeHtml(emp.designation)}` : ''}${emp.address ? `, residing at ${escapeHtml(emp.address)}` : ''} (the &ldquo;Employee&rdquo;).</p>
+    <p>The Company and the Employee are collectively referred to as the &ldquo;Parties&rdquo;.</p>
 
-    <h3 style="font-size:12pt">2. Obligations</h3>
-    <ol>
-      <li>The Recipient shall hold all Confidential Information in strict confidence and not disclose it to any third party without the Company's prior written consent.</li>
-      <li>The Recipient shall use Confidential Information solely for performing their duties at the Company.</li>
-      <li>The Recipient shall not copy, reproduce, or store Confidential Information except as required for legitimate work purposes.</li>
-      <li>Upon termination of employment, the Recipient shall return or destroy all Confidential Information and certify such return/destruction in writing.</li>
-    </ol>
+    <h3 style="font-size:12pt;margin-top:18px">1. Purpose</h3>
+    <p>The Employee acknowledges that during employment they will have access to sensitive, confidential and proprietary information of the Company and its clients. This Agreement governs protection of such information, assignment of intellectual property, and restrictions on use or disclosure during and after employment.</p>
 
-    <h3 style="font-size:12pt">3. Intellectual Property</h3>
-    <p>All work product, inventions, ideas, designs, code, and creative output developed by the Recipient in the course of employment shall be the exclusive property of Convertt Ltd. The Recipient hereby assigns all such rights to the Company.</p>
+    <h3 style="font-size:12pt">2. Confidential Information</h3>
+    <p>2.1 &ldquo;Confidential Information&rdquo; includes all non-public information relating to the Company&rsquo;s business, clients, products, designs, codes, strategies, financials, marketing plans, trade secrets, systems and other proprietary data, whether in written, oral, digital or any other form.</p>
+    <p>2.2 The Employee shall:</p>
+    <ul>
+      <li>Keep all Confidential Information strictly confidential;</li>
+      <li>Not disclose it to any third party without prior written authorisation;</li>
+      <li>Not copy, duplicate, store, download or retain Confidential Information on any personal device, cloud account, email or storage media;</li>
+      <li>Not use it for personal gain or for the benefit of any third party.</li>
+    </ul>
+    <p>2.3 Upon termination of employment, the Employee shall immediately return all Confidential Information and delete any copies from personal devices, emails or accounts.</p>
+    <p>2.4 These obligations survive termination of employment and remain indefinite.</p>
 
-    <h3 style="font-size:12pt">4. Duration</h3>
-    <p>The obligations set out in this Agreement shall survive the termination of the Recipient's employment with the Company and shall remain in effect indefinitely.</p>
+    <h3 style="font-size:12pt">3. Exclusions</h3>
+    <p>Confidential Information does not include information that:</p>
+    <ul>
+      <li>Is or becomes public through no fault of the Employee;</li>
+      <li>Was lawfully obtained by the Employee prior to disclosure by the Company; or</li>
+      <li>Must be disclosed under law, provided the Employee gives prior notice to the Company.</li>
+    </ul>
 
-    <h3 style="font-size:12pt">5. Remedies</h3>
-    <p>The Recipient acknowledges that any breach of this Agreement may cause irreparable harm to the Company, and the Company shall be entitled to seek injunctive relief in addition to any other remedies available at law.</p>
+    <h3 style="font-size:12pt">4. Intellectual Property Ownership</h3>
+    <p>4.1 All work, inventions, designs, content, code, documentation and creative output produced during employment (&ldquo;Work Product&rdquo;) shall be the sole and exclusive property of the Company.</p>
+    <p>4.2 The Employee irrevocably assigns all rights, title and interest in the Work Product to the Company, including copyright, patents, trademarks, designs and trade secrets.</p>
+    <p>4.3 The Employee waives any claim to ownership, royalties or additional compensation beyond salary for such Work Product.</p>
+    <p>4.4 These obligations survive termination of employment.</p>
 
-    <h3 style="font-size:12pt">6. Governing Law</h3>
-    <p>This Agreement is governed by the laws of Pakistan and any disputes shall be subject to the exclusive jurisdiction of the courts of Lahore.</p>
+    <h3 style="font-size:12pt">5. Non-Disparagement &amp; Social Media</h3>
+    <p>5.1 The Employee shall not, during or after employment, post, publish, circulate or endorse any defamatory, disparaging or negative statements about the Company, its management, employees or clients, including but not limited to LinkedIn, Facebook, Instagram, Twitter/X, WhatsApp, blogs, forums or any digital platform.</p>
+    <p>5.2 Any grievance must be raised internally with the Company. Public commentary or online campaigns against the Company shall constitute misconduct and reputational harm.</p>
+    <p>5.3 Breach of this clause may constitute cyber harassment or cyber bullying under the Prevention of Electronic Crimes Act, 2016 (PECA) and defamation under the Defamation Ordinance, 2002, entitling the Company to civil and criminal remedies.</p>
 
-    <div class="signature-block">
-      <div class="signature">
-        <div class="line">For Convertt Ltd</div>
-        <div class="name">Authorised Signatory</div>
-      </div>
-      <div class="signature">
-        <div class="line">Recipient</div>
-        <div class="name">${escapeHtml(emp.fullName)}</div>
-      </div>
-    </div>
+    <h3 style="font-size:12pt">6. Return &amp; Destruction of Materials</h3>
+    <p>6.1 The Employee shall not retain, copy or store any Company-owned information, documents or property after termination of employment.</p>
+    <p>6.2 Upon termination, the Employee shall:</p>
+    <ul>
+      <li>Return all Company devices, data, credentials and documents;</li>
+      <li>Permanently delete any Company-related files, emails or data stored on personal devices or cloud accounts;</li>
+      <li>Provide written certification that no Company information remains in their possession.</li>
+    </ul>
+
+    <h3 style="font-size:12pt">7. Remedies &amp; Liquidated Damages</h3>
+    <p>7.1 The Employee acknowledges that breach of this Agreement will cause irreparable harm to the Company, for which monetary damages alone may be insufficient.</p>
+    <p>7.2 The Company shall be entitled to:</p>
+    <ul>
+      <li>Injunctive relief (stay orders) from court to stop or prevent further breach;</li>
+      <li>Recovery of actual damages suffered due to breach, including loss of business, clients or reputation;</li>
+      <li>Recovery of legal costs and expenses.</li>
+    </ul>
+    <p>7.3 In addition, the Employee agrees that for any proven breach of this Agreement, the Company shall be entitled to liquidated damages of <strong>PKR 2,000,000 (Two Million Pakistani Rupees)</strong>, in addition to actual damages and other remedies available under law.</p>
+
+    <h3 style="font-size:12pt">8. Governing Law &amp; Jurisdiction</h3>
+    <p>This Agreement shall be governed by the laws of the Islamic Republic of Pakistan. Courts at Lahore, Punjab shall have exclusive jurisdiction.</p>
+
+    <h3 style="font-size:12pt">9. Entire Agreement</h3>
+    <p>This Agreement constitutes the entire understanding between the Parties regarding confidentiality, intellectual property and non-disparagement, and supersedes any prior discussions or agreements.</p>
+
+    <p style="margin-top:18px">Signed and accepted on ${fmtDate(start)}.</p>
+
+    <table class="sig-grid">
+      <tr>
+        <td>
+          <div class="esign-slot" data-esign="Syed Khawer"><span class="esign-hint">Click to sign</span></div>
+          <div class="sig-line"></div>
+          <div class="sig-name">Syed Khawer</div>
+          <div class="sig-role">Director Administration, Convertt</div>
+          <div class="sig-date">Date: _____________________</div>
+        </td>
+        <td>
+          <div class="esign-slot" data-esign="${escapeHtml(emp.fullName)}"><span class="esign-hint">Click to sign</span></div>
+          <div class="sig-line"></div>
+          <div class="sig-name">${escapeHtml(emp.fullName)}</div>
+          <div class="sig-role">CNIC: ${emp.cnic ? escapeHtml(emp.cnic) : '_____________________'}</div>
+          <div class="sig-date">Date: _____________________</div>
+        </td>
+      </tr>
+    </table>
   `
-  return { html: wrap('NDA', body), title: `NDA - ${emp.fullName}` }
+  return {
+    html: wrap('NDA', body, DEFAULT_SIGNATORY, 'letter', {
+      employeeId: emp.id, docType: 'nda', noSignOff: true,
+    }),
+    title: `NDA - ${emp.fullName}`,
+  }
 }
 
 function showCauseNotice({ emp, extras }: Ctx) {
