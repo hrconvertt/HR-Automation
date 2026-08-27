@@ -169,6 +169,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     vacancies: full.vacancies,
     reason: full.requestReason,
     requestNote: full.requestNote,
+    minExperienceYears: full.minExperienceYears,
+    salaryMin: full.salaryMin,
+    salaryMax: full.salaryMax,
   })
   await prisma.jobRequisition.update({
     where: { id },

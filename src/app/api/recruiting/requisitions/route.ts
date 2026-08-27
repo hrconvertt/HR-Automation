@@ -108,6 +108,9 @@ export async function POST(request: NextRequest) {
       departmentName: dept?.name,
       reason: requestReason,
       requestNote,
+      minExperienceYears,
+      salaryMin: Number.isFinite(salaryMin as number) ? salaryMin : null,
+      salaryMax: Number.isFinite(salaryMax as number) ? salaryMax : null,
     })
     await prisma.jobRequisition.update({
       where: { id: created.id },

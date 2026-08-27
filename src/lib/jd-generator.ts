@@ -26,6 +26,11 @@ interface JdInputs {
   vacancies: number
   reason?: string | null
   requestNote?: string | null
+  // Straight off the requisition, so the JD states what HR actually set
+  // instead of a band guessed from the job title.
+  minExperienceYears?: number | null
+  salaryMin?: number | null
+  salaryMax?: number | null
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -55,14 +60,17 @@ const TYPE_LABEL: Record<string, string> = {
   CONTRACT:   'Contract',
 }
 
-type Family = 'DESIGNER' | 'DEVELOPER' | 'MARKETING' | 'BUSINESS' | 'OPERATIONS' | 'GENERIC'
+type Family = 'DESIGNER' | 'DEVELOPER' | 'MARKETING' | 'BUSINESS' | 'FINANCE' | 'OPERATIONS' | 'GENERIC'
 
 function detectFamily(title: string): Family {
   const t = title.toLowerCase()
   if (/(designer|design|ui|ux|graphic|video|creative|illustrator)/.test(t)) return 'DESIGNER'
   if (/(developer|engineer|programmer|shopify|wordpress|frontend|backend|fullstack|qa|tester)/.test(t)) return 'DEVELOPER'
   if (/(marketing|cro|growth|content|copywriter|seo|sem|paid|media buyer|social media)/.test(t)) return 'MARKETING'
-  if (/(business|sales|account|client|partner|revenue|bd)/.test(t)) return 'BUSINESS'
+  // Finance first: 'account' would otherwise match Accounts Officer into BUSINESS
+  // and hand a bookkeeper a new-business JD.
+  if (/(account|finance|financial|bookkeep|audit|tax|payroll|treasur|billing)/.test(t)) return 'FINANCE'
+  if (/(business|sales|client|partner|revenue|bd)/.test(t)) return 'BUSINESS'
   if (/(hr|operations|admin|finance|accountant|office|coordinator|project)/.test(t)) return 'OPERATIONS'
   return 'GENERIC'
 }
@@ -89,6 +97,7 @@ function detectSpecialty(title: string, family: Family): string {
     if (t.includes('paid') || t.includes('media')) return 'Paid Media & Performance'
     return 'Growth & Marketing'
   }
+  if (family === 'FINANCE') return 'Accounts & Finance'
   if (family === 'BUSINESS') return 'New-Business & Client Growth'
   if (family === 'OPERATIONS') return 'Operations & People'
   return 'Convertt Team'
@@ -112,6 +121,19 @@ function detectGuardrail(title: string, family: Family): string | null {
 // ─── Role-specific "What You'll Do" / "Looking For" blocks ──────────
 
 const RESPONSIBILITIES: Record<Family, string[]> = {
+  FINANCE: [
+    'Record daily financial transactions and maintain general ledger entries in accounting software.',
+    'Manage accounts payable and receivable — issue client invoices, follow up on outstanding payments, and process vendor payments.',
+    'Perform bank reconciliations and maintain petty cash records.',
+    'Maintain organised documentation of bills, vouchers, receipts and supporting records.',
+    'Assist in month-end and year-end closing activities, including trial balance preparation.',
+    'Support payroll processing — salary sheets, deductions and disbursement records.',
+    'Handle tax-related tasks such as withholding tax deductions and assist with monthly/annual filings (FBR, PRA).',
+    'Track company expenses and flag discrepancies or unusual variances to management.',
+    'Prepare basic financial summaries and reports as required by management.',
+    'Coordinate with external auditors and assist during audit preparation.',
+    'Ensure compliance with company financial policies and internal controls.',
+  ],
   DESIGNER: [
     'Design high-converting e-commerce storefronts, product pages, and campaign landing pages from scratch',
     'Collaborate with CRO strategists to translate data insights and A/B test hypotheses into design changes',
@@ -168,6 +190,15 @@ const RESPONSIBILITIES: Record<Family, string[]> = {
 }
 
 const LOOKING_FOR: Record<Family, string[]> = {
+  FINANCE: [
+    'Bachelor’s degree in Commerce, Accounting, Finance or a related field (B.Com, BBA, ACCA/CA-Inter part-qualified also welcome).',
+    'Solid understanding of basic accounting principles, ledgers and reconciliations.',
+    'Proficiency in Microsoft Excel (formulas, pivot tables, data organisation).',
+    'Hands-on experience with accounting software (QuickBooks, Xero, Zoho Books or similar).',
+    'High attention to detail and accuracy in data entry and record-keeping.',
+    'Ability to manage deadlines and handle routine tasks independently.',
+    'Good communication and coordination skills.',
+  ],
   DESIGNER: [
     'A strong portfolio of eCommerce or DTC projects',
     'Proven experience designing specifically for Shopify — themes, sections, and landing pages',
@@ -222,6 +253,12 @@ const LOOKING_FOR: Record<Family, string[]> = {
 }
 
 const NICE_TO_HAVE: Record<Family, string[]> = {
+  FINANCE: [
+    'Experience in an IT services, software house or eCommerce setup.',
+    'Familiarity with invoicing international clients and handling foreign currency receipts.',
+    'Basic understanding of tax regulations and filing procedures in Pakistan.',
+    'Working knowledge of payroll processing.',
+  ],
   DESIGNER: [
     'Experience with ad creative design (Meta, Google Display)',
     'Familiarity with Shopify Liquid or basic HTML/CSS',
@@ -259,75 +296,138 @@ const NICE_TO_HAVE: Record<Family, string[]> = {
 
 // ─── Generator ──────────────────────────────────────────────────────
 
+
+// Opening paragraph per family. Written for the role in front of us — an
+// accounts hire should not be told about CRO strategists and Shopify builds.
+const INTRO: Record<Family, (title: string) => string> = {
+  FINANCE: (t) => `At Convertt, we are looking for an organised and detail-oriented ${t} to manage day-to-day accounting operations and maintain accurate financial records. The ideal candidate is comfortable with bookkeeping, reconciliations, invoicing and supporting month-end closing, with a strong grip on Excel and accounting software.`,
+  DESIGNER: (t) => `At Convertt, we are looking for a ${t} who can turn brand and product thinking into storefronts that convert. You will design for live eCommerce brands where every screen is measured, and your work ships to real customers rather than sitting in a portfolio.`,
+  DEVELOPER: (t) => `At Convertt, we are looking for a ${t} to build and maintain high-performing eCommerce experiences. You will work on live client stores where speed, reliability and clean implementation directly affect revenue.`,
+  MARKETING: (t) => `At Convertt, we are looking for a ${t} to help brands grow through sharp positioning, strong creative and measurable campaigns. You will own work that is judged on outcomes, not impressions.`,
+  BUSINESS: (t) => `At Convertt, we are looking for a ${t} to build client relationships and grow our book of business. You will work closely with delivery teams so that what we promise is what we ship.`,
+  OPERATIONS: (t) => `At Convertt, we are looking for a dependable ${t} to keep day-to-day operations running smoothly. The ideal candidate is organised, proactive and comfortable owning routine processes end to end.`,
+  GENERIC: (t) => `At Convertt, we are looking for a capable ${t} to join our team in Lahore. The ideal candidate is organised, takes ownership of their work, and communicates clearly with the people around them.`,
+}
+
+// "What We Offer" — the finance/ops version drops the agency-portfolio pitch.
+const OFFERS: Record<Family, string[]> = {
+  FINANCE: [
+    'Competitive salary based on experience and performance.',
+    'Structured, supportive work environment with clear day-to-day ownership.',
+    'Career growth path from Accounts Officer toward senior accounts and finance roles.',
+    'Exposure to local and international client billing.',
+    'Professional and collaborative team culture.',
+    'Statutory benefits (EOBI and leave entitlements per the Convertt Leave Policy).',
+  ],
+  OPERATIONS: [
+    'Competitive salary based on experience and performance.',
+    'Clear ownership of your area with room to improve how it runs.',
+    'Supportive, professional team culture.',
+    'Annual increments tied to performance.',
+    'Statutory benefits (EOBI and leave entitlements per the Convertt Leave Policy).',
+  ],
+  DESIGNER: DEFAULT_OFFERS(),
+  DEVELOPER: DEFAULT_OFFERS(),
+  MARKETING: DEFAULT_OFFERS(),
+  BUSINESS: DEFAULT_OFFERS(),
+  GENERIC: DEFAULT_OFFERS(),
+}
+
+function DEFAULT_OFFERS(): string[] {
+  return [
+    'Competitive salary with performance-based increments.',
+    'Work on real brands with real revenue at stake — your decisions have direct impact.',
+    'Fast-paced, collaborative team environment.',
+    'Exposure to a growing portfolio of global DTC brands across multiple verticals.',
+    'Statutory benefits (EOBI and leave entitlements per the Convertt Leave Policy).',
+  ]
+}
+
+/**
+ * Build the JD in the house format Convertt publishes:
+ *
+ *   CONVERTT / {Title} / Job Description
+ *   Intro paragraph (role-specific, no agency boilerplate)
+ *   Location · Employment Type · Experience · Salary
+ *   Key Responsibilities
+ *   Required Skills & Qualifications
+ *   Preferred Qualifications (Good to Have)
+ *   What We Offer
+ *   How to Apply
+ *
+ * The old draft opened with a "$1 billion in client revenue" brag and told
+ * every hire they would work alongside CRO strategists and Shopify developers
+ * — true for a storefront designer, nonsense for an Accounts Officer. Copy is
+ * per role family now, and the experience line comes from the requisition
+ * rather than being guessed from the job title.
+ */
 export function generateJD(input: JdInputs): string {
-  const seniority = detectSeniority(input.title)
   const family    = detectFamily(input.title)
-  const specialty = detectSpecialty(input.title, family)
-  const guardrail = detectGuardrail(input.title, family)
+  const seniority = detectSeniority(input.title)
   const typeLabel = TYPE_LABEL[input.type] ?? input.type
-  const expLine   = EXP_LINE[seniority]
+  const onsite    = input.type === 'INTERNSHIP' ? 'On-Site' : 'On-Site'
 
-  const reasonLine = input.reason === 'GROWTH'
-    ? 'expanding the team'
-    : input.reason === 'REPLACEMENT'
-      ? 'a replacement role'
-      : input.reason === 'BACKFILL'
-        ? 'a backfill role'
-        : 'a strategic addition'
+  // Experience: prefer what HR actually entered on the requisition; fall back
+  // to the band implied by the title only when nothing was given.
+  const expLine = experienceLine(input.minExperienceYears, seniority)
 
+  const salaryLine = input.salaryMin && input.salaryMax
+    ? `PKR ${input.salaryMin.toLocaleString('en-PK')} – ${input.salaryMax.toLocaleString('en-PK')} (Based on skills & experience)`
+    : input.salaryMin
+      ? `From PKR ${input.salaryMin.toLocaleString('en-PK')} (Based on skills & experience)`
+      : 'Market competitive (Based on skills & experience)'
+
+  const intro          = INTRO[family](input.title)
   const responsibilities = RESPONSIBILITIES[family]
   const lookingFor       = LOOKING_FOR[family]
   const niceToHave       = NICE_TO_HAVE[family]
+  const offers           = OFFERS[family]
 
-  return `# We're Hiring: ${input.title} — ${specialty}
+  const out: string[] = []
+  out.push('# CONVERTT')
+  out.push(`## ${input.title}`)
+  out.push('### Job Description')
+  out.push('')
+  out.push(intro)
+  out.push('')
+  out.push('**Location:** Mega Tower, Main Boulevard Gulberg, Lahore')
+  out.push(`**Employment Type:** ${typeLabel} (${onsite})`)
+  out.push(`**Experience:** ${expLine}`)
+  out.push(`**Salary:** ${salaryLine}`)
+  if (input.vacancies > 1) out.push(`**Positions:** ${input.vacancies}`)
+  out.push('')
+  out.push('## Key Responsibilities')
+  out.push(responsibilities.map((r) => `- ${r}`).join('\n'))
+  out.push('')
+  out.push('## Required Skills & Qualifications')
+  out.push([`${expLine} of experience in a similar role.`, ...lookingFor].map((r) => `- ${r}`).join('\n'))
+  out.push('')
+  out.push('## Preferred Qualifications (Good to Have)')
+  out.push(niceToHave.map((r) => `- ${r}`).join('\n'))
+  out.push('')
+  out.push('## What We Offer')
+  out.push(offers.map((r) => `- ${r}`).join('\n'))
+  out.push('')
+  out.push('## How to Apply')
+  out.push(`Send your resume and a brief introduction to: **hr@convertt.co**`)
+  out.push('')
+  out.push(`**Subject Line:** Application – ${input.title}`)
 
-**Location:** Mega Tower, Main Boulevard Gulberg, Lahore (On-Site)
+  // The manager's own note is worth keeping, but it is internal context and
+  // does not belong in published copy — it goes at the end, clearly marked.
+  if (input.requestNote?.trim()) {
+    out.push('')
+    out.push('---')
+    out.push(`*Internal note from the hiring manager: ${input.requestNote.trim()}*`)
+  }
 
-**Type:** ${typeLabel}
+  return out.join('\n')
+}
 
-**Experience:** ${expLine}
-
-${guardrail ? `> **${guardrail}**\n` : ''}
-
-## About Convertt
-
-Convertt is a fast-growing CRO and eCommerce design agency that has driven **over $1 billion in client revenue** across **310+ projects** worldwide. We work with DTC brands globally — from UAE to the US — building high-converting Shopify stores, landing pages, and full-stack eCommerce experiences using top global talent and AI-powered workflows.
-
-We don't just make things look good. **We make things sell.**
-
-## The Role
-
-We're hiring **${input.vacancies} ${typeLabel} ${input.title}${input.vacancies > 1 ? 's' : ''}** for ${input.departmentName || 'our team'}. This is ${reasonLine}.
-${input.requestNote ? `\n${input.requestNote}\n` : ''}
-You'll work directly with our CRO strategists, designers, and Shopify developers on live client projects across beauty, supplements, food & beverage, apparel, and more. You won't be polishing pet projects — every deliverable touches real revenue.
-
-## What You'll Do
-
-${responsibilities.map((r) => `- ${r}`).join('\n')}
-
-## What We're Looking For
-
-- **${expLine}** of relevant experience
-${lookingFor.map((r) => `- ${r}`).join('\n')}
-
-## Nice to Have
-
-${niceToHave.map((r) => `- ${r}`).join('\n')}
-
-## What We Offer
-
-- Competitive salary with performance-based bonuses
-- Work on real brands with real revenue at stake — your designs and decisions have direct impact
-- Fast-paced, collaborative team environment powered by AI workflows
-- Access to a growing portfolio of global DTC brands across multiple verticals
-- ${input.type === 'INTERNSHIP' ? 'Stipend with strong potential to convert to permanent after 2–3 months' : 'Annual increments tied to performance — first review in 6 months'}
-- Statutory benefits (EOBI, leave entitlements per Convertt Leave Policy)
-
-## How to Apply
-
-Send your CV${family === 'DESIGNER' ? ' and portfolio link' : family === 'DEVELOPER' ? ' and GitHub / live work samples' : ''}, with a 3-line note on why this role fits you. Shortlisted candidates hear back within 7 working days.
-
----
-
-*Auto-drafted by Convertt HR. Edit any section before publishing — the polish you add stays put.*`
+/** Experience wording — driven by the requisition when HR supplied a figure. */
+function experienceLine(min: number | null | undefined, seniority: string): string {
+  if (min == null) return EXP_LINE[seniority] ?? '1–2 Years'
+  if (min <= 0) return 'Up to 1 Year (entry level)'
+  if (min === 1) return '1 Year'
+  return `${min}+ Years`
 }

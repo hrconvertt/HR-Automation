@@ -225,6 +225,19 @@ export function JdReviewButton({ requisitionId, title, jdStatus }: Props) {
           )}
 
           <DialogFooter className="gap-2">
+            {/* The JD has to leave the system as a file — it gets emailed to
+                candidates and filed alongside the other JDs. Print → Save as
+                PDF from the printable page, so the sent file and the stored
+                text are the same thing. */}
+            <a
+              href={`/jd/${requisitionId}/print`}
+              target="_blank"
+              rel="noreferrer"
+              className="mr-auto inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-sm px-3 py-2 hover:bg-slate-50"
+              title="Open a printable copy to save as PDF"
+            >
+              Save as PDF
+            </a>
             {isPosted ? (
               <>
                 <Button variant="outline" onClick={reopen} disabled={saving}>
