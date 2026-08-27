@@ -135,6 +135,9 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     firstDayHalf?: boolean; lastDayHalf?: boolean
     // Who signed it off. Employee ids — '' clears the approver.
     managerApprovedById?: string; approvedById?: string
+    // Supporting evidence attached after the fact — a medical slip for a WFH
+    // day agreed over email had nowhere to live until now. '' clears it.
+    attachmentBase64?: string; attachmentMime?: string; attachmentName?: string
   } = {}
   try { body = await request.json() } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -144,6 +147,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (!found) return NextResponse.json({ error: 'Not found' }, { status: 404 })
   // Narrowing does not survive into the transaction closure below.
   const existing = found
+
+  // Evidence can be added, replaced or cleared on an existing record. Held to
+  // the same 5MB ceiling as evidence supplied at submission time.
+  let attachmentPatch: Record<string, unknown> = {}
+  if (typeof body.attachmentBase64 === 'string') {
+    if (body.attachmentBase64 === '') {
+      attachmentPatch = { attachmentBytes: null, attachmentMime: null, attachmentName: null }
+    } else {
+      let bytes: Buffer
+      try {
+        bytes = Buffer.from(body.attachmentBase64.replace(/^data:[^;]+;base64,/, ''), 'base64')
+      } catch {
+        return NextResponse.json({ error: 'Attachment is not valid base64' }, { status: 400 })
+      }
+      if (bytes.length > 5 * 1024 * 1024) {
+        return NextResponse.json({ error: 'Attachment is larger than 5MB' }, { status: 400 })
+      }
+      attachmentPatch = {
+        attachmentBytes: bytes,
+        attachmentMime: typeof body.attachmentMime === 'string' ? body.attachmentMime.slice(0, 120) : 'application/octet-stream',
+        attachmentName: typeof body.attachmentName === 'string' ? body.attachmentName.slice(0, 240) : 'evidence',
+      }
+    }
+  }
 
   const ALLOWED_TYPES = ['CASUAL', 'SICK', 'UNPAID', 'ANNUAL', 'MATERNITY', 'PATERNITY']
   const ALLOWED_STATUS = ['PENDING', 'PENDING_HR', 'APPROVED', 'REJECTED', 'CANCELLED']
@@ -244,6 +271,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         firstDayHalf,
         lastDayHalf,
         ...(typeof body.reason === 'string' ? { reason: body.reason.trim().slice(0, 2000) } : {}),
+        ...attachmentPatch,
         // Approvers, recorded after the fact — a leave agreed over email still
         // needs the lead and HR who signed it off named on the record.
         ...(typeof body.managerApprovedById === 'string'

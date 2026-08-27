@@ -301,6 +301,12 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
   // employees in both pickers is how a designer ends up recorded as the HR
   // sign-off; the lead list is leadership by designation, the HR list is the
   // HR team.
+  // Evidence picked in this dialog, held as base64 until Save. null means
+  // "leave whatever is on the record alone"; '' means "remove it".
+  const [evidence, setEvidence] = useState<{ base64: string; mime: string; name: string } | null>(null)
+  const [clearEvidence, setClearEvidence] = useState(false)
+  const [evidenceErr, setEvidenceErr] = useState<string | null>(null)
+
   type Person = { id: string; fullName: string; employeeCode: string }
   const [leads, setLeads] = useState<Person[]>([])
   const [hrStaff, setHrStaff] = useState<Person[]>([])
@@ -348,6 +354,11 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
         days: Number(days),
         firstDayHalf, lastDayHalf, reason,
         managerApprovedById: leadId, approvedById: hrId,
+        ...(evidence
+          ? { attachmentBase64: evidence.base64, attachmentMime: evidence.mime, attachmentName: evidence.name }
+          : clearEvidence
+            ? { attachmentBase64: '' }
+            : {}),
       }),
     })
     if (!res.ok) {
@@ -462,6 +473,64 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
 
           {/* Who signed it off. Recorded after the fact for leaves agreed over
               email, so the register names the lead and the HR rather than a dash. */}
+          {/* Supporting evidence — the medical slip or note behind a WFH day or
+              sick leave agreed over email. Some requests have one, some do not,
+              so it is optional and replaceable rather than required. */}
+          <Field label="Supporting evidence" hint="PDF or image, up to 5MB. Optional.">
+            <div className="space-y-1.5">
+              {row.attachmentName && !evidence && !clearEvidence && (
+                <div className="flex items-center gap-2 text-xs">
+                  <a
+                    href={`/api/leave/${row.id}/attachment`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-slate-700 hover:underline"
+                  >
+                    <Paperclip className="w-3 h-3" /> {row.attachmentName}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setClearEvidence(true)}
+                    className="text-red-600 hover:underline"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
+              {clearEvidence && (
+                <p className="text-xs text-amber-700">
+                  Evidence will be removed on save.{' '}
+                  <button type="button" className="underline" onClick={() => setClearEvidence(false)}>Undo</button>
+                </p>
+              )}
+              {evidence && (
+                <p className="text-xs text-emerald-700">
+                  New file ready: {evidence.name}{' '}
+                  <button type="button" className="underline" onClick={() => setEvidence(null)}>Undo</button>
+                </p>
+              )}
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="block w-full text-xs text-slate-600 file:mr-2 file:rounded-md file:border file:border-slate-300 file:bg-white file:px-2 file:py-1 file:text-xs"
+                onChange={(e) => {
+                  const f = e.target.files?.[0]
+                  if (!f) return
+                  setEvidenceErr(null)
+                  if (f.size > 5 * 1024 * 1024) { setEvidenceErr('That file is larger than 5MB.'); return }
+                  const reader = new FileReader()
+                  reader.onload = () => {
+                    const res = String(reader.result ?? '')
+                    setEvidence({ base64: res.replace(/^data:[^;]+;base64,/, ''), mime: f.type || 'application/octet-stream', name: f.name })
+                    setClearEvidence(false)
+                  }
+                  reader.readAsDataURL(f)
+                }}
+              />
+              {evidenceErr && <p className="text-xs text-red-600">{evidenceErr}</p>}
+            </div>
+          </Field>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Approved by (Lead / Manager)" hint="Stage 1 sign-off">
               <select value={leadId} onChange={(e) => setLeadId(e.target.value)} className={inputCls}>
