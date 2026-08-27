@@ -236,7 +236,7 @@ export function ChecklistGrid({ rows, isHR }: { rows: GridRow[]; isHR: boolean }
         </div>
 
         <div className="overflow-x-auto">
-          <table className="text-sm border-collapse min-w-max">
+          <table className="text-sm border-collapse w-full min-w-max">
             <thead>
               <tr className="bg-slate-50">
                 <th

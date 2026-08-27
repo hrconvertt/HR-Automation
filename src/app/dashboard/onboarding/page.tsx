@@ -27,12 +27,17 @@ function avatarTone(name: string): string {
 // Employees in any "exited" status should never appear on the
 // onboarding board, even if a stale checklist row exists.
 const EXCLUDED_EMP_STATUSES = ['RESIGNED', 'TERMINATED', 'INACTIVE', 'LAYOFF']
+// Founders were never onboarded, so they sat in the document checklist forever
+// at 0/9 — nine permanent gaps that are not gaps. attendanceExempt already
+// marks exactly that population (owners/founders off the staff tracking
+// boards), so the checklist reads it too rather than carrying its own list.
+const TRACKED_STAFF = { status: { notIn: EXCLUDED_EMP_STATUSES }, attendanceExempt: false }
 
 async function getData() {
   const today = new Date()
   const [checklists, probations] = await Promise.all([
     prisma.onboardingChecklist.findMany({
-      where: { employee: { status: { notIn: EXCLUDED_EMP_STATUSES } } },
+      where: { employee: TRACKED_STAFF },
       orderBy: { createdAt: 'desc' },
       include: {
         employee: { select: { id: true, fullName: true, employeeCode: true, joiningDate: true, designation: true, department: { select: { name: true } } } },
@@ -41,13 +46,13 @@ async function getData() {
       take: 50,
     }),
     prisma.probationRecord.findMany({
-      where: { employee: { status: { notIn: EXCLUDED_EMP_STATUSES } } },
+      where: { employee: TRACKED_STAFF },
       orderBy: { endDate: 'asc' },
       include: { employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } } },
     }),
   ])
   const everyone = await prisma.employee.findMany({
-    where: { status: { notIn: EXCLUDED_EMP_STATUSES } },
+    where: TRACKED_STAFF,
     orderBy: { employeeCode: 'asc' },
     select: {
       id: true, fullName: true, employeeCode: true, joiningDate: true,
