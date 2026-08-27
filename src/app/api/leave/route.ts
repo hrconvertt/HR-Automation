@@ -83,6 +83,8 @@ export async function GET(request: NextRequest) {
       days: true, firstDayHalf: true, lastDayHalf: true, reason: true,
       status: true, createdAt: true, approvedAt: true, managerApprovedAt: true,
       approvedById: true, managerApprovedById: true,
+      // A rejected list is only useful if it says why, and who said so.
+      rejectedReason: true, rejectedById: true,
       attachmentName: true, attachmentMime: true, attachmentUrl: true,
       employee: {
         select: {
@@ -119,7 +121,7 @@ export async function GET(request: NextRequest) {
   // Who signed off at each stage. Both columns hold Employee ids (that is what
   // the approve route writes), so one lookup covers lead and HR alike.
   const approverIds = [...new Set(
-    requests.flatMap((r) => [r.managerApprovedById, r.approvedById]).filter(Boolean),
+    requests.flatMap((r) => [r.managerApprovedById, r.approvedById, r.rejectedById]).filter(Boolean),
   )] as string[]
   const approvers = approverIds.length
     ? await prisma.employee.findMany({
@@ -157,6 +159,7 @@ export async function GET(request: NextRequest) {
       requesterBalance: bal,
       approvedByLead: r.managerApprovedById ? approverName.get(r.managerApprovedById) ?? null : null,
       approvedByHr: r.approvedById ? approverName.get(r.approvedById) ?? null : null,
+      rejectedBy: r.rejectedById ? approverName.get(r.rejectedById) ?? null : null,
     }
   })
 

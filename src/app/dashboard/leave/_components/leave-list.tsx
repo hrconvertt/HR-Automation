@@ -36,6 +36,8 @@ type LeaveRow = {
   attachmentName?: string | null
   approvedByLead?: string | null
   approvedByHr?: string | null
+  rejectedReason?: string | null
+  rejectedBy?: string | null
   managerApprovedById?: string | null
   approvedById?: string | null
   employee: { fullName: string; employeeCode: string; designation: string | null }
@@ -178,6 +180,14 @@ export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEd
                             </p>
                           ) : (
                             <span className="text-xs text-slate-400">—</span>
+                          )}
+                          {/* Why it was turned down, next to what was asked for —
+                              a rejected row without the reason tells you nothing. */}
+                          {r.status === 'REJECTED' && r.rejectedReason && (
+                            <p className="text-xs text-red-700 bg-red-50 border border-red-100 rounded px-2 py-1 mt-1">
+                              <span className="font-semibold">Rejected:</span> {r.rejectedReason}
+                              {r.rejectedBy ? ` — ${r.rejectedBy}` : ''}
+                            </p>
                           )}
                           {r.attachmentName && (
                             <Link
@@ -442,25 +452,6 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
 
           {/* Who signed it off. Recorded after the fact for leaves agreed over
               email, so the register names the lead and the HR rather than a dash. */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Approved by (Lead / Manager)">
-              <select className={inputCls} value={leadId} onChange={(e) => setLeadId(e.target.value)}>
-                <option value="">— Not recorded —</option>
-                {staff.map((p) => (
-                  <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
-                ))}
-              </select>
-            </Field>
-            <Field label="Approved by (HR)">
-              <select className={inputCls} value={hrId} onChange={(e) => setHrId(e.target.value)}>
-                <option value="">— Not recorded —</option>
-                {staff.map((p) => (
-                  <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
-                ))}
-              </select>
-            </Field>
-          </div>
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Approved by (Lead / Manager)" hint="Stage 1 sign-off">
               <select value={leadId} onChange={(e) => setLeadId(e.target.value)} className={inputCls}>

@@ -76,6 +76,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/leave/me',
   '/dashboard/leave/requests',
   '/dashboard/leave/approved',
+  '/dashboard/leave/rejected',
   '/dashboard/leave/sandwich',
   '/dashboard/policies',
   '/dashboard/letters',
@@ -561,6 +562,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
         { href: '/dashboard/leave/me', label: 'My Leave', icon: PlaneIcon },
         { href: '/dashboard/leave/requests', label: 'Leave Requests', icon: Inbox },
         { href: '/dashboard/leave/approved', label: 'Leave Approved', icon: CheckCircle2 },
+        { href: '/dashboard/leave/rejected', label: 'Leave Rejected', icon: X },
         // A pay charge, not a balance charge — its own list for that reason.
         { href: '/dashboard/leave/sandwich', label: 'Sandwich Deductions', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       ],
