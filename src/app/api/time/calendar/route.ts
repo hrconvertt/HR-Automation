@@ -77,7 +77,7 @@ export async function GET(request: NextRequest) {
 
   const [employees, logs, leaves, holidays] = await Promise.all([
     prisma.employee.findMany({
-      where: { status: 'ACTIVE', ...employeeFilter },
+      where: { status: 'ACTIVE', attendanceExempt: false, ...employeeFilter },
       select: {
         id: true, fullName: true, employeeCode: true,
         department: { select: { name: true } },

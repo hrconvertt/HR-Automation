@@ -92,7 +92,10 @@ export async function GET(request: NextRequest) {
         // first day of the 24th. Nobody is absent from a job they have not
         // begun, and marking them would open an attendance record before their
         // employment.
-        where: { status: 'ACTIVE', ...empFilter, joiningDate: { lte: todayEnd } },
+        // attendanceExempt covers the founders, who are not on the clock. The
+        // grid already filtered them out; this query did not, so they kept
+        // reappearing in the daily view as unmarked.
+        where: { status: 'ACTIVE', attendanceExempt: false, ...empFilter, joiningDate: { lte: todayEnd } },
         select: { id: true, employeeCode: true, fullName: true, timings: true, department: { select: { name: true } } },
         orderBy: { fullName: 'asc' },
       }),
