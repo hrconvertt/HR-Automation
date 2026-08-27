@@ -155,6 +155,16 @@ function wrap(
      printer still paginates it to A4 via @page. */
   .doc.paged { min-height: 297mm; }
   @media print { .doc.paged { box-shadow: none; } }
+  @media print {
+    .letterhead.running {
+      position: fixed; top: 0; left: 0; right: 0;
+      margin: 0; padding: 0 0 8pt;
+      background: #fff;
+    }
+    /* Reserve the band the running header occupies so body text starts below
+       it on every page rather than under it. */
+    .doc.paged { padding-top: 62pt; }
+  }
   /* Never split a clause off its heading across a page break. */
   .doc h3 { break-after: avoid; page-break-after: avoid; }
   .doc table.sig-grid { break-inside: avoid; page-break-inside: avoid; }
@@ -299,11 +309,11 @@ function wrap(
       : 'Click a signature line to sign, or Edit to change any wording before printing.'}</span>
   </div>
   <div class="doc${isPlain ? ' paged' : ''}" id="doc">
-    ${isPlain ? '' : `<div class="letterhead">
+    <div class="letterhead${isPlain ? ' running' : ''}">
       <div class="logo"><img src="${LOGO_DATA_URI}" alt="Convertt"></div>
       <div class="addr">${LETTERHEAD_ADDRESS_LINES.join('<br>')}</div>
     </div>
-    <div class="letter-date">${letterDate(new Date())}</div>`}
+    ${isPlain ? '' : `<div class="letter-date">${letterDate(new Date())}</div>`}
     ${body}
     ${meta.noSignOff ? '' : `<div class="sign-off">
       ${signatory.above ? `<p>${escapeHtml(signatory.above)}</p>` : ''}
