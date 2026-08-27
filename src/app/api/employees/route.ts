@@ -50,6 +50,12 @@ export async function GET(request: NextRequest) {
   // manager: designation contains a leadership keyword, or the user has
   // the HR_ADMIN role.
   const managersOnly = searchParams.get('managersOnly') === '1'
+  // Sign-off pickers want the two sides of the approval chain, separately:
+  // leadsOnly is leadership by designation (no HR blended in, unlike
+  // managersOnly), hrOnly is the HR team. Picking an approver from a list of
+  // everyone is how the wrong name ends up on a record.
+  const leadsOnly = searchParams.get('leadsOnly') === '1'
+  const hrOnly = searchParams.get('hrOnly') === '1'
 
   const employees = await listEmployees({
     effectiveRole,
@@ -60,6 +66,31 @@ export async function GET(request: NextRequest) {
     employeeType,
     limit,
   })
+
+  const LEADERSHIP_KEYWORDS = ['lead', 'head', 'manager', 'director', 'chief', 'cto', 'ceo', 'coo', 'cfo', 'vp', 'president', 'partner', 'founder']
+
+  if (leadsOnly) {
+    const filtered = employees.filter((e) => {
+      const d = (e.designation ?? '').toLowerCase()
+      return LEADERSHIP_KEYWORDS.some((k) => d.includes(k))
+    })
+    return NextResponse.json({ employees: filtered })
+  }
+
+  if (hrOnly) {
+    const hrAdmins = await prisma.userRole.findMany({
+      where: { role: 'HR_ADMIN' },
+      select: { user: { select: { employee: { select: { id: true } } } } },
+    })
+    const hrAdminEmpIds = new Set(
+      hrAdmins.map((r) => r.user?.employee?.id).filter((id): id is string => !!id),
+    )
+    // listEmployees selects the department name, not its id.
+    const filtered = employees.filter(
+      (e) => hrAdminEmpIds.has(e.id) || /human resources|^hr$/i.test(e.department?.name ?? ''),
+    )
+    return NextResponse.json({ employees: filtered })
+  }
 
   if (managersOnly) {
     const KEYWORDS = ['lead', 'head', 'manager', 'director', 'chief', 'cto', 'ceo', 'coo', 'cfo', 'vp', 'president', 'partner']

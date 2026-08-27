@@ -297,11 +297,21 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
   // behind it; without these the record shows a dash where the approver goes.
   const [leadId, setLeadId] = useState(row.managerApprovedById ?? '')
   const [hrId, setHrId] = useState(row.approvedById ?? '')
-  const [staff, setStaff] = useState<{ id: string; fullName: string; employeeCode: string }[]>([])
+  // Each side of the approval chain gets its own pool. Offering all 26
+  // employees in both pickers is how a designer ends up recorded as the HR
+  // sign-off; the lead list is leadership by designation, the HR list is the
+  // HR team.
+  type Person = { id: string; fullName: string; employeeCode: string }
+  const [leads, setLeads] = useState<Person[]>([])
+  const [hrStaff, setHrStaff] = useState<Person[]>([])
   useEffect(() => {
-    fetch('/api/employees?limit=500&status=ACTIVE')
+    fetch('/api/employees?limit=500&status=ACTIVE&leadsOnly=1')
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => { if (d?.employees) setStaff(d.employees) })
+      .then((d) => { if (d?.employees) setLeads(d.employees) })
+      .catch(() => {})
+    fetch('/api/employees?limit=500&status=ACTIVE&hrOnly=1')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.employees) setHrStaff(d.employees) })
       .catch(() => {})
   }, [])
 
@@ -456,7 +466,7 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
             <Field label="Approved by (Lead / Manager)" hint="Stage 1 sign-off">
               <select value={leadId} onChange={(e) => setLeadId(e.target.value)} className={inputCls}>
                 <option value="">— Not recorded —</option>
-                {staff.map((p) => (
+                {leads.map((p) => (
                   <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
                 ))}
               </select>
@@ -464,7 +474,7 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
             <Field label="Approved by (HR)" hint="Final sign-off">
               <select value={hrId} onChange={(e) => setHrId(e.target.value)} className={inputCls}>
                 <option value="">— Not recorded —</option>
-                {staff.map((p) => (
+                {hrStaff.map((p) => (
                   <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
                 ))}
               </select>
