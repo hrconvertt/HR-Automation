@@ -357,47 +357,9 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                     currentDepartmentId={employee.departmentId}
                   />
                 )}
-                {canEditFull && (
-                  /* Straight after a record is created, the employment letter
-                     is the next thing HR needs. It composes from the record
-                     itself — designation, joining date, CNIC, compensation —
-                     and opens editable, so it is generated rather than typed. */
-                  <a
-                    href={`/api/documents/generate?type=offer_letter&employeeId=${employee.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-2 hover:bg-slate-50"
-                    title="Generate the employment letter from this record"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> Employment Letter
-                  </a>
-                )}
-                {canEditFull && (
-                  /* The agreement and the NDA are signed within the first days
-                     of joining, so they belong next to the letter rather than
-                     buried in a dialog on another screen. Both open editable
-                     with click-to-sign slots. */
-                  <a
-                    href={`/api/documents/generate?type=employment_agreement&employeeId=${employee.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-2 hover:bg-slate-50"
-                    title="Generate the employment agreement from this record"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> Employment Agreement
-                  </a>
-                )}
-                {canEditFull && (
-                  <a
-                    href={`/api/documents/generate?type=nda&employeeId=${employee.id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-2 hover:bg-slate-50"
-                    title="Generate the NDA from this record"
-                  >
-                    <FileText className="w-3.5 h-3.5" /> NDA
-                  </a>
-                )}
+                {/* The employment letter, agreement and NDA are generated from
+                    Onboarding > Day-3 documents, where they are actually due —
+                    not from the profile's action row. */}
                 {canEditFull && (
                   <DeleteEmployeeButton
                     employeeId={employee.id}

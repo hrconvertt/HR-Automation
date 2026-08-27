@@ -279,6 +279,54 @@ export function OnboardingWorkspace(props: Props) {
         </Card>
       )}
 
+      {/* Day-3 paperwork. The letter, the agreement and the NDA are signed in
+          the first days on the job, so they belong in onboarding rather than
+          on the profile's action row. Each is generated from the record and
+          opens editable with signature slots. */}
+      {props.canEdit && (
+        <Card className="rounded-xl border-slate-200 overflow-hidden">
+          <div className="flex items-start justify-between gap-4 p-4 border-b border-slate-100">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900">Day-3 documents</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Signed in the first days on the job. Generated from the record — edit the wording before printing.
+              </p>
+            </div>
+            <span className={`text-[11px] font-medium px-2.5 py-1 rounded-full border whitespace-nowrap flex-shrink-0 ${
+              daysSinceJoin >= 3
+                ? 'bg-amber-50 text-amber-800 border-amber-200'
+                : 'bg-slate-50 text-slate-600 border-slate-200'
+            }`}>
+              {daysSinceJoin >= 3
+                ? 'Due now'
+                : `Due in ${3 - daysSinceJoin} day${3 - daysSinceJoin === 1 ? '' : 's'}`}
+            </span>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {[
+              { type: 'offer_letter', name: 'Employment Letter', sub: 'Offer and terms, composed from the record' },
+              { type: 'employment_agreement', name: 'Employment Agreement', sub: 'Appointment, salary, probation, leave and conduct' },
+              { type: 'nda', name: 'NDA', sub: 'Confidentiality, intellectual property and non-disparagement' },
+            ].map((doc) => (
+              <div key={doc.type} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50/60 transition-colors">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-slate-900">{doc.name}</p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">{doc.sub}</p>
+                </div>
+                <a
+                  href={`/api/documents/generate?type=${doc.type}&employeeId=${props.employeeId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-shrink-0"
+                >
+                  <Button size="sm" variant="outline">Generate</Button>
+                </a>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {/* Day 1 schedule */}
       <Card className="rounded-xl border-slate-200 p-5">
         <div className="flex items-baseline justify-between gap-3 flex-wrap mb-2">
