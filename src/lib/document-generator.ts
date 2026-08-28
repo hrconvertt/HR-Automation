@@ -1106,27 +1106,75 @@ function experienceLetter({ emp, extras }: Ctx) {
   return { html: wrap('Experience Letter', body), title: `Experience letter - ${emp.fullName}` }
 }
 
-function confirmationLetter({ emp }: Ctx) {
-  const confirmDate = emp.confirmationDate ?? new Date()
+/**
+ * Letter of Employment Confirmation — issued when probation is completed.
+ *
+ * Was a four-line stub addressed from a "Convertt Ltd" that does not exist,
+ * with no signature slots. Rebuilt to sit alongside the offer letter, the
+ * employment agreement and the NDA: real entity, the terms that actually
+ * change on confirmation, and click-to-sign for both sides.
+ */
+function confirmationLetter({ emp, extras }: Ctx) {
+  const confirmDate = extras.effectiveDate
+    ? new Date(extras.effectiveDate)
+    : emp.confirmationDate ?? new Date()
+  const role = emp.designation || '[Designation]'
+  const senior = /lead|head|senior|manager|director|chief|principal/i.test(role)
+  const notice = senior ? 'two (2) months' : 'one (1) month'
+
   const body = `
-    <div class="doc-title">Confirmation of Employment</div>
+    <div class="doc-title">Letter of Employment Confirmation</div>
+
+    <p><strong>Date:</strong> ${fmtDate(confirmDate)}</p>
+    <p><strong>Employee ID:</strong> ${escapeHtml(emp.employeeCode)}</p>
+
     <p>Dear <strong>${escapeHtml(emp.fullName)}</strong>,</p>
-    <p>We are pleased to confirm that following the successful completion of your three (3)-month probation period, your employment with <strong>Convertt Ltd</strong> as <strong>${escapeHtml(emp.designation)}</strong> in the <strong>${escapeHtml(emp.department?.name ?? '—')}</strong> department is hereby <strong>confirmed</strong>, effective <strong>${fmtDate(confirmDate)}</strong>.</p>
-    <p>All other terms and conditions of your Employment Agreement remain unchanged. From this date forward, the standard one (1) month notice period applies for both parties.</p>
-    <p>Congratulations and we look forward to your continued contributions to Convertt.</p>
-    <p>Warm regards,</p>
-    <div class="signature-block">
-      <div class="signature">
-        <div class="line">For Convertt Ltd</div>
-        <div class="name">People Operations</div>
-      </div>
-      <div class="signature">
-        <div class="line">Acknowledged by Employee</div>
-        <div class="name">${escapeHtml(emp.fullName)}</div>
-      </div>
-    </div>
+
+    <p>We are pleased to inform you that, following the successful completion and
+    review of your probationary period, your employment with <strong>Convertt</strong>
+    is hereby <strong>confirmed</strong> in the position of
+    <strong>${escapeHtml(role)}</strong>${emp.department?.name ? `, ${escapeHtml(emp.department.name)}` : ''},
+    with effect from <strong>${fmtDate(confirmDate)}</strong>.</p>
+
+    <p>This confirmation reflects the Company&rsquo;s appreciation of the commitment and
+    professionalism you have shown during your probationary period.</p>
+
+    <h3 style="font-size:12pt;margin-top:18px">Terms on Confirmation</h3>
+    <ol>
+      <li><strong>Status.</strong> You are now a confirmed permanent employee of Convertt.</li>
+      <li><strong>Notice period.</strong> The probationary notice period no longer applies. Either party may terminate the employment by giving <strong>${notice}</strong> written notice, or salary in lieu thereof.</li>
+      <li><strong>Leave entitlement.</strong> You move to the confirmed-employee leave entitlement set out in the Convertt Leave Policy.</li>
+      <li><strong>Existing terms.</strong> All other terms and conditions of your Employment Agreement, together with the Company&rsquo;s Code of Conduct, Confidentiality, Intellectual Property and Disciplinary policies, remain unchanged and in full force.</li>
+    </ol>
+
+    <p>We congratulate you on your confirmation and look forward to your continued
+    contribution to Convertt.</p>
+
+    <table class="sig-grid">
+      <tr>
+        <td>
+          <div class="esign-slot" data-esign="Syed Khawer"><span class="esign-hint">Click to sign</span></div>
+          <div class="sig-line"></div>
+          <div class="sig-name">Syed Khawer</div>
+          <div class="sig-role">Director Administration, Convertt</div>
+          <div class="sig-date">Date: _____________________</div>
+        </td>
+        <td>
+          <div class="esign-slot" data-esign="${escapeHtml(emp.fullName)}"><span class="esign-hint">Click to sign</span></div>
+          <div class="sig-line"></div>
+          <div class="sig-name">${escapeHtml(emp.fullName)}</div>
+          <div class="sig-role">Acknowledged by Employee</div>
+          <div class="sig-date">Date: _____________________</div>
+        </td>
+      </tr>
+    </table>
   `
-  return { html: wrap('Confirmation Letter', body), title: `Confirmation Letter - ${emp.fullName}` }
+  return {
+    html: wrap('Letter of Employment Confirmation', body, DEFAULT_SIGNATORY, 'letter', {
+      employeeId: emp.id, docType: 'confirmation_letter', noSignOff: true,
+    }),
+    title: `Confirmation Letter - ${emp.fullName}`,
+  }
 }
 
 function exitClearanceForm({ emp, extras }: Ctx) {

@@ -307,6 +307,10 @@ export function OnboardingWorkspace(props: Props) {
               { type: 'offer_letter', name: 'Employment Letter', sub: 'Offer and terms, composed from the record' },
               { type: 'employment_agreement', name: 'Employment Agreement', sub: 'Appointment, salary, probation, leave and conduct' },
               { type: 'nda', name: 'NDA', sub: 'Confidentiality, intellectual property and non-disparagement' },
+              // Issued at the end of probation rather than on Day 3, but it is
+              // the fourth document in the same set, so it is generated from
+              // the same place rather than hunted for elsewhere.
+              { type: 'confirmation_letter', name: 'Letter of Employment Confirmation', sub: 'Issued once probation is completed — confirms permanent status and notice period' },
             ].map((doc) => (
               <div key={doc.type} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50/60 transition-colors">
                 <div className="min-w-0">
