@@ -3,6 +3,8 @@ import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { LETTER_TYPE_LABEL, COMPANY, type LetterType } from '@/lib/letter-templates'
+import { LOGO_DATA_URI } from '@/lib/brand-logo'
+import { LETTERHEAD_ADDRESS_LINES } from '@/lib/brand'
 import { PrintButton } from '@/components/letters/print-button'
 
 interface PageProps { params: Promise<{ id: string }> }
@@ -111,8 +113,20 @@ export default async function PrintLetterPage({ params }: PageProps) {
           padding: '20mm 18mm',
           boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
           boxSizing: 'border-box',
+          position: 'relative',
         }}
       >
+        {/* The blue gradient bars the issued letters are printed on. */}
+        <div style={{
+          position: 'absolute', top: 0, left: '10mm', right: '10mm', height: '4.5mm',
+          background: 'linear-gradient(90deg, #0857E5 0%, #277FB1 100%)',
+          WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+        }} />
+        <div style={{
+          position: 'absolute', bottom: 0, left: '10mm', right: '10mm', height: '4.5mm',
+          background: 'linear-gradient(90deg, #0857E5 0%, #277FB1 100%)',
+          WebkitPrintColorAdjust: 'exact', printColorAdjust: 'exact',
+        }} />
         {/* Top action bar — hidden on print */}
         <div
           className="no-print"
@@ -138,23 +152,27 @@ export default async function PrintLetterPage({ params }: PageProps) {
           />
         </div>
 
-        {/* Letterhead */}
-        <header style={{ borderBottom: '2px solid #111827', paddingBottom: 14, marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-            <div>
-              <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: 2, margin: 0, color: '#111827' }}>
-                {COMPANY.name.toUpperCase()}
-              </h1>
-              <p style={{ margin: '4px 0 0', fontSize: 12, color: '#4b5563' }}>{COMPANY.address}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 12, color: '#4b5563' }}>{COMPANY.website}</p>
+        {/* Letterhead — the real mark and address block, the same ones the
+            offer letter and agreements carry. This page used to draw its own:
+            a bold "CONVERTT" text wordmark over a one-line address, which is
+            not the company's letterhead and did not match a single issued
+            document. */}
+        <header style={{ marginBottom: 26 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={LOGO_DATA_URI} alt="Convertt" style={{ height: 36, display: 'block' }} />
+            <div style={{ textAlign: 'right', fontSize: 11, lineHeight: 1.45, color: '#1a1a1a' }}>
+              {LETTERHEAD_ADDRESS_LINES.map((line) => (
+                <div key={line}>{line}</div>
+              ))}
             </div>
-            <div style={{ textAlign: 'right', fontSize: 11, color: '#374151' }}>
-              <p style={{ margin: 0 }}>
-                <strong>Ref:</strong>{' '}
-                <span style={{ fontFamily: 'Menlo, Consolas, monospace' }}>{letter.letterNumber ?? '—'}</span>
-              </p>
-              <p style={{ margin: '2px 0 0' }}><strong>Date:</strong> {today}</p>
-            </div>
+          </div>
+          <div style={{ textAlign: 'right', fontSize: 11, color: '#374151', marginTop: 18 }}>
+            <p style={{ margin: 0 }}>
+              <strong>Ref:</strong>{' '}
+              <span style={{ fontFamily: 'Menlo, Consolas, monospace' }}>{letter.letterNumber ?? '—'}</span>
+            </p>
+            <p style={{ margin: '2px 0 0' }}><strong>Date:</strong> {today}</p>
           </div>
         </header>
 
@@ -166,6 +184,17 @@ export default async function PrintLetterPage({ params }: PageProps) {
         {/* Body */}
         <div style={{ fontSize: 13, lineHeight: 1.75, color: '#1f2937', whiteSpace: 'pre-wrap' }}>
           {letter.letterBody}
+        </div>
+
+        {/* Who issued it. A confirmation letter with no signatory reads as a
+            system printout rather than a company letter. */}
+        <div style={{ marginTop: 44, fontSize: 13, color: '#1f2937' }}>
+          <p style={{ margin: '0 0 34px' }}>Yours sincerely,</p>
+          <div style={{ borderTop: '1px solid #1a1a1a', width: 200, marginBottom: 5 }} />
+          <p style={{ margin: 0, fontWeight: 700 }}>{letter.signedByName ?? 'Syed Khawer'}</p>
+          <p style={{ margin: '2px 0 0', fontSize: 11 }}>
+            {letter.signedByTitle ?? 'Director Administration'}, Convertt
+          </p>
         </div>
 
         {/* Footer note */}

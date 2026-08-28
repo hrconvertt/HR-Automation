@@ -327,6 +327,22 @@ export function OnboardingWorkspace(props: Props) {
                 </a>
               </div>
             ))}
+            {/* The outcome email is written from the review — ratings, overall
+                assessment and the salary arithmetic — so it is composed on the
+                review form rather than generated from the record like the four
+                above. It belongs beside them all the same: the confirmation
+                letter and the email that carries it go out together. */}
+            <div className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50/60 transition-colors">
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-900">Review outcome email</p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Confirmation and salary revision, written from the probation review — edit before sending
+                </p>
+              </div>
+              <Link href={`/dashboard/probation/${props.employeeId}/review`} className="flex-shrink-0">
+                <Button size="sm" variant="outline">Open review</Button>
+              </Link>
+            </div>
           </div>
         </Card>
       )}
