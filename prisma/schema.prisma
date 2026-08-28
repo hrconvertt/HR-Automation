@@ -1406,8 +1406,10 @@ model JobRequisition {
   type           String      // FULL_TIME | PART_TIME | INTERNSHIP | TRAINEE | CONTRACT
   vacancies      Int         @default(1)
   // Minimum years of experience the role requires — surfaced on the JD and used
-  // when screening resumes against this requisition.
-  minExperienceYears Int?
+  // when screening resumes against this requisition. Float, because "6 months
+  // to 1 year" is an ordinary Pakistani requirement and whole years could not
+  // express it: 0 knocked nobody out, 1 knocked out a good 8-month candidate.
+  minExperienceYears Float?
   description    String?
   requirements   String?
   salaryMin      Float?

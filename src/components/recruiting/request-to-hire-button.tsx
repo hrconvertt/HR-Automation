@@ -166,10 +166,13 @@ export function RequestToHireButton({ role }: { role: 'MANAGER' | 'HR_ADMIN' }) 
                 type="number"
                 min={0}
                 max={50}
+                step={0.5}
                 value={form.minExperienceYears}
-                onChange={(e) => setForm({ ...form, minExperienceYears: Math.max(0, Math.min(50, Number(e.target.value) || 0)) })}
+                onChange={(e) => setForm({ ...form, minExperienceYears: Math.max(0, Math.min(50, Math.round((Number(e.target.value) || 0) * 2) / 2)) })}
               />
-              <p className="text-xs text-slate-400 mt-1">0 = no minimum. Used on the JD and when screening resumes.</p>
+              <p className="text-xs text-slate-400 mt-1">
+                Half-years allowed — 0.5 is six months. 0 = no minimum. Used on the JD and to screen resumes.
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">

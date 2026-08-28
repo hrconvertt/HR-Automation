@@ -47,8 +47,10 @@ export async function POST(request: NextRequest) {
   const positionLevel = body.positionLevel ? String(body.positionLevel) : null
   const type          = String(body.type || 'FULL_TIME')
   const vacancies     = Math.max(1, Number(body.vacancies) || 1)
+  // Halves are allowed: 0.5 is "six months". Rounding to whole years is what
+  // made a 6-month requirement impossible to state.
   const minExperienceYears = body.minExperienceYears != null && body.minExperienceYears !== ''
-    ? Math.max(0, Math.min(50, Math.round(Number(body.minExperienceYears)) || 0))
+    ? Math.max(0, Math.min(50, Math.round(Number(body.minExperienceYears) * 2) / 2 || 0))
     : null
   const requestReason = body.requestReason ? String(body.requestReason) : null
   const requestNote   = body.requestNote ? String(body.requestNote).trim().slice(0, 2000) : null

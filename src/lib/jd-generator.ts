@@ -427,7 +427,14 @@ export function generateJD(input: JdInputs): string {
 /** Experience wording — driven by the requisition when HR supplied a figure. */
 function experienceLine(min: number | null | undefined, seniority: string): string {
   if (min == null) return EXP_LINE[seniority] ?? '1–2 Years'
-  if (min <= 0) return 'Up to 1 Year (entry level)'
+  if (min <= 0) return 'Open to entry level'
+  // Halves read as months, which is how the requirement is actually written:
+  // 0.5 is "6 months to 1 year", not "0.5+ years".
+  if (min === 0.5) return '6 months – 1 year'
   if (min === 1) return '1 Year'
+  if (!Number.isInteger(min)) {
+    const months = Math.round((min % 1) * 12)
+    return `${Math.floor(min)} years ${months} months+`
+  }
   return `${min}+ Years`
 }

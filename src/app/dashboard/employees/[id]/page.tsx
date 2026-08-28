@@ -360,12 +360,6 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                 {/* The employment letter, agreement and NDA are generated from
                     Onboarding > Day-3 documents, where they are actually due —
                     not from the profile's action row. */}
-                {canEditFull && (
-                  <DeleteEmployeeButton
-                    employeeId={employee.id}
-                    employeeName={employee.fullName}
-                  />
-                )}
                 {canEdit && (
                   <EditEmployeeButton
                     employeeId={employee.id}
@@ -420,6 +414,15 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                       sessiNumber: employee.sessiNumber,
                       hideFromDirectory: employee.hideFromDirectory,
                     }}
+                  />
+                )}
+                {/* Destructive, so it sits apart from Edit Profile at the end of
+                    the row rather than beside it. */}
+                <div className="ml-auto" />
+                {canEditFull && (
+                  <DeleteEmployeeButton
+                    employeeId={employee.id}
+                    employeeName={employee.fullName}
                   />
                 )}
               </div>

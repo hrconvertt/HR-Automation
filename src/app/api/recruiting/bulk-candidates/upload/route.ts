@@ -172,7 +172,14 @@ export async function POST(request: NextRequest) {
     // before ANTHROPIC_API_KEY is set in Vercel.
     const aiAvailable = !!process.env.ANTHROPIC_API_KEY
 
-    const jdText = requisition.jdContent || requisition.description || requisition.requirements || 'Title: ' + requisition.title
+    const baseJd = requisition.jdContent || requisition.description || requisition.requirements || 'Title: ' + requisition.title
+    // State the minimum explicitly for the model too, so its own reasoning
+    // agrees with the hard filter applied below rather than contradicting it.
+    const jdText = requisition.minExperienceYears != null && requisition.minExperienceYears > 0
+      ? `${baseJd}
+
+MINIMUM EXPERIENCE REQUIRED: ${requisition.minExperienceYears === 0.5 ? '6 months' : `${requisition.minExperienceYears} years`}.`
+      : baseJd
 
     const results: Array<{ filename: string; status: 'success' | 'error'; candidate?: Record<string, unknown>; error?: string }> = []
     const strongIds: string[] = []
@@ -196,9 +203,27 @@ export async function POST(request: NextRequest) {
           ? await scoreCandidateWithAI(rawText, jdText)
           : basicParseResume(rawText, filename)
         const knockoutEval = parsed.knockoutEvaluation as { passed?: boolean; failures?: string[] } | undefined
-        const knockoutStatus = knockoutEval?.passed === false ? 'FAILED' : 'PASSED'
-        const knockoutReasons = knockoutEval?.failures?.length
-          ? JSON.stringify(knockoutEval.failures.map((f: string) => ({ type: 'AUTO_SCREEN', reason: f })))
+        const failures = [...(knockoutEval?.failures ?? [])]
+        let passed = knockoutEval?.passed !== false
+
+        // The requisition's minimum years is a hard filter, applied here rather
+        // than left to the model: it is a number the requisition already states,
+        // so it should be enforced the same way every time and not depend on
+        // whether the prompt happened to weigh it. Skipped when the CV gives no
+        // figure — absence of a number is not evidence of inexperience.
+        const minYears = requisition.minExperienceYears
+        const candidateYears = typeof parsed.totalExperienceYears === 'number'
+          ? parsed.totalExperienceYears
+          : null
+        if (minYears != null && minYears > 0 && candidateYears != null && candidateYears < minYears) {
+          passed = false
+          const stated = minYears === 0.5 ? '6 months' : `${minYears} years`
+          failures.push(`Experience below the required minimum: ${candidateYears} years against ${stated}.`)
+        }
+
+        const knockoutStatus = passed ? 'PASSED' : 'FAILED'
+        const knockoutReasons = failures.length
+          ? JSON.stringify(failures.map((f: string) => ({ type: 'AUTO_SCREEN', reason: f })))
           : null
 
         const matchScore = typeof parsed.matchScore === 'number' ? parsed.matchScore : null

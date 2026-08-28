@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { playNotificationSound, type NotificationSound } from '@/lib/notification-sound'
 import Link from 'next/link'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import { Bell, CheckCheck } from 'lucide-react'
@@ -37,6 +38,17 @@ export default function NotificationsBell() {
   const [open, setOpen] = useState(false)
 
   const abortRef = useRef<AbortController | null>(null)
+  // The chosen sound, and the last count we saw. The bell polls, so a rise in
+  // unread is the only signal that something actually arrived.
+  const soundRef = useRef<NotificationSound>('NONE')
+  const lastUnreadRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    fetch('/api/profile/notification-settings')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.sound) soundRef.current = d.sound as NotificationSound })
+      .catch(() => {})
+  }, [])
 
   const fetchData = useCallback(async (force = false) => {
     try {
@@ -49,8 +61,15 @@ export default function NotificationsBell() {
         NOTIFICATIONS_URL,
         { staleMs: POLL_INTERVAL_MS, force, signal: controller.signal },
       )
+      const nextUnread = data.unreadCount ?? 0
+      // Only on a genuine increase, and never on the first load — otherwise
+      // every page navigation would announce old notifications.
+      if (lastUnreadRef.current !== null && nextUnread > lastUnreadRef.current) {
+        playNotificationSound(soundRef.current)
+      }
+      lastUnreadRef.current = nextUnread
       setNotifications(data.notifications ?? [])
-      setUnreadCount(data.unreadCount ?? 0)
+      setUnreadCount(nextUnread)
     } catch {
       // swallow — don't disturb the UI (includes aborts on unmount)
     }
