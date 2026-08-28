@@ -251,6 +251,12 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
   const decision = rec.hrDecision
 
   if (decision === 'CONFIRM') {
+    // Confirmation takes effect when probation ends, not when HR happened to
+    // press the button. Enacting on the 25th for a probation ending on the 1st
+    // was dating the letter — and the employee's permanent status — a week
+    // early. An early decision is the deliberate exception: that one is
+    // effective from the day it is taken.
+    const confirmEffective = rec.isEarlyDecision ? now : rec.endDate
     // ── 1. Optional salary bump ──
     const bump = rec.salaryBumpAmount && rec.salaryBumpAmount > 0 ? rec.salaryBumpAmount : null
     let oldGross: number | null = null
@@ -303,7 +309,7 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
       department: rec.employee.department?.name ?? null,
       probationStart: rec.startDate,
       probationEnd: rec.endDate,
-      confirmationDate: now,
+      confirmationDate: confirmEffective,
       isEarlyDecision: rec.isEarlyDecision,
       oldGross,
       newGross,
@@ -337,7 +343,7 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
     // ── 3. Update employee → PERMANENT ──
     await prisma.employee.update({
       where: { id: rec.employee.id },
-      data: { employeeType: 'PERMANENT', confirmationDate: now },
+      data: { employeeType: 'PERMANENT', confirmationDate: confirmEffective },
     })
 
     // ── 3b. Top up leave balances to PERMANENT quotas, pro-rated to

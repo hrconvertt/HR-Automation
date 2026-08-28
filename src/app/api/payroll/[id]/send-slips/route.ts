@@ -66,6 +66,18 @@ export async function POST(
   if (!slips.length) return NextResponse.json({ error: 'No payslips to send' }, { status: 400 })
 
   const period = `${MONTHS[run.month - 1]} ${run.year}`
+
+  // The payslip email's wording, if HR has configured one. Loaded once rather
+  // than per slip — a payroll run sends this to everybody, and the template
+  // does not change between the first employee and the last.
+  const payslipTemplate = await prisma.emailTemplate.findFirst({
+    where: {
+      active: true,
+      OR: [{ key: 'PAY-01' }, { triggerEvent: { contains: 'payroll.credited' } }],
+    },
+    select: { subject: true, body: true },
+  })
+
   const sent: string[] = []
   const failed: { name: string; reason: string }[] = []
   const queued: string[] = []
@@ -102,15 +114,38 @@ export async function POST(
       // The slip itself is not attached: it is rendered from live data behind
       // the app's own auth, so a link cannot be forwarded to someone who should
       // not see the figures, and a stale PDF can never disagree with the record.
-      const res = await sendEmail({
-        to: s.employee.email,
-        subject: `Salary Slip — ${period}`,
-        html: `<p>Dear ${s.employee.fullName},</p>
+      // Wording comes from the editable template when one is configured, so
+      // this email is changed in Settings > Email Templates rather than in
+      // code. Falls back to the built-in copy when the template is missing or
+      // deactivated — the slips still go out either way.
+      const vars: Record<string, string> = {
+        'First Name': s.employee.fullName.split(' ')[0],
+        'Full Name': s.employee.fullName,
+        'Month Year': period,
+        amount: formatCurrency(s.netSalary),
+        date: new Date().toLocaleDateString('en-GB', { dateStyle: 'long' }),
+        'X days': '7 days',
+        'Your Name': 'HR Team',
+      }
+      const fill = (t: string) => t.replace(/\[([^\]]+)\]/g, (m, k: string) => vars[k.trim()] ?? m)
+
+      const subject = payslipTemplate ? fill(payslipTemplate.subject) : `Salary Slip — ${period}`
+      const textBody = payslipTemplate
+        ? fill(payslipTemplate.body)
+        : `Dear ${s.employee.fullName},\n\nYour salary slip for ${period} is available. Net pay ${formatCurrency(s.netSalary)}.\n\nSign in to the HR portal to view and print it.\n\nPeople Operations, Convertt`
+      const htmlBody = payslipTemplate
+        ? textBody.split(/\n{2,}/).map((para) => `<p>${para.replace(/\n/g, '<br>')}</p>`).join('\n')
+        : `<p>Dear ${s.employee.fullName},</p>
 <p>Your salary slip for <strong>${period}</strong> is now available.</p>
 <p>Net pay: <strong>${formatCurrency(s.netSalary)}</strong></p>
 <p>You can view and print the full slip by signing in to the HR portal.</p>
-<p>Regards,<br>People Operations<br>Convertt Ltd</p>`,
-        text: `Dear ${s.employee.fullName},\n\nYour salary slip for ${period} is available. Net pay ${formatCurrency(s.netSalary)}.\n\nSign in to the HR portal to view and print it.\n\nPeople Operations, Convertt Ltd`,
+<p>Regards,<br>People Operations<br>Convertt</p>`
+
+      const res = await sendEmail({
+        to: s.employee.email,
+        subject,
+        html: htmlBody,
+        text: textBody,
       })
       if (!res.ok) {
         failed.push({ name: s.employee.fullName, reason: res.error ?? 'send failed' })
