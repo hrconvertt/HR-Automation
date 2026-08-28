@@ -39,12 +39,34 @@ async function loadRecord(id: string) {
   return prisma.probationRecord.findFirst({
     where: { OR: [{ id }, { employeeId: id }] },
     include: {
+      // The latest review, so the page can report what it says instead of
+      // offering to generate one that already exists.
+      reviews: {
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          id: true, status: true, overallAssessment: true, decision: true,
+          managerSignedAt: true, hrSignedAt: true, updatedAt: true,
+          ratingQuality: true, ratingPunctuality: true, ratingOwnership: true,
+          ratingCommunication: true, ratingAdaptability: true,
+          recommendedPct: true, proposedSalary: true,
+        },
+      },
       employee: {
         select: {
           id: true, fullName: true, employeeCode: true, designation: true,
           reportingManagerId: true,
           department: { select: { name: true } },
           reportingManager: { select: { id: true, fullName: true } },
+          // Only the employment letter. The probation page is about this
+          // person's terms, and the letter is the document those terms came
+          // from — the rest of their file belongs on the profile.
+          documents: {
+            where: { type: 'OFFER_LETTER' },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { id: true, name: true, url: true, createdAt: true },
+          },
         },
       },
     },

@@ -32,12 +32,18 @@ export async function generateMetadata({ params }: PageProps) {
 }
 
 const PRINT_CSS = `
-  @page { size: A4; margin: 22mm 20mm; }
+  @page { size: A4; margin: 0; }
   html, body { background: #fff; }
   body { font-family: 'Times New Roman', Georgia, serif; color: #111827; }
   @media print {
     .no-print { display: none !important; }
-    .letter-page { box-shadow: none !important; margin: 0 !important; }
+    .letter-page {
+      box-shadow: none !important;
+      margin: 0 !important;
+      /* Exactly one sheet: any extra height starts a second, near-empty page. */
+      min-height: auto !important;
+      height: 297mm;
+    }
   }
   @media screen {
     body { background: #f3f4f6; padding: 24px 0; }
@@ -197,10 +203,7 @@ export default async function PrintLetterPage({ params }: PageProps) {
           </p>
         </div>
 
-        {/* Footer note */}
-        <div style={{ marginTop: 48, paddingTop: 12, borderTop: '1px solid #e5e7eb', fontSize: 10, color: '#9ca3af', textAlign: 'center' }}>
-          This is a computer-generated letter issued through the Convertt HR system. For verification, contact us at {COMPANY.website}.
-        </div>
+
       </div>
     </>
   )

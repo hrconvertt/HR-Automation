@@ -54,12 +54,37 @@ interface ProbationRec {
     reportingManagerId: string | null
     department: { name: string } | null
     reportingManager: { id: string; fullName: string } | null
+    documents: { id: string; name: string; url: string | null; createdAt: string }[]
   }
+  reviews?: {
+    id: string
+    status: string
+    overallAssessment: string | null
+    decision: string | null
+    managerSignedAt: string | null
+    hrSignedAt: string | null
+    updatedAt: string
+    ratingQuality: number | null
+    ratingPunctuality: number | null
+    ratingOwnership: number | null
+    ratingCommunication: number | null
+    ratingAdaptability: number | null
+    recommendedPct: number | null
+    proposedSalary: number | null
+  }[]
 }
 
 interface CurrentUser {
   role: string
   employee?: { id: string } | null
+}
+
+const ASSESSMENT_LABEL: Record<string, string> = {
+  EXCEPTIONAL: 'Exceptional',
+  EXCEEDS: 'Exceeds Expectations',
+  SATISFACTORY: 'Satisfactory / Meets Expectations',
+  NEEDS_IMPROVEMENT: 'Needs Improvement',
+  UNSATISFACTORY: 'Unsatisfactory',
 }
 
 function fmt(d: string | null | undefined): string {
@@ -122,6 +147,16 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
   const daysLeft = Math.floor((new Date(rec.endDate).getTime() - Date.now()) / 86_400_000)
   const elapsed = Math.floor((Date.now() - new Date(rec.startDate).getTime()) / 86_400_000)
   const settlingDue = elapsed >= 30 && rec.settlingCheckInAt == null && rec.durationMonths >= 2
+
+  // The filled-in review, if there is one, and the average of whatever it rated.
+  const review = rec.reviews?.[0] ?? null
+  const ratedValues = review
+    ? [review.ratingQuality, review.ratingPunctuality, review.ratingOwnership,
+       review.ratingCommunication, review.ratingAdaptability].filter((n): n is number => typeof n === 'number')
+    : []
+  const reviewAvg = ratedValues.length
+    ? ratedValues.reduce((a, b) => a + b, 0) / ratedValues.length
+    : null
 
   return (
     <div className="space-y-6">
@@ -198,6 +233,33 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           ))}
         </div>
       </Card>
+
+      {/* The employment letter on file. The probation decision is judged
+          against the terms this letter set, so it belongs on the page where
+          that decision is made rather than only on the profile. */}
+      {rec.employee.documents?.length > 0 && (
+        <Card className="p-4 flex items-center justify-between gap-4 flex-wrap">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center flex-shrink-0">
+              <FileText className="w-4 h-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-900">Employment Letter</p>
+              <p className="text-[11px] text-slate-500 mt-0.5 truncate">
+                {rec.employee.documents[0].name} · uploaded {fmt(rec.employee.documents[0].createdAt)}
+              </p>
+            </div>
+          </div>
+          <a
+            href={`/api/documents/${rec.employee.documents[0].id}/download`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0"
+          >
+            <Button size="sm" variant="outline">View</Button>
+          </a>
+        </Card>
+      )}
 
       {/* Day-3 paperwork — the Employment Agreement and the NDA are signed in
           the first days on the job, well before the Day-30 check-in. Each
@@ -285,7 +347,15 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider">
             Performance Review
           </h2>
-          {daysLeft <= 10 ? (
+          {review ? (
+            <a
+              href={`/dashboard/probation/${rec.id}/review`}
+              className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 text-slate-700 text-xs px-3 py-1.5 hover:bg-slate-50"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              Open review
+            </a>
+          ) : daysLeft <= 10 ? (
             <a
               href={`/dashboard/probation/${rec.id}/review`}
               className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 text-white text-xs px-3 py-1.5"
@@ -299,6 +369,35 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
             </span>
           )}
         </div>
+
+        {/* Once it is filled in, report what it says. Offering to "generate"
+            a review that already exists is how the same one gets written twice. */}
+        {review && (
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            {reviewAvg != null && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
+                Average <strong className="tabular-nums">{reviewAvg.toFixed(1)}</strong> / 4
+              </span>
+            )}
+            {review.overallAssessment && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
+                {ASSESSMENT_LABEL[review.overallAssessment] ?? review.overallAssessment}
+              </span>
+            )}
+            {review.recommendedPct != null && review.recommendedPct > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700">
+                Increment <strong className="tabular-nums">{review.recommendedPct}%</strong>
+              </span>
+            )}
+            <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
+              review.status === 'FINALISED'
+                ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                : 'border-amber-200 bg-amber-50 text-amber-800'
+            }`}>
+              {review.status === 'FINALISED' ? 'Completed' : review.status === 'SUBMITTED' ? 'Submitted — awaiting HR' : 'In progress'}
+            </span>
+          </div>
+        )}
         <p className="text-xs text-slate-500">
           Ratings across five dimensions with the evidence beside each, the overall assessment,
           and the increment it argues for under the 10–15% policy. This is what the confirmation

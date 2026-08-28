@@ -1139,13 +1139,15 @@ function confirmationLetter({ emp, extras }: Ctx) {
     <p>This confirmation reflects the Company&rsquo;s appreciation of the commitment and
     professionalism you have shown during your probationary period.</p>
 
-    <h3 style="font-size:12pt;margin-top:18px">Terms on Confirmation</h3>
-    <ol>
-      <li><strong>Status.</strong> You are now a confirmed permanent employee of Convertt.</li>
-      <li><strong>Notice period.</strong> The probationary notice period no longer applies. Either party may terminate the employment by giving <strong>${notice}</strong> written notice, or salary in lieu thereof.</li>
-      <li><strong>Leave entitlement.</strong> You move to the confirmed-employee leave entitlement set out in the Convertt Leave Policy.</li>
-      <li><strong>Existing terms.</strong> All other terms and conditions of your Employment Agreement, together with the Company&rsquo;s Code of Conduct, Confidentiality, Intellectual Property and Disciplinary policies, remain unchanged and in full force.</li>
-    </ol>
+    <p>With effect from the date of confirmation, you are a permanent employee of
+    Convertt. The probationary notice period no longer applies, and either party
+    may terminate the employment by giving <strong>${notice}</strong> written
+    notice, or salary in lieu thereof. You also move to the confirmed-employee
+    leave entitlement set out in the Convertt Leave Policy.</p>
+
+    <p>All other terms and conditions of your Employment Agreement, together with
+    the Company&rsquo;s Code of Conduct, Confidentiality, Intellectual Property and
+    Disciplinary policies, remain unchanged and in full force.</p>
 
     <p>We congratulate you on your confirmation and look forward to your continued
     contribution to Convertt.</p>
