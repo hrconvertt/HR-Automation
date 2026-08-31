@@ -61,8 +61,20 @@ export default function AdminLeaveView() {
     startDate: '',
     endDate: '',
     reason: '',
+    // Whose leave this is. Nobody outside HR is using the system yet, so HR
+    // files on everyone's behalf; the API has always allowed it, the form
+    // just never asked who.
+    employeeId: '',
   })
   const [formError, setFormError] = useState('')
+  const [staff, setStaff] = useState<{ id: string; fullName: string; employeeCode: string }[]>([])
+
+  useEffect(() => {
+    fetch('/api/employees?limit=500&status=ACTIVE')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (d?.employees) setStaff(d.employees) })
+      .catch(() => {})
+  }, [])
 
   const fetchLeave = useCallback(async (force = false) => {
     setLoading(true)
@@ -90,7 +102,7 @@ export default function AdminLeaveView() {
     const data = await res.json()
     if (!res.ok) { setFormError(data.error || 'Failed'); return }
     setApplyOpen(false)
-    setForm({ leaveType: 'CASUAL', startDate: '', endDate: '', reason: '' })
+    setForm({ leaveType: 'CASUAL', startDate: '', endDate: '', reason: '', employeeId: '' })
     fetchLeave(true)
   }
 
@@ -333,6 +345,22 @@ export default function AdminLeaveView() {
             <DialogTitle>Apply for Leave</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Employee</label>
+              <select
+                className="w-full h-10 rounded-md border border-slate-200 px-3 text-sm bg-white"
+                value={form.employeeId}
+                onChange={(e) => setForm({ ...form, employeeId: e.target.value })}
+              >
+                <option value="">— Myself —</option>
+                {staff.map((p) => (
+                  <option key={p.id} value={p.id}>{p.fullName} ({p.employeeCode})</option>
+                ))}
+              </select>
+              <p className="text-xs text-slate-400 mt-1">
+                Filing for someone else records it against their balance and attendance.
+              </p>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Leave Type</label>
               <Select value={form.leaveType} onValueChange={(v) => setForm({ ...form, leaveType: v })}>

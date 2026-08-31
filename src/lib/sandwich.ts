@@ -30,8 +30,11 @@ export type SandwichTrigger = 'FRIDAY' | 'MONDAY'
  * carry notice by their nature and are accepted on a Friday or Monday as they
  * are on any other day:
  *
- *   SICK       — Tahreem's rule: a sick leave requested on a Friday or Monday
- *                is accepted. Being ill on a Friday is not gaming the weekend.
+ *   SICK       — accepted on a Friday or Monday, but only when the employee
+ *                supplies evidence. Being ill on a Friday is not gaming the
+ *                weekend; saying so with nothing attached is exactly the claim
+ *                the rule exists to test. Without a document the exemption
+ *                does not apply and the weekend is charged.
  *   ANNUAL     — booked and approved in advance, so notice is the whole point.
  *   MATERNITY  — statutory and planned.
  *   PATERNITY
@@ -44,14 +47,33 @@ export type SandwichTrigger = 'FRIDAY' | 'MONDAY'
  */
 export const SANDWICH_EXEMPT_TYPES = ['SICK', 'ANNUAL', 'MATERNITY', 'PATERNITY']
 
-export function isSandwichExempt(leaveType: string | null | undefined): boolean {
-  return !!leaveType && SANDWICH_EXEMPT_TYPES.includes(leaveType.toUpperCase())
+/**
+ * `hasEvidence` — whether a supporting document is attached to the request.
+ * Only sick leave depends on it: the other exempt types carry their notice by
+ * being booked in advance. Defaults to true so existing callers that do not
+ * pass it keep their previous behaviour.
+ */
+export function isSandwichExempt(
+  leaveType: string | null | undefined,
+  hasEvidence = true,
+): boolean {
+  if (!leaveType) return false
+  const t = leaveType.toUpperCase()
+  if (!SANDWICH_EXEMPT_TYPES.includes(t)) return false
+  if (t === 'SICK' && !hasEvidence) return false
+  return true
 }
 
-export function exemptionReason(leaveType: string | null | undefined): string | null {
-  if (!isSandwichExempt(leaveType)) return null
+export function exemptionReason(
+  leaveType: string | null | undefined,
+  hasEvidence = true,
+): string | null {
   const t = (leaveType ?? '').toUpperCase()
-  if (t === 'SICK') return 'Sick leave requested on a Friday or Monday is accepted.'
+  if (t === 'SICK' && !hasEvidence) {
+    return 'Sick leave on a Friday or Monday needs supporting evidence. None is attached, so the exemption does not apply.'
+  }
+  if (!isSandwichExempt(leaveType, hasEvidence)) return null
+  if (t === 'SICK') return 'Sick leave with supporting evidence is accepted on a Friday or Monday.'
   if (t === 'ANNUAL') return 'Annual leave is booked in advance, so notice was given.'
   return 'This leave type is planned in advance, so notice was given.'
 }

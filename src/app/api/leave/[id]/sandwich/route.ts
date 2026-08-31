@@ -42,6 +42,8 @@ async function assess(leaveId: string) {
     select: {
       id: true, employeeId: true, fromDate: true, toDate: true,
       leaveType: true, category: true, status: true,
+      // Evidence decides whether a Friday/Monday sick leave keeps its exemption.
+      attachmentName: true,
       employee: { select: { fullName: true, email: true, employeeCode: true } },
     },
   })
@@ -95,8 +97,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     // A Friday still opens a window on a sick leave — HR can still charge one
     // where the illness turned up after the fact — but the answer defaults to
     // no and the dialog says why.
-    exempt: isSandwichExempt(a.leave.leaveType),
-    exemptReason: exemptionReason(a.leave.leaveType),
+    exempt: isSandwichExempt(a.leave.leaveType, !!a.leave.attachmentName),
+    exemptReason: exemptionReason(a.leave.leaveType, !!a.leave.attachmentName),
   })
 }
 

@@ -50,6 +50,8 @@ export async function GET(request: NextRequest) {
     take: 300,
     select: {
       id: true, fromDate: true, toDate: true, leaveType: true, reason: true, days: true,
+      // Evidence decides whether a Friday/Monday sick leave keeps its exemption.
+      attachmentName: true,
       employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } },
     },
   })
@@ -59,7 +61,7 @@ export async function GET(request: NextRequest) {
       // Sick, annual, maternity and paternity carry notice by their nature, so
       // they are not offered here at all. Greying them out was not enough —
       // an Annual leave was charged 17 unpaid days twice before this.
-      if (isSandwichExempt(l.leaveType)) return null
+      if (isSandwichExempt(l.leaveType, !!l.attachmentName)) return null
       // A planned block is not what the rule is aimed at either. Four weeks
       // off hits four Fridays and produces a nonsense figure.
       if (l.days > MAX_SANDWICH_LEAVE_DAYS) return null
@@ -76,15 +78,70 @@ export async function GET(request: NextRequest) {
         triggerDate: found.windows[0].triggerDate,
         dates: found.dates,
         days: found.days,
-        exempt: isSandwichExempt(l.leaveType),
-        exemptReason: exemptionReason(l.leaveType),
+        exempt: isSandwichExempt(l.leaveType, !!l.attachmentName),
+        exemptReason: exemptionReason(l.leaveType, !!l.attachmentName),
+      }
+    })
+    .filter(Boolean)
+
+  // Leave marked straight onto the attendance grid never became a leave
+  // request, so the rule could not see it: a Friday marked L looked identical
+  // to a Friday worked. Those days are assessed here too, on the same terms.
+  // Anything already covered by a leave request is skipped so one absence
+  // cannot be charged twice.
+  const decidedTriggerKeys = new Set(
+    rows.map((r) => `${r.employeeId}::${r.triggerDate.toISOString().slice(0, 10)}`),
+  )
+  const coveredByRequest = new Set<string>()
+  for (const l of candidates) {
+    const cur = new Date(l.fromDate)
+    while (cur <= l.toDate) {
+      coveredByRequest.add(`${l.employee.id}::${cur.toISOString().slice(0, 10)}`)
+      cur.setDate(cur.getDate() + 1)
+    }
+  }
+
+  const attendanceLeave = await prisma.attendanceLog.findMany({
+    where: { status: { in: ['LEAVE', 'HALF_DAY'] } },
+    orderBy: { date: 'desc' },
+    take: 400,
+    select: {
+      id: true, date: true, employeeId: true,
+      employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } },
+    },
+  })
+
+  const attendancePending = attendanceLeave
+    .map((a) => {
+      const key = `${a.employeeId}::${a.date.toISOString().slice(0, 10)}`
+      if (coveredByRequest.has(key) || decidedTriggerKeys.has(key)) return null
+      const found = assessSandwich(a.date, a.date)
+      if (found.windows.length === 0) return null
+      return {
+        leaveId: null,
+        attendanceId: a.id,
+        source: 'ATTENDANCE' as const,
+        employee: a.employee,
+        // The grid records the day, not why it was taken. Without a leave type
+        // there is no exemption to claim and no evidence attached, so it is
+        // offered for a decision rather than judged here.
+        leaveType: null,
+        reason: 'Marked as leave on the attendance grid — no leave request on file.',
+        fromDate: a.date,
+        toDate: a.date,
+        trigger: found.windows[0].trigger,
+        triggerDate: found.windows[0].triggerDate,
+        dates: found.dates,
+        days: found.days,
+        exempt: false,
+        exemptReason: null,
       }
     })
     .filter(Boolean)
 
   const applied = rows.filter((r) => r.status === 'APPLIED')
   return NextResponse.json({
-    pending,
+    pending: [...pending, ...attendancePending],
     deductions: rows.map((r) => ({
       ...r,
       dates: (() => { try { return JSON.parse(r.dates) as string[] } catch { return [] } })(),
