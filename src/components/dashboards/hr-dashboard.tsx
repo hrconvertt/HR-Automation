@@ -93,6 +93,9 @@ async function loadData() {
   type WeekItem = {
     key: string; date: Date; type: 'joiner' | 'birthday' | 'anniversary' | 'probation' | 'holiday' | 'review';
     title: string; sub: string; tone: 'red' | 'amber' | 'blue' | 'emerald' | 'purple' | 'slate';
+    // Every row goes somewhere. "Recognize the milestone" was advice with
+    // nowhere to click.
+    href?: string;
   }
   const weekItems: WeekItem[] = []
 
@@ -105,6 +108,7 @@ async function loadData() {
     weekItems.push({
       key: `joiner-${e.id}`, date: e.joiningDate, type: 'joiner',
       title: `${e.fullName} joins`, sub: e.designation || 'New hire', tone: 'emerald',
+      href: `/dashboard/onboarding/${e.id}`,
     })
   }
 
@@ -120,6 +124,7 @@ async function loadData() {
       key: `prob-${p.id}`, date: p.endDate, type: 'probation',
       title: `${p.employee.fullName} probation ends`, sub: `${days}d remaining`,
       tone: days <= 14 ? 'red' : 'amber',
+      href: `/dashboard/probation/${p.id}`,
     })
   }
 
@@ -131,6 +136,7 @@ async function loadData() {
       weekItems.push({
         key: `bday-${e.fullName}-${bdThisYear.toISOString()}`, date: bdThisYear, type: 'birthday',
         title: `${e.fullName}'s birthday`, sub: 'Send a note', tone: 'amber',
+        href: '/dashboard/culture/birthdays',
       })
     }
   }
@@ -144,6 +150,7 @@ async function loadData() {
       weekItems.push({
         key: `anniv-${e.fullName}-${yrs}`, date: thisYearDate, type: 'anniversary',
         title: `${e.fullName} — ${yrs}-year anniversary`, sub: 'Recognize the milestone', tone: 'purple',
+        href: '/dashboard/culture/anniversaries',
       })
     }
   }
@@ -157,6 +164,7 @@ async function loadData() {
     if (dt >= today && dt <= in7) {
       weekItems.push({
         key: `hol-${h.date}`, date: dt, type: 'holiday', title: h.name, sub: 'Public holiday', tone: 'slate',
+        href: '/dashboard/calendar',
       })
     }
   }
@@ -794,6 +802,9 @@ function WeekItemRow({ item }: { item: {
   type: 'joiner' | 'birthday' | 'anniversary' | 'probation' | 'holiday' | 'review';
   title: string; sub: string;
   tone: 'red' | 'amber' | 'blue' | 'emerald' | 'purple' | 'slate';
+  // Where the row goes. "Recognize the milestone" was advice with nowhere to
+  // click; each item now opens the screen the action happens on.
+  href?: string;
 } }) {
   const TONE: Record<string, string> = {
     red:     'bg-slate-50 text-slate-700',
@@ -812,7 +823,7 @@ function WeekItemRow({ item }: { item: {
     review:      <ClipboardList className="w-4 h-4" />,
   }
   return (
-    <div className="flex items-center gap-3 py-2 px-2.5 -mx-2 rounded-lg hover:bg-slate-50/60 transition">
+    <RowShell href={item.href}>
       <span className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${TONE[item.tone]}`}>
         {ICONS[item.type]}
       </span>
@@ -822,8 +833,16 @@ function WeekItemRow({ item }: { item: {
           {item.sub} · {item.date.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })}
         </p>
       </div>
-    </div>
+      {item.href && <ChevronRight className="w-4 h-4 text-slate-300 flex-shrink-0" />}
+    </RowShell>
   )
+}
+
+/** A link when the row has somewhere to go, a plain row when it does not. */
+function RowShell({ href, children }: { href?: string; children: React.ReactNode }) {
+  const cls = 'flex items-center gap-3 py-2 px-2.5 -mx-2 rounded-lg hover:bg-slate-50/60 transition'
+  if (!href) return <div className={cls}>{children}</div>
+  return <Link href={href} className={`${cls} group`}>{children}</Link>
 }
 
 function FunnelTile({ label, value, tone }: { label: string; value: number | string; tone: 'blue' | 'amber' | 'emerald' | 'rose' | 'slate' }) {
