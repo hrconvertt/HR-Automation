@@ -84,7 +84,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
   const body = await request.json()
-  const action = body.action as 'APPROVE' | 'REJECT' | 'MARK_GENERATED' | undefined
+  const action = body.action as 'APPROVE' | 'REJECT' | 'MARK_GENERATED' | 'EDIT_BODY' | undefined
 
   const letter = await loadLetter(id)
   if (!letter) return NextResponse.json({ error: 'Not found' }, { status: 404 })
@@ -187,6 +187,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       title: 'Letter request rejected',
       message: `Your ${letter.letterType.replace('_', ' ')} request was rejected: ${reason}`,
       link: '/dashboard/letters',
+    })
+    return NextResponse.json({ letter: updated })
+  }
+
+  // Correct the wording of a letter that has already been issued. The letter
+  // is the thing that gets signed, so HR has to be able to fix a sentence in it
+  // without deleting the record and starting again.
+  if (action === 'EDIT_BODY') {
+    if (access.effectiveRole !== 'HR_ADMIN') {
+      return NextResponse.json({ error: 'HR only' }, { status: 403 })
+    }
+    const newBody = typeof body.letterBody === 'string' ? body.letterBody : null
+    if (!newBody || !newBody.trim()) {
+      return NextResponse.json({ error: 'The letter cannot be empty' }, { status: 400 })
+    }
+    const updated = await prisma.letterRequest.update({
+      where: { id },
+      data: { letterBody: newBody.slice(0, 20000) },
     })
     return NextResponse.json({ letter: updated })
   }

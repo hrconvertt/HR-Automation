@@ -100,6 +100,12 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
 
+  // The outcome email. Composed from the review by the same endpoint the
+  // review form uses, so the letter and the email that carries it never drift.
+  const [draft, setDraft] = useState<{ subject: string; text: string; recipient: string | null } | null>(null)
+  const [mailing, setMailing] = useState(false)
+  const [mailMsg, setMailMsg] = useState('')
+
   const [adjustOpen, setAdjustOpen] = useState(false)
   const [earlyOpen, setEarlyOpen] = useState(false)
   const [forceOpen, setForceOpen] = useState(false)
@@ -137,6 +143,32 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
     } finally {
       setBusy(false)
     }
+  }
+
+  async function generateOutcomeEmail() {
+    setMailing(true); setErr(''); setMailMsg('')
+    try {
+      const r = await fetch(`/api/probation/${id}/review/email`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}',
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setErr(d.error || 'Could not build the letter.'); return }
+      setDraft({ subject: d.subject, text: d.text, recipient: d.recipient })
+    } finally { setMailing(false) }
+  }
+
+  async function sendOutcomeEmail() {
+    if (!draft) return
+    setMailing(true); setMailMsg('')
+    try {
+      const r = await fetch(`/api/probation/${id}/review/email`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ send: true, subject: draft.subject, body: draft.text }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setMailMsg(d.error || 'Send failed.'); return }
+      setMailMsg(d.queued ? `Queued for ${d.to} — no mail server is configured yet.` : `Sent to ${d.to}.`)
+    } finally { setMailing(false) }
   }
 
   if (loading) return <div className="p-8 text-slate-500">Loading…</div>
@@ -482,7 +514,49 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
               <FileText className="w-4 h-4" /> View confirmation letter
             </a>
           )}
+          <div className="mt-3">
+            <Button size="sm" variant="outline" disabled={mailing} onClick={generateOutcomeEmail}>
+              {mailing ? 'Working…' : 'Generate email'}
+            </Button>
+            <p className="text-[11px] text-slate-500 mt-1">
+              The confirmation letter as an email — edit before it goes.
+            </p>
+          </div>
         </Card>
+      )}
+
+      {/* Draft — edited here, and what is in the box is what goes out. */}
+      {draft && (
+        <Dialog open onOpenChange={() => { setDraft(null); setMailMsg('') }}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader><DialogTitle>Confirmation letter — email</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <p className="text-[11px] uppercase tracking-wide text-slate-400">To</p>
+                <p className="text-sm text-slate-800">{draft.recipient ?? 'No email on file'}</p>
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">Subject</label>
+                <Input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} />
+              </div>
+              <div>
+                <label className="text-[11px] uppercase tracking-wide text-slate-400">Body</label>
+                <textarea
+                  className="w-full min-h-[300px] rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  value={draft.text}
+                  onChange={(e) => setDraft({ ...draft, text: e.target.value })}
+                />
+              </div>
+              {mailMsg && <p className="text-xs text-slate-700 bg-slate-50 border border-slate-200 rounded p-2">{mailMsg}</p>}
+            </div>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={() => navigator.clipboard?.writeText(draft.text)}>Copy</Button>
+              <Button onClick={sendOutcomeEmail} disabled={mailing || !draft.recipient}>
+                {mailing ? 'Sending…' : 'Send'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
 
       {/* Warning history strip */}

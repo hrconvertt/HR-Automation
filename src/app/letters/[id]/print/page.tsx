@@ -6,6 +6,7 @@ import { LETTER_TYPE_LABEL, COMPANY, type LetterType } from '@/lib/letter-templa
 import { LOGO_DATA_URI } from '@/lib/brand-logo'
 import { LETTERHEAD_ADDRESS_LINES } from '@/lib/brand'
 import { PrintButton } from '@/components/letters/print-button'
+import { LetterBody } from '@/components/letters/letter-body'
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -187,15 +188,20 @@ export default async function PrintLetterPage({ params }: PageProps) {
           {subject.toUpperCase()}
         </h2>
 
-        {/* Body */}
-        <div style={{ fontSize: 13, lineHeight: 1.75, color: '#1f2937', whiteSpace: 'pre-wrap' }}>
-          {letter.letterBody}
-        </div>
+        {/* Body — editable by HR, because the generated wording is a starting
+            point and a letter routinely needs a sentence changed before it is
+            signed. */}
+        <LetterBody
+          letterId={letter.id}
+          initialBody={letter.letterBody ?? ''}
+          canEdit={effectiveRole === 'HR_ADMIN'}
+        />
 
         {/* Who issued it. A confirmation letter with no signatory reads as a
             system printout rather than a company letter. */}
-        <div style={{ marginTop: 44, fontSize: 13, color: '#1f2937' }}>
-          <p style={{ margin: '0 0 34px' }}>Yours sincerely,</p>
+        <div style={{ marginTop: 52, fontSize: 13, color: '#1f2937' }}>
+          {/* Room for a wet signature between the sign-off and the name. */}
+          <p style={{ margin: '0 0 66px' }}>Yours sincerely,</p>
           <div style={{ borderTop: '1px solid #1a1a1a', width: 200, marginBottom: 5 }} />
           <p style={{ margin: 0, fontWeight: 700 }}>{letter.signedByName ?? 'Syed Khawer'}</p>
           <p style={{ margin: '2px 0 0', fontSize: 11 }}>
