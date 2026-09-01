@@ -54,7 +54,7 @@ export default async function IncrementsPage() {
   const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
   if (role !== 'HR_ADMIN' && role !== 'EXECUTIVE') redirect('/dashboard/performance')
 
-  const [employees, history, ledger] = await Promise.all([
+  const [employees, history, adjustments, ledger] = await Promise.all([
     prisma.employee.findMany({
       where: { status: 'ACTIVE' },
       select: {
@@ -76,6 +76,15 @@ export default async function IncrementsPage() {
         employeeId: true, type: true, oldSalary: true, newSalary: true,
         incrementPct: true, effectiveDate: true, reason: true,
       },
+    }),
+    // Allowances. They are not raises, so they stay out of the record — but
+    // they do move what someone is paid, which is why Current can sit above
+    // the figure the last increment ended on. Fetched so the roster can say
+    // so rather than leaving the two columns silently disagreeing.
+    prisma.compensationHistory.findMany({
+      where: { type: 'ADJUSTMENT' },
+      orderBy: { effectiveDate: 'asc' },
+      select: { employeeId: true, oldSalary: true, newSalary: true, effectiveDate: true },
     }),
     // The ledger below. Increments only — an opening salary, a travel
     // allowance and a sales commission are all recorded as compensation
@@ -121,6 +130,18 @@ export default async function IncrementsPage() {
     const monthsSince = anchor ? monthsBetween(anchor, today) : null
     const overdueBy = dueDate ? monthsBetween(dueDate, today) : null
 
+    // What has been added since the last increment — travel and home
+    // allowances, in practice. This is the whole of the gap between the
+    // record's last figure and what the person is paid today, so printing it
+    // makes the two columns add up instead of merely differing.
+    const sinceLast = adjustments.filter(
+      (a) => a.employeeId === e.id && (!last || a.effectiveDate > last.effectiveDate),
+    )
+    const allowance = last
+      ? sinceLast.reduce((n, a) => n + (a.newSalary - a.oldSalary), 0)
+      : 0
+    const allowanceFrom = allowance > 0 ? sinceLast.at(-1)!.effectiveDate : null
+
     const rise = last ? last.newSalary - last.oldSalary : null
     const pct = last
       ? (last.incrementPct ?? (last.oldSalary > 0 ? (rise! / last.oldSalary) * 100 : null))
@@ -128,6 +149,7 @@ export default async function IncrementsPage() {
 
     return {
       ...e, current, last, dueDate, monthsSince, overdueBy, rise, pct, track,
+      allowance, allowanceFrom,
       neverRaised: !last,
     }
   })
@@ -472,7 +494,9 @@ export default async function IncrementsPage() {
         <div className="px-4 py-2.5 border-b border-slate-100">
           <h2 className="text-sm font-semibold text-slate-900">Everyone · {rows.length}</h2>
           <p className="text-[11px] text-slate-500 mt-0.5">
-            First review falls {FIRST_REVIEW_MONTHS} months after joining, then every {CYCLE_MONTHS}.
+            First review falls {FIRST_REVIEW_MONTHS} months after joining, then on the employee&apos;s
+            own track. Current is what payroll pays — where an allowance was added after the last
+            increment, the line beneath shows the two figures it is made of.
           </p>
         </div>
         <div className="overflow-x-auto">
@@ -503,6 +527,13 @@ export default async function IncrementsPage() {
                     </td>
                     <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap text-slate-900">
                       {r.current ? pkr(r.current) : <span className="text-slate-400">not set</span>}
+                      {/* Spells out why Current sits above the last increment
+                          in the record: an allowance was added afterwards. */}
+                      {r.allowance > 0 && r.last && (
+                        <span className="block text-[11px] text-slate-400 font-normal">
+                          {pkr(r.last.newSalary)} + {pkr(r.allowance)} allowance
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-2.5">
                       <TrackPicker employeeId={r.id} value={r.incrementTrack} />
@@ -556,9 +587,11 @@ export default async function IncrementsPage() {
       </div>
 
       <p className="text-[11px] text-slate-400">
-        Current pay is the sum of the salary components on record, which is what payroll uses.
-        The percentage is the one stored with the increment where there is one, and worked from
-        the old and new figures where there is not.
+        Current pay is the sum of the salary components on record — the same figure payroll bills
+        and the same one the compensation history ends on. The record above lists increments only,
+        so where an allowance has been added since, Current is the increment plus that allowance,
+        stated on the row. The percentage is the one stored with the increment where there is one,
+        and worked from the old and new figures where there is not.
       </p>
     </div>
   )
