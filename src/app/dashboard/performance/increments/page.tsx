@@ -174,6 +174,11 @@ export default async function IncrementsPage() {
     months.reverse()
   }
 
+  // Collapsed, the whole record is a dozen lines and fits on one screen. The
+  // latest month that actually had a raise opens, so the tab is not a wall of
+  // shut drawers — September can be empty and still not be what you land on.
+  const openMonth = months.find((m) => m.entries.length > 0)?.key ?? null
+
   const ledgerAdded = entries.reduce((n, h) => n + (h.newSalary - h.oldSalary), 0)
   const ledgerAvgPct = (() => {
     const v = entries
@@ -206,10 +211,9 @@ export default async function IncrementsPage() {
             Increment record · {entries.length} across {months.length} months
           </h2>
           <p className="text-[11px] text-slate-500 mt-0.5">
-            Every increment on record, by the month it took effect
-            {ledgerAdded > 0 ? ` — ${pkr(ledgerAdded)} added to monthly payroll` : ''}
+            {ledgerAdded > 0 ? `${pkr(ledgerAdded)} added to monthly payroll` : 'By the month each took effect'}
             {ledgerAvgPct != null ? `, averaging ${ledgerAvgPct.toFixed(1)}%` : ''}. Openings,
-            allowances and commissions are excluded; only raises appear here.
+            allowances and commissions are excluded — only raises. Click a month to open it.
           </p>
         </div>
 
@@ -217,19 +221,40 @@ export default async function IncrementsPage() {
           <p className="px-4 py-6 text-sm text-slate-400">No increments recorded yet.</p>
         ) : (
           <div className="divide-y divide-slate-100">
-            {months.map((m) => (
-              <div key={m.key}>
-                <div className="flex items-baseline justify-between gap-3 px-4 py-2 bg-slate-50/70">
-                  <h3 className="text-[13px] font-semibold text-slate-800">{monthLabel(m.key)}</h3>
-                  <p className="text-[11px] text-slate-500 tabular-nums whitespace-nowrap">
-                    {m.entries.length === 0
-                      ? 'none'
-                      : `${m.entries.length} increment${m.entries.length === 1 ? '' : 's'} · +${pkr(m.added)} a month`}
-                  </p>
-                </div>
+            {months.map((m) => {
+              // A month with nobody raised is one line, not a heading over
+              // nothing to open.
+              if (m.entries.length === 0) {
+                return (
+                  <div
+                    key={m.key}
+                    className="flex items-baseline justify-between gap-3 pl-9 pr-4 py-1.5"
+                  >
+                    <span className="text-[13px] text-slate-400">{monthLabel(m.key)}</span>
+                    <span className="text-[11px] text-slate-300">no increments</span>
+                  </div>
+                )
+              }
+              return (
+                <details key={m.key} className="group" open={m.key === openMonth}>
+                  <summary className="flex items-baseline gap-2 px-4 py-1.5 cursor-pointer list-none hover:bg-slate-50/70 [&::-webkit-details-marker]:hidden">
+                    <svg
+                      viewBox="0 0 20 20" fill="currentColor" aria-hidden
+                      className="w-3 h-3 shrink-0 self-center text-slate-400 transition-transform group-open:rotate-90"
+                    >
+                      <path d="M7 5l6 5-6 5V5z" />
+                    </svg>
+                    <span className="text-[13px] font-semibold text-slate-800">
+                      {monthLabel(m.key)}
+                    </span>
+                    <span className="flex-1 border-b border-dotted border-slate-200" />
+                    <span className="text-[11px] text-slate-500 tabular-nums whitespace-nowrap">
+                      {m.entries.length} increment{m.entries.length === 1 ? '' : 's'}
+                      <span className="text-emerald-700 font-medium ml-2">+{pkr(m.added)}</span>
+                    </span>
+                  </summary>
 
-                {m.entries.length > 0 && (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto pb-1">
                     <table className="w-full text-sm">
                       <tbody>
                         {m.entries.map((h) => {
@@ -237,39 +262,35 @@ export default async function IncrementsPage() {
                           const pc = h.incrementPct
                             ?? (h.oldSalary > 0 ? (rise / h.oldSalary) * 100 : null)
                           return (
-                            <tr key={h.id} className="border-t border-slate-50 hover:bg-slate-50/60">
-                              <td className="px-4 py-2">
+                            <tr key={h.id} className="hover:bg-slate-50/60">
+                              <td className="pl-9 pr-3 py-1 whitespace-nowrap">
                                 <Link
                                   href={`/dashboard/performance/increments/${h.employee.id}`}
-                                  className="text-slate-900 font-medium hover:underline"
+                                  className="text-slate-900 hover:underline"
                                 >
                                   {h.employee.fullName}
                                 </Link>
                                 {h.employee.status !== 'ACTIVE' && (
-                                  <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-slate-50 text-slate-500 border-slate-200">
+                                  <span className="ml-1.5 text-[10px] uppercase tracking-wider text-slate-400">
                                     former
                                   </span>
                                 )}
-                                <p className="text-[11px] text-slate-500">
-                                  {h.employee.designation ?? h.employee.employeeCode}
-                                  {h.employee.department?.name ? ` · ${h.employee.department.name}` : ''}
-                                </p>
                               </td>
-                              <td className="px-4 py-2 text-slate-500 whitespace-nowrap tabular-nums text-right">
+                              <td className="px-3 py-1 text-[11px] text-slate-400 whitespace-nowrap tabular-nums">
                                 {day(h.effectiveDate)}
                               </td>
-                              <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap text-slate-600">
+                              <td className="px-3 py-1 text-right tabular-nums whitespace-nowrap text-slate-500">
                                 {pkr(h.oldSalary)}
                                 <span className="text-slate-300 mx-1.5">→</span>
-                                <span className="text-slate-900 font-medium">{pkr(h.newSalary)}</span>
+                                <span className="text-slate-900">{pkr(h.newSalary)}</span>
                               </td>
-                              <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap text-emerald-700 font-medium">
+                              <td className="px-3 py-1 text-right tabular-nums whitespace-nowrap text-emerald-700">
                                 +{pkr(rise)}
                               </td>
-                              <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap text-slate-600 w-16">
+                              <td className="px-3 py-1 text-right tabular-nums whitespace-nowrap text-slate-400 w-14">
                                 {pc != null ? `${pc.toFixed(1)}%` : '—'}
                               </td>
-                              <td className="px-4 py-2 text-[11px] text-slate-500 max-w-xs">
+                              <td className="pl-3 pr-4 py-1 text-[11px] text-slate-400 truncate max-w-[18rem]">
                                 {h.reason ?? ''}
                               </td>
                             </tr>
@@ -278,9 +299,9 @@ export default async function IncrementsPage() {
                       </tbody>
                     </table>
                   </div>
-                )}
-              </div>
-            ))}
+                </details>
+              )
+            })}
           </div>
         )}
       </div>
