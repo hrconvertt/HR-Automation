@@ -17,7 +17,7 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isFounder } from '@/lib/review-scope'
 import Link from 'next/link'
-import { INCREMENT_RULES, ruleRange, type IncrementTrack } from '@/lib/pay-split'
+import { INCREMENT_RULES, ruleRange, incrementFor, type IncrementTrack } from '@/lib/pay-split'
 import { TrackPicker, TrackBand } from './_components/track-picker'
 
 const FIRST_REVIEW_MONTHS = 6
@@ -114,9 +114,8 @@ export default async function IncrementsPage() {
     // Their own cycle decides the wait — six-monthly and annual are not the
     // same gap, so a fixed twelve months would have shown half the company a
     // date six months later than it really is.
-    const cycle = INCREMENT_RULES[
-      (e.incrementTrack === 'BIANNUAL' ? 'BIANNUAL' : 'ANNUAL') as IncrementTrack
-    ].cycleMonths ?? CYCLE_MONTHS
+    const track = (e.incrementTrack === 'BIANNUAL' ? 'BIANNUAL' : 'ANNUAL') as IncrementTrack
+    const cycle = INCREMENT_RULES[track].cycleMonths ?? CYCLE_MONTHS
     const window = last ? cycle : FIRST_REVIEW_MONTHS
     const dueDate = anchor ? addMonths(anchor, window) : null
     const monthsSince = anchor ? monthsBetween(anchor, today) : null
@@ -128,7 +127,7 @@ export default async function IncrementsPage() {
       : null
 
     return {
-      ...e, current, last, dueDate, monthsSince, overdueBy, rise, pct,
+      ...e, current, last, dueDate, monthsSince, overdueBy, rise, pct, track,
       neverRaised: !last,
     }
   })
@@ -179,6 +178,30 @@ export default async function IncrementsPage() {
   // shut drawers — September can be empty and still not be what you land on.
   const openMonth = months.find((m) => m.entries.length > 0)?.key ?? null
 
+  // ---- the schedule: who falls due, in the month they fall due ------------
+  // Six months on for the six-monthly track, twelve for the annual one,
+  // counted from the last raise — or from joining, at six months, for anyone
+  // who has never had one. Only months with somebody in them are printed:
+  // this is a schedule to work from, not a record to audit.
+  const thisMonth = monthKey(new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1)))
+  const dueBuckets = new Map<string, typeof rows>()
+  for (const r of rows) {
+    if (!r.dueDate) continue
+    const k = monthKey(r.dueDate)
+    dueBuckets.set(k, [...(dueBuckets.get(k) ?? []), r])
+  }
+  const schedule = [...dueBuckets.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([key, people]) => ({
+      key,
+      people: [...people].sort((a, b) => (a.dueDate!.getTime() - b.dueDate!.getTime())
+        || a.fullName.localeCompare(b.fullName)),
+      passed: key < thisMonth,
+      isNow: key === thisMonth,
+    }))
+  // Land on the month that needs attention now, not on a year-old backlog.
+  const openDue = schedule.find((s) => !s.passed)?.key ?? schedule.at(-1)?.key ?? null
+
   const ledgerAdded = entries.reduce((n, h) => n + (h.newSalary - h.oldSalary), 0)
   const ledgerAvgPct = (() => {
     const v = entries
@@ -201,6 +224,106 @@ export default async function IncrementsPage() {
         <Stat label="Raised this year" value={String(raisedThisYear.length)} sub={`in ${today.getFullYear()}`} />
         <Stat label="Average rise" value={avgPct != null ? `${avgPct.toFixed(1)}%` : '—'} sub="last increment each" />
         <Stat label="Monthly payroll" value={pkr(totalCurrent)} sub="gross, active staff" />
+      </div>
+
+      {/* Who is due, in the month they fall due. */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Increments due · {rows.filter((r) => r.dueDate).length} across {schedule.length} months
+          </h2>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Six months on for the six-monthly track, twelve for the annual one, counted from the
+            last increment — or from joining, at six months, for anyone who has never had one.
+            Months already past are still owed.
+          </p>
+        </div>
+
+        {schedule.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-slate-400">Nobody has a due date on record.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {schedule.map((s) => (
+              <details key={s.key} className="group" open={s.key === openDue}>
+                <summary className={`flex items-baseline gap-2 px-4 py-1.5 cursor-pointer list-none hover:bg-slate-50/70 [&::-webkit-details-marker]:hidden ${s.passed ? 'bg-amber-50/40' : ''}`}>
+                  <svg
+                    viewBox="0 0 20 20" fill="currentColor" aria-hidden
+                    className="w-3 h-3 shrink-0 self-center text-slate-400 transition-transform group-open:rotate-90"
+                  >
+                    <path d="M7 5l6 5-6 5V5z" />
+                  </svg>
+                  <span className={`text-[13px] font-semibold ${s.passed ? 'text-amber-900' : 'text-slate-800'}`}>
+                    {monthLabel(s.key)}
+                  </span>
+                  {s.passed && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-200">
+                      overdue
+                    </span>
+                  )}
+                  {s.isNow && (
+                    <span className="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-slate-900 text-white border-slate-900">
+                      this month
+                    </span>
+                  )}
+                  <span className="flex-1 border-b border-dotted border-slate-200" />
+                  <span className="text-[11px] text-slate-500 tabular-nums whitespace-nowrap">
+                    {s.people.length} {s.people.length === 1 ? 'person' : 'people'}
+                  </span>
+                </summary>
+
+                <div className="overflow-x-auto pb-1">
+                  <table className="w-full text-sm">
+                    <tbody>
+                      {s.people.map((r) => {
+                        const rule = INCREMENT_RULES[r.track]
+                        const low = incrementFor(r.current, r.track, rule.minPct)
+                        const high = incrementFor(r.current, r.track, rule.maxPct)
+                        return (
+                          <tr key={r.id} className="hover:bg-slate-50/60">
+                            <td className="pl-9 pr-3 py-1 whitespace-nowrap">
+                              <Link
+                                href={`/dashboard/performance/increments/${r.id}`}
+                                className="text-slate-900 hover:underline"
+                              >
+                                {r.fullName}
+                              </Link>
+                            </td>
+                            <td className="px-3 py-1 text-[11px] text-slate-400 whitespace-nowrap">
+                              {rule.label}
+                            </td>
+                            <td className="px-3 py-1 text-[11px] text-slate-400 whitespace-nowrap tabular-nums">
+                              {day(r.dueDate)}
+                            </td>
+                            <td className="px-3 py-1 text-right tabular-nums whitespace-nowrap text-slate-500">
+                              {r.current ? pkr(r.current) : '—'}
+                            </td>
+                            <td className="px-3 py-1 text-right tabular-nums whitespace-nowrap text-slate-600">
+                              {r.current ? (
+                                <>
+                                  <span className="text-slate-300 mr-1.5">→</span>
+                                  {pkr(low.newGross)}
+                                  {high.newGross !== low.newGross && ` – ${pkr(high.newGross)}`}
+                                </>
+                              ) : ''}
+                            </td>
+                            <td className="px-3 py-1 text-right tabular-nums whitespace-nowrap text-slate-400 w-20">
+                              {ruleRange(r.track)}
+                            </td>
+                            <td className="pl-3 pr-4 py-1 text-[11px] text-slate-400 whitespace-nowrap">
+                              {r.neverRaised
+                                ? `first review · joined ${day(r.joiningDate)}`
+                                : `last raised ${day(r.last!.effectiveDate)}`}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Every increment, in the month it took effect. Months with none are
