@@ -85,31 +85,27 @@ export async function POST(
   const confirming = review.decision === 'CONFIRM'
   const extending = review.decision === 'EXTEND'
 
+  // Only promise a salary revision when there is one. "Confirmation of
+  // Employment & Salary Revision" on a letter containing no revision is the
+  // kind of subject line that generates a reply asking where the raise is.
+  const hasRevision = pct > 0 && current > 0
   const subject = body.subject?.trim() || (
-    confirming ? `Confirmation of Employment & Salary Revision — ${e.fullName}`
-    : extending ? `Probation Review Outcome — ${e.fullName}`
-    : `Probation Review Outcome — ${e.fullName}`
+    confirming
+      ? hasRevision
+        ? `Confirmation of Employment & Salary Revision — ${e.fullName}`
+        : `Confirmation of Employment — ${e.fullName}`
+      : `Probation Review Outcome — ${e.fullName}`
   )
 
   const first = e.fullName.split(' ')[0]
   const reviewer = e.reportingManager?.fullName ?? 'your manager'
 
-  const reLine =
-    confirming ? 'Re: Confirmation of Employment Following Probation'
-    : extending ? 'Re: Probation Review Outcome — Extension of Probation'
-    : 'Re: Probation Review Outcome'
-
-  // Overall assessment and the per-dimension ratings, gathered under one heading.
-  const summaryBullets = [
-    assessment ? `Overall assessment: <strong>${label}</strong>` : null,
-    `Reviewed by: ${reviewer}`,
-    ...ratings,
-  ].filter(Boolean) as string[]
+  // The ratings, with the scale spelled out. "1/4" on its own does not say
+  // whether 1 is the best mark or the worst.
+  const summaryBullets = ratings
 
   const paragraphs: (string | null)[] = [
     `Dear ${first},`,
-
-    `<strong>${reLine}</strong>`,
 
     confirming
       ? `We are pleased to inform you that, following the successful completion and review of your probationary period, your employment with Convertt is hereby confirmed in the position of <strong>${e.designation ?? 'a member of the team'}</strong>${e.department?.name ? `, ${e.department.name}` : ''}, with effect from <strong>${longDate(rec.endDate)}</strong>.`
@@ -117,8 +113,14 @@ export async function POST(
         ? `Following the review of your probationary period, your probation has been extended by <strong>${review.extensionDays ?? 30} days</strong> to allow for further assessment against the areas set out below.`
         : `This letter confirms the outcome of the review of your probationary period.`,
 
+    // Who reviewed it and what they concluded, as a sentence.
+    assessment
+      ? `Your review was completed by ${reviewer}, and your overall assessment is <strong>${label}</strong>.`
+      : `Your review was completed by ${reviewer}.`,
+
     summaryBullets.length
-      ? `<strong>Summary of Review</strong><br>&bull; ${summaryBullets.join('<br>&bull; ')}`
+      ? `<strong>Performance Summary</strong> <span style="color:#64748b">(rated 1–4, where 4 is the highest)</span>`
+        + `<br>&bull; ${summaryBullets.join('<br>&bull; ')}`
       : null,
 
     // The manager's note, framed as an attributed quote rather than dropped in
@@ -146,14 +148,21 @@ export async function POST(
 
     body.extraNote?.trim() || null,
 
+    // Confirmation changes the terms, and the letter should say which.
+    confirming
+      ? 'Your notice period moves from the probationary terms to those set out in your Employment Agreement, and you move to the confirmed-employee leave entitlement under the Convertt Leave Policy. All other terms remain unchanged.'
+      : null,
+
     confirming
       ? 'On behalf of Convertt, thank you for your contribution during your probationary period. We are glad to have you on the team and look forward to your continued growth with us.'
       : extending
         ? 'A further review will be conducted at the end of the extension period, and your manager will discuss the specific expectations with you.'
         : null,
 
+    'Your formal confirmation letter is attached to your employee record and can be provided on request.',
+
     'Yours sincerely,',
-    'Human Resources<br>Convertt',
+    'Syed Khawer<br>Director Administration, Convertt',
   ]
 
   const lines = paragraphs.filter(Boolean) as string[]
