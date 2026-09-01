@@ -5,6 +5,7 @@ import { calculatePayslip } from '@/lib/payroll'
 import { getPayrollConfig } from '@/lib/config'
 import { dayKey } from '@/lib/date-utils'
 import { getPayrollRun, listPayrollRuns } from '@/lib/queries/payroll'
+import { leaveDaysForMonth } from '@/lib/payroll-leave'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -121,36 +122,11 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    // Approved leave for the month â€” needed to count paid leave as PRESENT
-    // (CASUAL / SICK / etc. are paid; only UNPAID leave reduces pay).
-    const approvedLeaves = await prisma.leaveRequest.findMany({
-      where: {
-        status: 'APPROVED',
-        fromDate: { lte: endOfMonth },
-        toDate: { gte: startOfMonth },
-      },
-      select: { employeeId: true, fromDate: true, toDate: true, days: true, leaveType: true },
-    })
-
-    // Per-employee: paid-leave days vs unpaid-leave days that intersect this month
-    const paidLeaveByEmp: Record<string, number> = {}
-    const unpaidLeaveByEmp: Record<string, number> = {}
-    for (const lv of approvedLeaves) {
-      // Clip the leave to the month range
-      const lvStart = lv.fromDate > startOfMonth ? lv.fromDate : startOfMonth
-      const lvEnd = lv.toDate < endOfMonth ? lv.toDate : endOfMonth
-      // Count weekday days in the clipped range
-      let days = 0
-      const cur = new Date(lvStart); cur.setHours(0, 0, 0, 0)
-      const stop = new Date(lvEnd); stop.setHours(0, 0, 0, 0)
-      while (cur <= stop) {
-        const dow = cur.getDay()
-        if (dow !== 0 && dow !== 6 && !holidayKeys.has(dayKey(cur))) days++
-        cur.setDate(cur.getDate() + 1)
-      }
-      const bucket = lv.leaveType === 'UNPAID' ? unpaidLeaveByEmp : paidLeaveByEmp
-      bucket[lv.employeeId] = (bucket[lv.employeeId] ?? 0) + days
-    }
+    // Leave for the month, from approved requests and from days marked LEAVE
+    // on the attendance grid, deduped — see src/lib/payroll-leave.ts. Paid
+    // leave (CASUAL / SICK / etc.) counts as PRESENT; only UNPAID reduces pay.
+    const { paid: paidLeaveByEmp, unpaid: unpaidLeaveByEmp } =
+      await leaveDaysForMonth(startOfMonth, endOfMonth, holidayKeys)
 
     // Sum approved overtime hours per employee for the month
     const otByEmployee: Record<string, number> = {}

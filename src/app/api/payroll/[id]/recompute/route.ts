@@ -14,6 +14,7 @@ import { verifyToken } from '@/lib/auth'
 import { calculatePayslip } from '@/lib/payroll'
 import { getPayrollConfig } from '@/lib/config'
 import { dayKey } from '@/lib/date-utils'
+import { leaveDaysForMonth } from '@/lib/payroll-leave'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const startOfMonth = new Date(year, month - 1, 1, 0, 0, 0, 0)
   const endOfMonth = new Date(year, month, 0, 23, 59, 59, 999)
 
-  const [employees, holidays, attendanceLogs, approvedLeaves] = await Promise.all([
+  const [employees, holidays, attendanceLogs] = await Promise.all([
     prisma.employee.findMany({ where: { status: 'ACTIVE' }, include: { salary: true } }),
     prisma.holiday.findMany({
       where: { type: 'PUBLIC', date: { gte: startOfMonth, lte: endOfMonth } },
@@ -59,32 +60,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     prisma.attendanceLog.findMany({
       where: { date: { gte: startOfMonth, lte: endOfMonth }, status: { in: ['PRESENT', 'LATE'] } },
     }),
-    prisma.leaveRequest.findMany({
-      where: { status: 'APPROVED', fromDate: { lte: endOfMonth }, toDate: { gte: startOfMonth } },
-      select: { employeeId: true, fromDate: true, toDate: true, leaveType: true },
-    }),
   ])
 
   const holidayKeys = new Set(holidays.map((h) => dayKey(h.date)))
   const workingDays = countWeekdaysExcludingHolidays(month, year, holidayKeys)
 
-  // Per-employee paid vs unpaid leave days
-  const paidLeaveByEmp: Record<string, number> = {}
-  const unpaidLeaveByEmp: Record<string, number> = {}
-  for (const lv of approvedLeaves) {
-    const lvStart = lv.fromDate > startOfMonth ? lv.fromDate : startOfMonth
-    const lvEnd = lv.toDate < endOfMonth ? lv.toDate : endOfMonth
-    let days = 0
-    const cur = new Date(lvStart); cur.setHours(0,0,0,0)
-    const stop = new Date(lvEnd); stop.setHours(0,0,0,0)
-    while (cur <= stop) {
-      const dow = cur.getDay()
-      if (dow !== 0 && dow !== 6 && !holidayKeys.has(dayKey(cur))) days++
-      cur.setDate(cur.getDate() + 1)
-    }
-    const bucket = lv.leaveType === 'UNPAID' ? unpaidLeaveByEmp : paidLeaveByEmp
-    bucket[lv.employeeId] = (bucket[lv.employeeId] ?? 0) + days
-  }
+  // Leave comes from approved requests and from days marked LEAVE on the
+  // attendance grid, deduped — see src/lib/payroll-leave.ts.
+  const { paid: paidLeaveByEmp, unpaid: unpaidLeaveByEmp } =
+    await leaveDaysForMonth(startOfMonth, endOfMonth, holidayKeys)
 
   const otByEmployee: Record<string, number> = {}
   for (const l of attendanceLogs) {
