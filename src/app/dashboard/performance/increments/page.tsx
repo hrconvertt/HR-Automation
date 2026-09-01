@@ -26,7 +26,17 @@ const CYCLE_MONTHS = 12
 const pkr = (n: number) => 'PKR ' + Math.round(n).toLocaleString('en-PK')
 
 const day = (d: Date | null) =>
-  d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  d
+    ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' })
+    : '—'
+
+/** Effective dates are stored at UTC midnight; read them back the same way. */
+const monthKey = (d: Date) => d.toISOString().slice(0, 7)
+
+const monthLabel = (key: string) =>
+  new Date(key + '-01T00:00:00Z').toLocaleDateString('en-GB', {
+    month: 'long', year: 'numeric', timeZone: 'UTC',
+  })
 
 function addMonths(d: Date, months: number): Date {
   const c = new Date(d)
@@ -44,7 +54,7 @@ export default async function IncrementsPage() {
   const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
   if (role !== 'HR_ADMIN' && role !== 'EXECUTIVE') redirect('/dashboard/performance')
 
-  const [employees, history] = await Promise.all([
+  const [employees, history, ledger] = await Promise.all([
     prisma.employee.findMany({
       where: { status: 'ACTIVE' },
       select: {
@@ -65,6 +75,23 @@ export default async function IncrementsPage() {
       select: {
         employeeId: true, type: true, oldSalary: true, newSalary: true,
         incrementPct: true, effectiveDate: true, reason: true,
+      },
+    }),
+    // The ledger below. Increments only — an opening salary, a travel
+    // allowance and a sales commission are all recorded as compensation
+    // history too, and none of them is a raise.
+    prisma.compensationHistory.findMany({
+      where: { type: 'INCREMENT' },
+      orderBy: [{ effectiveDate: 'desc' }, { newSalary: 'desc' }],
+      select: {
+        id: true, oldSalary: true, newSalary: true, incrementPct: true,
+        effectiveDate: true, reason: true,
+        employee: {
+          select: {
+            id: true, fullName: true, employeeCode: true, designation: true,
+            status: true, department: { select: { name: true } },
+          },
+        },
       },
     }),
   ])
@@ -116,6 +143,45 @@ export default async function IncrementsPage() {
     return withPct.length ? withPct.reduce((a, b) => a + b, 0) / withPct.length : null
   })()
 
+  // ---- the ledger: every month from the first increment to this one --------
+  // Founders are left out here for the same reason they are left out of the
+  // roster. Former staff are kept: a raise that happened, happened, and the
+  // year's cost is wrong without them.
+  const entries = ledger.filter((h) => !isFounder(h.employee.designation))
+
+  const months: { key: string; entries: typeof entries; added: number }[] = []
+  if (entries.length) {
+    const first = monthKey(entries[entries.length - 1].effectiveDate)
+    const cursor = new Date(first + '-01T00:00:00Z')
+    const end = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1))
+    const buckets = new Map<string, typeof entries>()
+    for (const h of entries) {
+      const k = monthKey(h.effectiveDate)
+      buckets.set(k, [...(buckets.get(k) ?? []), h])
+    }
+    // Walk every month in the range, so a month in which nobody was raised
+    // still appears. A gap you cannot see is a gap you cannot ask about.
+    while (cursor <= end) {
+      const k = monthKey(cursor)
+      const inMonth = buckets.get(k) ?? []
+      months.push({
+        key: k,
+        entries: inMonth,
+        added: inMonth.reduce((n, h) => n + (h.newSalary - h.oldSalary), 0),
+      })
+      cursor.setUTCMonth(cursor.getUTCMonth() + 1)
+    }
+    months.reverse()
+  }
+
+  const ledgerAdded = entries.reduce((n, h) => n + (h.newSalary - h.oldSalary), 0)
+  const ledgerAvgPct = (() => {
+    const v = entries
+      .map((h) => h.incrementPct ?? (h.oldSalary > 0 ? ((h.newSalary - h.oldSalary) / h.oldSalary) * 100 : null))
+      .filter((x): x is number => x != null && x > 0)
+    return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null
+  })()
+
   return (
     <div className="space-y-4">
       <div>
@@ -130,6 +196,93 @@ export default async function IncrementsPage() {
         <Stat label="Raised this year" value={String(raisedThisYear.length)} sub={`in ${today.getFullYear()}`} />
         <Stat label="Average rise" value={avgPct != null ? `${avgPct.toFixed(1)}%` : '—'} sub="last increment each" />
         <Stat label="Monthly payroll" value={pkr(totalCurrent)} sub="gross, active staff" />
+      </div>
+
+      {/* Every increment, in the month it took effect. Months with none are
+          printed too — the quiet months are part of the record. */}
+      <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="px-4 py-2.5 border-b border-slate-100">
+          <h2 className="text-sm font-semibold text-slate-900">
+            Increment record · {entries.length} across {months.length} months
+          </h2>
+          <p className="text-[11px] text-slate-500 mt-0.5">
+            Every increment on record, by the month it took effect
+            {ledgerAdded > 0 ? ` — ${pkr(ledgerAdded)} added to monthly payroll` : ''}
+            {ledgerAvgPct != null ? `, averaging ${ledgerAvgPct.toFixed(1)}%` : ''}. Openings,
+            allowances and commissions are excluded; only raises appear here.
+          </p>
+        </div>
+
+        {months.length === 0 ? (
+          <p className="px-4 py-6 text-sm text-slate-400">No increments recorded yet.</p>
+        ) : (
+          <div className="divide-y divide-slate-100">
+            {months.map((m) => (
+              <div key={m.key}>
+                <div className="flex items-baseline justify-between gap-3 px-4 py-2 bg-slate-50/70">
+                  <h3 className="text-[13px] font-semibold text-slate-800">{monthLabel(m.key)}</h3>
+                  <p className="text-[11px] text-slate-500 tabular-nums whitespace-nowrap">
+                    {m.entries.length === 0
+                      ? 'none'
+                      : `${m.entries.length} increment${m.entries.length === 1 ? '' : 's'} · +${pkr(m.added)} a month`}
+                  </p>
+                </div>
+
+                {m.entries.length > 0 && (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <tbody>
+                        {m.entries.map((h) => {
+                          const rise = h.newSalary - h.oldSalary
+                          const pc = h.incrementPct
+                            ?? (h.oldSalary > 0 ? (rise / h.oldSalary) * 100 : null)
+                          return (
+                            <tr key={h.id} className="border-t border-slate-50 hover:bg-slate-50/60">
+                              <td className="px-4 py-2">
+                                <Link
+                                  href={`/dashboard/performance/increments/${h.employee.id}`}
+                                  className="text-slate-900 font-medium hover:underline"
+                                >
+                                  {h.employee.fullName}
+                                </Link>
+                                {h.employee.status !== 'ACTIVE' && (
+                                  <span className="ml-1.5 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-slate-50 text-slate-500 border-slate-200">
+                                    former
+                                  </span>
+                                )}
+                                <p className="text-[11px] text-slate-500">
+                                  {h.employee.designation ?? h.employee.employeeCode}
+                                  {h.employee.department?.name ? ` · ${h.employee.department.name}` : ''}
+                                </p>
+                              </td>
+                              <td className="px-4 py-2 text-slate-500 whitespace-nowrap tabular-nums text-right">
+                                {day(h.effectiveDate)}
+                              </td>
+                              <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap text-slate-600">
+                                {pkr(h.oldSalary)}
+                                <span className="text-slate-300 mx-1.5">→</span>
+                                <span className="text-slate-900 font-medium">{pkr(h.newSalary)}</span>
+                              </td>
+                              <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap text-emerald-700 font-medium">
+                                +{pkr(rise)}
+                              </td>
+                              <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap text-slate-600 w-16">
+                                {pc != null ? `${pc.toFixed(1)}%` : '—'}
+                              </td>
+                              <td className="px-4 py-2 text-[11px] text-slate-500 max-w-xs">
+                                {h.reason ?? ''}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* The bands, stated once. Nobody should be recalling these from memory
