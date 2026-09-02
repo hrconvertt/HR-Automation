@@ -39,6 +39,7 @@ import {
   Sprout,
   Heart,
   Sparkles,
+  AlertTriangle,
   Network,
   CalendarCheck,
   MessageSquare,
@@ -345,6 +346,28 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
  * so without their own entries those two pages matched no prefix, lost the
  * module sidebar, and dropped the user back to the main nav mid-module.
  */
+/**
+ * Performance module menu.
+ *
+ * Hoisted for the same reason LIFECYCLE_NAV is: Daily Log and Team Review sit
+ * on /dashboard/daily-log and /dashboard/daily-review, outside the module's
+ * own path, and register this menu under their own keys below.
+ */
+const PERFORMANCE_NAV: NavGroup[] = [
+  {
+    label: 'Performance',
+    items: [
+      { href: '/dashboard/performance', label: 'Overview', icon: TrendingUp },
+      { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
+      { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
+      { href: '/dashboard/performance/appraisals', label: 'Appraisal Forms', icon: ClipboardList },
+      { href: '/dashboard/performance?tab=pip', label: 'PIP', icon: AlertTriangle },
+      { href: '/dashboard/performance/increments', label: 'Increments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      { href: '/dashboard/culture', label: 'Recognition', icon: Sparkles },
+    ],
+  },
+]
+
 const LIFECYCLE_NAV: NavGroup[] = [
   {
     label: 'Employee Lifecycle',
@@ -447,19 +470,13 @@ const LETTERS_NAV: NavGroup[] = [
 ]
 
 const NESTED_NAV: Record<string, NavGroup[]> = {
-  '/dashboard/performance': [
-    {
-      label: 'Performance',
-      items: [
-        { href: '/dashboard/performance', label: 'Overview', icon: TrendingUp },
-        { href: '/dashboard/performance/increments', label: 'Increments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
-        { href: '/dashboard/performance/appraisals', label: 'Appraisal Forms', icon: ClipboardList },
-        { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
-        { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
-        { href: '/dashboard/culture', label: 'Recognition', icon: Sparkles },
-      ],
-    },
-  ],
+  '/dashboard/performance': PERFORMANCE_NAV,
+  // Two of the module's own pages live outside /dashboard/performance. Without
+  // their own entries they matched no prefix, lost the module sidebar, and
+  // dropped the user back to the main nav with no way back — the same trap
+  // LIFECYCLE_NAV documents above.
+  '/dashboard/daily-log': PERFORMANCE_NAV,
+  '/dashboard/daily-review': PERFORMANCE_NAV,
   '/dashboard/settings': SETTINGS_NAV,
   '/dashboard/letters': LETTERS_NAV,
   '/dashboard/recruiting': RECRUITING_NAV,

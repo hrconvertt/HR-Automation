@@ -16,7 +16,16 @@ import { PipPanel } from '@/components/performance/pip-panel'
 import { PerformanceAnalytics } from '@/components/performance/analytics-panel'
 import { TrendingUp, ExternalLink, ClipboardCheck, ArrowRight } from 'lucide-react'
 
-export default async function PerformancePage() {
+const TABS = ['overview', 'goals', 'reviews', 'showcause', 'pip']
+
+export default async function PerformancePage(
+  { searchParams }: { searchParams: Promise<{ tab?: string }> },
+) {
+  // The sidebar links straight to PIP and Show Cause. Without reading the
+  // param the page always opened on Overview and the link went nowhere
+  // visible.
+  const sp = await searchParams
+  const tab = sp.tab && TABS.includes(sp.tab) ? sp.tab : 'overview'
   const cookieStore = await cookies()
   const token = cookieStore.get('hr_token')?.value
   const payload = await verifyToken(token)
@@ -82,7 +91,7 @@ export default async function PerformancePage() {
         </p>
       </div>
 
-      <Tabs defaultValue="overview">
+      <Tabs key={tab} defaultValue={tab}>
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="goals">Goals</TabsTrigger>

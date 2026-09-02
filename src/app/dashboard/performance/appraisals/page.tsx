@@ -25,6 +25,7 @@ import { REVIEW_WINDOW_DAYS } from '@/lib/probation-review'
 import { INCREMENT_RULES, ruleRange } from '@/lib/pay-split'
 import { incrementDue as nextIncrementDue, daysAway, FIRST_REVIEW_MONTHS } from '@/lib/increment-schedule'
 import { ClipboardList, ShieldCheck, TrendingUp } from 'lucide-react'
+import { OpenAppraisal } from './_components/open-appraisal'
 
 const pkr = (n: number) => 'PKR ' + Math.round(n).toLocaleString('en-PK')
 
@@ -47,6 +48,8 @@ interface Due {
   detail: string
   href: string
   hasForm: boolean
+  /** An appraisal form already opened for this person, if there is one. */
+  appraisalId: string | null
 }
 
 export default async function AppraisalsPage() {
@@ -58,7 +61,7 @@ export default async function AppraisalsPage() {
     redirect('/dashboard/performance')
   }
 
-  const [probations, employees, history, existingReviews] = await Promise.all([
+  const [probations, employees, history, existingReviews, appraisalForms] = await Promise.all([
     prisma.probationRecord.findMany({
       where: { status: { in: ['ACTIVE', 'UNDER_REVIEW'] } },
       select: {
@@ -97,9 +100,19 @@ export default async function AppraisalsPage() {
       select: { employeeId: true, effectiveDate: true },
     }),
     prisma.probationReview.findMany({ select: { employeeId: true } }),
+    // The most recent appraisal form per person, so a row offers "open" rather
+    // than starting a second one.
+    prisma.appraisalForm.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: { id: true, employeeId: true, status: true },
+    }),
   ])
 
   const reviewed = new Set(existingReviews.map((r) => r.employeeId))
+  const appraisalByEmployee = new Map<string, string>()
+  for (const a of appraisalForms) {
+    if (!appraisalByEmployee.has(a.employeeId)) appraisalByEmployee.set(a.employeeId, a.id)
+  }
   const onProbation = new Set(probations.map((p) => p.employeeId))
   const lastRaise = new Map<string, Date>()
   for (const h of history) {
@@ -133,6 +146,7 @@ export default async function AppraisalsPage() {
         : `Probation ends in ${plural(left, 'day')}`,
       href: `/dashboard/probation/${p.id}`,
       hasForm: reviewed.has(p.employeeId),
+      appraisalId: appraisalByEmployee.get(p.employeeId) ?? null,
     })
   }
 
@@ -169,7 +183,8 @@ export default async function AppraisalsPage() {
         + ` · ${INCREMENT_RULES[track].label.toLowerCase()}`
         + (neverRaised ? ', first review' : ''),
       href: `/dashboard/performance/increments/${e.id}`,
-      hasForm: false,
+      hasForm: appraisalByEmployee.has(e.id),
+      appraisalId: appraisalByEmployee.get(e.id) ?? null,
     })
   }
 
@@ -246,13 +261,16 @@ export default async function AppraisalsPage() {
                       </p>
                       <p className="text-[11px] text-slate-400">band {d.band}</p>
                     </div>
-                    <Link
-                      href={d.href}
-                      className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                    >
-                      <ClipboardList className="w-3 h-3" />
-                      {d.hasForm ? 'Open form' : 'Start form'}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <Link
+                        href={d.href}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                      >
+                        <ClipboardList className="w-3 h-3" />
+                        {d.kind === 'PROBATION' ? 'Probation record' : 'Pay history'}
+                      </Link>
+                      <OpenAppraisal employeeId={d.employeeId} existingFormId={d.appraisalId} />
+                    </div>
                   </div>
                 </div>
               )
