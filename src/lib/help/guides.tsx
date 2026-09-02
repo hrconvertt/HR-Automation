@@ -143,7 +143,7 @@ function PeopleGuide() {
       <Section title="What HR can do here">
         <Step n={1} title="Add an employee">"+ Add Employee" button top-right. Fill name, designation, dept, employee type (Permanent/Probation/Internship/Training), joining date, reporting manager.</Step>
         <Step n={2} title="Edit any employee's profile">Click their row → "Edit Profile". You can change personal info, addresses (permanent / temporary / work location), job info, <strong>reporting manager</strong>, work schedule, status, confirmation/exit dates.</Step>
-        <Step n={3} title="Set or change salary">Open the employee → Compensation tab → <strong>Request Compensation Change</strong>. Pick change type (Annual Increment / Promotion / Bonus / Market Adjustment), edit pay components, see live before/after diff. Optional in-app + email notification to the employee. Every change is logged with reason + approver.</Step>
+        <Step n={3} title="Set or change salary">Open the employee → Compensation tab → <strong>Request Compensation Change</strong>. Pick change type (Increment / Promotion / Bonus / Market Adjustment), edit pay components, see live before/after diff. Optional in-app + email notification to the employee. Every change is logged with reason + approver.</Step>
         <Step n={4} title="Assign system roles">Open the employee → System Roles panel. Tick Employee / Manager / Executive / HR_ADMIN — a single user can hold multiple roles simultaneously.</Step>
         <Step n={5} title="Generate documents">Compensation tab → Total Rewards button. Or via the Onboarding/Offboarding journey — every relevant task has a ✨ Generate document button.</Step>
       </Section>
@@ -285,7 +285,7 @@ function PayrollGuide() {
       <Section title="Compensation changes">
         <p>To change anyone&apos;s salary: People → Employee → Compensation tab → <strong>Request Compensation Change</strong>.</p>
         <ul className="list-disc pl-5 space-y-1">
-          <li>Pick change type: Annual Increment / Promotion / Bonus / Market Adjustment / Initial Setup</li>
+          <li>Pick change type: Increment / Promotion / Bonus / Market Adjustment / Initial Setup</li>
           <li>Edit each pay component (Basic, House Rent, Utilities, Food, Fuel, Medical, Other)</li>
           <li>Live before/after comparison with +/− delta and percentage</li>
           <li>Reason field (required)</li>
@@ -531,7 +531,7 @@ function CompensationGuide() {
           <li><strong>Confidential banner</strong> — confirms who&apos;s viewing + offers Total Rewards download &amp; Request Compensation Change buttons</li>
           <li><strong>4 KPI tiles</strong> — Monthly Gross, Annual Gross, Last Change, Changes This Year</li>
           <li><strong>Pay Components</strong> — line-item breakdown (Basic, House Rent, Utilities, Food, Fuel, Medical, Other) with effective-from date</li>
-          <li><strong>Compensation History</strong> — every change tagged (Annual Increment / Promotion / Bonus / Adjustment / Initial), before / after / delta / percentage / reason</li>
+          <li><strong>Compensation History</strong> — every change tagged (Increment / Promotion / Bonus / Adjustment / Initial), before / after / delta / percentage / reason</li>
         </ul>
       </Section>
 

@@ -39,7 +39,7 @@ const TYPES = [
   { value: 'REGULAR',    label: 'Regular Pay' },
   { value: 'HIRE',       label: 'Hire — Joining offer' },
   { value: 'INITIAL',    label: 'Initial Setup' },
-  { value: 'INCREMENT',  label: 'Annual Increment' },
+  { value: 'INCREMENT',  label: 'Increment' },
   { value: 'PROMOTION',  label: 'Promotion' },
   { value: 'BONUS',      label: 'Bonus' },
   { value: 'ADJUSTMENT', label: 'Market Adjustment' },

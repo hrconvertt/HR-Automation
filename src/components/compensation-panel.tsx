@@ -67,7 +67,7 @@ function payslipStatusTone(status: string): string {
 
 const TYPE_LABELS: Record<string, { label: string; tone: string }> = {
   REGULAR:     { label: 'Regular Pay',       tone: 'bg-slate-100 text-slate-900' },
-  INCREMENT:   { label: 'Annual Increment', tone: 'bg-slate-100 text-slate-900' },
+  INCREMENT:   { label: 'Increment',         tone: 'bg-slate-100 text-slate-900' },
   PROMOTION:   { label: 'Promotion',         tone: 'bg-slate-100 text-slate-900' },
   BONUS:       { label: 'Bonus',             tone: 'bg-slate-100 text-slate-900' },
   ADJUSTMENT:  { label: 'Adjustment',        tone: 'bg-slate-100 text-slate-900' },

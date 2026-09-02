@@ -54,7 +54,7 @@ interface Props {
 
 const CHANGE_TYPES = [
   { value: 'REGULAR',    label: 'Regular Pay',       hint: 'Standard monthly salary — no increase or decrease, just confirming this month’s pay.' },
-  { value: 'INCREMENT',  label: 'Annual Increment', hint: 'Yearly merit raise based on performance review.' },
+  { value: 'INCREMENT',  label: 'Increment',        hint: 'A merit raise. How often one falls due comes from the employee’s track — six-monthly or annual — not from this label.' },
   { value: 'PROMOTION',  label: 'Promotion',        hint: 'Compensation aligned with a new role or band.' },
   { value: 'BONUS',      label: 'Bonus',            hint: 'One-off variable payment.' },
   { value: 'ADJUSTMENT', label: 'Market Adjustment',hint: 'Correction for market parity or cost of living.' },

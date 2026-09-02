@@ -147,7 +147,7 @@ export default function EditSalaryButton({ employeeId, employeeName, current }: 
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="REGULAR">Regular Pay</SelectItem>
-                    <SelectItem value="INCREMENT">Annual Increment</SelectItem>
+                    <SelectItem value="INCREMENT">Increment</SelectItem>
                     <SelectItem value="PROMOTION">Promotion</SelectItem>
                     <SelectItem value="BONUS">Bonus / One-off</SelectItem>
                     <SelectItem value="ADJUSTMENT">Correction / Adjustment</SelectItem>
