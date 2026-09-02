@@ -15,9 +15,10 @@ import { useState, useMemo, useCallback } from 'react'
 import {
   SECTIONS, RATING_INDEX, MAX_RATING, CORE_SECTIONS, MANAGERIAL_SECTION,
   CORE_MAX, MANAGERIAL_MAX, OVERALL_MAX, sectionMax, subTotal, coreTotal,
-  overallTotal, overallAverage, bandFor, completeness, BANDS,
+  overallTotal, overallAverage, bandFor, completeness, BANDS, proposeIncrement,
   type Ratings, type GoalRow, type DevelopmentRow, type Column,
 } from '@/lib/appraisal-form'
+import { INCREMENT_RULES, ruleRange, type IncrementTrack } from '@/lib/pay-split'
 
 interface Person { id: string; fullName: string; designation: string | null }
 
@@ -34,12 +35,13 @@ export interface AppraisalState {
   promotedTo: string; promotedWef: string
   transferredTo: string; transferredAs: string; transferredWef: string
   trainingNeeds: string
+  approvedPct: number | null
   appraiserSigned: boolean; reviewerSigned: boolean; hrSigned: boolean
   status: string
 }
 
 export function AppraisalFormEditor({
-  formId, canEdit, isHr, people, employee, initial,
+  formId, canEdit, isHr, people, employee, initial, currentSalary, track,
 }: {
   formId: string
   canEdit: boolean
@@ -47,6 +49,8 @@ export function AppraisalFormEditor({
   people: Person[]
   employee: { fullName: string; employeeCode: string | null; joiningDate: string; dateOfBirth: string }
   initial: AppraisalState
+  currentSalary: number
+  track: IncrementTrack
 }) {
   const [s, setS] = useState<AppraisalState>(initial)
   const [saving, setSaving] = useState(false)
@@ -78,13 +82,32 @@ export function AppraisalFormEditor({
   )
   const avg = useMemo(() => overallAverage(s.ratings, 'appraiser'), [s.ratings])
 
+  // What the score is worth. Recomputed as the ratings change, so the number
+  // offered and the number earned can never drift apart.
+  const rule = INCREMENT_RULES[track]
+  const proposal = useMemo(
+    () => proposeIncrement(avg, currentSalary, rule),
+    [avg, currentSalary, rule],
+  )
+  const pct = s.approvedPct ?? proposal.pct
+  const rise = Math.round(currentSalary * (pct / 100))
+  const proposed = Math.round(currentSalary) + rise
+
   async function save(extra: Record<string, unknown> = {}) {
     setSaving(true); setMsg('')
     try {
       const res = await fetch(`/api/appraisals/${formId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...s, ...extra }),
+        body: JSON.stringify({
+          ...s,
+          currentSalary,
+          incrementTrack: track,
+          recommendedPct: proposal.pct,
+          incrementAmount: rise,
+          proposedSalary: proposed,
+          ...extra,
+        }),
       })
       const d = await res.json().catch(() => ({}))
       if (!res.ok) { setMsg(d.error ?? 'Could not save.'); return false }
@@ -309,6 +332,74 @@ export function AppraisalFormEditor({
         </p>
       </Card>
 
+      {/* ── What the score is worth ──────────────────────────────────── */}
+      <Card
+        title="Increment earned"
+        sub={`Worked from the score above against this person's own band — ${rule.label.toLowerCase()}, ${ruleRange(track)}`}
+      >
+        {!proposal.eligible ? (
+          <div className="px-4 py-4">
+            <p className="text-sm text-slate-900">
+              {done.done === 0
+                ? 'Score the criteria above and the increment appears here.'
+                : `Overall ${avg.toFixed(1)} — below 50, which the form bands as Poor.`}
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">
+              {done.done === 0
+                ? `${done.total} criteria to rate.`
+                : 'No increment is proposed. An appraisal below 50 is not an argument for a raise.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="px-4 py-4">
+              <div className="flex flex-wrap items-end gap-x-8 gap-y-3">
+                <Figure label="Overall score" value={avg.toFixed(1)} sub={proposal.band ?? ''} />
+                <Arrow />
+                <Figure label="Increment" value={`${pct}%`}
+                  sub={s.approvedPct != null && s.approvedPct !== proposal.pct
+                    ? `overridden — the score earns ${proposal.pct}%`
+                    : `${proposal.band} on a ${ruleRange(track)} band`} />
+                <Arrow />
+                <Figure label="Rise" value={pkr(rise)} sub="per month" />
+                <Arrow />
+                <Figure label="Revised salary" value={pkr(proposed)} strong
+                  sub={`from ${pkr(currentSalary)}`} />
+              </div>
+            </div>
+            <div className="px-4 py-3 border-t border-slate-100 flex flex-wrap items-center gap-3">
+              <label className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">
+                Override %
+              </label>
+              <input
+                type="number" step="0.5" min="0" max="100" disabled={!isHr}
+                value={s.approvedPct ?? ''}
+                placeholder={String(proposal.pct)}
+                onChange={(e) => set('approvedPct',
+                  e.target.value === '' ? null : Number(e.target.value))}
+                className="w-24 text-sm rounded-lg border border-slate-200 px-3 py-1.5 disabled:bg-slate-50"
+              />
+              {s.approvedPct != null && (
+                <button type="button" disabled={!isHr} onClick={() => set('approvedPct', null)}
+                  className="text-[13px] text-slate-500 hover:text-slate-900 hover:underline">
+                  Back to the earned {proposal.pct}%
+                </button>
+              )}
+              <span className="text-[11px] text-slate-400 ml-auto">
+                The band is a starting figure, not a cap. An override is recorded as the approved
+                percentage alongside what the score earned.
+              </span>
+            </div>
+            <div className="px-4 pb-3">
+              <p className="text-[11px] text-slate-400">
+                How the band is read: Outstanding takes the top of it, Average the floor, Very Good
+                and Good sit proportionally between. Below 50 earns nothing.
+              </p>
+            </div>
+          </>
+        )}
+      </Card>
+
       {/* ── Reviewing officer ────────────────────────────────────────── */}
       <Card title="Performance review" sub="To be filled by the reviewing officer">
         <div className="overflow-x-auto">
@@ -426,6 +517,26 @@ export function AppraisalFormEditor({
 }
 
 /* ── small pieces ─────────────────────────────────────────────────── */
+
+const pkr = (n: number) => 'PKR ' + Math.round(n).toLocaleString('en-PK')
+
+function Figure({ label, value, sub, strong }: {
+  label: string; value: string; sub?: string; strong?: boolean
+}) {
+  return (
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">{label}</p>
+      <p className={`tabular-nums mt-0.5 ${strong ? 'text-2xl font-bold text-slate-900' : 'text-xl font-semibold text-slate-900'}`}>
+        {value}
+      </p>
+      {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
+    </div>
+  )
+}
+
+function Arrow() {
+  return <span className="text-slate-300 text-xl pb-2 select-none">→</span>
+}
 
 function Card({ title, sub, children }: {
   title: string; sub?: string; children: React.ReactNode

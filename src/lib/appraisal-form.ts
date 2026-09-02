@@ -170,3 +170,54 @@ export const EMPTY_GOALS: GoalRow[] = [
 export const EMPTY_DEVELOPMENT: DevelopmentRow[] = DEVELOPMENT_AREAS.map((criteria) => ({
   criteria, areas: '', training: '',
 }))
+
+/**
+ * What the score is worth, in money.
+ *
+ * The bands were a poster on the increments page — 10–15% six-monthly, 24%
+ * annual — and somebody still had to decide where in the band a particular
+ * appraisal landed, by feel, after the form was filled in. That is the gap
+ * Muzaffar's query came out of: rated exceptional, offered 12%, with nothing
+ * saying how the two were connected.
+ *
+ * So the overall band the form already computes picks the position in the pay
+ * band. Outstanding takes the top of it, Average the floor, the two in between
+ * sit proportionally. A fixed band like the annual 24% has no room to move,
+ * and correctly gives 24% for anything above Poor.
+ *
+ * Poor earns nothing. An appraisal below 50 is not an argument for a raise,
+ * and printing one would make the score decorative.
+ */
+const BAND_POSITION: Record<string, number> = {
+  Outstanding: 1,
+  'Very Good': 0.7,
+  Good: 0.4,
+  Average: 0,
+}
+
+export interface IncrementProposal {
+  /** The overall average the appraiser's column comes to. */
+  score: number
+  band: string | null
+  /** Percentage the band and score argue for. */
+  pct: number
+  rise: number
+  proposed: number
+  /** False when the score is below 50 — no increment is proposed. */
+  eligible: boolean
+}
+
+export function proposeIncrement(
+  score: number,
+  currentSalary: number,
+  rule: { minPct: number; maxPct: number },
+): IncrementProposal {
+  const band = bandFor(score)
+  const position = band ? BAND_POSITION[band] : undefined
+  if (band == null || position === undefined) {
+    return { score, band, pct: 0, rise: 0, proposed: currentSalary, eligible: false }
+  }
+  const pct = Math.round((rule.minPct + position * (rule.maxPct - rule.minPct)) * 10) / 10
+  const rise = Math.round(currentSalary * (pct / 100))
+  return { score, band, pct, rise, proposed: Math.round(currentSalary) + rise, eligible: true }
+}

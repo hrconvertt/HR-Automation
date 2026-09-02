@@ -92,13 +92,6 @@ export default async function PerformancePage(
       </div>
 
       <Tabs key={tab} defaultValue={tab}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="goals">Goals</TabsTrigger>
-          <TabsTrigger value="reviews">Reviews</TabsTrigger>
-          {showDisciplinaryTabs && <TabsTrigger value="showcause">Show Cause</TabsTrigger>}
-          {showDisciplinaryTabs && <TabsTrigger value="pip">PIP</TabsTrigger>}
-        </TabsList>
 
         {/* OVERVIEW TAB â€” Step 9 */}
         <TabsContent value="overview">

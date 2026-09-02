@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
+import { searchDestinations } from '@/lib/nav-search'
 import RolePreviewSwitcher from '@/components/role-preview-switcher'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   LayoutDashboard,
@@ -40,6 +41,10 @@ import {
   Heart,
   Sparkles,
   AlertTriangle,
+  ArrowRight,
+  Target,
+  ClipboardCheck,
+  FileWarning,
   Network,
   CalendarCheck,
   MessageSquare,
@@ -358,10 +363,13 @@ const PERFORMANCE_NAV: NavGroup[] = [
     label: 'Performance',
     items: [
       { href: '/dashboard/performance', label: 'Overview', icon: TrendingUp },
+      { href: '/dashboard/performance?tab=goals', label: 'Goals', icon: Target },
+      { href: '/dashboard/performance?tab=reviews', label: 'Reviews', icon: ClipboardCheck },
       { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
       { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
       { href: '/dashboard/performance/appraisals', label: 'Appraisal Forms', icon: ClipboardList },
-      { href: '/dashboard/performance?tab=pip', label: 'PIP', icon: AlertTriangle },
+      { href: '/dashboard/performance?tab=showcause', label: 'Show Cause', icon: FileWarning, roles: ['HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
+      { href: '/dashboard/performance?tab=pip', label: 'PIP', icon: AlertTriangle, roles: ['HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
       { href: '/dashboard/performance/increments', label: 'Increments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       { href: '/dashboard/culture', label: 'Recognition', icon: Sparkles },
     ],
@@ -644,9 +652,11 @@ interface SearchResultItem {
   href: string
 }
 
-function SearchBar() {
+function SearchBar({ role }: { role: string }) {
   const router = useRouter()
-  const [open, setOpen] = useState(false)
+  // The bar is always on screen. Hidden behind an icon, nobody could tell the
+  // app had search at all, and Ctrl+K only helps people who already know.
+  const [open, setOpen] = useState(true)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResultItem[]>([])
   const [loading, setLoading] = useState(false)
@@ -663,7 +673,6 @@ function SearchBar() {
         setOpen(true)
       }
       if (e.key === 'Escape') {
-        setOpen(false)
         setQuery('')
       }
     }
@@ -677,7 +686,8 @@ function SearchBar() {
     function onClick(e: MouseEvent) {
       const el = document.getElementById('hr-search-wrapper')
       if (el && !el.contains(e.target as Node)) {
-        setOpen(false)
+        setResults([])
+        setQuery('')
       }
     }
     document.addEventListener('mousedown', onClick)
@@ -709,6 +719,10 @@ function SearchBar() {
     return () => clearTimeout(t)
   }, [query, open])
 
+  // Screens, matched in the browser — no round trip, so a destination appears
+  // the moment you have typed enough of its name.
+  const pages = useMemo(() => searchDestinations(query, role), [query, role])
+
   // suppress unused
   void wrapperRef
   void containerRef
@@ -723,18 +737,8 @@ function SearchBar() {
   }
 
   return (
-    <div id="hr-search-wrapper" className="relative w-auto sm:w-[280px] max-w-full min-w-0">
-      {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          className="p-2 rounded-full text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-          aria-label="Search"
-          title="Search (Ctrl+K)"
-        >
-          <Search className="w-5 h-5" />
-        </button>
-      ) : (
+    <div id="hr-search-wrapper" className="relative w-full sm:w-[340px] max-w-full min-w-0">
+      {(
         <div className="relative">
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 bg-white shadow-sm">
             <Search className="w-4 h-4 text-gray-400" />
@@ -743,20 +747,46 @@ function SearchBar() {
               type="text"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search people, payslips, policies, leaves…"
+              placeholder="Search people, leave, payroll, onboarding…"
               className="flex-1 outline-none text-sm bg-transparent"
             />
             <kbd className="text-[10px] text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">
               Esc
             </kbd>
           </div>
-          {(query.trim().length >= 2 || loading) && (
+          {(query.trim().length >= 1 || loading) && (
             <div className="absolute top-full left-0 right-0 mt-1 max-h-[400px] overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg z-50">
               {loading && (
                 <div className="px-3 py-2 text-xs text-gray-500">Searching…</div>
               )}
-              {!loading && results.length === 0 && (
+              {pages.length > 0 && (
+                <div className="border-b border-gray-100">
+                  <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                    Go to
+                  </p>
+                  {pages.map((d) => (
+                    <button
+                      key={d.href}
+                      type="button"
+                      onClick={() => { router.push(d.href); setQuery(''); setResults([]) }}
+                      className="flex items-center gap-2 w-full text-left px-3 py-2 hover:bg-gray-50"
+                    >
+                      <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-sm font-medium text-gray-900 truncate">{d.label}</span>
+                        <span className="block text-xs text-gray-500 truncate">{d.section}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {!loading && results.length === 0 && pages.length === 0 && (
                 <div className="px-3 py-2 text-xs text-gray-500">No results.</div>
+              )}
+              {!loading && results.length > 0 && (
+                <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                  Records
+                </p>
               )}
               {!loading &&
                 results.map((r) => (
@@ -1078,7 +1108,7 @@ export default function DashboardChrome({
 
           <div className="flex-1" />
 
-          <SearchBar />
+          <SearchBar role={role} />
 
           <div className="flex items-center gap-1.5">
             <Link

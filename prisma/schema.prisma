@@ -3126,6 +3126,16 @@ model AppraisalForm {
   /// [{ goal, actual, rating }] — the reviewing officer's section
   goals       Json?
 
+  /// The increment the score argues for. Captured on the form rather than
+  /// recomputed on read: the salary moves afterwards, and the appraisal has
+  /// to keep saying what it said at the time.
+  currentSalary   Float?
+  incrementTrack  String? // BIANNUAL | ANNUAL — which band applied
+  recommendedPct  Float? // what the score maps to
+  approvedPct     Float? // what was actually given, when it differs
+  incrementAmount Float?
+  proposedSalary  Float?
+
   // For HR Department use only
   completedOn    DateTime?
   incrementOf    String?

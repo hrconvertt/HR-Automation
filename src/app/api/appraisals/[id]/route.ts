@@ -88,6 +88,20 @@ export async function PATCH(
   }
   if ('trainingNeeds' in body) data.trainingNeeds = text(body.trainingNeeds, 2000)
 
+  // The increment the score works out to, kept with the form. Recomputing it
+  // on read would show next year's salary against last year's appraisal.
+  const num = (v: unknown) =>
+    typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : null
+  for (const f of ['currentSalary', 'recommendedPct', 'incrementAmount', 'proposedSalary'] as const) {
+    if (f in body) data[f] = num(body[f])
+  }
+  if ('approvedPct' in body) {
+    data.approvedPct = body.approvedPct == null ? null : num(body.approvedPct)
+  }
+  if ('incrementTrack' in body) {
+    data.incrementTrack = body.incrementTrack === 'BIANNUAL' ? 'BIANNUAL' : 'ANNUAL'
+  }
+
   for (const f of ['periodFrom', 'periodTo', 'completedOn', 'incrementWef',
     'promotedWef', 'transferredWef'] as const) {
     if (f in body) data[f] = date(body[f])

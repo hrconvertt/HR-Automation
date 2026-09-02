@@ -217,6 +217,15 @@ export default async function AppraisalPrintPage(
           <span><strong>B/w 50 &amp; 69</strong> – Average</span>
           <span><strong>Below 49</strong> – Poor</span>
         </div>
+        {form.currentSalary != null && form.incrementAmount != null && form.incrementAmount > 0 && (
+          <p style={{ fontSize: '10.5pt', margin: '0 0 10pt' }}>
+            <strong>Increment earned:</strong>{' '}
+            {(form.approvedPct ?? form.recommendedPct ?? 0)}% of PKR{' '}
+            {Math.round(form.currentSalary).toLocaleString('en-PK')} ={' '}
+            PKR {Math.round(form.incrementAmount).toLocaleString('en-PK')} — revised monthly
+            salary PKR {Math.round(form.proposedSalary ?? 0).toLocaleString('en-PK')}.
+          </p>
+        )}
         {bandFor(avg) && (
           <p style={{ fontSize: '10.5pt', margin: '0 0 12pt' }}>
             <strong>Rating: {bandFor(avg)}</strong>
@@ -283,7 +292,11 @@ export default async function AppraisalPrintPage(
           <div className="head">For HR Department use only</div>
           Appraisal completed on: <span className="fill">{d(form.completedOn)}</span><br />
           The employee is eligible for an increment of{' '}
-          <span className="fill">{form.incrementOf ?? ''}</span> w.e.f{' '}
+          <span className="fill">
+            {form.approvedPct != null || form.recommendedPct != null
+              ? `${form.approvedPct ?? form.recommendedPct}%`
+              : (form.incrementOf ?? '')}
+          </span> w.e.f{' '}
           <span className="fill">{d(form.incrementWef)}</span><br />
           The employee can be promoted to{' '}
           <span className="fill">{form.promotedTo ?? ''}</span> w.e.f{' '}

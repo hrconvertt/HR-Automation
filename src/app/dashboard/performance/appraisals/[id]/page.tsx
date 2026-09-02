@@ -14,6 +14,7 @@ import { prisma } from '@/lib/prisma'
 import { AppraisalFormEditor } from '../_components/appraisal-form-editor'
 import type { Ratings, GoalRow, DevelopmentRow } from '@/lib/appraisal-form'
 import { EMPTY_GOALS, EMPTY_DEVELOPMENT } from '@/lib/appraisal-form'
+import { resolveTrack } from '@/lib/increment-schedule'
 
 export default async function AppraisalFormPage(
   { params }: { params: Promise<{ id: string }> },
@@ -34,7 +35,14 @@ export default async function AppraisalFormPage(
         select: {
           id: true, fullName: true, employeeCode: true, designation: true,
           joiningDate: true, dob: true, email: true,
+          incrementTrack: true,
           department: { select: { name: true } },
+          salary: {
+            select: {
+              basic: true, houseRent: true, utilities: true, food: true,
+              fuel: true, medicalAllowance: true, otherAllowance: true,
+            },
+          },
         },
       },
       appraiser: { select: { id: true, fullName: true } },
@@ -51,6 +59,16 @@ export default async function AppraisalFormPage(
   })
 
   const iso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : '')
+
+  // Pay as it stands today, unless the form already captured it — an
+  // appraisal signed six months ago should still show the salary it argued
+  // from, not whatever the person earns now.
+  const sal = form.employee.salary
+  const liveGross = sal
+    ? sal.basic + sal.houseRent + sal.utilities + sal.food + sal.fuel
+      + sal.medicalAllowance + sal.otherAllowance
+    : 0
+  const track = resolveTrack(form.incrementTrack ?? form.employee.incrementTrack)
 
   return (
     <div className="space-y-4">
@@ -82,6 +100,8 @@ export default async function AppraisalFormPage(
           joiningDate: iso(form.employee.joiningDate),
           dateOfBirth: iso(form.employee.dob),
         }}
+        currentSalary={form.currentSalary ?? liveGross}
+        track={track}
         initial={{
           periodFrom: iso(form.periodFrom),
           periodTo: iso(form.periodTo),
@@ -106,6 +126,7 @@ export default async function AppraisalFormPage(
           transferredAs: form.transferredAs ?? '',
           transferredWef: iso(form.transferredWef),
           trainingNeeds: form.trainingNeeds ?? '',
+          approvedPct: form.approvedPct,
           appraiserSigned: form.appraiserSignedAt != null,
           reviewerSigned: form.reviewerSignedAt != null,
           hrSigned: form.hrSignedAt != null,
