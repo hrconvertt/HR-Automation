@@ -38,7 +38,13 @@ export async function GET(request: NextRequest) {
   }
 
   const [assets, assignments] = await Promise.all([
-    prisma.asset.findMany({ where: assetWhere, orderBy: { createdAt: 'desc' }, take: 100 }),
+    // The whole register, ordered as it reads on paper. take was 100 and the
+    // list is 48 today, but a register only grows.
+    prisma.asset.findMany({
+      where: assetWhere,
+      orderBy: [{ category: 'asc' }, { subCategory: 'asc' }, { name: 'asc' }],
+      take: 2000,
+    }),
     prisma.assetAssignment.findMany({
       where: assignWhere,
       orderBy: { assignedDate: 'desc' },

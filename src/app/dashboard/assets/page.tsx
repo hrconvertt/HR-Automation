@@ -2,15 +2,17 @@
 
 import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { Plus, X } from 'lucide-react'
-import { formatDate, formatCurrency } from '@/lib/utils'
+import { formatDate } from '@/lib/utils'
+import { AssetRegister, type RegisterAsset } from './_components/asset-register'
 
-interface Asset { id: string; name: string; type: string; brand: string | null; model: string | null; serialNo: string | null; value: number | null; status: string }
+interface Asset extends RegisterAsset {
+  type: string; model: string | null; serialNo: string | null; value: number | null
+}
 interface Assignment {
   id: string; assignedDate: string; condition: string | null;
   assetCode: string | null; assetType: string | null; serialNumber: string | null;
@@ -36,13 +38,6 @@ const ASSET_TYPES = [
   { value: 'DOCUMENTS_CONTRACTS', label: 'Documents / Contracts', dept: 'HR' },
   { value: 'OTHER', label: 'Other', dept: 'Admin' },
 ]
-
-const statusVariant: Record<string, 'success' | 'default' | 'warning' | 'destructive'> = {
-  AVAILABLE: 'success',
-  ASSIGNED: 'default',
-  MAINTENANCE: 'warning',
-  DISPOSED: 'destructive',
-}
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([])
@@ -78,35 +73,16 @@ export default function AssetsPage() {
         )}
       </div>
 
-      <Card>
-        <CardHeader className="border-b border-slate-100"><CardTitle>Asset Inventory ({assets.length})</CardTitle></CardHeader>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Brand / Model</TableHead>
-              <TableHead>Serial</TableHead>
-              {isHR && <TableHead>Cost</TableHead>}
-              <TableHead>Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {assets.length === 0 ? (
-              <TableRow><TableCell colSpan={isHR ? 6 : 5} className="text-center py-8 text-gray-400">No assets. Click Add Asset to start.</TableCell></TableRow>
-            ) : assets.map((a) => (
-              <TableRow key={a.id}>
-                <TableCell className="font-medium">{a.name}</TableCell>
-                <TableCell><Badge variant="secondary">{a.type.replace(/_/g, ' ')}</Badge></TableCell>
-                <TableCell>{[a.brand, a.model].filter(Boolean).join(' / ') || '—'}</TableCell>
-                <TableCell className="font-mono text-xs">{a.serialNo ?? '—'}</TableCell>
-                {isHR && <TableCell>{a.value ? formatCurrency(a.value) : '—'}</TableCell>}
-                <TableCell><Badge variant={statusVariant[a.status] ?? 'secondary'}>{a.status}</Badge></TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+      <AssetRegister assets={assets} />
+
+      {assets.length === 0 && (
+        <Card>
+          <CardHeader className="border-b border-slate-100"><CardTitle>Asset Inventory</CardTitle></CardHeader>
+          <p className="text-center py-8 text-gray-400 text-sm">
+            No assets yet. Click Add Asset to start.
+          </p>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="border-b border-slate-100"><CardTitle>Active Assignments</CardTitle></CardHeader>
