@@ -137,18 +137,23 @@ export function JdReviewButton({ requisitionId, title, jdStatus }: Props) {
 
   return (
     <>
+      {/* One width, whatever the state. The label used to carry it — "Generate
+          JD" / "Review JD" / "View JD" — which made thirteen rows of ragged
+          buttons. The dot carries it now and the row stays a grid. */}
       <button
         type="button"
         onClick={openDialog}
-        className={`inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border ${
-          isPosted ? 'text-slate-700 border-slate-100 bg-slate-50 hover:bg-slate-100' :
-          isDraft  ? 'text-slate-700 border-slate-100 bg-slate-50 hover:bg-slate-100' :
-                     'text-slate-700 border-slate-100 bg-slate-50 hover:bg-slate-100'
-        }`}
+        className="inline-flex items-center justify-center gap-1.5 w-[74px] text-[11px] font-medium px-2 py-1 rounded-md border text-slate-700 border-slate-100 bg-slate-50 hover:bg-slate-100"
         title={label}
       >
+        <span
+          aria-hidden
+          className={`w-1.5 h-1.5 rounded-full ${
+            isPosted ? 'bg-emerald-500' : isDraft ? 'bg-amber-500' : 'bg-slate-300'
+          }`}
+        />
         <Icon className="w-3 h-3" />
-        {label}
+        JD
       </button>
 
       <Dialog open={open} onOpenChange={setOpen}>

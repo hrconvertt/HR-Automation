@@ -355,6 +355,17 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                   <p className="text-xs text-slate-500">
                     <span className="font-semibold text-slate-900">{liveReqs.length}</span> {liveReqs.length === 1 ? 'requisition' : 'requisitions'} on the hiring board
+                    <span className="ml-3 inline-flex items-center gap-3 text-[11px] text-slate-400 align-middle">
+                      <span className="inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" /> not started
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> in progress
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> done
+                      </span>
+                    </span>
                   </p>
                 </div>
                 <Table>
@@ -364,14 +375,16 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                       <TableHead>Type</TableHead>
                       <TableHead>Vacancies</TableHead>
                       <TableHead>Status</TableHead>
-                      {isHR && <TableHead>JD</TableHead>}
+                      {isHR && <TableHead className="text-center">JD</TableHead>}
+                      {isHR && <TableHead className="text-center">Filters</TableHead>}
+                      {isHR && <TableHead className="text-center">Form</TableHead>}
                       <TableHead>Closes</TableHead>
                       {isHR && <TableHead></TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {liveReqs.length === 0 ? (
-                      <TableRow><TableCell colSpan={isHR ? 7 : 5} className="text-center py-10 text-slate-400 text-sm">
+                      <TableRow><TableCell colSpan={isHR ? 9 : 5} className="text-center py-10 text-slate-400 text-sm">
                         No open requisitions yet. {isHR && 'Click "New Requisition" to add one, or approve a pending request.'}
                       </TableCell></TableRow>
                     ) : (
@@ -381,14 +394,24 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                           <TableCell><Badge variant="secondary">{r.type}</Badge></TableCell>
                           <TableCell className="tabular-nums">{r.vacancies}</TableCell>
                           <TableCell><Badge variant={STATUS_TONE[r.status] ?? 'secondary'}>{r.status}</Badge></TableCell>
+                          {/* One chip per column, all the same width. Three
+                              different-length buttons stacked in a single cell
+                              made thirteen rows of ragged edges. */}
                           {isHR && (
-                            <TableCell>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                <JdReviewButton requisitionId={r.id} title={r.title} jdStatus={r.jdStatus} />
-                                <KnockoutEditorButton requisitionId={r.id} title={r.title} jdContent={r.jdContent} />
-                                <ManpowerFormButton requisitionId={r.id}
-                                  existingFormId={r.manpowerForm?.id ?? null} />
-                              </div>
+                            <TableCell className="text-center">
+                              <JdReviewButton requisitionId={r.id} title={r.title} jdStatus={r.jdStatus} />
+                            </TableCell>
+                          )}
+                          {isHR && (
+                            <TableCell className="text-center">
+                              <KnockoutEditorButton requisitionId={r.id} title={r.title} jdContent={r.jdContent} />
+                            </TableCell>
+                          )}
+                          {isHR && (
+                            <TableCell className="text-center">
+                              <ManpowerFormButton requisitionId={r.id}
+                                existingFormId={r.manpowerForm?.id ?? null}
+                                status={r.manpowerForm?.status ?? null} />
                             </TableCell>
                           )}
                           <TableCell className="text-slate-500">{r.closingDate ? formatDate(r.closingDate) : '—'}</TableCell>

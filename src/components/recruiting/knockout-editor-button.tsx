@@ -110,7 +110,7 @@ export function KnockoutEditorButton({ requisitionId, title, jdContent }: Props)
       <button
         type="button"
         onClick={openDialog}
-        className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border text-slate-700 border-slate-100 bg-slate-50 hover:bg-slate-100"
+        className="inline-flex items-center justify-center gap-1 w-[74px] text-[11px] font-medium px-2 py-1 rounded-md border text-slate-700 border-slate-100 bg-slate-50 hover:bg-slate-100"
         title="Knockout filters"
       >
         <Filter className="w-3 h-3" />
