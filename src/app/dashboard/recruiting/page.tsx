@@ -13,6 +13,7 @@ import { DecideRequestButtons } from '@/components/recruiting/decide-request-but
 import { AddCandidateButton } from '@/components/recruiting/add-candidate-button'
 import { CandidateCard } from '@/components/recruiting/candidate-card'
 import { RequisitionStatusMenu } from '@/components/recruiting/requisition-status-menu'
+import { ManpowerFormButton } from '@/components/recruiting/manpower-form-button'
 import { JdReviewButton } from '@/components/recruiting/jd-review-button'
 import { InterviewFeedbackButton } from '@/components/recruiting/interview-feedback-button'
 import { TalentPoolView } from '@/components/recruiting/talent-pool-view'
@@ -51,7 +52,10 @@ async function getData() {
     prisma.jobRequisition.findMany({
       orderBy: { createdAt: 'desc' },
       take: 100,
-      include: { requestedBy: { select: { fullName: true } } },
+      include: {
+        requestedBy: { select: { fullName: true } },
+        manpowerForm: { select: { id: true, status: true } },
+      },
     }),
     prisma.candidate.findMany({
       // Strong matches surface first per column. Within the same score,
@@ -382,6 +386,8 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                               <div className="flex items-center gap-1.5 flex-wrap">
                                 <JdReviewButton requisitionId={r.id} title={r.title} jdStatus={r.jdStatus} />
                                 <KnockoutEditorButton requisitionId={r.id} title={r.title} jdContent={r.jdContent} />
+                                <ManpowerFormButton requisitionId={r.id}
+                                  existingFormId={r.manpowerForm?.id ?? null} />
                               </div>
                             </TableCell>
                           )}

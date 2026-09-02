@@ -1442,6 +1442,7 @@ model JobRequisition {
   // this number qualify for auto talent-pool inclusion. Default 60.
   scoreThreshold Int @default(60)
 
+  manpowerForm     ManpowerRequisition?
   postings         JobPosting[]
   rubrics          InterviewRubric[]
   candidates       Candidate[]
@@ -3159,4 +3160,70 @@ model AppraisalForm {
   @@index([employeeId])
   @@index([periodTo])
   @@map("appraisal_forms")
+}
+
+
+/// Convertt's Manpower Requisition Form — the paper form that has to be filled
+/// and approved before a vacancy is worked, kept beside the requisition it
+/// authorises rather than inside it. JobRequisition is the live hiring record
+/// (JD, postings, candidates, knockouts); this is the signed piece of paper
+/// that says the headcount was granted, and the two have different lifetimes.
+model ManpowerRequisition {
+  id            String         @id @default(cuid())
+  requisitionId String         @unique
+  requisition   JobRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+
+  jobCode       String?
+  costCenter    String?
+  designation   String?
+  noOfPositions Int?
+
+  /// PERMANENT | TEMPORARY
+  appointmentType String?
+  /// Whether the headcount is already budgeted.
+  sanctioned      Boolean?
+  jdAttached      Boolean?
+  /// Free text — "6 months", "till project close" — because a contract is not
+  /// always a whole number of months.
+  contractDuration String?
+  workDescription  String?
+
+  // Manpower currently available in the department
+  currentPermanent Int?
+  currentTemporary Int?
+  currentConsultants Int?
+
+  grade             String?
+  departmentHead    String?
+  reportingHead     String?
+  /// REPLACEMENT | ADDITION | NEW_POSITION
+  requirementNature String?
+  replacingWhom     String?
+  qualificationMust String?
+  qualificationAdditional String?
+  desiredExperience String?
+  skills            String?
+  placeOfWork       String?
+  /// "Requirement to be filled in by" — the date the role is needed by.
+  fillBy            DateTime?
+
+  // The approval chain, in the order the form prints it. Each name is stored
+  // as text: a Director signing today may not be an employee record tomorrow,
+  // and the form has to keep saying who signed it.
+  requestedBy      String?
+  requisitionDate  DateTime?
+  divisionHead     String?
+  divisionHeadDate DateTime?
+  headHr           String?
+  headHrDate       DateTime?
+  director         String?
+  directorDate     DateTime?
+  managingDirector String?
+  managingDirectorDate DateTime?
+
+  status    String   @default("DRAFT") // DRAFT | SUBMITTED | APPROVED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("manpower_requisitions")
 }
