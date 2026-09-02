@@ -23,28 +23,15 @@ import { prisma } from '@/lib/prisma'
 import { isFounder } from '@/lib/review-scope'
 import { REVIEW_WINDOW_DAYS } from '@/lib/probation-review'
 import { INCREMENT_RULES, ruleRange } from '@/lib/pay-split'
+import { incrementDue as nextIncrementDue, daysAway, FIRST_REVIEW_MONTHS } from '@/lib/increment-schedule'
 import { ClipboardList, ShieldCheck, TrendingUp } from 'lucide-react'
-
-const CYCLE_MONTHS = 12
-const FIRST_REVIEW_MONTHS = 6
 
 const pkr = (n: number) => 'PKR ' + Math.round(n).toLocaleString('en-PK')
 
 const day = (d: Date | null) =>
   d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
 
-function addMonths(d: Date, months: number): Date {
-  const c = new Date(d)
-  c.setMonth(c.getMonth() + months)
-  return c
-}
-
-/** Whole days from today, negative once the date has passed. */
-function daysAway(d: Date): number {
-  const a = new Date(); a.setHours(0, 0, 0, 0)
-  const b = new Date(d); b.setHours(0, 0, 0, 0)
-  return Math.round((b.getTime() - a.getTime()) / 86_400_000)
-}
+const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
 
 interface Due {
   employeeId: string
@@ -94,6 +81,7 @@ export default async function AppraisalsPage() {
       where: { status: 'ACTIVE' },
       select: {
         id: true, fullName: true, designation: true, joiningDate: true,
+        incrementTrack: true,
         department: { select: { name: true } },
         salary: {
           select: {
@@ -141,8 +129,8 @@ export default async function AppraisalsPage() {
       currentPay: gross(p.employee.salary),
       band: ruleRange('PROBATION_TO_PERMANENT'),
       detail: left < 0
-        ? `Probation ended ${Math.abs(left)} days ago`
-        : `Probation ends in ${left} days`,
+        ? `Probation ended ${plural(Math.abs(left), 'day')} ago`
+        : `Probation ends in ${plural(left, 'day')}`,
       href: `/dashboard/probation/${p.id}`,
       hasForm: reviewed.has(p.employeeId),
     })
@@ -152,10 +140,14 @@ export default async function AppraisalsPage() {
   for (const e of employees) {
     if (onProbation.has(e.id)) continue
     if (isFounder(e.designation)) continue
-    const anchor = lastRaise.get(e.id) ?? e.joiningDate
-    if (!anchor) continue
-    const window = lastRaise.has(e.id) ? CYCLE_MONTHS : FIRST_REVIEW_MONTHS
-    const dueDate = addMonths(anchor, window)
+    // Same maths as the increments tab, from the same place — see
+    // src/lib/increment-schedule.ts.
+    const { track, dueDate, neverRaised } = nextIncrementDue({
+      incrementTrack: e.incrementTrack,
+      lastIncrement: lastRaise.get(e.id) ?? null,
+      joiningDate: e.joiningDate,
+    })
+    if (!dueDate) continue
     const left = daysAway(dueDate)
     if (left > REVIEW_WINDOW_DAYS) continue
     due.push({
@@ -167,10 +159,15 @@ export default async function AppraisalsPage() {
       dueDate,
       daysLeft: left,
       currentPay: gross(e.salary),
-      band: ruleRange('ANNUAL'),
-      detail: left < 0
-        ? `Increment was due ${Math.abs(left)} days ago`
-        : `Increment month starts in ${left} days`,
+      // The band the person's own track earns, not the annual one for
+      // everybody — 24% against a six-monthly reviewer is a wrong number to
+      // walk into a review with.
+      band: ruleRange(track),
+      detail: (left < 0
+        ? `Increment was due ${plural(Math.abs(left), 'day')} ago`
+        : `Increment month starts in ${plural(left, 'day')}`)
+        + ` · ${INCREMENT_RULES[track].label.toLowerCase()}`
+        + (neverRaised ? ', first review' : ''),
       href: `/dashboard/performance/increments/${e.id}`,
       hasForm: false,
     })
@@ -195,7 +192,7 @@ export default async function AppraisalsPage() {
         <Stat label="Due now" value={String(due.length)} sub={`within ${REVIEW_WINDOW_DAYS} days`} />
         <Stat label="Overdue" value={String(overdue.length)} sub="date already passed" />
         <Stat label="Probation" value={String(probationDue.length)} sub={`confirmation at ${ruleRange('PROBATION_TO_PERMANENT')}`} />
-        <Stat label="Increment" value={String(incrementDue.length)} sub={`annual at ${ruleRange('ANNUAL')}`} />
+        <Stat label="Increment" value={String(incrementDue.length)} sub="on their own track" />
       </div>
 
       {due.length === 0 ? (
@@ -275,9 +272,10 @@ export default async function AppraisalsPage() {
           </li>
           <li>
             <strong className="text-slate-900">Permanent</strong> — {REVIEW_WINDOW_DAYS} days
-            before the increment falls due: {CYCLE_MONTHS} months after the last raise, or{' '}
-            {FIRST_REVIEW_MONTHS} months after joining for anyone who has not had one yet.
-            {' '}{INCREMENT_RULES.ANNUAL.note}
+            before the increment falls due: six months after the last raise on the six-monthly
+            track and twelve on the annual one, or {FIRST_REVIEW_MONTHS} months after joining
+            for anyone who has not had one yet. The band shown on each row is that person&apos;s
+            own — {ruleRange('BIANNUAL')} six-monthly, {ruleRange('ANNUAL')} annual.
           </li>
         </ul>
       </div>

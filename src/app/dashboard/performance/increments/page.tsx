@@ -6,9 +6,10 @@
  * worth, and when the next one falls due all come off the same history the
  * increment letters are generated from.
  *
- * Convertt's stated cycle is annual, with a first review six months after
- * joining. So someone with no increment yet is measured from their joining
- * date at six months, and everyone else from their last increment at twelve.
+ * A first review falls six months after joining; after that the wait is the
+ * employee's own track — six months or twelve. That maths lives in
+ * src/lib/increment-schedule.ts because the appraisal forms need the same
+ * answer, and when each screen worked it out for itself they disagreed.
  */
 
 import { cookies } from 'next/headers'
@@ -18,10 +19,8 @@ import { prisma } from '@/lib/prisma'
 import { isFounder } from '@/lib/review-scope'
 import Link from 'next/link'
 import { INCREMENT_RULES, ruleRange, incrementFor, type IncrementTrack } from '@/lib/pay-split'
+import { incrementDue, FIRST_REVIEW_MONTHS } from '@/lib/increment-schedule'
 import { TrackPicker, TrackBand } from './_components/track-picker'
-
-const FIRST_REVIEW_MONTHS = 6
-const CYCLE_MONTHS = 12
 
 const pkr = (n: number) => 'PKR ' + Math.round(n).toLocaleString('en-PK')
 
@@ -37,12 +36,6 @@ const monthLabel = (key: string) =>
   new Date(key + '-01T00:00:00Z').toLocaleDateString('en-GB', {
     month: 'long', year: 'numeric', timeZone: 'UTC',
   })
-
-function addMonths(d: Date, months: number): Date {
-  const c = new Date(d)
-  c.setMonth(c.getMonth() + months)
-  return c
-}
 
 const monthsBetween = (a: Date, b: Date) =>
   (b.getFullYear() - a.getFullYear()) * 12 + (b.getMonth() - a.getMonth())
@@ -120,13 +113,11 @@ export default async function IncrementsPage() {
 
     // No increment yet means the clock runs from joining, at six months.
     const anchor = last?.effectiveDate ?? e.joiningDate
-    // Their own cycle decides the wait — six-monthly and annual are not the
-    // same gap, so a fixed twelve months would have shown half the company a
-    // date six months later than it really is.
-    const track = (e.incrementTrack === 'BIANNUAL' ? 'BIANNUAL' : 'ANNUAL') as IncrementTrack
-    const cycle = INCREMENT_RULES[track].cycleMonths ?? CYCLE_MONTHS
-    const window = last ? cycle : FIRST_REVIEW_MONTHS
-    const dueDate = anchor ? addMonths(anchor, window) : null
+    const { track, dueDate } = incrementDue({
+      incrementTrack: e.incrementTrack,
+      lastIncrement: last?.effectiveDate ?? null,
+      joiningDate: e.joiningDate,
+    })
     const monthsSince = anchor ? monthsBetween(anchor, today) : null
     const overdueBy = dueDate ? monthsBetween(dueDate, today) : null
 
