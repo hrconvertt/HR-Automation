@@ -9,6 +9,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@
 import { Plus, X } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { AssetRegister, type RegisterAsset } from './_components/asset-register'
+import { depreciate } from '@/lib/asset-depreciation'
 
 interface Asset extends RegisterAsset {
   type: string; model: string | null; serialNo: string | null; value: number | null
@@ -130,6 +131,52 @@ export default function AssetsPage() {
   )
 }
 
+function AddPreview({ cost, life, residual, purchaseDate }: {
+  cost: string; life: string; residual: string; purchaseDate: string
+}) {
+  const c = Number(cost)
+  if (!cost || !Number.isFinite(c) || c <= 0) return null
+  const d = depreciate({
+    purchasePricePkr: c,
+    estimatedLifeYears: life ? Number(life) : null,
+    residualValue: residual ? Number(residual) : null,
+    purchaseDate: purchaseDate || null,
+  })
+  const money = (n: number | null) => (n == null ? '—' : 'PKR ' + Math.round(n).toLocaleString('en-PK'))
+  return (
+    <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-3 py-2.5">
+      <p className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold mb-1.5">
+        Works out to
+      </p>
+      <div className="grid grid-cols-3 gap-x-4 gap-y-1.5 text-[12px]">
+        <Cell k="Residual" v={money(d.residual)} />
+        <Cell k="Per year" v={money(d.annual)} />
+        <Cell k="Per month" v={money(d.monthly)} />
+        <Cell k="Total months" v={d.totalMonths != null ? String(d.totalMonths) : '—'} />
+        <Cell k="Months elapsed" v={d.monthsElapsed != null ? String(d.monthsElapsed) : '—'} />
+        <Cell k="Months left" v={d.monthsLeft != null ? String(d.monthsLeft) : '—'} />
+        <Cell k="Years left" v={d.yearsLeft != null ? d.yearsLeft.toFixed(1) : '—'} />
+        <Cell k="Written off" v={money(d.accumulated)} />
+        <Cell k="Book value" v={money(d.bookValue)} />
+      </div>
+      {!life && (
+        <p className="text-[11px] text-slate-400 mt-1.5">
+          Set an estimated life and the rest of these fill in.
+        </p>
+      )}
+    </div>
+  )
+}
+
+function Cell({ k, v }: { k: string; v: string }) {
+  return (
+    <div>
+      <span className="block text-[10px] text-slate-400">{k}</span>
+      <span className="tabular-nums text-slate-800">{v}</span>
+    </div>
+  )
+}
+
 function AddAssetDialog({
   employees, assetTypes, onClose, onDone,
 }: {
@@ -149,6 +196,17 @@ function AddAssetDialog({
   const [assignedToEmployeeId, setAssignedToEmployeeId] = useState('')
   const [notes, setNotes] = useState('')
   const [assetCode, setAssetCode] = useState('')
+  // Register fields. Without a life and a cost the Assets screen can compute
+  // nothing for this asset, so the form asks for them rather than leaving a
+  // row of blanks to be filled in later.
+  const [category, setCategory] = useState('Electronic')
+  const [subCategory, setSubCategory] = useState('')
+  const [quantity, setQuantity] = useState('1')
+  const [estimatedLifeYears, setEstimatedLifeYears] = useState('')
+  const [residualValue, setResidualValue] = useState('')
+  const [currentMarketValue, setCurrentMarketValue] = useState('')
+  const [photoUrl, setPhotoUrl] = useState('')
+  const [locationLabel, setLocationLabel] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -172,6 +230,13 @@ function AddAssetDialog({
         notes,
         assignedToEmployeeId: assignedToEmployeeId || null,
         assetCode,
+        category, subCategory,
+        quantity: quantity || 1,
+        estimatedLifeYears: estimatedLifeYears || null,
+        residualValue: residualValue || null,
+        currentMarketValue: currentMarketValue || null,
+        photoUrl: photoUrl || null,
+        locationLabel: locationLabel || null,
       }),
     })
     setBusy(false)
@@ -221,9 +286,34 @@ function AddAssetDialog({
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
+            <Field label="Category"><Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Electronic" /></Field>
+            <Field label="Sub-category"><Input value={subCategory} onChange={(e) => setSubCategory(e.target.value)} placeholder="Laptop" /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Quantity"><Input type="number" min="0" value={quantity} onChange={(e) => setQuantity(e.target.value)} /></Field>
+            <Field label="Location / department"><Input value={locationLabel} onChange={(e) => setLocationLabel(e.target.value)} placeholder="Kitchen, CEO Office, Media Team…" /></Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Cost (PKR)"><Input type="number" value={costPkr} onChange={(e) => setCostPkr(e.target.value)} /></Field>
             <Field label="Purchase Date"><Input type="date" value={purchaseDate} onChange={(e) => setPurchaseDate(e.target.value)} /></Field>
           </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Estimated life (years)">
+              <Input type="number" step="0.5" min="0" value={estimatedLifeYears}
+                onChange={(e) => setEstimatedLifeYears(e.target.value)} placeholder="e.g. 2" />
+            </Field>
+            <Field label="Residual value (PKR)">
+              <Input type="number" value={residualValue} onChange={(e) => setResidualValue(e.target.value)}
+                placeholder={costPkr ? String(Math.round(Number(costPkr) * 0.5)) : 'cost x 50%'} />
+            </Field>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Current market value (PKR)"><Input type="number" value={currentMarketValue} onChange={(e) => setCurrentMarketValue(e.target.value)} /></Field>
+            <Field label="Asset picture (link)"><Input value={photoUrl} onChange={(e) => setPhotoUrl(e.target.value)} placeholder="https://drive.google.com/…" /></Field>
+          </div>
+
+          {/* What those figures come to, before the asset is saved. */}
+          <AddPreview cost={costPkr} life={estimatedLifeYears} residual={residualValue} purchaseDate={purchaseDate} />
           <Field label="Assign To (optional)">
             <Select value={assignedToEmployeeId} onValueChange={setAssignedToEmployeeId}>
               <SelectTrigger><SelectValue placeholder="Unassigned (in inventory)" /></SelectTrigger>

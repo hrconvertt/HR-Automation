@@ -6,7 +6,16 @@
  *     name, assetType, brand, model, serialNumber, conditionAtIssue,
  *     costPkr, purchaseDate, custodianDept, notes,
  *     assignedToEmployeeId (optional), assetCode (optional CON-AST-NNN)
+ *
+ *     Register fields, all optional:
+ *     category, subCategory, quantity, estimatedLifeYears, residualValue,
+ *     currentMarketValue, photoUrl, locationLabel, motherboardNumber
  *   }
+ *
+ * The register fields matter because everything the Assets screen calculates
+ * — depreciation, months left, book value — comes off cost, life and purchase
+ * date. An asset added without a life is a row of blanks on that screen, so
+ * the form asks for them.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -40,6 +49,26 @@ export async function POST(request: NextRequest) {
   const assignedToEmployeeId = body.assignedToEmployeeId ? String(body.assignedToEmployeeId) : null
   const explicitCode = body.assetCode ? String(body.assetCode).trim() : null
 
+  const numOrNull = (v: unknown) => {
+    if (v == null || v === '') return null
+    const n = Number(v)
+    return Number.isFinite(n) ? n : null
+  }
+  const strOrNull = (v: unknown) => (v ? String(v).trim() || null : null)
+
+  const category = strOrNull(body.category)
+  const subCategory = strOrNull(body.subCategory)
+  const quantity = numOrNull(body.quantity) ?? 1
+  const estimatedLifeYears = numOrNull(body.estimatedLifeYears)
+  const currentMarketValue = numOrNull(body.currentMarketValue)
+  const photoUrl = strOrNull(body.photoUrl)
+  const locationLabel = strOrNull(body.locationLabel)
+  const motherboardNumber = strOrNull(body.motherboardNumber)
+  // Residual is half the cost unless it is given — the convention the Asset
+  // Management List is kept to, and the basis of every depreciation figure.
+  const residualValue = numOrNull(body.residualValue)
+    ?? (costPkr != null ? Math.round(costPkr * 0.5) : null)
+
   if (!name) return NextResponse.json({ error: 'Name is required' }, { status: 400 })
 
   // Generate next code if not supplied
@@ -69,6 +98,18 @@ export async function POST(request: NextRequest) {
       purchaseDate,
       value: costPkr,
       status: assignedToEmployeeId ? 'ASSIGNED' : 'AVAILABLE',
+      assetCode,
+      category, subCategory, quantity,
+      modelSerialNumber: serialNumber ?? model,
+      motherboardNumber,
+      estimatedLifeYears,
+      purchasePricePkr: costPkr,
+      currentMarketValue,
+      residualValue,
+      photoUrl,
+      locationLabel,
+      custodyType: assignedToEmployeeId ? 'INDIVIDUAL' : 'SHARED',
+      notes,
     },
   })
 

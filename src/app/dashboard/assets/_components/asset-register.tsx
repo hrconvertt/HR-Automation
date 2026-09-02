@@ -49,6 +49,7 @@ export function AssetRegister({ assets }: { assets: RegisterAsset[] }) {
   const [detail, setDetail] = useState<string | null>(null)
 
   const asOf = useMemo(() => new Date(), [])
+  const today = asOf.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   const totals = useMemo(() => registerTotals(assets, asOf), [assets, asOf])
 
   const groups = useMemo(() => {
@@ -114,13 +115,14 @@ export function AssetRegister({ assets }: { assets: RegisterAsset[] }) {
               </summary>
 
               <div className="overflow-x-auto pb-1">
-                <table className="w-full text-sm min-w-[1750px]">
+                <table className="w-full text-sm min-w-[1850px]">
                   <thead>
                     <tr className="bg-slate-50/70 border-y border-slate-100">
                       <Th>Item</Th>
                       <Th right>Qty</Th>
                       <Th>Where / who</Th>
                       <Th>Purchased</Th>
+                      <Th>Current<br /><span className="font-normal normal-case text-slate-400">date</span></Th>
                       <Th right>Cost</Th>
                       <Th right>Residual<br /><span className="font-normal normal-case text-slate-400">cost x 50%</span></Th>
                       <Th right>Life<br /><span className="font-normal normal-case text-slate-400">years</span></Th>
@@ -161,6 +163,7 @@ export function AssetRegister({ assets }: { assets: RegisterAsset[] }) {
                               <span className="block text-slate-400">{a.custodyType.toLowerCase()}</span>
                             </td>
                             <td className="px-3 py-1.5 text-[11px] text-slate-500 whitespace-nowrap tabular-nums">{day(a.purchaseDate)}</td>
+                            <td className="px-3 py-1.5 text-[11px] text-slate-400 whitespace-nowrap tabular-nums">{today}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-slate-600 whitespace-nowrap">{pkr(d.cost)}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-slate-500 whitespace-nowrap">{pkr(d.residual)}</td>
                             <td className="px-3 py-1.5 text-right tabular-nums text-slate-400 whitespace-nowrap">
@@ -206,7 +209,7 @@ export function AssetRegister({ assets }: { assets: RegisterAsset[] }) {
 
                           {isOpen && (
                             <tr className="bg-slate-50/80 border-b border-slate-100">
-                              <td colSpan={17} className="px-9 py-3">
+                              <td colSpan={18} className="px-9 py-3">
                                 <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-x-6 gap-y-3">
                                   <Cell label="Purchase price" value={pkr(d.cost)} />
                                   <Cell label="Residual (50%)" value={pkr(d.residual)} />
@@ -254,7 +257,7 @@ export function AssetRegister({ assets }: { assets: RegisterAsset[] }) {
                       )
                     })}
                     <tr className="bg-slate-50/70">
-                      <td colSpan={4} className="px-4 py-2 text-right text-[13px] font-semibold text-slate-700">
+                      <td colSpan={5} className="px-4 py-2 text-right text-[13px] font-semibold text-slate-700">
                         {g.category} total
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums font-semibold whitespace-nowrap">{pkr(g.totals.cost)}</td>
