@@ -134,9 +134,30 @@ const FOCUS_PATHS = new Set([
   '/dashboard/attendance/corrections',
 ])
 
+/**
+ * Built, but not shown yet.
+ *
+ * Separate from FOCUS_PATHS on purpose. Focus mode is "what are we polishing
+ * this week" and is driven by an env var; this is "this module is finished
+ * enough to exist but nobody should find it yet", which is a decision, not a
+ * setting. Deleting a line here is the whole of switching one back on.
+ *
+ * The routes still work if the URL is typed — nothing is torn out, only
+ * unlinked, so turning it back on cannot have broken anything in the meantime.
+ *
+ *   /dashboard/assets — the register and its 48 imported assets are in place;
+ *     hidden at Tahreem's request on 2 Sep 2026 until she says otherwise.
+ */
+const HIDDEN_PATHS = new Set([
+  '/dashboard/assets',
+])
+
 function applyFocus(groups: NavGroup[]): NavGroup[] {
-  if (!FOCUS_MODE) return groups
-  return groups
+  const visible = groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => !HIDDEN_PATHS.has(i.href)) }))
+    .filter((g) => g.items.length > 0)
+  if (!FOCUS_MODE) return visible
+  return visible
     .map((g) => ({ ...g, items: g.items.filter((i) => FOCUS_PATHS.has(i.href)) }))
     .filter((g) => g.items.length > 0)
 }

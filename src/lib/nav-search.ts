@@ -56,7 +56,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Org Chart', href: '/dashboard/org-chart', section: 'Talent', keywords: ['hierarchy', 'reporting', 'structure'] },
 
   // Admin
-  { label: 'Assets', href: '/dashboard/assets', section: 'Finance & Admin', keywords: ['laptop', 'equipment', 'devices', 'allocation'] },
+  // Assets is hidden from the menu for now, so search does not offer it either.
   { label: 'Letters', href: '/dashboard/letters', section: 'Admin', keywords: ['experience letter', 'confirmation letter', 'document', 'register'] },
   { label: 'Policies', href: '/dashboard/policies', section: 'Admin', keywords: ['handbook', 'rules', 'playbook'] },
   { label: 'Settings', href: '/dashboard/settings', section: 'Admin', keywords: ['configuration', 'email templates', 'preferences'] },
