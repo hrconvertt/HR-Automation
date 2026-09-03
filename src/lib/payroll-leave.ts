@@ -22,6 +22,7 @@
  */
 import { prisma } from '@/lib/prisma'
 import { dayKey } from '@/lib/date-utils'
+import { interimEnabled } from '@/lib/interim-flags'
 
 export interface MonthLeave {
   /** employeeId → paid leave days */
@@ -37,6 +38,9 @@ export async function leaveDaysForMonth(
   endOfMonth: Date,
   holidayKeys: Set<string>,
 ): Promise<MonthLeave> {
+  // Reading the grid is an interim rule — see Settings > Interim rules. Off,
+  // payroll counts approved requests only.
+  const readGrid = await interimEnabled('interim_payroll_grid_leave')
   const [approvedLeaves, attendanceLeave] = await Promise.all([
     prisma.leaveRequest.findMany({
       where: {
@@ -46,10 +50,12 @@ export async function leaveDaysForMonth(
       },
       select: { employeeId: true, fromDate: true, toDate: true, leaveType: true },
     }),
-    prisma.attendanceLog.findMany({
-      where: { date: { gte: startOfMonth, lte: endOfMonth }, status: 'LEAVE' },
-      select: { employeeId: true, date: true },
-    }),
+    readGrid
+      ? prisma.attendanceLog.findMany({
+        where: { date: { gte: startOfMonth, lte: endOfMonth }, status: 'LEAVE' },
+        select: { employeeId: true, date: true },
+      })
+      : Promise.resolve([] as { employeeId: string; date: Date }[]),
   ])
 
   const paid: Record<string, number> = {}

@@ -443,6 +443,7 @@ const SETTINGS_NAV: NavGroup[] = [
       { href: '/dashboard/settings/daily-logging', label: 'Daily Logging', icon: ClipboardList },
       { href: '/dashboard/settings/users', label: 'Users', icon: UserIcon },
       { href: '/dashboard/settings/time-tracking', label: 'Time Tracking', icon: BarChart3 },
+      { href: '/dashboard/settings/interim-rules', label: 'Interim Rules', icon: AlertTriangle, roles: ['HR_ADMIN', 'EXECUTIVE'] },
     ],
   },
 ]

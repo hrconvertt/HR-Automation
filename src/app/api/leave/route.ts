@@ -6,6 +6,7 @@ import { parseLocalDate, dayKey } from '@/lib/date-utils'
 import { countWorkingDays } from '@/lib/leave-days'
 import { getStageOneApprover, isSeniorStaffRole, isCoFounderDesignation } from '@/lib/leave-approver'
 import { needsEvidenceOnTrigger } from '@/lib/sandwich'
+import { interimEnabled } from '@/lib/interim-flags'
 
 // Day-counting math lives in @/lib/leave-days (shared with the preview
 // endpoint so the form preview can never disagree with what's charged).
@@ -71,10 +72,15 @@ export async function GET(request: NextRequest) {
     where.employeeId = employeeId
   }
 
+  // Ordered by the day the leave was, not the day it was typed. Records
+  // entered from an old email thread used to jump to the top of a history
+  // list, and 92 approved records were being cut to the 50 most recently
+  // keyed — so 42 of them simply were not on the page.
+  const limit = Math.min(Number(searchParams.get('limit') ?? 500) || 500, 1000)
   const requests = await prisma.leaveRequest.findMany({
     where,
-    orderBy: { createdAt: 'desc' },
-    take: 50,
+    orderBy: [{ fromDate: 'desc' }, { createdAt: 'desc' }],
+    take: limit,
     // Explicit select: `include` alone returned every scalar, and that includes
     // the attachmentBytes BYTEA — every prescription and medical note was being
     // serialised into the list payload just to render a table of dates.
@@ -226,6 +232,14 @@ export async function POST(request: NextRequest) {
           { status: 403 },
         )
       }
+      // Filing for somebody else is an interim rule — see Settings > Interim
+      // rules. Switched off, even HR files only their own.
+      if (!(await interimEnabled('interim_hr_files_for_others'))) {
+        return NextResponse.json({
+          error: 'Filing leave on behalf of another employee is switched off. '
+            + 'Employees raise their own requests.',
+        }, { status: 403 })
+      }
       empId = bodyEmpId
     } else {
       if (!access.employeeId) {
@@ -246,7 +260,8 @@ export async function POST(request: NextRequest) {
     // the sandwich rule applies when deciding whether to charge the weekend.
     // Refused here rather than flagged later, because a request that reaches an
     // approver without its evidence is one they cannot actually decide.
-    if (!attachmentBytes && needsEvidenceOnTrigger(leaveType, start, end)) {
+    const evidenceRuleOn = await interimEnabled('interim_friday_monday_evidence')
+    if (evidenceRuleOn && !attachmentBytes && needsEvidenceOnTrigger(leaveType, start, end)) {
       const what = category === 'WFH' ? 'Working from home' : 'Sick leave'
       return NextResponse.json({
         error: `${what} on a Friday or Monday needs supporting evidence attached. `

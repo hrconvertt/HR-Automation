@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { assessSandwich, isSandwichExempt, exemptionReason } from '@/lib/sandwich'
+import { interimEnabled } from '@/lib/interim-flags'
 
 /** Beyond this many days it is a planned absence, not an unnotified one. */
 const MAX_SANDWICH_LEAVE_DAYS = 3
@@ -101,15 +102,20 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  const attendanceLeave = await prisma.attendanceLog.findMany({
-    where: { status: { in: ['LEAVE', 'HALF_DAY'] } },
-    orderBy: { date: 'desc' },
-    take: 400,
-    select: {
-      id: true, date: true, employeeId: true,
-      employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } },
-    },
-  })
+  // Assessing days that were only ever marked on the grid is an interim rule —
+  // see Settings > Interim rules. Off, only approved requests are assessed.
+  const readGrid = await interimEnabled('interim_sandwich_grid_leave')
+  const attendanceLeave = readGrid
+    ? await prisma.attendanceLog.findMany({
+      where: { status: { in: ['LEAVE', 'HALF_DAY'] } },
+      orderBy: { date: 'desc' },
+      take: 400,
+      select: {
+        id: true, date: true, employeeId: true,
+        employee: { select: { id: true, fullName: true, employeeCode: true, designation: true } },
+      },
+    })
+    : []
 
   const attendancePending = attendanceLeave
     .map((a) => {

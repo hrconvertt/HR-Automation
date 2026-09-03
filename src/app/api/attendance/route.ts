@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { getPayrollConfig } from '@/lib/config'
 import { leaveRequestForGridMark, withdrawGridLeave } from '@/lib/grid-leave'
+import { interimEnabled } from '@/lib/interim-flags'
 import { dayKey } from '@/lib/date-utils'
 import { parseShiftStart, buildAttendanceGrid, type GridPayload } from '@/lib/queries/attendance-grid'
 import {
@@ -641,7 +642,8 @@ export async function POST(request: NextRequest) {
     // a day marked L used to exist only as a letter in a grid, invisible to
     // payroll, to the sandwich rule and to the leave list.
     let leave: { created: boolean; requestId?: string } = { created: false }
-    if (nextStatus === 'LEAVE') {
+    const gridLeaveOn = await interimEnabled('interim_grid_leave')
+    if (nextStatus === 'LEAVE' && gridLeaveOn) {
       const me = await prisma.employee.findFirst({
         where: { userId: payload.userId }, select: { id: true },
       })
@@ -651,7 +653,7 @@ export async function POST(request: NextRequest) {
         leaveType: typeof leaveType === 'string' ? leaveType : null,
         approvedByEmployeeId: me?.id ?? null,
       })
-    } else {
+    } else if (gridLeaveOn) {
       await withdrawGridLeave(empId, logDate)
     }
 
