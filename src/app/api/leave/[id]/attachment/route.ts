@@ -19,6 +19,18 @@ import { verifyToken } from '@/lib/auth'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
+/**
+ * `inline; filename="..."; filename*=UTF-8''...`
+ *
+ * The quoted parameter is ASCII-folded so the header is always constructible;
+ * `filename*` carries the real thing for any client that reads it.
+ */
+function contentDisposition(name: string): string {
+  const ascii = name.replace(/[^ -~]/g, '-').replace(/"/g, '')
+  return `inline; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`
+}
+
+
 const ALLOWED = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png', 'image/webp']
 const MAX_BYTES = 5 * 1024 * 1024
 
@@ -78,7 +90,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       'Content-Length': String(buf.length),
       // inline so a prescription opens in the tab rather than landing in
       // Downloads every time someone checks it.
-      'Content-Disposition': `inline; filename="${(name ?? 'attachment').replace(/"/g, '')}"`,
+      // Header values are ByteStrings. A filename with an em-dash — which is
+      // what "Transcript Voucher — challan S295873.jpeg" has — throws on
+      // construction, the response never forms, and the image silently fails
+      // to load. ASCII for the plain parameter, RFC 5987 for the real name.
+      'Content-Disposition': contentDisposition(name ?? 'attachment'),
       'Cache-Control': 'private, no-store',
     },
   })

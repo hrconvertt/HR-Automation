@@ -6,8 +6,9 @@
  * has to look at, so it gets a panel of its own with the files rendered rather
  * than named — a challan is read by looking at it.
  *
- * Two columns on a wide screen: the request on the left, evidence and the
- * decision trail on the right. One column below that, in the same order.
+ * The documents get the room. The text beside them sits in a fixed 380px
+ * column, because a reason does not read better at 900px wide, and four short
+ * values spread across 1900px is diluting the screen rather than using it.
  */
 
 import { cookies } from 'next/headers'
@@ -140,13 +141,13 @@ export default async function LeaveDetailPage({ params }: RouteProps) {
         </Badge>
       </div>
 
-      {/* The facts, across the top. Four numbers nobody should have to hunt
-          through a paragraph for. */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* One strip, not four stretched boxes. Spreading four short values
+          across 1900px is not using the screen, it is diluting it. */}
+      <div className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex flex-wrap gap-x-10 gap-y-3">
         <Stat label="Type" value={req.leaveType} />
         <Stat label="Days" value={formatDays(req.days)} />
         <Stat
-          label="Dates"
+          label={single ? 'Date' : 'Dates'}
           value={single ? fmt(req.fromDate) : `${fmt(req.fromDate)} → ${fmt(req.toDate)}`}
           sub={[
             req.firstDayHalf ? 'first day half' : null,
@@ -155,15 +156,19 @@ export default async function LeaveDetailPage({ params }: RouteProps) {
         />
         <Stat
           label="HR notified"
-          value={req.notifiedAt ? fmtDateTime(req.notifiedAt) : '—'}
+          value={req.notifiedAt ? fmtDateTime(req.notifiedAt) : 'not recorded'}
+          muted={!req.notifiedAt}
           sub={req.notifiedAt
             ? [noticeLabel, req.notifiedVia ? VIA_LABEL[req.notifiedVia] ?? '' : '']
               .filter(Boolean).join(' · ')
-            : 'no notice time on record'}
+            : undefined}
         />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
+      {/* The documents get the room. They are what the page is opened for;
+          the text beside them is a fixed column because a reason does not read
+          better at 900px wide. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] gap-4 items-start">
         <div className="space-y-4">
           <section className="bg-white border border-slate-200 rounded-xl overflow-hidden">
             <div className="px-4 py-2.5 border-b border-slate-100">
@@ -229,11 +234,15 @@ export default async function LeaveDetailPage({ params }: RouteProps) {
   )
 }
 
-function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
+function Stat({ label, value, sub, muted }: {
+  label: string; value: string; sub?: string; muted?: boolean
+}) {
   return (
-    <div className="bg-white border border-slate-200 rounded-xl px-4 py-3">
-      <p className="text-[11px] uppercase tracking-wide text-slate-500 font-semibold">{label}</p>
-      <p className="text-sm font-semibold text-slate-900 mt-1">{value}</p>
+    <div>
+      <p className="text-[11px] uppercase tracking-wide text-slate-400 font-semibold">{label}</p>
+      <p className={`text-sm font-semibold mt-0.5 ${muted ? 'text-slate-400 font-normal' : 'text-slate-900'}`}>
+        {value}
+      </p>
       {sub && <p className="text-[11px] text-slate-400 mt-0.5">{sub}</p>}
     </div>
   )
