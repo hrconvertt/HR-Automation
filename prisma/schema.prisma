@@ -681,6 +681,14 @@ model LeaveRequest {
   approvedAt          DateTime?
   rejectedReason      String?
   rejectedById        String?
+  /// When the employee actually told HR, and how. This used to be prose inside
+  /// `reason` — "Emailed HR at 5:03 PM on the day" — which meant it could not
+  /// be sorted, compared, or checked against the leave date. Notice given is
+  /// the whole of the sandwich rule's question, so it is a field.
+  notifiedAt          DateTime?
+  /// EMAIL | WHATSAPP | CALL | IN_PERSON | OTHER
+  notifiedVia         String?
+
   attachmentUrl       String?
   // Inline attachment (PDF/JPG/PNG, max ~5MB) uploaded with the request —
   // e.g. a sick-leave doctor's note.

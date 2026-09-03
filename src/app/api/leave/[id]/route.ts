@@ -115,7 +115,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
  * edited by hand — that is their correction, not ours to overwrite.
  *
  *   Body: { leaveType?, reason?, category?, status?,
- *           fromDate?, toDate?, days?, firstDayHalf?, lastDayHalf? }
+ *           fromDate?, toDate?, days?, firstDayHalf?, lastDayHalf?,
+ *           notifiedAt?, notifiedVia? }
  */
 export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const token = request.cookies.get('hr_token')?.value
@@ -138,6 +139,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     // Supporting evidence attached after the fact — a medical slip for a WFH
     // day agreed over email had nowhere to live until now. '' clears it.
     attachmentBase64?: string; attachmentMime?: string; attachmentName?: string
+    // When the employee actually told HR, and how. '' clears it.
+    notifiedAt?: string; notifiedVia?: string
   } = {}
   try { body = await request.json() } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -271,6 +274,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         firstDayHalf,
         lastDayHalf,
         ...(typeof body.reason === 'string' ? { reason: body.reason.trim().slice(0, 2000) } : {}),
+        // Notice given, as a time rather than a sentence — the sandwich rule's
+        // whole question is whether there was any.
+        ...(typeof body.notifiedAt === 'string'
+          ? { notifiedAt: body.notifiedAt ? new Date(body.notifiedAt) : null }
+          : {}),
+        ...(typeof body.notifiedVia === 'string'
+          ? { notifiedVia: body.notifiedVia || null }
+          : {}),
         ...attachmentPatch,
         // Approvers, recorded after the fact — a leave agreed over email still
         // needs the lead and HR who signed it off named on the record.

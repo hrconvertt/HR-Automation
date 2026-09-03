@@ -34,6 +34,9 @@ type LeaveRow = {
   firstDayHalf?: boolean
   lastDayHalf?: boolean
   attachmentName?: string | null
+  attachmentMime?: string | null
+  notifiedAt?: string | null
+  notifiedVia?: string | null
   approvedByLead?: string | null
   approvedByHr?: string | null
   rejectedReason?: string | null
@@ -80,6 +83,45 @@ const fmt = (iso: string, withYear = false) =>
     weekday: 'short', day: '2-digit', month: 'short',
     ...(withYear ? { year: 'numeric' } : {}),
   })
+
+const VIA_LABEL: Record<string, string> = {
+  EMAIL: 'email',
+  WHATSAPP: 'WhatsApp',
+  CALL: 'call',
+  IN_PERSON: 'in person',
+  OTHER: 'other',
+}
+
+const fmtTime = (iso: string) =>
+  new Date(iso).toLocaleTimeString('en-GB', {
+    hour: '2-digit', minute: '2-digit', hour12: true, timeZone: 'UTC',
+  })
+
+/**
+ * How much notice that was. "On the day" and "2 days before" are the answer to
+ * the only question the sandwich rule asks, and a bare timestamp does not give
+ * it — you would have to hold the leave date in your head to work it out.
+ */
+function noticeLabel(notifiedIso: string, fromIso: string): string {
+  const n = new Date(notifiedIso); const f = new Date(fromIso)
+  const days = Math.round(
+    (Date.UTC(f.getUTCFullYear(), f.getUTCMonth(), f.getUTCDate())
+      - Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate())) / 86_400_000,
+  )
+  if (days === 0) return 'on the day'
+  if (days === 1) return 'day before'
+  if (days > 1) return `${days} days before`
+  return days === -1 ? 'day after' : `${Math.abs(days)} days after`
+}
+
+/** "JPEG" / "PDF" — the label on the evidence chip, kept to one short word. */
+function fileKind(name: string, mime?: string | null): string {
+  const ext = name.split('.').pop()?.toUpperCase() ?? ''
+  if (ext && ext.length <= 4) return ext === 'JPG' ? 'JPEG' : ext
+  if (mime?.includes('pdf')) return 'PDF'
+  if (mime?.includes('image')) return 'Image'
+  return 'File'
+}
 
 export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEdit = false }: Props) {
   const [rows, setRows] = useState<LeaveRow[]>([])
@@ -151,9 +193,9 @@ export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEd
                     <Th>Reason</Th>
                     {!isWfh && <Th>Type</Th>}
                     <Th>Dates</Th>
-                    <Th right>Days</Th>
-                    <Th>Approved by lead</Th>
-                    <Th>Approved by HR</Th>
+                    <Th>Notified</Th>
+                    <Th>Evidence</Th>
+                    <Th>Approved by</Th>
                     <Th>Status</Th>
                     {canEdit && <Th right>Edit</Th>}
                   </tr>
@@ -189,15 +231,6 @@ export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEd
                               {r.rejectedBy ? ` — ${r.rejectedBy}` : ''}
                             </p>
                           )}
-                          {r.attachmentName && (
-                            <Link
-                              href={`/dashboard/leave/${r.id}`}
-                              className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-900 mt-1"
-                            >
-                              <Paperclip className="w-3 h-3" />
-                              {r.attachmentName}
-                            </Link>
-                          )}
                         </td>
                         {!isWfh && (
                           <td className="px-4 py-3">
@@ -216,15 +249,56 @@ export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEd
                               {fmt(r.toDate, true)}
                             </>
                           )}
+                          <span className="block text-xs text-slate-400">{formatDays(r.days)}</span>
                         </td>
-                        <td className="px-4 py-3 text-slate-700 text-right whitespace-nowrap">
-                          {formatDays(r.days)}
+                        {/* When HR was actually told. Notice given is the whole
+                            of the sandwich rule's question, so it is a column
+                            rather than a sentence buried in the reason. */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {r.notifiedAt ? (
+                            <>
+                              <span className="text-slate-700 tabular-nums">{fmtTime(r.notifiedAt)}</span>
+                              <span className="block text-xs text-slate-400">
+                                {noticeLabel(r.notifiedAt, r.fromDate)}
+                                {r.notifiedVia ? ` · ${VIA_LABEL[r.notifiedVia] ?? r.notifiedVia.toLowerCase()}` : ''}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
-                          {r.approvedByLead ?? <span className="text-slate-400">—</span>}
+                        {/* Evidence, on its own. Tucked under the reason it read
+                            as a footnote to the prose rather than the thing an
+                            approver has to look at. */}
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          {r.attachmentName ? (
+                            <Link
+                              href={`/dashboard/leave/${r.id}`}
+                              title={r.attachmentName}
+                              className="inline-flex items-center gap-1.5 text-xs px-2 py-1 rounded-md border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                            >
+                              <Paperclip className="w-3 h-3 flex-shrink-0" />
+                              {fileKind(r.attachmentName, r.attachmentMime)}
+                            </Link>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-xs text-slate-300">
+                              <Paperclip className="w-3 h-3" /> none
+                            </span>
+                          )}
                         </td>
-                        <td className="px-4 py-3 text-xs text-slate-600 whitespace-nowrap">
-                          {r.approvedByHr ?? <span className="text-slate-400">—</span>}
+                        <td className="px-4 py-3 text-xs whitespace-nowrap">
+                          {r.approvedByLead || r.approvedByHr ? (
+                            <>
+                              <span className="block text-slate-700">
+                                {r.approvedByLead ?? <span className="text-slate-300">no lead</span>}
+                              </span>
+                              <span className="block text-slate-400">
+                                {r.approvedByHr ? `HR · ${r.approvedByHr}` : 'HR · —'}
+                              </span>
+                            </>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
                         </td>
                         <td className="px-4 py-3">
                           <Badge variant={LEAVE_STATUS_TONE[r.status] ?? 'secondary'}>
@@ -295,6 +369,10 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
   const [err, setErr] = useState<string | null>(null)
   // Who signed it off. A leave agreed over email still has a lead and an HR
   // behind it; without these the record shows a dash where the approver goes.
+  // Notice given, as data. The datetime-local input wants "YYYY-MM-DDTHH:mm";
+  // the stored value is UTC, so slice rather than re-derive through a timezone.
+  const [notifiedAt, setNotifiedAt] = useState(row.notifiedAt ? row.notifiedAt.slice(0, 16) : '')
+  const [notifiedVia, setNotifiedVia] = useState(row.notifiedVia ?? '')
   const [leadId, setLeadId] = useState(row.managerApprovedById ?? '')
   const [hrId, setHrId] = useState(row.approvedById ?? '')
   // Each side of the approval chain gets its own pool. Offering all 26
@@ -353,6 +431,8 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
         leaveType, category, status, fromDate, toDate,
         days: Number(days),
         firstDayHalf, lastDayHalf, reason,
+        notifiedAt: notifiedAt ? `${notifiedAt}:00.000Z` : '',
+        notifiedVia,
         managerApprovedById: leadId, approvedById: hrId,
         ...(evidence
           ? { attachmentBase64: evidence.base64, attachmentMime: evidence.mime, attachmentName: evidence.name }
@@ -470,6 +550,34 @@ function EditDialog({ row, isWfh, onClose, onSaved }: {
               className={inputCls}
             />
           </Field>
+
+          {/* When HR was told, and how. This used to be a sentence inside the
+              reason — "Emailed HR at 5:03 PM on the day" — which could not be
+              sorted, compared, or checked against the leave date. */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="HR notified at">
+              <input
+                type="datetime-local"
+                value={notifiedAt}
+                onChange={(e) => setNotifiedAt(e.target.value)}
+                className={inputCls}
+              />
+            </Field>
+            <Field label="How">
+              <select
+                value={notifiedVia}
+                onChange={(e) => setNotifiedVia(e.target.value)}
+                className={inputCls}
+              >
+                <option value="">— not recorded —</option>
+                <option value="EMAIL">Email</option>
+                <option value="WHATSAPP">WhatsApp</option>
+                <option value="CALL">Call</option>
+                <option value="IN_PERSON">In person</option>
+                <option value="OTHER">Other</option>
+              </select>
+            </Field>
+          </div>
 
           {/* Who signed it off. Recorded after the fact for leaves agreed over
               email, so the register names the lead and the HR rather than a dash. */}

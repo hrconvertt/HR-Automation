@@ -93,6 +93,7 @@ export async function GET(request: NextRequest) {
       // A rejected list is only useful if it says why, and who said so.
       rejectedReason: true, rejectedById: true,
       attachmentName: true, attachmentMime: true, attachmentUrl: true,
+      notifiedAt: true, notifiedVia: true,
       employee: {
         select: {
           fullName: true,
