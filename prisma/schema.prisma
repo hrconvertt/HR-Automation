@@ -689,6 +689,11 @@ model LeaveRequest {
   /// EMAIL | WHATSAPP | CALL | IN_PERSON | OTHER
   notifiedVia         String?
 
+  /// Evidence, however many files it takes. The single attachment columns
+  /// below are the old one-file world, kept so nothing that reads them breaks
+  /// while they are migrated; `evidence` is the real answer.
+  evidence            LeaveEvidence[]
+
   attachmentUrl       String?
   // Inline attachment (PDF/JPG/PNG, max ~5MB) uploaded with the request —
   // e.g. a sick-leave doctor's note.
@@ -3234,4 +3239,29 @@ model ManpowerRequisition {
   updatedAt DateTime @updatedAt
 
   @@map("manpower_requisitions")
+}
+
+
+/// One file of evidence attached to a leave or WFH request.
+///
+/// It was three columns on LeaveRequest — bytes, mime, name — which is one
+/// file, and one file is not what actually arrives. Rayyan's Friday needed
+/// two: the challan that evidenced the day and the form the payment was for.
+/// Attaching the second used to mean losing the first.
+model LeaveEvidence {
+  id             String       @id @default(cuid())
+  leaveRequestId String
+  leaveRequest   LeaveRequest @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+
+  bytes     Bytes
+  mime      String
+  name      String
+  /// Bytes, kept out of band so a list can show the size without loading it.
+  size      Int
+  /// Who attached it — HR, usually, from an email the employee sent.
+  addedById String?
+  createdAt DateTime @default(now())
+
+  @@index([leaveRequestId])
+  @@map("leave_evidence")
 }

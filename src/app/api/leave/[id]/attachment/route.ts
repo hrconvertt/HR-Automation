@@ -34,7 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       employee: { select: { id: true, reportingManagerId: true } },
     },
   })
-  if (!req?.attachmentBytes) return NextResponse.json({ error: 'No attachment' }, { status: 404 })
+  if (!req) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   // A sick note is medical information. The person it belongs to, their manager
   // and HR — nobody else.
@@ -49,17 +49,36 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     req.employee.reportingManagerId === myEmpId
   if (!allowed) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const buf = Buffer.isBuffer(req.attachmentBytes)
-    ? req.attachmentBytes
-    : Buffer.from(req.attachmentBytes as unknown as ArrayBuffer)
+  // ?fileId= picks one of the request's evidence files. Without it the legacy
+  // single attachment is served, so links made before evidence became a list
+  // keep working.
+  const fileId = request.nextUrl.searchParams.get('fileId')
+  let bytes: Buffer | Uint8Array | null = req.attachmentBytes
+  let mime = req.attachmentMime
+  let name = req.attachmentName
+  if (fileId) {
+    const file = await prisma.leaveEvidence.findUnique({
+      where: { id: fileId },
+      select: { bytes: true, mime: true, name: true, leaveRequestId: true },
+    })
+    if (!file || file.leaveRequestId !== id) {
+      return NextResponse.json({ error: 'No such file on this request' }, { status: 404 })
+    }
+    bytes = file.bytes; mime = file.mime; name = file.name
+  }
+  if (!bytes) return NextResponse.json({ error: 'No attachment' }, { status: 404 })
+
+  const buf = Buffer.isBuffer(bytes)
+    ? bytes
+    : Buffer.from(bytes as unknown as ArrayBuffer)
 
   return new NextResponse(new Uint8Array(buf), {
     headers: {
-      'Content-Type': req.attachmentMime ?? 'application/octet-stream',
+      'Content-Type': mime ?? 'application/octet-stream',
       'Content-Length': String(buf.length),
       // inline so a prescription opens in the tab rather than landing in
       // Downloads every time someone checks it.
-      'Content-Disposition': `inline; filename="${(req.attachmentName ?? 'attachment').replace(/"/g, '')}"`,
+      'Content-Disposition': `inline; filename="${(name ?? 'attachment').replace(/"/g, '')}"`,
       'Cache-Control': 'private, no-store',
     },
   })
