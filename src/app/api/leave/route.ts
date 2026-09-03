@@ -5,6 +5,7 @@ import { notify } from '@/lib/notifications'
 import { parseLocalDate, dayKey } from '@/lib/date-utils'
 import { countWorkingDays } from '@/lib/leave-days'
 import { getStageOneApprover, isSeniorStaffRole, isCoFounderDesignation } from '@/lib/leave-approver'
+import { needsEvidenceOnTrigger } from '@/lib/sandwich'
 
 // Day-counting math lives in @/lib/leave-days (shared with the preview
 // endpoint so the form preview can never disagree with what's charged).
@@ -238,6 +239,20 @@ export async function POST(request: NextRequest) {
     // as local-midnight DateTimes).
     const start = parseLocalDate(startDate)
     const end = parseLocalDate(endDate)
+
+    // A Friday or Monday needs a reason on file. Sick leave and work from home
+    // are both claims that the day was not an ordinary long weekend, and the
+    // claim is only worth anything with the document behind it — the same test
+    // the sandwich rule applies when deciding whether to charge the weekend.
+    // Refused here rather than flagged later, because a request that reaches an
+    // approver without its evidence is one they cannot actually decide.
+    if (!attachmentBytes && needsEvidenceOnTrigger(leaveType, start, end)) {
+      const what = category === 'WFH' ? 'Working from home' : 'Sick leave'
+      return NextResponse.json({
+        error: `${what} on a Friday or Monday needs supporting evidence attached. `
+          + 'Attach the document and submit again.',
+      }, { status: 400 })
+    }
 
     if (end < start) {
       return NextResponse.json({ error: 'End date must be after start date' }, { status: 400 })

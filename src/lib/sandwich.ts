@@ -35,6 +35,12 @@ export type SandwichTrigger = 'FRIDAY' | 'MONDAY'
  *                weekend; saying so with nothing attached is exactly the claim
  *                the rule exists to test. Without a document the exemption
  *                does not apply and the weekend is charged.
+ *   WFH        — the same test, for the same reason. Working from home on a
+ *                Friday or a Monday is not an absence at all when there is a
+ *                reason for it on file — Rayyan's university challan had to be
+ *                paid in person — but "I will work from home on Friday" with
+ *                nothing attached is indistinguishable from the long weekend
+ *                the rule exists to catch. Evidence or the exemption goes.
  *   ANNUAL     — booked and approved in advance, so notice is the whole point.
  *   MATERNITY  — statutory and planned.
  *   PATERNITY
@@ -45,12 +51,19 @@ export type SandwichTrigger = 'FRIDAY' | 'MONDAY'
  * from the dialog — somebody who ghosts for two days and calls it sick
  * afterwards is exactly the case the policy is aimed at.
  */
-export const SANDWICH_EXEMPT_TYPES = ['SICK', 'ANNUAL', 'MATERNITY', 'PATERNITY']
+export const SANDWICH_EXEMPT_TYPES = ['SICK', 'WFH', 'ANNUAL', 'MATERNITY', 'PATERNITY']
+
+/**
+ * The types whose exemption is conditional on a document. Both are claims
+ * about why the Friday or Monday was not an ordinary long weekend, and a claim
+ * with nothing behind it is the case the policy is written for.
+ */
+export const EVIDENCE_REQUIRED_TYPES = ['SICK', 'WFH']
 
 /**
  * `hasEvidence` — whether a supporting document is attached to the request.
- * Only sick leave depends on it: the other exempt types carry their notice by
- * being booked in advance. Defaults to true so existing callers that do not
+ * Sick leave and WFH depend on it; the other exempt types carry their notice
+ * by being booked in advance. Defaults to true so existing callers that do not
  * pass it keep their previous behaviour.
  */
 export function isSandwichExempt(
@@ -60,8 +73,19 @@ export function isSandwichExempt(
   if (!leaveType) return false
   const t = leaveType.toUpperCase()
   if (!SANDWICH_EXEMPT_TYPES.includes(t)) return false
-  if (t === 'SICK' && !hasEvidence) return false
+  if (EVIDENCE_REQUIRED_TYPES.includes(t) && !hasEvidence) return false
   return true
+}
+
+/** Does a Friday or Monday on this date demand a document? */
+export function needsEvidenceOnTrigger(
+  leaveType: string | null | undefined,
+  from: Date,
+  to: Date,
+): boolean {
+  const t = (leaveType ?? '').toUpperCase()
+  if (!EVIDENCE_REQUIRED_TYPES.includes(t)) return false
+  return opensSandwichWindow(from, to)
 }
 
 export function exemptionReason(
@@ -72,8 +96,12 @@ export function exemptionReason(
   if (t === 'SICK' && !hasEvidence) {
     return 'Sick leave on a Friday or Monday needs supporting evidence. None is attached, so the exemption does not apply.'
   }
+  if (t === 'WFH' && !hasEvidence) {
+    return 'Working from home on a Friday or Monday needs supporting evidence. None is attached, so the exemption does not apply.'
+  }
   if (!isSandwichExempt(leaveType, hasEvidence)) return null
   if (t === 'SICK') return 'Sick leave with supporting evidence is accepted on a Friday or Monday.'
+  if (t === 'WFH') return 'Work from home with supporting evidence is accepted on a Friday or Monday.'
   if (t === 'ANNUAL') return 'Annual leave is booked in advance, so notice was given.'
   return 'This leave type is planned in advance, so notice was given.'
 }
