@@ -2,6 +2,7 @@
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { getPayrollConfig } from '@/lib/config'
+import { leaveRequestForGridMark, withdrawGridLeave } from '@/lib/grid-leave'
 import { dayKey } from '@/lib/date-utils'
 import { parseShiftStart, buildAttendanceGrid, type GridPayload } from '@/lib/queries/attendance-grid'
 import {
@@ -622,19 +623,39 @@ export async function POST(request: NextRequest) {
     }
 
     // Manual HR entry
-    const { status } = body
+    const { status, leaveType } = body
+    const nextStatus = status ?? 'PRESENT'
     const log = await prisma.attendanceLog.upsert({
       where: { employeeId_date: { employeeId: empId, date: logDate } },
-      update: { status: status ?? 'PRESENT' },
+      update: { status: nextStatus },
       create: {
         employeeId: empId,
         date: logDate,
-        status: status ?? 'PRESENT',
+        status: nextStatus,
         workType,
       },
     })
 
-    return NextResponse.json({ log })
+    // Marking a cell L makes the approved leave request behind it, and
+    // clearing the cell withdraws the one it made. See src/lib/grid-leave.ts —
+    // a day marked L used to exist only as a letter in a grid, invisible to
+    // payroll, to the sandwich rule and to the leave list.
+    let leave: { created: boolean; requestId?: string } = { created: false }
+    if (nextStatus === 'LEAVE') {
+      const me = await prisma.employee.findFirst({
+        where: { userId: payload.userId }, select: { id: true },
+      })
+      leave = await leaveRequestForGridMark({
+        employeeId: empId,
+        date: logDate,
+        leaveType: typeof leaveType === 'string' ? leaveType : null,
+        approvedByEmployeeId: me?.id ?? null,
+      })
+    } else {
+      await withdrawGridLeave(empId, logDate)
+    }
+
+    return NextResponse.json({ log, leave })
   } catch (error) {
     console.error('[POST /api/attendance]', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
