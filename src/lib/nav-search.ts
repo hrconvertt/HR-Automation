@@ -43,6 +43,9 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Daily Log', href: '/dashboard/daily-log', section: 'Performance', keywords: ['kpi', 'tasks', 'log'] },
   { label: 'Team Review', href: '/dashboard/daily-review', section: 'Performance', keywords: ['kpi', 'team daily', 'actuals'] },
   { label: 'Recognition', href: '/dashboard/culture', section: 'Performance', keywords: ['culture', 'awards', 'kudos', 'birthday', 'anniversary'] },
+  { label: 'Pulse', href: '/dashboard/culture/pulse', section: 'People & Culture', keywords: ['engagement', 'survey', 'enps', 'how people feel', 'morale'] },
+  { label: 'Talent Review', href: '/dashboard/performance/talent', section: 'Performance', keywords: ['nine box', '9-box', 'potential', 'succession', 'flight risk'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
+  { label: 'Skills', href: '/dashboard/people/skills', section: 'People', keywords: ['who can cover', 'capability', 'expertise', 'cover'] },
 
   { label: 'Employee Lifecycle', href: '/dashboard/lifecycle', section: 'Talent', keywords: ['joiner', 'mover', 'leaver'] },
   { label: 'Onboarding', href: '/dashboard/onboarding', section: 'Lifecycle', keywords: ['new hire', 'joining', 'induction', 'day 1', 'documents'] },

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -23,6 +23,7 @@ interface KudosRow {
   id: string
   message: string
   category: string
+  value?: { id: string; name: string } | null
   createdAt: string
   from: { id: string; fullName: string; employeeCode: string }
   to: { id: string; fullName: string; designation: string }
@@ -189,7 +190,16 @@ function RecognitionView({ kudos = [], colleagues = [] }: Props) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
-  const [form, setForm] = useState({ toId: '', message: '', category: 'APPRECIATION' })
+  const [form, setForm] = useState({ toId: '', message: '', category: 'APPRECIATION', valueId: '' })
+  // The values are configurable — the four that used to be hardcoded here are
+  // placeholders until the Playbook's real ones replace them.
+  const [values, setValues] = useState<{ id: string; name: string; description: string | null }[]>([])
+  useEffect(() => {
+    fetch('/api/recognition-values')
+      .then((r) => r.json())
+      .then((d) => setValues(d.values ?? []))
+      .catch(() => setValues([]))
+  }, [])
 
   async function submit() {
     setErr('')
@@ -203,7 +213,7 @@ function RecognitionView({ kudos = [], colleagues = [] }: Props) {
     setBusy(false)
     if (!r.ok) { const d = await r.json().catch(() => ({})); setErr(d.error || 'Failed'); return }
     setOpen(false)
-    setForm({ toId: '', message: '', category: 'APPRECIATION' })
+    setForm({ toId: '', message: '', category: 'APPRECIATION', valueId: '' })
     router.refresh()
   }
 
@@ -226,7 +236,9 @@ function RecognitionView({ kudos = [], colleagues = [] }: Props) {
                   <span className="text-sm font-semibold text-slate-900">{k.from.fullName}</span>
                   <span className="text-xs text-slate-500">→</span>
                   <span className="text-sm font-semibold text-slate-900">{k.to.fullName}</span>
-                  <Badge className={CAT_TONE[k.category] ?? 'bg-slate-100 text-slate-700'}>{k.category}</Badge>
+                  <Badge className={CAT_TONE[k.category] ?? 'bg-slate-100 text-slate-700'}>
+                    {k.value?.name ?? k.category}
+                  </Badge>
                 </div>
                 <p className="text-sm text-slate-700">{k.message}</p>
                 <p className="text-[11px] text-slate-400 mt-1">{new Date(k.createdAt).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}</p>
@@ -252,13 +264,20 @@ function RecognitionView({ kudos = [], colleagues = [] }: Props) {
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">Category</label>
-              <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+              <label className="block text-xs font-medium text-slate-700 mb-1">Value</label>
+              <Select value={form.valueId} onValueChange={(v) => setForm({ ...form, valueId: v })}>
+                <SelectTrigger><SelectValue placeholder="Which value does this show?" /></SelectTrigger>
                 <SelectContent>
-                  {KUDOS_CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                  {values.map((v) => (
+                    <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {form.valueId && (
+                <p className="text-[11px] text-slate-500 mt-1">
+                  {values.find((v) => v.id === form.valueId)?.description}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-slate-700 mb-1">Message</label>

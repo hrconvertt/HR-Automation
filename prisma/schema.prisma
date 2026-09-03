@@ -335,6 +335,8 @@ model Employee {
   attendanceCorrections AttendanceCorrection[]
   interviewSlots        InterviewSlot[]        @relation("InterviewSlots")
   interviewScorecards   Scorecard[]            @relation("InterviewScorecards")
+  talentAssessments     TalentAssessment[]
+  skills                EmployeeSkill[]
   appraisals            AppraisalForm[]        @relation("AppraisalSubject")
   appraisalsGiven       AppraisalForm[]        @relation("AppraisalAppraiser")
   appraisalsReviewed    AppraisalForm[]        @relation("AppraisalReviewer")
@@ -2504,16 +2506,133 @@ model EventRole {
 }
 
 model Kudos {
-  id        String   @id @default(cuid())
+  id        String            @id @default(cuid())
   fromId    String
-  from      Employee @relation("KudosFrom", fields: [fromId], references: [id])
+  from      Employee          @relation("KudosFrom", fields: [fromId], references: [id])
   toId      String
-  to        Employee @relation("KudosTo", fields: [toId], references: [id])
+  to        Employee          @relation("KudosTo", fields: [toId], references: [id])
   message   String
-  category  String   @default("APPRECIATION") // APPRECIATION | TEAMWORK | INNOVATION | LEADERSHIP
-  createdAt DateTime @default(now())
+  category  String            @default("APPRECIATION") // legacy free text; superseded by valueId
+  /// The company value this recognises. Recognition that names a value tells
+  /// you which ones actually show up in behaviour; recognition that names
+  /// nothing is a compliment with no shelf life.
+  valueId   String?
+  value     RecognitionValue? @relation(fields: [valueId], references: [id])
+  createdAt DateTime          @default(now())
 
+  @@index([toId, createdAt])
   @@map("kudos")
+}
+
+/// The values recognition is given against.
+///
+/// Seeded from the four categories that were hardcoded, because inventing a
+/// company's values is not something software should do. Editable in Settings —
+/// they should be replaced with the ones in the HR Playbook.
+model RecognitionValue {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  description String?
+  active      Boolean @default(true)
+  sortOrder   Int     @default(0)
+  kudos       Kudos[]
+
+  @@map("recognition_values")
+}
+
+/// A round of the engagement pulse. Short and recurring rather than long and
+/// annual: five questions people answer beat forty they abandon, and a trend
+/// needs more than one point.
+model PulseRound {
+  id        String   @id @default(cuid())
+  title     String
+  opensAt   DateTime
+  closesAt  DateTime
+  status    String   @default("DRAFT") // DRAFT | OPEN | CLOSED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  responses PulseResponse[]
+
+  @@map("pulse_rounds")
+}
+
+/// One person's answers.
+///
+/// employeeId is stored so nobody answers twice, and is never returned by any
+/// endpoint that shows results. Scores are withheld entirely until the round
+/// has enough responses to hide an individual inside them; at 25 people that
+/// threshold is the whole of the confidentiality promise.
+model PulseResponse {
+  id          String     @id @default(cuid())
+  roundId     String
+  round       PulseRound @relation(fields: [roundId], references: [id], onDelete: Cascade)
+  employeeId  String
+  /// 0-10. "How likely are you to recommend Convertt as a place to work?"
+  enps        Int?
+  /// { driverKey: 1-5 }
+  scores      Json
+  comment     String?
+  submittedAt DateTime   @default(now())
+
+  @@unique([roundId, employeeId])
+  @@index([roundId])
+  @@map("pulse_responses")
+}
+
+/// Where somebody sits on performance against potential.
+///
+/// Performance comes off the appraisal score where there is one, so the grid
+/// and the form cannot disagree. Potential is a judgement and is entered.
+model TalentAssessment {
+  id             String   @id @default(cuid())
+  employeeId     String
+  employee       Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  /// "2026", "2026 H1" — whatever the review is called.
+  cycleLabel     String
+  /// 1 low, 2 medium, 3 high, on both axes. Three by three is nine boxes.
+  performance    Int?
+  potential      Int?
+  /// The appraisal average the performance band was read from, if any.
+  appraisalScore Float?
+  /// LOW | MEDIUM | HIGH — the question a nine-box is usually opened to answer.
+  flightRisk     String?
+  successorFor   String?
+  note           String?
+  assessedById   String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([employeeId, cycleLabel])
+  @@index([cycleLabel])
+  @@map("talent_assessments")
+}
+
+/// A skill somebody has. Not a marketplace — an answer to "who can cover this".
+model Skill {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  category  String?
+  createdAt DateTime        @default(now())
+  holders   EmployeeSkill[]
+
+  @@map("skills")
+}
+
+model EmployeeSkill {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  skillId    String
+  skill      Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  /// 1 aware, 2 working, 3 strong, 4 can teach it
+  level      Int      @default(2)
+  note       String?
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, skillId])
+  @@index([skillId])
+  @@map("employee_skills")
 }
 
 // ─── EMAIL TEMPLATES ──────────────────────────────────────────────────────────

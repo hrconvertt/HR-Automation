@@ -15,6 +15,7 @@ import { AppraisalFormEditor } from '../_components/appraisal-form-editor'
 import type { Ratings, GoalRow, DevelopmentRow } from '@/lib/appraisal-form'
 import { EMPTY_GOALS, EMPTY_DEVELOPMENT } from '@/lib/appraisal-form'
 import { resolveTrack } from '@/lib/increment-schedule'
+import { recognitionInPeriod } from '@/lib/recognition'
 
 export default async function AppraisalFormPage(
   { params }: { params: Promise<{ id: string }> },
@@ -70,6 +71,10 @@ export default async function AppraisalFormPage(
     : 0
   const track = resolveTrack(form.incrementTrack ?? form.employee.incrementTrack)
 
+  // What colleagues said about this person during the period being assessed.
+  // An appraiser should be reading it, not recalling it.
+  const recognition = await recognitionInPeriod(form.employeeId, form.periodFrom, form.periodTo)
+
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
@@ -100,6 +105,10 @@ export default async function AppraisalFormPage(
           joiningDate: iso(form.employee.joiningDate),
           dateOfBirth: iso(form.employee.dob),
         }}
+        recognition={recognition.map((r) => ({
+          id: r.id, message: r.message, valueName: r.valueName,
+          fromName: r.fromName, createdAt: r.createdAt.toISOString(),
+        }))}
         currentSalary={form.currentSalary ?? liveGross}
         track={track}
         initial={{

@@ -40,8 +40,16 @@ export interface AppraisalState {
   status: string
 }
 
+export interface RecognitionItem {
+  id: string
+  message: string
+  valueName: string | null
+  fromName: string
+  createdAt: string
+}
+
 export function AppraisalFormEditor({
-  formId, canEdit, isHr, people, employee, initial, currentSalary, track,
+  formId, canEdit, isHr, people, employee, initial, currentSalary, track, recognition,
 }: {
   formId: string
   canEdit: boolean
@@ -51,6 +59,8 @@ export function AppraisalFormEditor({
   initial: AppraisalState
   currentSalary: number
   track: IncrementTrack
+  /** Kudos this person received inside the assessment period. */
+  recognition: RecognitionItem[]
 }) {
   const [s, setS] = useState<AppraisalState>(initial)
   const [saving, setSaving] = useState(false)
@@ -154,6 +164,32 @@ export function AppraisalFormEditor({
           Score Managerial Competencies as well — for anyone who manages people
         </label>
       </Card>
+
+      {/* What colleagues said during the period. On the wall in the culture
+          module this was decoration; in front of somebody about to score
+          twenty criteria it is evidence. */}
+      {recognition.length > 0 && (
+        <Card
+          title={`Recognition received · ${recognition.length}`}
+          sub="Given by colleagues during this assessment period"
+        >
+          <ul className="divide-y divide-slate-50">
+            {recognition.map((r) => (
+              <li key={r.id} className="px-4 py-2.5">
+                <p className="text-sm text-slate-800">{r.message}</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  {r.fromName}
+                  {r.valueName ? ` · ${r.valueName}` : ''}
+                  {' · '}
+                  {new Date(r.createdAt).toLocaleDateString('en-GB', {
+                    day: '2-digit', month: 'short', year: 'numeric',
+                  })}
+                </p>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       {/* ── The rating index, once, above the sections that use it ────── */}
       <div className="bg-white border border-slate-200 rounded-xl px-4 py-2.5">

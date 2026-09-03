@@ -48,6 +48,7 @@ export async function loadCultureContext() {
       include: {
         from: { select: { id: true, fullName: true, employeeCode: true } },
         to: { select: { id: true, fullName: true, designation: true } },
+        value: { select: { id: true, name: true } },
       },
     }),
     prisma.employee.findMany({

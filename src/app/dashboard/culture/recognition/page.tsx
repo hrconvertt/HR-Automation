@@ -17,6 +17,7 @@ export default async function CultureRecognitionPage() {
           id: k.id,
           message: k.message,
           category: k.category,
+          value: k.value ? { id: k.value.id, name: k.value.name } : null,
           createdAt: k.createdAt.toISOString(),
           from: k.from,
           to: k.to,

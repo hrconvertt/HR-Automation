@@ -10,6 +10,7 @@ export async function GET() {
     include: {
       from: { select: { id: true, fullName: true, employeeCode: true, photoUrl: true } },
       to: { select: { id: true, fullName: true, employeeCode: true, photoUrl: true, designation: true } },
+      value: { select: { id: true, name: true } },
     },
   })
   return NextResponse.json({ kudos })
@@ -31,6 +32,10 @@ export async function POST(request: NextRequest) {
   const toId = String(body.toId || '')
   const message = String(body.message || '').trim()
   const category = String(body.category || 'APPRECIATION')
+  // The value this recognises. Recognition that names one tells you which
+  // values actually show up in behaviour; recognition that names nothing is a
+  // compliment with no shelf life.
+  const valueId = typeof body.valueId === 'string' && body.valueId ? body.valueId : null
 
   if (!toId) return NextResponse.json({ error: 'Recipient required' }, { status: 400 })
   if (!message) return NextResponse.json({ error: 'Message required' }, { status: 400 })
@@ -42,6 +47,7 @@ export async function POST(request: NextRequest) {
       toId,
       message: message.slice(0, 1000),
       category,
+      valueId,
     },
   })
 
