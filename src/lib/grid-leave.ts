@@ -44,14 +44,14 @@ export async function leaveRequestForGridMark(opts: {
 }): Promise<{ created: boolean; requestId?: string }> {
   const { employeeId, date, approvedByEmployeeId } = opts
 
+  // Any request at all, whatever its status — not just the live ones.
+  // Filtering to PENDING/APPROVED meant a request HR had deliberately
+  // *rejected* looked like an absence of one, so the next save of the same
+  // cell quietly created a fresh approved copy and overrode the decision.
+  // A rejection is an answer; the cell staying L does not make it not one.
   const covering = await prisma.leaveRequest.findFirst({
-    where: {
-      employeeId,
-      fromDate: { lte: date },
-      toDate: { gte: date },
-      status: { in: ['PENDING', 'PENDING_HR', 'APPROVED'] },
-    },
-    select: { id: true },
+    where: { employeeId, fromDate: { lte: date }, toDate: { gte: date } },
+    select: { id: true, status: true },
   })
   if (covering) return { created: false }
 

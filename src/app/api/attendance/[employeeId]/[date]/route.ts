@@ -18,6 +18,8 @@ import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { parseLocalDate, endOfDay } from '@/lib/date-utils'
 import { CELL_DEFAULTS, type CellStatus } from '@/lib/attendance-cell'
+import { leaveRequestForGridMark, withdrawGridLeave } from '@/lib/grid-leave'
+import { interimEnabled } from '@/lib/interim-flags'
 
 function parseDate(s: string): Date | null {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null
@@ -123,8 +125,32 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     },
   })
 
+  // Marking a cell LEAVE makes the approved leave request behind it, and
+  // moving it off leave withdraws the one it made — see src/lib/grid-leave.ts.
+  // This is the route the grid actually calls; the same behaviour lives on
+  // POST /api/attendance for the other manual-entry path.
+  let leave: { created: boolean; requestId?: string } = { created: false }
+  if (await interimEnabled('interim_grid_leave')) {
+    const me = await prisma.employee.findFirst({
+      where: { userId: user.id }, select: { id: true },
+    })
+    if (saved.status === 'LEAVE') {
+      leave = await leaveRequestForGridMark({
+        employeeId,
+        date,
+        leaveType: typeof (body as { leaveType?: string }).leaveType === 'string'
+          ? (body as { leaveType?: string }).leaveType
+          : null,
+        approvedByEmployeeId: me?.id ?? null,
+      })
+    } else {
+      await withdrawGridLeave(employeeId, date)
+    }
+  }
+
   return NextResponse.json({
     ok: true,
+    leave,
     cell: {
       employeeId,
       date: dateStr,
