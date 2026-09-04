@@ -14,9 +14,11 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
-import { Mail, Copy, Check, Loader2, Undo2, Ban, Calculator, Trash2 } from 'lucide-react'
+import { Mail, Copy, Check, Loader2, Undo2, Ban, Calculator, Trash2, MoreHorizontal } from 'lucide-react'
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 
 interface Row {
   id: string
@@ -90,12 +92,19 @@ export function SandwichTable() {
   /** Answer the question on a leave nobody has ruled on yet. */
   async function decide(pnd: Pending, apply: boolean) {
     setWriting(pnd.leaveId)
-    await fetch(`/api/leave/${pnd.leaveId}/sandwich`, {
+    const res = await fetch(`/api/leave/${pnd.leaveId}/sandwich`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ apply, informed: !apply }),
     })
     setWriting(null)
+    if (res.ok) {
+      toastSuccess(apply
+        ? `Sandwich applied to ${pnd.employee.fullName}`
+        : `${pnd.employee.fullName} — no deduction recorded`)
+    } else {
+      toastError('That decision was not recorded', (await res.json().catch(() => ({}))).error)
+    }
     load()
   }
 
@@ -105,19 +114,28 @@ export function SandwichTable() {
       + 'Waive keeps the record and stops the charge; this removes it entirely.',
     )) return
     setWriting(row.id)
-    await fetch(`/api/sandwich/${row.id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/sandwich/${row.id}`, { method: 'DELETE' })
     setWriting(null)
+    if (res.ok) toastSuccess(`Deduction removed for ${row.employee.fullName}`)
+    else toastError('That record was not removed', (await res.json().catch(() => ({}))).error)
     load()
   }
 
   async function setStatus(row: Row, status: 'APPLIED' | 'WAIVED') {
     setWriting(row.id)
-    await fetch(`/api/sandwich/${row.id}`, {
+    const res = await fetch(`/api/sandwich/${row.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status }),
     })
     setWriting(null)
+    if (res.ok) {
+      toastSuccess(status === 'WAIVED'
+        ? `Waived — ${row.employee.fullName} will not be charged`
+        : `Reinstated — ${pkr(row.amount)} will be charged`)
+    } else {
+      toastError('That change was not saved', (await res.json().catch(() => ({}))).error)
+    }
     load()
   }
 
@@ -241,9 +259,26 @@ export function SandwichTable() {
                       {pkr(r.perDayAmount)}
                       <span className="block text-[11px] text-slate-400">net ÷ {r.divisorDays}</span>
                     </td>
-                    <td className={`px-4 py-2.5 text-right tabular-nums whitespace-nowrap font-medium ${r.status === 'WAIVED' ? 'text-slate-400 line-through' : 'text-slate-900'}`}>
-                      {pkr(r.amount)}
-                      <span className="block text-[11px] text-slate-400 font-normal">{r.days} days</span>
+                    {/* The number is the button. "Calculation" was a pill in the
+                        actions column explaining a figure two columns away; it
+                        belongs on the figure. */}
+                    <td className="px-4 py-2.5 text-right whitespace-nowrap">
+                      <button
+                        type="button"
+                        onClick={() => setSums(r)}
+                        title="See how this was worked out"
+                        className="group inline-flex flex-col items-end"
+                      >
+                        <span className={`tabular-nums font-medium underline decoration-dotted decoration-slate-300 underline-offset-4 group-hover:decoration-slate-500 ${
+                          r.status === 'WAIVED' ? 'text-slate-400 line-through' : 'text-slate-900'
+                        }`}>
+                          {pkr(r.amount)}
+                        </span>
+                        <span className="flex items-center gap-1 text-[11px] text-slate-400 font-normal">
+                          <Calculator className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          {r.days} days
+                        </span>
+                      </button>
                     </td>
                     <td className="px-4 py-2.5">
                       <span className={`inline-block text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border ${
@@ -255,47 +290,102 @@ export function SandwichTable() {
                       </span>
                       {r.note && <p className="text-[11px] text-slate-400 mt-1 max-w-[14rem]">{r.note}</p>}
                     </td>
-                    <td className="px-4 py-2.5 text-[11px] text-slate-500 whitespace-nowrap">
-                      {r.warningSentAt
-                        ? <>Sent {new Date(r.warningSentAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</>
-                        : <span className="text-slate-400">Not sent</span>}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <div className="flex items-center gap-1.5 justify-end">
-                        <button
-                          type="button"
-                          onClick={() => setSums(r)}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-slate-100 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                        >
-                          <Calculator className="w-3 h-3" /> Calculation
-                        </button>
+                    {/* Status and action in one place. The column said "Not sent"
+                        while the button that sends it sat four columns away. */}
+                    <td className="px-4 py-2.5 text-[11px] whitespace-nowrap">
+                      {r.warningSentAt ? (
+                        <>
+                          <span className="text-slate-600">
+                            Sent {new Date(r.warningSentAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setLetter(r)}
+                            className="block text-slate-400 hover:text-slate-700 underline underline-offset-2"
+                          >
+                            Send again
+                          </button>
+                        </>
+                      ) : (
                         <button
                           type="button"
                           onClick={() => setLetter(r)}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-slate-100 bg-slate-50 text-slate-700 hover:bg-slate-100"
+                          className="inline-flex items-center gap-1 text-slate-500 hover:text-slate-900"
                         >
-                          <Mail className="w-3 h-3" /> Warning
+                          <Mail className="w-3 h-3" />
+                          <span className="underline underline-offset-2 decoration-slate-300">Send warning</span>
                         </button>
+                      )}
+                    </td>
+                    {/* One decision, and a menu for the rest. Four pills of
+                        identical weight per row — 172 of them down the page —
+                        made the destructive one look like the others and the
+                        real decision look like none of them. */}
+                    <td className="px-4 py-2.5">
+                      <div className="flex items-center gap-1 justify-end">
                         <button
                           type="button"
                           disabled={writing === r.id}
                           onClick={() => setStatus(r, r.status === 'APPLIED' ? 'WAIVED' : 'APPLIED')}
-                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-slate-100 bg-white text-slate-600 hover:bg-slate-50"
+                          className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2.5 py-1.5 rounded-lg border disabled:opacity-40 ${
+                            r.status === 'APPLIED'
+                              ? 'border-slate-300 bg-white text-slate-800 hover:bg-slate-50'
+                              : 'border-transparent bg-slate-900 text-white hover:bg-slate-800'
+                          }`}
                         >
                           {writing === r.id
-                            ? <Loader2 className="w-3 h-3 animate-spin" />
-                            : r.status === 'APPLIED' ? <Ban className="w-3 h-3" /> : <Undo2 className="w-3 h-3" />}
+                            ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            : r.status === 'APPLIED' ? <Ban className="w-3.5 h-3.5" /> : <Undo2 className="w-3.5 h-3.5" />}
                           {r.status === 'APPLIED' ? 'Waive' : 'Reinstate'}
                         </button>
-                        <button
-                          type="button"
-                          disabled={writing === r.id}
-                          onClick={() => remove(r)}
-                          title="Remove this deduction entirely"
-                          className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md border border-slate-100 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-700"
-                        >
-                          <Trash2 className="w-3 h-3" />
-                        </button>
+
+                        <DropdownMenu.Root>
+                          <DropdownMenu.Trigger asChild>
+                            <button
+                              type="button"
+                              aria-label={`More for ${r.employee.fullName}`}
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-900 hover:bg-slate-100 data-[state=open]:bg-slate-100"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </DropdownMenu.Trigger>
+                          <DropdownMenu.Portal>
+                            <DropdownMenu.Content
+                              align="end"
+                              sideOffset={4}
+                              className="z-50 min-w-[210px] rounded-xl border border-slate-200 bg-white shadow-lg p-1.5 text-[13px]"
+                            >
+                              <DropdownMenu.Item
+                                onSelect={() => setSums(r)}
+                                className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-700 outline-none data-[highlighted]:bg-slate-50 cursor-pointer"
+                              >
+                                <Calculator className="w-3.5 h-3.5 text-slate-400" /> See the calculation
+                              </DropdownMenu.Item>
+                              <DropdownMenu.Item
+                                onSelect={() => setLetter(r)}
+                                className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-slate-700 outline-none data-[highlighted]:bg-slate-50 cursor-pointer"
+                              >
+                                <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                {r.warningSentAt ? 'Send the warning again' : 'Send a warning'}
+                              </DropdownMenu.Item>
+                              <DropdownMenu.Separator className="h-px bg-slate-100 my-1" />
+                              {/* Removing is not the same as waiving, and it is
+                                  the only thing here that cannot be undone —
+                                  so it sits apart, in red, behind the menu. */}
+                              <DropdownMenu.Item
+                                onSelect={(e) => {
+                                  // Let the menu finish closing before a
+                                  // blocking confirm() takes over the thread.
+                                  e.preventDefault()
+                                  setTimeout(() => remove(r), 0)
+                                }}
+                                className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-red-700 outline-none data-[highlighted]:bg-red-50 cursor-pointer"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" /> Remove this record
+                              </DropdownMenu.Item>
+                            </DropdownMenu.Content>
+                          </DropdownMenu.Portal>
+                        </DropdownMenu.Root>
                       </div>
                     </td>
                   </tr>
