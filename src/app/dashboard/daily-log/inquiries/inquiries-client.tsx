@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 
 interface TaskInquiry {
   id: string
@@ -41,12 +42,17 @@ export default function InquiriesClient() {
     if (!response || !response.trim()) return
     setBusy(id)
     const url = kind === 'task' ? `/api/daily-log/${id}/respond` : `/api/daily-kpi/${id}/respond`
-    await fetch(url, {
+    const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ response }),
     })
     setBusy(null)
+    if (!res.ok) {
+      toastError('Your reply was not saved', (await res.json().catch(() => ({}))).error)
+      return
+    }
+    toastSuccess('Reply sent')
     setResponses({ ...responses, [id]: '' })
     void load()
   }

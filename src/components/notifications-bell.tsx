@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { playNotificationSound, type NotificationSound } from '@/lib/notification-sound'
 import Link from 'next/link'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
@@ -100,14 +101,16 @@ export default function NotificationsBell() {
   }, [open, fetchData])
 
   async function markOneRead(id: string) {
-    await fetch(`/api/notifications/${id}`, { method: 'PATCH' })
+    const res = await fetch(`/api/notifications/${id}`, { method: 'PATCH' })
+    if (!res.ok) { toastError('Could not mark that as read'); return }
     invalidateCache(NOTIFICATIONS_URL)
     setNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, isRead: true } : n)))
     setUnreadCount((c) => Math.max(0, c - 1))
   }
 
   async function markAllRead() {
-    await fetch('/api/notifications', { method: 'PATCH' })
+    const res = await fetch('/api/notifications', { method: 'PATCH' })
+    if (!res.ok) { toastError('Could not mark them all as read'); return }
     invalidateCache(NOTIFICATIONS_URL)
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })))
     setUnreadCount(0)

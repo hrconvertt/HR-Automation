@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -43,11 +44,13 @@ export default function TrustedDevicesPanel({ initial }: { initial: Device[] }) 
   )
 
   async function handleAction(deviceId: string, action: 'TRUST' | 'REVOKE') {
-    await fetch('/api/attendance/trusted-devices', {
+    const res = await fetch('/api/attendance/trusted-devices', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ deviceId, action }),
     })
+    if (res.ok) toastSuccess(action === 'TRUST' ? 'Device trusted' : 'Device revoked')
+    else toastError(`Could not ${action.toLowerCase()} that device`, (await res.json().catch(() => ({}))).error)
     router.refresh()
   }
 

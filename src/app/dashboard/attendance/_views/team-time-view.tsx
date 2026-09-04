@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -149,10 +150,12 @@ export default function TeamTimeView({ managerEmployeeId, managerName }: { manag
   }
 
   async function approveOT(logId: string, hours: number) {
-    await fetch('/api/attendance/overtime', {
+    const res = await fetch('/api/attendance/overtime', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ attendanceLogId: logId, overtimeHours: hours, approve: true }),
     })
+    if (res.ok) toastSuccess(`${hours}h overtime approved`)
+    else toastError('Could not approve that overtime', (await res.json().catch(() => ({}))).error)
     await refresh()
   }
 

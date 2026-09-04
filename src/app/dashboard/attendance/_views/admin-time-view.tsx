@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -285,11 +286,13 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
   // the header which switches to the Employee preview view.)
 
   async function handleApproveOvertime(logId: string, hours: number, approve: boolean) {
-    await fetch('/api/attendance/overtime', {
+    const res = await fetch('/api/attendance/overtime', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ attendanceLogId: logId, overtimeHours: hours, approve }),
     })
+    if (res.ok) toastSuccess(approve ? `${hours}h overtime approved` : 'Overtime declined')
+    else toastError('Could not record that decision', (await res.json().catch(() => ({}))).error)
     fetchOvertimeLogs()
   }
 
@@ -300,8 +303,9 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'regenerate_token' }),
     })
-    const data = await res.json()
-    setSyncToken(data.token ?? '')
+    const data = await res.json().catch(() => ({}))
+    if (res.ok) { setSyncToken(data.token ?? ''); toastSuccess('New sync token generated') }
+    else toastError('Could not regenerate the token', data.error)
     setTokenLoading(false)
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -24,10 +25,15 @@ export default function OrganizationSettingsPage() {
   }, [])
 
   async function save() {
-    await fetch('/api/settings', {
+    const res = await fetch('/api/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ companyName, companyAddress, companyNtn, companyEobi, companySessi }),
     })
+    if (!res.ok) {
+      toastError('Organisation details not saved', (await res.json().catch(() => ({}))).error)
+      return
+    }
+    toastSuccess('Organisation details saved')
     setSaved(true); setTimeout(() => setSaved(false), 2500)
   }
 

@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { useEffect, useMemo, useState } from 'react'
 import { BarChart3 } from 'lucide-react'
 
@@ -80,10 +81,13 @@ export default function DailyReviewClient({ readOnly }: { readOnly: boolean }) {
       body: JSON.stringify({ question }),
     })
     setSubmitting(false)
-    if (res.ok) {
-      setModal(null)
-      void load()
+    if (!res.ok) {
+      toastError('Question not sent', (await res.json().catch(() => ({}))).error)
+      return
     }
+    toastSuccess('Question sent')
+    setModal(null)
+    void load()
   }
 
   const employees = data?.employees ?? []

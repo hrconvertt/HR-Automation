@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { BackButton } from '@/components/ui/back-button'
@@ -34,7 +35,8 @@ export default function OnboardingFeedbackPage() {
       body: JSON.stringify({ managerRating, clarityRating, recommendScore, missingItems }),
     })
     setBusy(false)
-    if (res.ok) setDone(true)
+    if (res.ok) { toastSuccess('Thank you — your feedback is in'); setDone(true) }
+    else toastError('Feedback not submitted', (await res.json().catch(() => ({}))).error)
   }
 
   if (done || submittedAt) {

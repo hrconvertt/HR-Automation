@@ -7,6 +7,7 @@
  */
 
 import { useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import { Eye, EyeOff } from 'lucide-react'
 
@@ -34,6 +35,7 @@ export default function DocumentVisibilityToggle({
     setBusy(false)
     if (!res.ok) {
       setVisible(!next) // revert
+      toastError('Visibility not changed', (await res.json().catch(() => ({}))).error)
       return
     }
     router.refresh()

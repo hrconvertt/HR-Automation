@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -129,8 +130,11 @@ export default function NotificationsSettingsPage() {
         body: JSON.stringify({ prefs, theme, sound }),
       })
       if (res.ok) {
+        toastSuccess('Notification preferences saved')
         setSaved(true)
         setTimeout(() => setSaved(false), 2500)
+      } else {
+        toastError('Preferences not saved', (await res.json().catch(() => ({}))).error)
       }
     } finally {
       setSaving(false)

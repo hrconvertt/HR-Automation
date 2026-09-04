@@ -9,6 +9,7 @@
  * HR clicks a cell to edit; the number persists via POST /api/settings/leave-policies.
  */
 import { useState, useEffect } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -46,10 +47,12 @@ export default function LeavePoliciesSettingsPage() {
     setSaving(true)
     const days = Number(editValue)
     if (!Number.isFinite(days) || days < 0) { setSaving(false); return }
-    await fetch('/api/settings/leave-policies', {
+    const res = await fetch('/api/settings/leave-policies', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ leaveType: editing.leaveType, employeeType: editing.employeeType, daysPerYear: days }),
     })
+    if (res.ok) toastSuccess(`${editing.leaveType} set to ${days} days a year`)
+    else toastError('Could not save that policy', (await res.json().catch(() => ({}))).error)
     setEditing(null); setEditValue('')
     await load()
     setSaving(false)
