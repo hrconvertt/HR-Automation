@@ -12,6 +12,7 @@
  */
 
 import { useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -129,7 +130,7 @@ export default function RoleHistoryCard({
     setBusy(false)
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      alert(data?.error ?? 'Failed to delete.')
+      toastError('Failed to delete.', data?.error)
       return
     }
     router.refresh()

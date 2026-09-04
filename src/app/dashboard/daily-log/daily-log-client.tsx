@@ -142,84 +142,86 @@ export default function DailyLogClient() {
             <Plus className="w-4 h-4" /> Add row
           </button>
         </div>
-        <table className="w-full text-sm">
-          <thead className="text-gray-700">
-            <tr className="border-b border-gray-200">
-              <th className="text-left py-2 font-medium">Task name</th>
-              <th className="text-left py-2 font-medium w-20">Hours</th>
-              <th className="text-left py-2 font-medium w-32">Status</th>
-              <th className="text-left py-2 font-medium w-32">Category</th>
-              <th className="text-left py-2 font-medium">Notes</th>
-              <th className="w-8" />
-            </tr>
-          </thead>
-          <tbody>
-            {tasks.map((row, i) => (
-              <tr key={i} className="border-b border-gray-100">
-                <td className="py-1 pr-2">
-                  <input
-                    value={row.taskName}
-                    onChange={(e) => setRow(i, { taskName: e.target.value })}
-                    placeholder="What did you do?"
-                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                  />
-                </td>
-                <td className="py-1 pr-2">
-                  <input
-                    type="number"
-                    step="0.25"
-                    min="0"
-                    max="24"
-                    value={row.hoursInvested}
-                    onChange={(e) => setRow(i, { hoursInvested: e.target.value })}
-                    className="w-20 border border-gray-300 rounded px-2 py-1.5 text-sm"
-                  />
-                </td>
-                <td className="py-1 pr-2">
-                  <select
-                    value={row.status}
-                    onChange={(e) => setRow(i, { status: e.target.value })}
-                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                  >
-                    {(config?.statusOptions ?? ['NOT_STARTED','IN_PROGRESS','COMPLETED','BLOCKED']).map((s) => (
-                      <option key={s} value={s}>{s.replace('_', ' ')}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="py-1 pr-2">
-                  <select
-                    value={row.category}
-                    onChange={(e) => setRow(i, { category: e.target.value })}
-                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                  >
-                    <option value="">—</option>
-                    {(config?.taskCategories ?? []).map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </td>
-                <td className="py-1 pr-2">
-                  <input
-                    value={row.notes}
-                    onChange={(e) => setRow(i, { notes: e.target.value })}
-                    placeholder="optional"
-                    className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
-                  />
-                </td>
-                <td className="py-1">
-                  <button
-                    type="button"
-                    onClick={() => removeRow(i)}
-                    className="text-gray-400 hover:text-slate-900 p-1"
-                    aria-label="Remove row"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </td>
+        <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+            <thead className="text-gray-700">
+              <tr className="border-b border-gray-200">
+                <th className="text-left py-2 font-medium">Task name</th>
+                <th className="text-left py-2 font-medium w-20">Hours</th>
+                <th className="text-left py-2 font-medium w-32">Status</th>
+                <th className="text-left py-2 font-medium w-32">Category</th>
+                <th className="text-left py-2 font-medium">Notes</th>
+                <th className="w-8" />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {tasks.map((row, i) => (
+                <tr key={i} className="border-b border-gray-100">
+                  <td className="py-1 pr-2">
+                    <input
+                      value={row.taskName}
+                      onChange={(e) => setRow(i, { taskName: e.target.value })}
+                      placeholder="What did you do?"
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                    />
+                  </td>
+                  <td className="py-1 pr-2">
+                    <input
+                      type="number"
+                      step="0.25"
+                      min="0"
+                      max="24"
+                      value={row.hoursInvested}
+                      onChange={(e) => setRow(i, { hoursInvested: e.target.value })}
+                      className="w-20 border border-gray-300 rounded px-2 py-1.5 text-sm"
+                    />
+                  </td>
+                  <td className="py-1 pr-2">
+                    <select
+                      value={row.status}
+                      onChange={(e) => setRow(i, { status: e.target.value })}
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                    >
+                      {(config?.statusOptions ?? ['NOT_STARTED','IN_PROGRESS','COMPLETED','BLOCKED']).map((s) => (
+                        <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="py-1 pr-2">
+                    <select
+                      value={row.category}
+                      onChange={(e) => setRow(i, { category: e.target.value })}
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                    >
+                      <option value="">—</option>
+                      {(config?.taskCategories ?? []).map((c) => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className="py-1 pr-2">
+                    <input
+                      value={row.notes}
+                      onChange={(e) => setRow(i, { notes: e.target.value })}
+                      placeholder="optional"
+                      className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm"
+                    />
+                  </td>
+                  <td className="py-1">
+                    <button
+                      type="button"
+                      onClick={() => removeRow(i)}
+                      className="text-gray-400 hover:text-slate-900 p-1"
+                      aria-label="Remove row"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <div className="mt-2 text-xs text-gray-500">Total hours: {totalHours.toFixed(2)}</div>
       </div>
 
@@ -228,26 +230,28 @@ export default function DailyLogClient() {
         {assignments.length === 0 ? (
           <p className="text-sm text-gray-500">No KPIs assigned. HR can configure them in Daily Logging Settings.</p>
         ) : (
-          <table className="w-full text-sm">
-            <tbody>
-              {assignments.map((a) => (
-                <tr key={a.id} className="border-b border-gray-100">
-                  <td className="py-2 text-gray-900 font-medium">{a.metric.name}</td>
-                  <td className="py-2 text-gray-500 w-32">Target: {a.target} <span className="text-xs">({a.metric.unit})</span></td>
-                  <td className="py-2 w-40">
-                    <input
-                      type="number"
-                      min="0"
-                      placeholder="Actual"
-                      value={kpiInputs[a.metricId] ?? ''}
-                      onChange={(e) => setKpiInputs({ ...kpiInputs, [a.metricId]: e.target.value })}
-                      className="w-28 border border-gray-300 rounded px-2 py-1.5 text-sm"
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="w-full overflow-x-auto">
+              <table className="w-full text-sm">
+              <tbody>
+                {assignments.map((a) => (
+                  <tr key={a.id} className="border-b border-gray-100">
+                    <td className="py-2 text-gray-900 font-medium">{a.metric.name}</td>
+                    <td className="py-2 text-gray-500 w-32">Target: {a.target} <span className="text-xs">({a.metric.unit})</span></td>
+                    <td className="py-2 w-40">
+                      <input
+                        type="number"
+                        min="0"
+                        placeholder="Actual"
+                        value={kpiInputs[a.metricId] ?? ''}
+                        onChange={(e) => setKpiInputs({ ...kpiInputs, [a.metricId]: e.target.value })}
+                        className="w-28 border border-gray-300 rounded px-2 py-1.5 text-sm"
+                      />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

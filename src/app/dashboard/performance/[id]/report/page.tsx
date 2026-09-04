@@ -201,31 +201,33 @@ export default async function PerformanceReportPage({ params }: PageProps) {
           {review.goals.length === 0 ? (
             <p style={{ fontSize: 10, color: '#6b7280' }}>No goals recorded for this period.</p>
           ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th style={{ width: '40%' }}>Goal</th>
-                  <th>KPI / Target</th>
-                  <th style={{ width: 70 }}>Weight</th>
-                  <th style={{ width: 90 }}>Achievement</th>
-                  <th style={{ width: 90 }}>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {review.goals.map((g) => (
-                  <tr key={g.id}>
-                    <td>{g.description}</td>
-                    <td style={{ fontSize: 9, color: '#374151' }}>
-                      {g.kpi ? <div><strong>{g.kpi}</strong></div> : null}
-                      {g.target ? <div>{g.target}</div> : null}
-                    </td>
-                    <td className="tabular-nums">{g.weight}</td>
-                    <td className="tabular-nums">{g.achievement != null ? `${g.achievement}%` : '—'}</td>
-                    <td>{g.status.replace('_', ' ')}</td>
+            <div className="w-full overflow-x-auto">
+                <table>
+                <thead>
+                  <tr>
+                    <th style={{ width: '40%' }}>Goal</th>
+                    <th>KPI / Target</th>
+                    <th style={{ width: 70 }}>Weight</th>
+                    <th style={{ width: 90 }}>Achievement</th>
+                    <th style={{ width: 90 }}>Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {review.goals.map((g) => (
+                    <tr key={g.id}>
+                      <td>{g.description}</td>
+                      <td style={{ fontSize: 9, color: '#374151' }}>
+                        {g.kpi ? <div><strong>{g.kpi}</strong></div> : null}
+                        {g.target ? <div>{g.target}</div> : null}
+                      </td>
+                      <td className="tabular-nums">{g.weight}</td>
+                      <td className="tabular-nums">{g.achievement != null ? `${g.achievement}%` : '—'}</td>
+                      <td>{g.status.replace('_', ' ')}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {(review.goalsOnTime != null || review.goalsLate != null) && (
             <p style={{ fontSize: 10, color: '#6b7280', marginTop: 6 }}>
@@ -238,23 +240,25 @@ export default async function PerformanceReportPage({ params }: PageProps) {
         {/* 3. Behavioral */}
         <section>
           <h2>Behavioral Assessment</h2>
-          <table>
-            <tbody>
-              {DIM_LABELS.map(([key, label]) => {
-                const v = (review as unknown as DimScores)[key]
-                const pct = v != null ? Math.max(0, Math.min(100, (v / 5) * 100)) : 0
-                return (
-                  <tr key={key}>
-                    <td style={{ width: '30%' }}>{label}</td>
-                    <td>
-                      <div className="bar"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
-                    </td>
-                    <td style={{ width: 60, textAlign: 'right' }}>{v != null ? `${v.toFixed(1)} / 5` : '—'}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <div className="w-full overflow-x-auto">
+              <table>
+              <tbody>
+                {DIM_LABELS.map(([key, label]) => {
+                  const v = (review as unknown as DimScores)[key]
+                  const pct = v != null ? Math.max(0, Math.min(100, (v / 5) * 100)) : 0
+                  return (
+                    <tr key={key}>
+                      <td style={{ width: '30%' }}>{label}</td>
+                      <td>
+                        <div className="bar"><div className="bar-fill" style={{ width: `${pct}%` }} /></div>
+                      </td>
+                      <td style={{ width: 60, textAlign: 'right' }}>{v != null ? `${v.toFixed(1)} / 5` : '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
         </section>
 
         {/* 4. Time & Attendance */}

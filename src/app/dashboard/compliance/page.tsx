@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -53,7 +54,7 @@ export default function CompliancePage() {
     })
     setGenerating(null)
     if (res.ok) fetchReports()
-    else alert('Failed to generate report')
+    else toastError('Failed to generate report')
   }
 
   return (

@@ -12,6 +12,7 @@
  * CSS; they are absent from the payload.
  */
 import { useState, useEffect, useCallback } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { PULSE_DRIVERS, PULSE_SCALE, ENPS_QUESTION, enpsBand } from '@/lib/pulse'
 import { Loader2, ShieldCheck, Check } from 'lucide-react'
 
@@ -96,21 +97,25 @@ export function PulseClient({ isHr }: { isHr: boolean }) {
   async function newRound() {
     setSaving(true)
     try {
-      await fetch('/api/pulse', {
+      const res = await fetch('/api/pulse', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'create' }),
       })
+      if (res.ok) toastSuccess('New pulse round created')
+      else toastError('Could not create the round', (await res.json().catch(() => ({}))).error)
       await load()
     } finally { setSaving(false) }
   }
 
   async function setStatus(id: string, action: 'open' | 'close') {
-    await fetch('/api/pulse', {
+    const res = await fetch('/api/pulse', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action, id }),
     })
+    if (res.ok) toastSuccess(action === 'open' ? 'Round opened' : 'Round closed')
+    else toastError(`Could not ${action} the round`, (await res.json().catch(() => ({}))).error)
     await load()
   }
 

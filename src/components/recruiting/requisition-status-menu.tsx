@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, Pause, Play, X, CheckCheck, RotateCcw } from 'lucide-react'
 
@@ -37,7 +38,7 @@ export function RequisitionStatusMenu({ requisitionId, status, title }: Props) {
     setSaving(false)
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      alert(data.error || 'Failed to change status')
+      toastError('Failed to change status', data.error)
       return
     }
     router.refresh()

@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -288,7 +289,7 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
           return
         }
       } else {
-        alert(msg)
+        toastError('Something went wrong', String(msg))
       }
       return
     }
@@ -301,7 +302,7 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
     setBusy(true)
     const r = await safeFetch(`/api/payroll/${payrollRun.id}/recompute`, { method: 'POST' })
     setBusy(false)
-    if (!r.ok) alert(r.error ?? 'Failed to recompute')
+    if (!r.ok) toastError('Failed to recompute', r.error)
     fetchPayroll()
   }
 
@@ -316,7 +317,7 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
     })
     setBusy(false)
     if (!r.ok) {
-      alert(r.error ?? 'Action failed')
+      toastError('Action failed', r.error)
       return
     }
     fetchPayroll()
@@ -326,7 +327,7 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
     if (!payrollRun) return
     const trimmed = sendBackReason.trim()
     if (trimmed.length < 3) {
-      alert('Please provide a reason for sending back.')
+      toastError('Please provide a reason for sending back.')
       return
     }
     setSendBackOpen(false)
@@ -360,11 +361,11 @@ export function HRPayrollView({ initialData }: { initialData?: HRPayrollInitialD
     setGenBusy(false)
     setGenDocsOpen(false)
     if (!r.ok) {
-      alert(r.error ?? 'Failed to generate payslip documents.')
+      toastError('Failed to generate payslip documents.', r.error)
       return
     }
     const { created = 0, skipped = 0, notified = 0 } = r.data ?? {}
-    alert(`Generated ${created} payslip PDF${created === 1 ? '' : 's'}.${skipped ? ` Skipped ${skipped} existing.` : ''}${notified ? ` Notified ${notified} employee${notified === 1 ? '' : 's'}.` : ''}`)
+    toastSuccess(`Generated ${created} payslip PDF${created === 1 ? '' : 's'}.${skipped ? ` Skipped ${skipped} existing.` : ''}${notified ? ` Notified ${notified} employee${notified === 1 ? '' : 's'}.` : ''}`)
   }
 
   const canSendBack = payrollRun
@@ -1017,7 +1018,7 @@ function OffCycleDialog({
     const entries = Object.entries(selected)
       .map(([employeeId, v]) => ({ employeeId, amount: Number(v.amount), note: v.note.trim() || undefined }))
       .filter((e) => Number.isFinite(e.amount) && e.amount > 0)
-    if (entries.length === 0) { alert('Select at least one employee and enter a positive amount.'); return }
+    if (entries.length === 0) { toastError('Select at least one employee and enter a positive amount.'); return }
     setBusy(true)
     const r = await safeFetch<{ payrollRun: { id: string } }>('/api/payroll/off-cycle', {
       method: 'POST',
@@ -1025,7 +1026,7 @@ function OffCycleDialog({
       body: JSON.stringify({ month, year, runType, entries }),
     })
     setBusy(false)
-    if (!r.ok || !r.data?.payrollRun?.id) { alert(r.error ?? 'Failed to create off-cycle run'); return }
+    if (!r.ok || !r.data?.payrollRun?.id) { toastError('Failed to create off-cycle run', r.error); return }
     onCreated(r.data.payrollRun.id)
   }
 
@@ -1140,7 +1141,7 @@ function PayrollCalendarCard({ initial, todayISO }: { initial: PayrollCalendar; 
       body: JSON.stringify(draft),
     })
     setBusy(false)
-    if (!r.ok || !r.data) { alert(r.error ?? 'Failed to save'); return }
+    if (!r.ok || !r.data) { toastError('Failed to save', r.error); return }
     setCfg(r.data)
     setEditing(false)
   }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 
@@ -85,7 +86,7 @@ export default function PayrollConfigSettingsPage() {
   const employerContribution = Math.round(eobiWageBase * (eobiEmployerRate / 100))
 
   async function save() {
-    await fetch('/api/settings', {
+    const res = await fetch('/api/settings', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         standardHoursPerDay, overtimeMultiplier, lateThresholdHour, lateThresholdMinute,
@@ -108,6 +109,11 @@ export default function PayrollConfigSettingsPage() {
         taxEnabled,
       }),
     })
+    if (!res.ok) {
+      toastError('Payroll configuration not saved', (await res.json().catch(() => ({}))).error)
+      return
+    }
+    toastSuccess('Payroll configuration saved')
     setSaved(true); setTimeout(() => setSaved(false), 2500)
   }
 

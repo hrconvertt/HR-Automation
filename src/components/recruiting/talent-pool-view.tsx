@@ -1,6 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -92,7 +93,7 @@ export function TalentPoolView({ candidates, openRequisitions }: Props) {
       body: JSON.stringify({ inPool: false }),
     })
     setRemovingId(null)
-    if (!res.ok) { alert('Failed to remove'); return }
+    if (!res.ok) { toastError('Failed to remove'); return }
     router.refresh()
   }
 

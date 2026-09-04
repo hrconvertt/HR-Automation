@@ -11,6 +11,7 @@
  */
 
 import { useEffect, useState, useCallback } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -88,7 +89,7 @@ export function DepartmentBreakdown({ canEdit }: { canEdit: boolean }) {
     const r = await fetch(`/api/settings/departments/${d.id}`, { method: 'DELETE' })
     if (!r.ok) {
       const e = await r.json().catch(() => ({}))
-      alert(e.error ?? 'Failed to delete')
+      toastError('Failed to delete', e.error)
       return
     }
     void load()

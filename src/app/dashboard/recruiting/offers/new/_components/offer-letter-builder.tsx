@@ -222,40 +222,44 @@ export function OfferLetterBuilder({ departments }: { departments: Dept[] }) {
             Subject to your acceptance, the terms of your employment are set out below.
           </p>
 
-          <table className="w-full border-collapse mb-4">
-            <tbody>
-              <Row k="Position" v={f.position} />
-              <Row k="Department" v={f.department} />
-              <Row k="Employment Type" v={f.employmentType} />
-              <Row k="Reporting To" v={f.reportingTo} />
-              <Row k="Date of Joining" v={f.joiningDate ? fmtDate(f.joiningDate) : ''} />
-              <Row k="Work Location" v={f.workLocation} />
-              <Row k="Working Hours" v={f.workingHours} />
-              <Row k="Probation Period" v={f.probation} />
-              <Row k="Notice Period" v={f.noticePeriod} />
-              <Row k="Leave Entitlement" v={f.leaveEntitlement} />
-            </tbody>
-          </table>
+          <div className="w-full overflow-x-auto">
+              <table className="w-full border-collapse mb-4">
+              <tbody>
+                <Row k="Position" v={f.position} />
+                <Row k="Department" v={f.department} />
+                <Row k="Employment Type" v={f.employmentType} />
+                <Row k="Reporting To" v={f.reportingTo} />
+                <Row k="Date of Joining" v={f.joiningDate ? fmtDate(f.joiningDate) : ''} />
+                <Row k="Work Location" v={f.workLocation} />
+                <Row k="Working Hours" v={f.workingHours} />
+                <Row k="Probation Period" v={f.probation} />
+                <Row k="Notice Period" v={f.noticePeriod} />
+                <Row k="Leave Entitlement" v={f.leaveEntitlement} />
+              </tbody>
+            </table>
+          </div>
 
           <p className="font-semibold mb-2">Compensation</p>
-          <table className="w-full border-collapse mb-4">
-            <tbody>
-              {COMPONENTS.map((c) => (
-                <tr key={c.key}>
-                  <td className="border border-slate-300 px-2 py-1 w-1/2">{c.label}</td>
+          <div className="w-full overflow-x-auto">
+              <table className="w-full border-collapse mb-4">
+              <tbody>
+                {COMPONENTS.map((c) => (
+                  <tr key={c.key}>
+                    <td className="border border-slate-300 px-2 py-1 w-1/2">{c.label}</td>
+                    <td className="border border-slate-300 px-2 py-1 text-right tabular-nums">
+                      {Number(pay[c.key]) > 0 ? money(Number(pay[c.key])) : '—'}
+                    </td>
+                  </tr>
+                ))}
+                <tr className="font-bold">
+                  <td className="border border-slate-300 px-2 py-1">Gross Monthly Salary (PKR)</td>
                   <td className="border border-slate-300 px-2 py-1 text-right tabular-nums">
-                    {Number(pay[c.key]) > 0 ? money(Number(pay[c.key])) : '—'}
+                    {gross > 0 ? money(gross) : '—'}
                   </td>
                 </tr>
-              ))}
-              <tr className="font-bold">
-                <td className="border border-slate-300 px-2 py-1">Gross Monthly Salary (PKR)</td>
-                <td className="border border-slate-300 px-2 py-1 text-right tabular-nums">
-                  {gross > 0 ? money(gross) : '—'}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+              </tbody>
+            </table>
+          </div>
 
           <p className="mb-3">
             All payments are subject to deduction of income tax and any other statutory

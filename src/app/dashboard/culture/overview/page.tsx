@@ -185,26 +185,28 @@ export default async function CultureOverviewPage() {
           {eventCats.length === 0 ? (
             <Empty>Nothing to break down yet.</Empty>
           ) : (
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
-                  <th className="text-left font-semibold py-2">Kind</th>
-                  <th className="text-right font-semibold py-2 w-20">Events</th>
-                  <th className="text-right font-semibold py-2 w-32">Spend</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {eventCats.map(([cat, v]) => (
-                  <tr key={cat}>
-                    <td className="py-2 text-slate-700">
-                      {CATEGORY_LABELS[cat as EventCategory] ?? cat}
-                    </td>
-                    <td className="py-2 text-right tabular-nums text-slate-600">{v.count}</td>
-                    <td className="py-2 text-right tabular-nums text-slate-900">{money(v.spend)}</td>
+            <div className="w-full overflow-x-auto">
+                <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-[11px] uppercase tracking-wide text-slate-500 border-b border-slate-200">
+                    <th className="text-left font-semibold py-2">Kind</th>
+                    <th className="text-right font-semibold py-2 w-20">Events</th>
+                    <th className="text-right font-semibold py-2 w-32">Spend</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {eventCats.map(([cat, v]) => (
+                    <tr key={cat}>
+                      <td className="py-2 text-slate-700">
+                        {CATEGORY_LABELS[cat as EventCategory] ?? cat}
+                      </td>
+                      <td className="py-2 text-right tabular-nums text-slate-600">{v.count}</td>
+                      <td className="py-2 text-right tabular-nums text-slate-900">{money(v.spend)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </Panel>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
@@ -56,7 +57,7 @@ export function LetterActions({ letterId, status, role, canDelete, isPreviewMode
     setSaving(false)
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      alert(data.error || 'Failed to delete')
+      toastError('Failed to delete', data.error)
       return
     }
     router.refresh()

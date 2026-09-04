@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { EmailLink } from '@/components/ui/contact-link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -128,7 +129,7 @@ export default function PipelinePage() {
                           </div>
                           <div>
                             <p className="text-sm text-white font-medium">{maskName(c.fullName, c.email)}</p>
-                            {!anonymous && <p className="text-xs text-gray-500">{c.email}</p>}
+                            {!anonymous && <p className="text-xs"><EmailLink value={c.email} className="text-gray-500" /></p>}
                           </div>
                         </div>
                         <div className="flex items-center gap-3">

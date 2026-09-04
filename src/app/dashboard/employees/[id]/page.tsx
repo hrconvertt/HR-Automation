@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { ContactValue, EmailLink } from '@/components/ui/contact-link'
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import { formatDate, formatCurrency } from '@/lib/utils'
 import { verifyToken } from '@/lib/auth'
@@ -441,7 +442,9 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
               </div>
               <div>
                 <p className="text-gray-400 text-xs">Email</p>
-                <p className="font-medium text-gray-900 truncate">{employee.email}</p>
+                <p className="font-medium text-gray-900 truncate">
+                  <EmailLink value={employee.email} />
+                </p>
               </div>
             </div>
           </div>
@@ -481,7 +484,9 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                   ] as [string, string | null | undefined][]).map(([label, value]) => (
                     <div key={label} className="flex gap-3">
                       <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
-                      <dd className={value ? 'text-gray-900' : 'text-slate-300'}>{value || '—'}</dd>
+                      <dd className={value ? 'text-gray-900' : 'text-slate-300'}>
+                        <ContactValue label={label} value={value} />
+                      </dd>
                     </div>
                   ))}
                 </dl>
@@ -510,7 +515,9 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                     ] as [string, string | null | undefined][]).map(([label, value]) => (
                       <div key={label} className="flex gap-3">
                         <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
-                        <dd className={value ? 'text-gray-900' : 'text-slate-300'}>{value || '—'}</dd>
+                        <dd className={value ? 'text-gray-900' : 'text-slate-300'}>
+                        <ContactValue label={label} value={value} />
+                      </dd>
                       </div>
                     ))}
                   </dl>
@@ -540,7 +547,9 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                     ] as [string, string | null | undefined][]).map(([label, value]) => (
                       <div key={label} className="flex gap-3">
                         <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
-                        <dd className={value ? 'text-gray-900' : 'text-slate-300'}>{value || '—'}</dd>
+                        <dd className={value ? 'text-gray-900' : 'text-slate-300'}>
+                        <ContactValue label={label} value={value} />
+                      </dd>
                       </div>
                     ))}
                   </dl>
@@ -571,7 +580,9 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                   ] as [string, string | null | undefined][]).map(([label, value]) => (
                     <div key={label} className="flex gap-3">
                       <dt className="text-gray-500 w-36 flex-shrink-0">{label}</dt>
-                      <dd className={value ? 'text-gray-900' : 'text-slate-300'}>{value || '—'}</dd>
+                      <dd className={value ? 'text-gray-900' : 'text-slate-300'}>
+                        <ContactValue label={label} value={value} />
+                      </dd>
                     </div>
                   ))}
                 </dl>

@@ -13,6 +13,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import Link from 'next/link'
 import { CheckCircle2, XCircle, Inbox, Clock, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -70,7 +71,7 @@ export function ApprovalsInbox(_props: { role: string }) {
       }),
     })
     setActing(null)
-    if (!r.ok) alert(r.error ?? 'Could not approve.')
+    if (!r.ok) toastError('Could not approve.', r.error)
     fetchData()
   }
 
@@ -87,7 +88,7 @@ export function ApprovalsInbox(_props: { role: string }) {
       }),
     })
     setActing(null)
-    if (!r.ok) { alert(r.error ?? 'Could not reject.'); return }
+    if (!r.ok) { toastError('Could not reject.', r.error); return }
     setRejectTarget(null)
     setRejectReason('')
     fetchData()

@@ -17,6 +17,7 @@
  */
 
 import { useState, useMemo, useEffect, useCallback } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
@@ -154,7 +155,7 @@ export function PayrollGridEditor({
       body: JSON.stringify({ updates }),
     })
     setBusy(false)
-    if (!r.ok) { alert(r.error ?? 'Save failed'); return }
+    if (!r.ok) { toastError('Save failed', r.error); return }
     setEdits({})
     onSaved()
   }
@@ -185,7 +186,7 @@ export function PayrollGridEditor({
       body: JSON.stringify({ action: act, reason }),
     })
     setBusy(false)
-    if (!r.ok) { alert(r.error ?? 'Action failed'); return }
+    if (!r.ok) { toastError('Action failed', r.error); return }
     onAdvanced()
   }
 
@@ -429,7 +430,7 @@ export function PayrollGridEditor({
               <Button
                 onClick={() => {
                   const t = sendBackReason.trim()
-                  if (t.length < 3) { alert('A reason is required.'); return }
+                  if (t.length < 3) { toastError('A reason is required.'); return }
                   setShowSendBack(false); setSendBackReason('')
                   advance('SEND_BACK', t)
                 }}

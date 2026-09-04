@@ -149,70 +149,74 @@ export default function DailyReviewClient({ readOnly }: { readOnly: boolean }) {
             </div>
 
             {e.logs.length > 0 && (
-              <table className="w-full text-sm">
-                <tbody>
-                  {e.logs.map((l) => (
-                    <tr key={l.id} className="border-t border-gray-100">
-                      <td className="py-1.5 pr-2 text-gray-900">{l.taskName}</td>
-                      <td className="py-1.5 pr-2 text-gray-500 w-20">{Number(l.hoursInvested).toFixed(2)} hr</td>
-                      <td className="py-1.5 pr-2 text-gray-500 w-28">{l.status.replace('_', ' ')}</td>
-                      <td className="py-1.5 pr-2 text-gray-500 w-28">{l.category ?? '—'}</td>
-                      <td className="py-1.5 text-right w-28">
-                        {!readOnly && l.inquiryStatus === 'NONE' && (
-                          <button
-                            type="button"
-                            onClick={() => openAsk('task', l.id, l.taskName)}
-                            className="text-xs text-slate-700 underline"
-                          >
-                            Ask Why
-                          </button>
-                        )}
-                        {l.inquiryStatus === 'PENDING' && (
-                          <span className="text-xs text-slate-700">Pending response</span>
-                        )}
-                        {l.inquiryStatus === 'RESOLVED' && (
-                          <span className="text-xs text-slate-700" title={l.employeeResponse ?? ''}>Resolved</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-
-            {e.kpis.length > 0 && (
-              <table className="w-full text-sm mt-2">
-                <tbody>
-                  {e.kpis.map((k) => {
-                    const met = k.actual >= k.target
-                    return (
-                      <tr key={k.id} className="border-t border-gray-100">
-                        <td className="py-1.5 pr-2 text-gray-900">KPI — {k.metric.name}</td>
-                        <td className="py-1.5 pr-2 text-gray-500 w-40">
-                          {k.actual} / {k.target} {met ? '✓' : '✗'}
-                        </td>
+              <div className="w-full overflow-x-auto">
+                  <table className="w-full text-sm">
+                  <tbody>
+                    {e.logs.map((l) => (
+                      <tr key={l.id} className="border-t border-gray-100">
+                        <td className="py-1.5 pr-2 text-gray-900">{l.taskName}</td>
+                        <td className="py-1.5 pr-2 text-gray-500 w-20">{Number(l.hoursInvested).toFixed(2)} hr</td>
+                        <td className="py-1.5 pr-2 text-gray-500 w-28">{l.status.replace('_', ' ')}</td>
+                        <td className="py-1.5 pr-2 text-gray-500 w-28">{l.category ?? '—'}</td>
                         <td className="py-1.5 text-right w-28">
-                          {!readOnly && k.inquiryStatus === 'NONE' && (
+                          {!readOnly && l.inquiryStatus === 'NONE' && (
                             <button
                               type="button"
-                              onClick={() => openAsk('kpi', k.id, k.metric.name)}
+                              onClick={() => openAsk('task', l.id, l.taskName)}
                               className="text-xs text-slate-700 underline"
                             >
                               Ask Why
                             </button>
                           )}
-                          {k.inquiryStatus === 'PENDING' && (
+                          {l.inquiryStatus === 'PENDING' && (
                             <span className="text-xs text-slate-700">Pending response</span>
                           )}
-                          {k.inquiryStatus === 'RESOLVED' && (
-                            <span className="text-xs text-slate-700" title={k.employeeResponse ?? ''}>Resolved</span>
+                          {l.inquiryStatus === 'RESOLVED' && (
+                            <span className="text-xs text-slate-700" title={l.employeeResponse ?? ''}>Resolved</span>
                           )}
                         </td>
                       </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {e.kpis.length > 0 && (
+              <div className="w-full overflow-x-auto">
+                  <table className="w-full text-sm mt-2">
+                  <tbody>
+                    {e.kpis.map((k) => {
+                      const met = k.actual >= k.target
+                      return (
+                        <tr key={k.id} className="border-t border-gray-100">
+                          <td className="py-1.5 pr-2 text-gray-900">KPI — {k.metric.name}</td>
+                          <td className="py-1.5 pr-2 text-gray-500 w-40">
+                            {k.actual} / {k.target} {met ? '✓' : '✗'}
+                          </td>
+                          <td className="py-1.5 text-right w-28">
+                            {!readOnly && k.inquiryStatus === 'NONE' && (
+                              <button
+                                type="button"
+                                onClick={() => openAsk('kpi', k.id, k.metric.name)}
+                                className="text-xs text-slate-700 underline"
+                              >
+                                Ask Why
+                              </button>
+                            )}
+                            {k.inquiryStatus === 'PENDING' && (
+                              <span className="text-xs text-slate-700">Pending response</span>
+                            )}
+                            {k.inquiryStatus === 'RESOLVED' && (
+                              <span className="text-xs text-slate-700" title={k.employeeResponse ?? ''}>Resolved</span>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
             )}
           </div>
         )

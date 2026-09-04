@@ -373,77 +373,79 @@ export default function MyTimeView({ employeeId, employeeName }: { employeeId: s
                 <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500 font-semibold">Today&apos;s Sessions</p>
                 <p className="text-[11px] text-slate-500">{sessionsOnly.length} session{sessionsOnly.length > 1 ? 's' : ''}</p>
               </div>
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-100">
-                    <th className="text-left px-5 py-2 w-12">#</th>
-                    <th className="text-left px-2 py-2">Type</th>
-                    <th className="text-left px-2 py-2">Start</th>
-                    <th className="text-left px-2 py-2">End</th>
-                    <th className="text-left px-2 py-2">Location</th>
-                    <th className="text-right px-5 py-2">Duration</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((r, i) => {
-                    const isSession = r.kind === 'SESSION'
-                    const sessionNum = isSession ? sessionsOnly.indexOf(r) + 1 : null
-                    const endTime = r.end ?? now
-                    const ms = endTime.getTime() - r.start.getTime()
-                    return (
-                      <tr key={i} className={'border-b border-slate-50 last:border-b-0 ' + (isSession ? '' : 'bg-slate-50/40')}>
-                        <td className="px-5 py-3 text-slate-400 font-mono text-xs">{isSession ? sessionNum : '—'}</td>
-                        <td className="px-2 py-3">
-                          {isSession ? (
-                            <span className={
-                              'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ' +
-                              (r.wfh ? 'bg-slate-100 text-slate-900' : 'bg-slate-100 text-slate-900')
-                            }>
-                              {r.wfh ? <Home className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
-                              {r.wfh ? 'WFH' : 'Onsite'}
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-700">
-                              <Coffee className="w-3 h-3" /> Break
-                            </span>
-                          )}
-                        </td>
-                        <td className="px-2 py-3 font-mono tabular-nums text-slate-900">{fmtTime(r.start.toISOString())}</td>
-                        <td className="px-2 py-3 font-mono tabular-nums">
-                          {r.end ? <span className="text-slate-900">{fmtTime(r.end.toISOString())}</span> :
-                            <span className="text-slate-700 font-semibold">running…</span>}
-                        </td>
-                        <td className="px-2 py-3 text-xs text-slate-600">
-                          {isSession ? (r.wfh ? 'Working from home' : 'At the office') : 'Stepped away'}
-                        </td>
-                        <td className="px-5 py-3 text-right font-semibold text-slate-900 tabular-nums">
-                          {formatHMS(ms)}
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-                <tfoot>
-                  <tr className="border-t-2 border-slate-300 bg-slate-50/60">
-                    <td colSpan={5} className="px-5 py-3 text-[11px] uppercase tracking-wider text-slate-700 font-semibold">
-                      Total worked today
-                    </td>
-                    <td className="px-5 py-3 text-right">
-                      <span className="text-base font-bold text-slate-700 tabular-nums">
-                        {(() => {
-                          let total = 0
-                          for (const r of rows) {
-                            if (r.kind !== 'SESSION') continue
-                            const e = r.end ?? now
-                            total += e.getTime() - r.start.getTime()
-                          }
-                          return formatHMS(total)
-                        })()}
-                      </span>
-                    </td>
-                  </tr>
-                </tfoot>
-              </table>
+              <div className="w-full overflow-x-auto">
+                  <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-100">
+                      <th className="text-left px-5 py-2 w-12">#</th>
+                      <th className="text-left px-2 py-2">Type</th>
+                      <th className="text-left px-2 py-2">Start</th>
+                      <th className="text-left px-2 py-2">End</th>
+                      <th className="text-left px-2 py-2">Location</th>
+                      <th className="text-right px-5 py-2">Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rows.map((r, i) => {
+                      const isSession = r.kind === 'SESSION'
+                      const sessionNum = isSession ? sessionsOnly.indexOf(r) + 1 : null
+                      const endTime = r.end ?? now
+                      const ms = endTime.getTime() - r.start.getTime()
+                      return (
+                        <tr key={i} className={'border-b border-slate-50 last:border-b-0 ' + (isSession ? '' : 'bg-slate-50/40')}>
+                          <td className="px-5 py-3 text-slate-400 font-mono text-xs">{isSession ? sessionNum : '—'}</td>
+                          <td className="px-2 py-3">
+                            {isSession ? (
+                              <span className={
+                                'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ' +
+                                (r.wfh ? 'bg-slate-100 text-slate-900' : 'bg-slate-100 text-slate-900')
+                              }>
+                                {r.wfh ? <Home className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                                {r.wfh ? 'WFH' : 'Onsite'}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-700">
+                                <Coffee className="w-3 h-3" /> Break
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-2 py-3 font-mono tabular-nums text-slate-900">{fmtTime(r.start.toISOString())}</td>
+                          <td className="px-2 py-3 font-mono tabular-nums">
+                            {r.end ? <span className="text-slate-900">{fmtTime(r.end.toISOString())}</span> :
+                              <span className="text-slate-700 font-semibold">running…</span>}
+                          </td>
+                          <td className="px-2 py-3 text-xs text-slate-600">
+                            {isSession ? (r.wfh ? 'Working from home' : 'At the office') : 'Stepped away'}
+                          </td>
+                          <td className="px-5 py-3 text-right font-semibold text-slate-900 tabular-nums">
+                            {formatHMS(ms)}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-slate-300 bg-slate-50/60">
+                      <td colSpan={5} className="px-5 py-3 text-[11px] uppercase tracking-wider text-slate-700 font-semibold">
+                        Total worked today
+                      </td>
+                      <td className="px-5 py-3 text-right">
+                        <span className="text-base font-bold text-slate-700 tabular-nums">
+                          {(() => {
+                            let total = 0
+                            for (const r of rows) {
+                              if (r.kind !== 'SESSION') continue
+                              const e = r.end ?? now
+                              total += e.getTime() - r.start.getTime()
+                            }
+                            return formatHMS(total)
+                          })()}
+                        </span>
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
             </CardContent>
           </Card>
         )

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -35,13 +36,15 @@ export default function TaxSlabsSettingsPage() {
 
   async function persist(s: Slab) {
     setSavingId(s.id)
-    await fetch(`/api/settings/tax-slabs/${s.id}`, {
+    const res = await fetch(`/api/settings/tax-slabs/${s.id}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         incomeFrom: s.incomeFrom, incomeTo: s.incomeTo,
         ratePercent: s.ratePercent, fixedAmount: s.fixedAmount,
       }),
     })
+    if (res.ok) toastSuccess('Slab saved')
+    else toastError('Could not save the slab', (await res.json().catch(() => ({}))).error)
     setSavingId(null)
   }
 
@@ -51,11 +54,14 @@ export default function TaxSlabsSettingsPage() {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ taxYear: year, incomeFrom: lastFrom + 100000, incomeTo: null, ratePercent: 0, fixedAmount: 0 }),
     })
-    if (res.ok) load(year)
+    if (res.ok) { toastSuccess('Slab added'); load(year) }
+    else toastError('Could not add the slab', (await res.json().catch(() => ({}))).error)
   }
 
   async function remove(id: string) {
-    await fetch(`/api/settings/tax-slabs/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/settings/tax-slabs/${id}`, { method: 'DELETE' })
+    if (res.ok) toastSuccess('Slab removed')
+    else toastError('Could not remove the slab', (await res.json().catch(() => ({}))).error)
     load(year)
   }
 

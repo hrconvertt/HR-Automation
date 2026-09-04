@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Mail, Send, AlertTriangle, MailCheck, Clock, Ban } from 'lucide-react'
@@ -59,7 +60,7 @@ export default function EmailSendsClient({ counts }: { counts: Record<Status, nu
     setActing(null)
     if (!r.ok) {
       const d = await r.json().catch(() => ({}))
-      alert(d.error || 'Action failed')
+      toastError('Action failed', d.error)
     }
     await load(tab)
     if (selected?.id === id) setSelected(null)

@@ -178,59 +178,61 @@ export default async function JobPostSpendPage({ searchParams }: {
               </tbody>
             </table>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  <Th>Role</Th><Th>Platform</Th><Th>Posted</Th><Th>Closed</Th>
-                  <Th right>Budget</Th><Th right>Paid</Th><Th>Status</Th>
-                  {canEdit && <Th></Th>}
-                </tr>
-              </thead>
-              <tbody>
-                {postings.map((p) => (
-                  <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/60">
-                    <td className="px-4 py-2 text-slate-900">{p.requisition.title}</td>
-                    <td className="px-4 py-2 text-slate-600 text-xs">{PLATFORM_LABELS[p.platform] ?? p.platform}</td>
-                    <td className="px-4 py-2 text-slate-600"><Stamp at={p.postedAt} /></td>
-                    <td className="px-4 py-2 text-slate-600"><Stamp at={p.closedAt} /></td>
-                    <td className="px-4 py-2 text-right text-slate-600 tabular-nums whitespace-nowrap">
-                      <Amount value={p.budget} currency={p.currency} />
-                    </td>
-                    <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">
-                      {p.cost == null && p.status === 'ACTIVE'
-                        ? <span className="text-amber-700 text-xs">still running</span>
-                        : <Amount value={p.cost} currency={p.currency} />}
-                    </td>
-                    <td className="px-4 py-2 text-xs text-slate-500">
-                      {p.status.charAt(0) + p.status.slice(1).toLowerCase()}
-                    </td>
-                    {canEdit && (
-                      <td className="px-4 py-2 text-right">
-                        <PostingEditButton
-                          posting={{
-                            id: p.id,
-                            role: p.requisition.title,
-                            platform: p.platform,
-                            currency: p.currency,
-                            budget: p.budget,
-                            cost: p.cost,
-                            postedAt: postingInputValue(p.postedAt),
-                            closedAt: postingInputValue(p.closedAt),
-                            status: p.status,
-                            notes: p.notes,
-                          }}
-                        />
-                      </td>
-                    )}
+            <div className="w-full overflow-x-auto">
+                <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <Th>Role</Th><Th>Platform</Th><Th>Posted</Th><Th>Closed</Th>
+                    <Th right>Budget</Th><Th right>Paid</Th><Th>Status</Th>
+                    {canEdit && <Th></Th>}
                   </tr>
-                ))}
-                <tr className="bg-slate-50 font-semibold">
-                  <td colSpan={5} className="px-4 py-2.5 text-slate-900">Total</td>
-                  <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{totalLine}</td>
-                  <td colSpan={canEdit ? 2 : 1} />
-                </tr>
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {postings.map((p) => (
+                    <tr key={p.id} className="border-b border-slate-50 hover:bg-slate-50/60">
+                      <td className="px-4 py-2 text-slate-900">{p.requisition.title}</td>
+                      <td className="px-4 py-2 text-slate-600 text-xs">{PLATFORM_LABELS[p.platform] ?? p.platform}</td>
+                      <td className="px-4 py-2 text-slate-600"><Stamp at={p.postedAt} /></td>
+                      <td className="px-4 py-2 text-slate-600"><Stamp at={p.closedAt} /></td>
+                      <td className="px-4 py-2 text-right text-slate-600 tabular-nums whitespace-nowrap">
+                        <Amount value={p.budget} currency={p.currency} />
+                      </td>
+                      <td className="px-4 py-2 text-right tabular-nums whitespace-nowrap">
+                        {p.cost == null && p.status === 'ACTIVE'
+                          ? <span className="text-amber-700 text-xs">still running</span>
+                          : <Amount value={p.cost} currency={p.currency} />}
+                      </td>
+                      <td className="px-4 py-2 text-xs text-slate-500">
+                        {p.status.charAt(0) + p.status.slice(1).toLowerCase()}
+                      </td>
+                      {canEdit && (
+                        <td className="px-4 py-2 text-right">
+                          <PostingEditButton
+                            posting={{
+                              id: p.id,
+                              role: p.requisition.title,
+                              platform: p.platform,
+                              currency: p.currency,
+                              budget: p.budget,
+                              cost: p.cost,
+                              postedAt: postingInputValue(p.postedAt),
+                              closedAt: postingInputValue(p.closedAt),
+                              status: p.status,
+                              notes: p.notes,
+                            }}
+                          />
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                  <tr className="bg-slate-50 font-semibold">
+                    <td colSpan={5} className="px-4 py-2.5 text-slate-900">Total</td>
+                    <td className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">{totalLine}</td>
+                    <td colSpan={canEdit ? 2 : 1} />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

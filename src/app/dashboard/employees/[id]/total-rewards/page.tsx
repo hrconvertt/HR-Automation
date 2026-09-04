@@ -232,77 +232,87 @@ export default async function TotalRewardsPage({ params }: PageProps) {
         </div>
 
         <h2>Employee</h2>
-        <table className="trs-table trs-info">
-          <tbody>
-            <tr>
-              <td>Name</td><td>{emp.fullName}</td>
-            </tr>
-            <tr>
-              <td>Employee Code</td><td style={{ fontFamily: 'monospace' }}>{emp.employeeCode}</td>
-            </tr>
-            <tr>
-              <td>Designation</td><td>{emp.designation}</td>
-            </tr>
-            <tr>
-              <td>Department</td><td>{emp.department?.name ?? '—'}</td>
-            </tr>
-            <tr>
-              <td>Joining Date</td>
-              <td>{emp.joiningDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
-            </tr>
-            <tr>
-              <td>Employment Type</td><td>{emp.employeeType}</td>
-            </tr>
-          </tbody>
-        </table>
+        <div className="w-full overflow-x-auto">
+            <table className="trs-table trs-info">
+            <tbody>
+              <tr>
+                <td>Name</td><td>{emp.fullName}</td>
+              </tr>
+              <tr>
+                <td>Employee Code</td><td style={{ fontFamily: 'monospace' }}>{emp.employeeCode}</td>
+              </tr>
+              <tr>
+                <td>Designation</td><td>{emp.designation}</td>
+              </tr>
+              <tr>
+                <td>Department</td><td>{emp.department?.name ?? '—'}</td>
+              </tr>
+              <tr>
+                <td>Joining Date</td>
+                <td>{emp.joiningDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</td>
+              </tr>
+              <tr>
+                <td>Employment Type</td><td>{emp.employeeType}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <h2>1 · Direct Compensation (Annual)</h2>
-        <table className="trs-table">
-          <tbody>
-            <tr><td>Basic Salary (× 12)</td><td className="num">{fmt(basicAnnual)}</td></tr>
-            {hraAnnual > 0 && <tr><td>House Rent Allowance (× 12)</td><td className="num">{fmt(hraAnnual)}</td></tr>}
-            {medAnnual > 0 && <tr><td>Medical Allowance (× 12)</td><td className="num">{fmt(medAnnual)}</td></tr>}
-            {fuelAnnual > 0 && <tr><td>Conveyance / Fuel (× 12)</td><td className="num">{fmt(fuelAnnual)}</td></tr>}
-            {utilAnnual > 0 && <tr><td>Utilities (× 12)</td><td className="num">{fmt(utilAnnual)}</td></tr>}
-            {foodAnnual > 0 && <tr><td>Food Allowance (× 12)</td><td className="num">{fmt(foodAnnual)}</td></tr>}
-            {otherAnnual > 0 && <tr><td>Other Allowances (× 12)</td><td className="num">{fmt(otherAnnual)}</td></tr>}
-            <tr><td>Annual Bonus <span className="trs-row-sub">(estimated, 1× monthly gross)</span></td><td className="num">{fmt(bonusAnnual)}</td></tr>
-            <tr className="trs-row-total"><td>Subtotal</td><td className="num">{fmt(directTotal)}</td></tr>
-          </tbody>
-        </table>
+        <div className="w-full overflow-x-auto">
+            <table className="trs-table">
+            <tbody>
+              <tr><td>Basic Salary (× 12)</td><td className="num">{fmt(basicAnnual)}</td></tr>
+              {hraAnnual > 0 && <tr><td>House Rent Allowance (× 12)</td><td className="num">{fmt(hraAnnual)}</td></tr>}
+              {medAnnual > 0 && <tr><td>Medical Allowance (× 12)</td><td className="num">{fmt(medAnnual)}</td></tr>}
+              {fuelAnnual > 0 && <tr><td>Conveyance / Fuel (× 12)</td><td className="num">{fmt(fuelAnnual)}</td></tr>}
+              {utilAnnual > 0 && <tr><td>Utilities (× 12)</td><td className="num">{fmt(utilAnnual)}</td></tr>}
+              {foodAnnual > 0 && <tr><td>Food Allowance (× 12)</td><td className="num">{fmt(foodAnnual)}</td></tr>}
+              {otherAnnual > 0 && <tr><td>Other Allowances (× 12)</td><td className="num">{fmt(otherAnnual)}</td></tr>}
+              <tr><td>Annual Bonus <span className="trs-row-sub">(estimated, 1× monthly gross)</span></td><td className="num">{fmt(bonusAnnual)}</td></tr>
+              <tr className="trs-row-total"><td>Subtotal</td><td className="num">{fmt(directTotal)}</td></tr>
+            </tbody>
+          </table>
+        </div>
 
         <h2>2 · Statutory Benefits</h2>
-        <table className="trs-table">
-          <tbody>
-            <tr><td>EOBI <span className="trs-row-sub">(employer contribution, PKR 1,500/mo)</span></td><td className="num">{fmt(eobiAnnual)}</td></tr>
-            {gratuityAnnual > 0 && (
-              <tr><td>Gratuity Accrual <span className="trs-row-sub">(1 month basic / year, PERMANENT only)</span></td><td className="num">{fmt(gratuityAnnual)}</td></tr>
-            )}
-            {pfAnnual > 0 && (
-              <tr><td>Provident Fund <span className="trs-row-sub">(employer)</span></td><td className="num">{fmt(pfAnnual)}</td></tr>
-            )}
-            <tr className="trs-row-total"><td>Subtotal</td><td className="num">{fmt(statutoryTotal)}</td></tr>
-          </tbody>
-        </table>
+        <div className="w-full overflow-x-auto">
+            <table className="trs-table">
+            <tbody>
+              <tr><td>EOBI <span className="trs-row-sub">(employer contribution, PKR 1,500/mo)</span></td><td className="num">{fmt(eobiAnnual)}</td></tr>
+              {gratuityAnnual > 0 && (
+                <tr><td>Gratuity Accrual <span className="trs-row-sub">(1 month basic / year, PERMANENT only)</span></td><td className="num">{fmt(gratuityAnnual)}</td></tr>
+              )}
+              {pfAnnual > 0 && (
+                <tr><td>Provident Fund <span className="trs-row-sub">(employer)</span></td><td className="num">{fmt(pfAnnual)}</td></tr>
+              )}
+              <tr className="trs-row-total"><td>Subtotal</td><td className="num">{fmt(statutoryTotal)}</td></tr>
+            </tbody>
+          </table>
+        </div>
 
         <h2>3 · Time-Off Value (PKR equivalent)</h2>
-        <table className="trs-table">
-          <tbody>
-            <tr><td>Annual Leave <span className="trs-row-sub">({annualLeaveDays} days × daily rate)</span></td><td className="num">{fmt(annualLeaveValue)}</td></tr>
-            <tr><td>Sick Leave <span className="trs-row-sub">({sickLeaveDays} days × daily rate)</span></td><td className="num">{fmt(sickLeaveValue)}</td></tr>
-            <tr><td>Casual Leave <span className="trs-row-sub">({casualLeaveDays} days × daily rate)</span></td><td className="num">{fmt(casualLeaveValue)}</td></tr>
-            <tr className="trs-row-total"><td>Subtotal</td><td className="num">{fmt(timeOffTotal)}</td></tr>
-          </tbody>
-        </table>
+        <div className="w-full overflow-x-auto">
+            <table className="trs-table">
+            <tbody>
+              <tr><td>Annual Leave <span className="trs-row-sub">({annualLeaveDays} days × daily rate)</span></td><td className="num">{fmt(annualLeaveValue)}</td></tr>
+              <tr><td>Sick Leave <span className="trs-row-sub">({sickLeaveDays} days × daily rate)</span></td><td className="num">{fmt(sickLeaveValue)}</td></tr>
+              <tr><td>Casual Leave <span className="trs-row-sub">({casualLeaveDays} days × daily rate)</span></td><td className="num">{fmt(casualLeaveValue)}</td></tr>
+              <tr className="trs-row-total"><td>Subtotal</td><td className="num">{fmt(timeOffTotal)}</td></tr>
+            </tbody>
+          </table>
+        </div>
 
         {otherBenefitsTotal > 0 && (
           <>
             <h2>4 · Other Benefits</h2>
-            <table className="trs-table">
-              <tbody>
-                <tr className="trs-row-total"><td>Subtotal</td><td className="num">{fmt(otherBenefitsTotal)}</td></tr>
-              </tbody>
-            </table>
+            <div className="w-full overflow-x-auto">
+                <table className="trs-table">
+                <tbody>
+                  <tr className="trs-row-total"><td>Subtotal</td><td className="num">{fmt(otherBenefitsTotal)}</td></tr>
+                </tbody>
+              </table>
+            </div>
           </>
         )}
 

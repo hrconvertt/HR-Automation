@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import { EmailLink } from '@/components/ui/contact-link'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
@@ -95,7 +96,7 @@ export default async function OffersPage() {
                 <TableRow key={o.id}>
                   <TableCell className="font-medium text-slate-900">
                     {o.candidate.fullName}
-                    <p className="text-[11px] text-slate-500">{o.candidate.email}</p>
+                    <p className="text-[11px] text-slate-500"><EmailLink value={o.candidate.email} /></p>
                   </TableCell>
                   <TableCell className="text-slate-700 text-sm">
                     {o.candidate.requisition?.title ?? '—'}

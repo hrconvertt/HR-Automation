@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Search, RefreshCw, AlertTriangle, Maximize2, Plus, Minus } from 'lucide-react'
 import OrgNodeCard from './org-node'
 
@@ -321,7 +322,7 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
       })
       const j = await r.json()
       if (!r.ok) {
-        alert(j.error ?? 'Failed to reparent')
+        toastError('Failed to reparent', j.error)
       } else {
         await fetchTree()
         // Surface the Undo toast — auto-dismisses after 10s. A subsequent
@@ -340,7 +341,7 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
         }, 10_000)
       }
     } catch (e) {
-      alert((e as Error).message)
+      toastError('Something went wrong', String((e as Error).message))
     } finally {
       setReparenting(false)
       setDragging(null)
@@ -362,14 +363,14 @@ export default function OrgTree({ canEdit }: { canEdit: boolean }) {
       })
       const j = await r.json()
       if (!r.ok) {
-        alert(j.error ?? 'Failed to undo')
+        toastError('Failed to undo', j.error)
         return
       }
       await fetchTree()
       clearUndoTimer()
       setLastMove(null)
     } catch (e) {
-      alert((e as Error).message)
+      toastError('Something went wrong', String((e as Error).message))
     } finally {
       setUndoBusy(false)
     }

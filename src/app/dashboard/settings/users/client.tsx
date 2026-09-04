@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
+import { EmailLink } from '@/components/ui/contact-link'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 interface UserRow {
@@ -93,7 +95,7 @@ export default function UserManagementClient({
     })
     if (!res.ok) {
       const data = await res.json().catch(() => ({}))
-      alert(`Action failed: ${data.error ?? res.statusText}`)
+      toastError(`Action failed: ${data.error ?? res.statusText}`)
     } else {
       refresh()
     }
@@ -122,19 +124,19 @@ export default function UserManagementClient({
                 try {
                   const res = await fetch('/api/settings/users/sync-emails', { method: 'POST' })
                   const data = await res.json()
-                  if (!res.ok) { alert(data.error || 'Sync failed'); return }
+                  if (!res.ok) { toastError('Sync failed', data.error); return }
                   const s = data.summary as { updated: number; unchanged: number; unmatched: string[]; conflicts: unknown[] }
-                  alert(
-                    `Sync complete.\n\n` +
-                    `Updated:   ${s.updated}\n` +
-                    `Unchanged: ${s.unchanged}\n` +
-                    `Unmatched: ${s.unmatched.length}${s.unmatched.length ? ' — ' + s.unmatched.join(', ') : ''}\n` +
-                    `Conflicts: ${s.conflicts.length}\n\n` +
-                    `Tell affected employees to visit /reset-session, then sign in again.`,
+                  toastSuccess(
+                    `Sync complete — ${s.updated} updated, ${s.unchanged} unchanged`,
+                    [
+                      s.unmatched.length ? `Unmatched: ${s.unmatched.join(', ')}` : null,
+                      s.conflicts.length ? `${s.conflicts.length} conflict(s)` : null,
+                      'Affected employees should visit /reset-session, then sign in again.',
+                    ].filter(Boolean).join(' · '),
                   )
                   refresh()
                 } catch (e) {
-                  alert((e as Error).message || 'Network error')
+                  toastError('Network error', (e as Error).message)
                 }
               }}
               className="px-4 py-2 bg-white border border-slate-300 text-slate-800 rounded-lg text-sm font-semibold hover:bg-slate-50"
@@ -172,144 +174,146 @@ export default function UserManagementClient({
 
       {tab === 'users' && (
         <div className="bg-white border border-slate-200 rounded-lg">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="text-left px-4 py-2 font-semibold text-slate-700">Name</th>
-                <th className="text-left px-4 py-2 font-semibold text-slate-700">Work email</th>
-                <th className="text-left px-4 py-2 font-semibold text-slate-700">Personal email</th>
-                <th className="text-left px-4 py-2 font-semibold text-slate-700">Role</th>
-                <th className="text-left px-4 py-2 font-semibold text-slate-700">MFA</th>
-                <th className="text-left px-4 py-2 font-semibold text-slate-700">Status</th>
-                <th className="text-left px-4 py-2 font-semibold text-slate-700 w-12"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading && (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
-              )}
-              {!loading && rows.length === 0 && (
-                <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">No users yet.</td></tr>
-              )}
-              {rows.map((u) => (
-                <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50">
-                  <td className="px-4 py-2 font-medium text-slate-900">{u.fullName}</td>
-                  <td className="px-4 py-2 text-slate-700">{u.email}</td>
-                  <td className="px-4 py-2 text-slate-500">{u.personalEmail || <span className="text-slate-300">—</span>}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex flex-wrap gap-1">
-                      {u.roles.map((r) => (
-                        <span key={r} className="px-2 py-0.5 text-xs bg-slate-100 text-slate-700 rounded">
-                          {r}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2">
-                    {u.mfaEnabled === null ? (
-                      <span className="text-slate-400">—</span>
-                    ) : u.mfaEnabled ? (
-                      <span className="text-emerald-600">✓</span>
-                    ) : (
-                      <span className="text-slate-400">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    <span className={
-                      'px-2 py-0.5 text-xs rounded ' +
-                      (u.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500')
-                    }>
-                      {u.isActive ? 'Active' : 'Inactive'}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 relative">
-                    <button
-                      onClick={() => setOpenMenu(openMenu === u.id ? null : u.id)}
-                      className="px-2 py-1 hover:bg-slate-100 rounded text-slate-500"
-                    >
-                      ⋮
-                    </button>
-                    {openMenu === u.id && (
-                      <div className="absolute right-2 top-full mt-1 bg-white border border-slate-200 shadow-lg rounded-lg z-10 w-56 py-1 text-sm">
-                        <button
-                          onClick={() => {
-                            const newRole = prompt(
-                              `Primary role for ${u.fullName}?\nOptions: ${ROLE_OPTIONS.join(', ')}`,
-                              u.primaryRole,
-                            )
-                            if (newRole && ROLE_OPTIONS.includes(newRole)) {
-                              actOn(u.id, 'change-role', { primaryRole: newRole, additionalRoles: u.roles.filter(r => r !== newRole) })
-                            }
-                          }}
-                          className="block w-full text-left px-4 py-2 hover:bg-slate-50"
-                        >
-                          Change role
-                        </button>
-                        <button
-                          onClick={() => {
-                            const newEmail = prompt(
-                              `Change sign-in email for ${u.fullName}?\nCurrent: ${u.email}\n\nThe employee will need to sign in with this new email next time.`,
-                              u.email,
-                            )
-                            if (newEmail && newEmail.trim() !== u.email) {
-                              actOn(u.id, 'change-email', { email: newEmail.trim() })
-                            }
-                          }}
-                          className="block w-full text-left px-4 py-2 hover:bg-slate-50"
-                        >
-                          Edit email
-                        </button>
-                        <button
-                          onClick={() => confirm(`Send password reset to ${u.email}?`) && actOn(u.id, 'reset-password')}
-                          className="block w-full text-left px-4 py-2 hover:bg-slate-50"
-                          disabled={!u.clerkLinked}
-                        >
-                          Reset password
-                        </button>
-                        <button
-                          onClick={() => confirm(`Reset MFA for ${u.fullName}?`) && actOn(u.id, 'reset-mfa')}
-                          className="block w-full text-left px-4 py-2 hover:bg-slate-50"
-                          disabled={!u.clerkLinked}
-                        >
-                          Reset MFA
-                        </button>
-                        <button
-                          onClick={() => confirm(`Lock ${u.fullName}? (revokes all sessions)`) && actOn(u.id, 'lock')}
-                          className="block w-full text-left px-4 py-2 hover:bg-slate-50"
-                          disabled={!u.clerkLinked}
-                        >
-                          Lock account
-                        </button>
-                        {u.isActive ? (
-                          <button
-                            onClick={() => confirm(`Deactivate ${u.fullName}?`) && actOn(u.id, 'deactivate')}
-                            className="block w-full text-left px-4 py-2 hover:bg-slate-50 text-red-600"
-                          >
-                            Deactivate
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => actOn(u.id, 'reactivate')}
-                            className="block w-full text-left px-4 py-2 hover:bg-slate-50 text-emerald-700"
-                          >
-                            Reactivate
-                          </button>
-                        )}
-                        <a
-                          href="https://dashboard.clerk.com"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block px-4 py-2 hover:bg-slate-50 text-slate-500"
-                        >
-                          View Clerk audit log ↗
-                        </a>
-                      </div>
-                    )}
-                  </td>
+          <div className="w-full overflow-x-auto">
+              <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-700">Name</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-700">Work email</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-700">Personal email</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-700">Role</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-700">MFA</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-700">Status</th>
+                  <th className="text-left px-4 py-2 font-semibold text-slate-700 w-12"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {loading && (
+                  <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
+                )}
+                {!loading && rows.length === 0 && (
+                  <tr><td colSpan={7} className="px-4 py-6 text-center text-slate-400">No users yet.</td></tr>
+                )}
+                {rows.map((u) => (
+                  <tr key={u.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="px-4 py-2 font-medium text-slate-900">{u.fullName}</td>
+                    <td className="px-4 py-2 text-slate-700"><EmailLink value={u.email} /></td>
+                    <td className="px-4 py-2 text-slate-500"><EmailLink value={u.personalEmail} /></td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-wrap gap-1">
+                        {u.roles.map((r) => (
+                          <span key={r} className="px-2 py-0.5 text-xs bg-slate-100 text-slate-700 rounded">
+                            {r}
+                          </span>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">
+                      {u.mfaEnabled === null ? (
+                        <span className="text-slate-400">—</span>
+                      ) : u.mfaEnabled ? (
+                        <span className="text-emerald-600">✓</span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      <span className={
+                        'px-2 py-0.5 text-xs rounded ' +
+                        (u.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-500')
+                      }>
+                        {u.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 relative">
+                      <button
+                        onClick={() => setOpenMenu(openMenu === u.id ? null : u.id)}
+                        className="px-2 py-1 hover:bg-slate-100 rounded text-slate-500"
+                      >
+                        ⋮
+                      </button>
+                      {openMenu === u.id && (
+                        <div className="absolute right-2 top-full mt-1 bg-white border border-slate-200 shadow-lg rounded-lg z-10 w-56 py-1 text-sm">
+                          <button
+                            onClick={() => {
+                              const newRole = prompt(
+                                `Primary role for ${u.fullName}?\nOptions: ${ROLE_OPTIONS.join(', ')}`,
+                                u.primaryRole,
+                              )
+                              if (newRole && ROLE_OPTIONS.includes(newRole)) {
+                                actOn(u.id, 'change-role', { primaryRole: newRole, additionalRoles: u.roles.filter(r => r !== newRole) })
+                              }
+                            }}
+                            className="block w-full text-left px-4 py-2 hover:bg-slate-50"
+                          >
+                            Change role
+                          </button>
+                          <button
+                            onClick={() => {
+                              const newEmail = prompt(
+                                `Change sign-in email for ${u.fullName}?\nCurrent: ${u.email}\n\nThe employee will need to sign in with this new email next time.`,
+                                u.email,
+                              )
+                              if (newEmail && newEmail.trim() !== u.email) {
+                                actOn(u.id, 'change-email', { email: newEmail.trim() })
+                              }
+                            }}
+                            className="block w-full text-left px-4 py-2 hover:bg-slate-50"
+                          >
+                            Edit email
+                          </button>
+                          <button
+                            onClick={() => confirm(`Send password reset to ${u.email}?`) && actOn(u.id, 'reset-password')}
+                            className="block w-full text-left px-4 py-2 hover:bg-slate-50"
+                            disabled={!u.clerkLinked}
+                          >
+                            Reset password
+                          </button>
+                          <button
+                            onClick={() => confirm(`Reset MFA for ${u.fullName}?`) && actOn(u.id, 'reset-mfa')}
+                            className="block w-full text-left px-4 py-2 hover:bg-slate-50"
+                            disabled={!u.clerkLinked}
+                          >
+                            Reset MFA
+                          </button>
+                          <button
+                            onClick={() => confirm(`Lock ${u.fullName}? (revokes all sessions)`) && actOn(u.id, 'lock')}
+                            className="block w-full text-left px-4 py-2 hover:bg-slate-50"
+                            disabled={!u.clerkLinked}
+                          >
+                            Lock account
+                          </button>
+                          {u.isActive ? (
+                            <button
+                              onClick={() => confirm(`Deactivate ${u.fullName}?`) && actOn(u.id, 'deactivate')}
+                              className="block w-full text-left px-4 py-2 hover:bg-slate-50 text-red-600"
+                            >
+                              Deactivate
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => actOn(u.id, 'reactivate')}
+                              className="block w-full text-left px-4 py-2 hover:bg-slate-50 text-emerald-700"
+                            >
+                              Reactivate
+                            </button>
+                          )}
+                          <a
+                            href="https://dashboard.clerk.com"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="block px-4 py-2 hover:bg-slate-50 text-slate-500"
+                          >
+                            View Clerk audit log ↗
+                          </a>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -411,81 +415,83 @@ function SignupAttemptsPanel({
       </div>
 
       <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-slate-50 border-b border-slate-200">
-            <tr>
-              <th className="text-left px-4 py-2 font-semibold text-slate-700">Email</th>
-              <th className="text-left px-4 py-2 font-semibold text-slate-700">Name</th>
-              <th className="text-left px-4 py-2 font-semibold text-slate-700">Attempted</th>
-              <th className="text-left px-4 py-2 font-semibold text-slate-700">Status</th>
-              <th className="text-left px-4 py-2 font-semibold text-slate-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
-            )}
-            {!loading && rows.length === 0 && (
-              <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No sign-up attempts.</td></tr>
-            )}
-            {rows.map((r) => {
-              const fullName = [r.firstName, r.lastName].filter(Boolean).join(' ') || '—'
-              return (
-                <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 align-top">
-                  <td className="px-4 py-2 font-medium text-slate-900">{r.email}</td>
-                  <td className="px-4 py-2 text-slate-700">{fullName}</td>
-                  <td className="px-4 py-2 text-slate-500 text-xs">
-                    {new Date(r.attemptedAt).toLocaleString()}
-                  </td>
-                  <td className="px-4 py-2">
-                    <StatusBadge status={r.status} />
-                    {r.status === 'APPROVED' && r.resultingEmployee && (
-                      <div className="mt-1">
-                        <a
-                          href={`/dashboard/employees/${r.resultingEmployee.id}`}
-                          className="text-xs text-slate-600 hover:text-slate-900 underline"
-                        >
-                          → {r.resultingEmployee.fullName}
-                        </a>
-                      </div>
-                    )}
-                    {(r.status === 'APPROVED' || r.status === 'DISMISSED') && r.reviewedAt && (
-                      <div className="text-xs text-slate-400 mt-1">
-                        {new Date(r.reviewedAt).toLocaleDateString()}
-                        {r.reviewerName ? ` by ${r.reviewerName}` : ''}
-                      </div>
-                    )}
-                    {r.reviewNotes && (
-                      <div className="text-xs text-slate-500 italic mt-1">
-                        {r.reviewNotes}
-                      </div>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    {r.status === 'PENDING' ? (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => setApproveFor(r)}
-                          className="px-3 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 font-semibold"
-                        >
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => setDismissFor(r)}
-                          className="px-3 py-1 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200 font-semibold"
-                        >
-                          Dismiss
-                        </button>
-                      </div>
-                    ) : (
-                      <span className="text-xs text-slate-400">—</span>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
+        <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="text-left px-4 py-2 font-semibold text-slate-700">Email</th>
+                <th className="text-left px-4 py-2 font-semibold text-slate-700">Name</th>
+                <th className="text-left px-4 py-2 font-semibold text-slate-700">Attempted</th>
+                <th className="text-left px-4 py-2 font-semibold text-slate-700">Status</th>
+                <th className="text-left px-4 py-2 font-semibold text-slate-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">Loading…</td></tr>
+              )}
+              {!loading && rows.length === 0 && (
+                <tr><td colSpan={5} className="px-4 py-6 text-center text-slate-400">No sign-up attempts.</td></tr>
+              )}
+              {rows.map((r) => {
+                const fullName = [r.firstName, r.lastName].filter(Boolean).join(' ') || '—'
+                return (
+                  <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50 align-top">
+                    <td className="px-4 py-2 font-medium text-slate-900"><EmailLink value={r.email} /></td>
+                    <td className="px-4 py-2 text-slate-700">{fullName}</td>
+                    <td className="px-4 py-2 text-slate-500 text-xs">
+                      {new Date(r.attemptedAt).toLocaleString()}
+                    </td>
+                    <td className="px-4 py-2">
+                      <StatusBadge status={r.status} />
+                      {r.status === 'APPROVED' && r.resultingEmployee && (
+                        <div className="mt-1">
+                          <a
+                            href={`/dashboard/employees/${r.resultingEmployee.id}`}
+                            className="text-xs text-slate-600 hover:text-slate-900 underline"
+                          >
+                            → {r.resultingEmployee.fullName}
+                          </a>
+                        </div>
+                      )}
+                      {(r.status === 'APPROVED' || r.status === 'DISMISSED') && r.reviewedAt && (
+                        <div className="text-xs text-slate-400 mt-1">
+                          {new Date(r.reviewedAt).toLocaleDateString()}
+                          {r.reviewerName ? ` by ${r.reviewerName}` : ''}
+                        </div>
+                      )}
+                      {r.reviewNotes && (
+                        <div className="text-xs text-slate-500 italic mt-1">
+                          {r.reviewNotes}
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      {r.status === 'PENDING' ? (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => setApproveFor(r)}
+                            className="px-3 py-1 text-xs bg-emerald-600 text-white rounded hover:bg-emerald-700 font-semibold"
+                          >
+                            Approve
+                          </button>
+                          <button
+                            onClick={() => setDismissFor(r)}
+                            className="px-3 py-1 text-xs bg-slate-100 text-slate-700 rounded hover:bg-slate-200 font-semibold"
+                          >
+                            Dismiss
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400">—</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {approveFor && (

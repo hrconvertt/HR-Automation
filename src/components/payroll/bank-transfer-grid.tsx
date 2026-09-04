@@ -18,6 +18,7 @@
  */
 
 import { useState, useMemo, useCallback } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 const money = (n: number) => n.toLocaleString('en-PK', { maximumFractionDigits: 2 })
@@ -116,7 +117,7 @@ export function BankTransferGrid({
       body: JSON.stringify({ updates }),
     })
     setBusy(false)
-    if (!r.ok) { alert(r.error ?? 'Save failed'); return }
+    if (!r.ok) { toastError('Save failed', r.error); return }
     setEdits({})
     onSaved()
   }
@@ -307,49 +308,51 @@ export function BankTransferGrid({
                   {reference} · {rows.length} transfer{rows.length === 1 ? '' : 's'} · Total PKR {money(total)}
                 </p>
               </div>
-              <table className="min-w-full text-[11px] leading-5 border border-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }}>
-                <thead className="bg-slate-100">
-                  <tr>
-                    <PrintTh>Beneficiary First Name</PrintTh>
-                    <PrintTh>Beneficiary Account No</PrintTh>
-                    {format === 'IBFT' && <PrintTh>Bank</PrintTh>}
-                    <PrintTh right>Transaction Amount</PrintTh>
-                    <PrintTh>Reference # 1</PrintTh>
-                    <PrintTh>Reference # 9</PrintTh>
-                    <PrintTh>{format === 'IFT' ? 'Note' : 'Notes'}</PrintTh>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.length === 0 ? (
+              <div className="w-full overflow-x-auto">
+                  <table className="min-w-full text-[11px] leading-5 border border-slate-300" style={{ fontVariantNumeric: 'tabular-nums' }}>
+                  <thead className="bg-slate-100">
                     <tr>
-                      <td colSpan={format === 'IBFT' ? 7 : 6} className="border border-slate-300 py-6 text-center text-slate-400">
-                        No {format} rows this month.
-                      </td>
+                      <PrintTh>Beneficiary First Name</PrintTh>
+                      <PrintTh>Beneficiary Account No</PrintTh>
+                      {format === 'IBFT' && <PrintTh>Bank</PrintTh>}
+                      <PrintTh right>Transaction Amount</PrintTh>
+                      <PrintTh>Reference # 1</PrintTh>
+                      <PrintTh>Reference # 9</PrintTh>
+                      <PrintTh>{format === 'IFT' ? 'Note' : 'Notes'}</PrintTh>
                     </tr>
-                  ) : rows.map((r) => (
-                    <tr key={r.p.id}>
-                      <PrintTd>{r.p.employee.fullName}</PrintTd>
-                      <PrintTd mono>{r.iban || '—'}</PrintTd>
-                      {format === 'IBFT' && <PrintTd>{r.bank || '—'}</PrintTd>}
-                      <PrintTd right>{money(r.amount)}</PrintTd>
-                      <PrintTd>{reference}</PrintTd>
-                      <PrintTd>{reference}</PrintTd>
-                      <PrintTd>{r.notes || ''}</PrintTd>
-                    </tr>
-                  ))}
-                </tbody>
-                {rows.length > 0 && (
-                  <tfoot className="bg-slate-100 font-semibold">
-                    <tr>
-                      <PrintTd colSpan={format === 'IBFT' ? 3 : 2} right>
-                        {rows.length} {format} transfer{rows.length === 1 ? '' : 's'}
-                      </PrintTd>
-                      <PrintTd right>{money(total)}</PrintTd>
-                      <PrintTd colSpan={3}>{''}</PrintTd>
-                    </tr>
-                  </tfoot>
-                )}
-              </table>
+                  </thead>
+                  <tbody>
+                    {rows.length === 0 ? (
+                      <tr>
+                        <td colSpan={format === 'IBFT' ? 7 : 6} className="border border-slate-300 py-6 text-center text-slate-400">
+                          No {format} rows this month.
+                        </td>
+                      </tr>
+                    ) : rows.map((r) => (
+                      <tr key={r.p.id}>
+                        <PrintTd>{r.p.employee.fullName}</PrintTd>
+                        <PrintTd mono>{r.iban || '—'}</PrintTd>
+                        {format === 'IBFT' && <PrintTd>{r.bank || '—'}</PrintTd>}
+                        <PrintTd right>{money(r.amount)}</PrintTd>
+                        <PrintTd>{reference}</PrintTd>
+                        <PrintTd>{reference}</PrintTd>
+                        <PrintTd>{r.notes || ''}</PrintTd>
+                      </tr>
+                    ))}
+                  </tbody>
+                  {rows.length > 0 && (
+                    <tfoot className="bg-slate-100 font-semibold">
+                      <tr>
+                        <PrintTd colSpan={format === 'IBFT' ? 3 : 2} right>
+                          {rows.length} {format} transfer{rows.length === 1 ? '' : 's'}
+                        </PrintTd>
+                        <PrintTd right>{money(total)}</PrintTd>
+                        <PrintTd colSpan={3}>{''}</PrintTd>
+                      </tr>
+                    </tfoot>
+                  )}
+                </table>
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 px-5 py-4 border-t border-slate-100 print-hide">

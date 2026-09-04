@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -49,24 +50,31 @@ export default function LocationsManager({ initial }: { initial: Loc[] }) {
     })
     setSaving(false)
     if (res.ok) {
+      toastSuccess(`${form.name.trim()} added`)
       setAdding(false)
       setForm({ name: '', kind: 'OFFICE', ssids: '', notes: '' })
       router.refresh()
+    } else {
+      toastError('Could not add that location', (await res.json().catch(() => ({}))).error)
     }
   }
 
   async function handleToggleActive(loc: Loc) {
-    await fetch(`/api/attendance/locations/${loc.id}`, {
+    const res = await fetch(`/api/attendance/locations/${loc.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ active: !loc.active }),
     })
+    if (res.ok) toastSuccess(loc.active ? `${loc.name} switched off` : `${loc.name} switched on`)
+    else toastError('Could not change that location', (await res.json().catch(() => ({}))).error)
     router.refresh()
   }
 
   async function handleDelete(id: string) {
     if (!confirm('Delete this location?')) return
-    await fetch(`/api/attendance/locations/${id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/attendance/locations/${id}`, { method: 'DELETE' })
+    if (res.ok) toastSuccess('Location deleted')
+    else toastError('Could not delete that location', (await res.json().catch(() => ({}))).error)
     router.refresh()
   }
 

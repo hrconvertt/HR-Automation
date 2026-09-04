@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Button } from '@/components/ui/button'
 
 interface Props {
@@ -26,10 +27,10 @@ export function ResignationButton({ employeeType, defaultLastDay }: Props) {
     setSubmitting(false)
     if (!res.ok) {
       const { error } = await res.json().catch(() => ({}))
-      alert(error || 'Failed to submit')
+      toastError('Failed to submit', error)
       return
     }
-    alert('Resignation submitted. Your manager will be notified.')
+    toastSuccess('Resignation submitted. Your manager will be notified.')
     setOpen(false)
     window.location.reload()
   }

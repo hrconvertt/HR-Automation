@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import { getInitials } from '@/lib/utils'
 import { ChevronDown, Star, CalendarClock } from 'lucide-react'
@@ -71,7 +72,7 @@ export function CandidateCard({ candidate, canMove }: Props) {
     setSaving(false)
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
-      alert(d.error || 'Failed to move candidate')
+      toastError('Failed to move candidate', d.error)
       return
     }
     router.refresh()
@@ -86,7 +87,7 @@ export function CandidateCard({ candidate, canMove }: Props) {
     setSaving(false)
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
-      alert(d.error || 'Failed to update pool status')
+      toastError('Failed to update pool status', d.error)
       return
     }
     router.refresh()

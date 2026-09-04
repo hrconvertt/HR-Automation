@@ -1,6 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Star, Search } from 'lucide-react'
 
 interface Row {
@@ -75,7 +76,7 @@ export default function RolesMatrix() {
       })
       const j = await r.json()
       if (!r.ok) {
-        alert(j.error ?? 'Failed')
+        toastError('Failed', j.error)
       } else {
         await fetchData()
       }
@@ -95,7 +96,7 @@ export default function RolesMatrix() {
       })
       const j = await r.json()
       if (!r.ok) {
-        alert(j.error ?? 'Failed')
+        toastError('Failed', j.error)
       } else {
         await fetchData()
       }

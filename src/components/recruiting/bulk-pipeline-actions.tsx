@@ -11,6 +11,7 @@
  * people.
  */
 import { useState } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { ArrowRight, X } from 'lucide-react'
@@ -40,11 +41,11 @@ export function BulkPipelineActions({ requisitionId, requisitionTitle }: Props) 
     setBusy(null)
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
-      alert(d.error || 'Failed')
+      toastError('Failed', d.error)
       return
     }
     const d = await res.json()
-    alert(`Moved ${d.moved} candidate(s) to SCREENING`)
+    toastSuccess(`Moved ${d.moved} candidate(s) to SCREENING`)
     router.refresh()
   }
 
@@ -60,11 +61,11 @@ export function BulkPipelineActions({ requisitionId, requisitionTitle }: Props) 
     setBusy(null)
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
-      alert(d.error || 'Failed')
+      toastError('Failed', d.error)
       return
     }
     const d = await res.json()
-    alert(`Rejected ${d.rejected} candidate(s). Templated rejection emails are queued in drafts.`)
+    toastSuccess(`Rejected ${d.rejected} candidate(s). Templated rejection emails are queued in drafts.`)
     router.refresh()
   }
 

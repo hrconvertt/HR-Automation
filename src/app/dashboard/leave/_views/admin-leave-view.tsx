@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { cachedFetch } from '@/lib/client-cache'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Card, CardContent } from '@/components/ui/card'
@@ -138,7 +139,7 @@ export default function AdminLeaveView() {
     setActionLoading(null)
     if (!res.ok) {
       const err = await res.json().catch(() => ({}))
-      alert(err.error || 'Failed to delete leave')
+      toastError('Failed to delete leave', err.error)
       return
     }
     fetchLeave(true)

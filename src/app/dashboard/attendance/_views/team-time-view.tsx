@@ -298,55 +298,57 @@ export default function TeamTimeView({ managerEmployeeId, managerName }: { manag
             </div>
             <Card>
               <CardContent className="p-0">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-100">
-                      <th className="text-left px-5 py-2 w-12">#</th>
-                      <th className="text-left px-2 py-2">Work mode</th>
-                      <th className="text-left px-2 py-2">Start</th>
-                      <th className="text-left px-2 py-2">End</th>
-                      <th className="text-right px-5 py-2">Duration</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sessions.map((s, i) => {
-                      const endTime = s.end ?? now
-                      const dur = endTime.getTime() - s.start.getTime()
-                      return (
-                        <tr key={i} className="border-b border-slate-50 last:border-b-0">
-                          <td className="px-5 py-2.5 text-slate-400 font-mono text-xs">{i + 1}</td>
-                          <td className="px-2 py-2.5">
-                            <span className={
-                              'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ' +
-                              (s.wfh ? 'bg-slate-100 text-slate-900' : 'bg-slate-100 text-slate-900')
-                            }>
-                              {s.wfh ? <Home className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
-                              {s.wfh ? 'WFH' : 'Onsite'}
-                            </span>
-                          </td>
-                          <td className="px-2 py-2.5 font-mono tabular-nums text-slate-900">{fmtTime(s.start.toISOString())}</td>
-                          <td className="px-2 py-2.5 font-mono tabular-nums">
-                            {s.end
-                              ? <span className="text-slate-900">{fmtTime(s.end.toISOString())}</span>
-                              : <span className="text-slate-700 font-semibold">running…</span>}
-                          </td>
-                          <td className="px-5 py-2.5 text-right font-semibold text-slate-900 tabular-nums">{formatHMS(dur)}</td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                  <tfoot>
-                    <tr className="border-t-2 border-slate-300 bg-slate-50/60">
-                      <td colSpan={4} className="px-5 py-3 text-[11px] uppercase tracking-wider text-slate-700 font-semibold">
-                        Total worked today
-                      </td>
-                      <td className="px-5 py-3 text-right">
-                        <span className="text-base font-bold text-slate-700 tabular-nums">{formatHMS(totalMs)}</span>
-                        <span className="text-xs text-slate-500 ml-2 tabular-nums">({(totalMs / 3_600_000).toFixed(2)} h)</span>
-                      </td>
-                    </tr>
-                  </tfoot>
-                </table>
+                <div className="w-full overflow-x-auto">
+                    <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold border-b border-slate-100">
+                        <th className="text-left px-5 py-2 w-12">#</th>
+                        <th className="text-left px-2 py-2">Work mode</th>
+                        <th className="text-left px-2 py-2">Start</th>
+                        <th className="text-left px-2 py-2">End</th>
+                        <th className="text-right px-5 py-2">Duration</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sessions.map((s, i) => {
+                        const endTime = s.end ?? now
+                        const dur = endTime.getTime() - s.start.getTime()
+                        return (
+                          <tr key={i} className="border-b border-slate-50 last:border-b-0">
+                            <td className="px-5 py-2.5 text-slate-400 font-mono text-xs">{i + 1}</td>
+                            <td className="px-2 py-2.5">
+                              <span className={
+                                'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ' +
+                                (s.wfh ? 'bg-slate-100 text-slate-900' : 'bg-slate-100 text-slate-900')
+                              }>
+                                {s.wfh ? <Home className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                                {s.wfh ? 'WFH' : 'Onsite'}
+                              </span>
+                            </td>
+                            <td className="px-2 py-2.5 font-mono tabular-nums text-slate-900">{fmtTime(s.start.toISOString())}</td>
+                            <td className="px-2 py-2.5 font-mono tabular-nums">
+                              {s.end
+                                ? <span className="text-slate-900">{fmtTime(s.end.toISOString())}</span>
+                                : <span className="text-slate-700 font-semibold">running…</span>}
+                            </td>
+                            <td className="px-5 py-2.5 text-right font-semibold text-slate-900 tabular-nums">{formatHMS(dur)}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-slate-300 bg-slate-50/60">
+                        <td colSpan={4} className="px-5 py-3 text-[11px] uppercase tracking-wider text-slate-700 font-semibold">
+                          Total worked today
+                        </td>
+                        <td className="px-5 py-3 text-right">
+                          <span className="text-base font-bold text-slate-700 tabular-nums">{formatHMS(totalMs)}</span>
+                          <span className="text-xs text-slate-500 ml-2 tabular-nums">({(totalMs / 3_600_000).toFixed(2)} h)</span>
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           </div>

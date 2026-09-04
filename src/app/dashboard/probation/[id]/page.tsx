@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, use } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -771,7 +772,7 @@ function HRForm({ onSubmit, busy, suggested, managerRec }: { onSubmit: (p: Recor
       </div>
       <Button onClick={() => {
         if (decision === 'CONFIRM' && bumpAmount.trim() === '') {
-          alert('Enter a salary bump (0 if no change). Field is required.')
+          toastError('Enter a salary bump (0 if no change). Field is required.')
           return
         }
         const payload: Record<string, unknown> = { decision, notes }

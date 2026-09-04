@@ -261,25 +261,27 @@ export default function CompensationPanel({
               {access.canEdit && ' Click "Set Initial Salary" above to create one.'}
             </p>
           ) : (
-            <table className="w-full text-sm">
-              <tbody>
-                <PayRow label="Basic Salary"      value={currentSalary.basic} weight="primary" />
-                <PayRow label="House Rent"        value={currentSalary.houseRent} />
-                <PayRow label="Utilities"         value={currentSalary.utilities} />
-                <PayRow label="Food Allowance"    value={currentSalary.food} />
-                <PayRow label="Fuel Allowance"    value={currentSalary.fuel} />
-                <PayRow label="Medical Allowance" value={currentSalary.medicalAllowance} />
-                <PayRow label="Other Allowances"  value={currentSalary.otherAllowance} />
-              </tbody>
-              <tfoot>
-                <tr className="border-t-2 border-slate-300">
-                  <td className="pt-3 pb-1 font-bold text-slate-900">Gross Monthly Pay</td>
-                  <td className="pt-3 pb-1 text-right font-bold text-slate-700 tabular-nums">
-                    {formatCurrency(grossMonthly)}
-                  </td>
-                </tr>
-              </tfoot>
-            </table>
+            <div className="w-full overflow-x-auto">
+                <table className="w-full text-sm">
+                <tbody>
+                  <PayRow label="Basic Salary"      value={currentSalary.basic} weight="primary" />
+                  <PayRow label="House Rent"        value={currentSalary.houseRent} />
+                  <PayRow label="Utilities"         value={currentSalary.utilities} />
+                  <PayRow label="Food Allowance"    value={currentSalary.food} />
+                  <PayRow label="Fuel Allowance"    value={currentSalary.fuel} />
+                  <PayRow label="Medical Allowance" value={currentSalary.medicalAllowance} />
+                  <PayRow label="Other Allowances"  value={currentSalary.otherAllowance} />
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-300">
+                    <td className="pt-3 pb-1 font-bold text-slate-900">Gross Monthly Pay</td>
+                    <td className="pt-3 pb-1 text-right font-bold text-slate-700 tabular-nums">
+                      {formatCurrency(grossMonthly)}
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
           )}
         </CardContent>
       </Card>

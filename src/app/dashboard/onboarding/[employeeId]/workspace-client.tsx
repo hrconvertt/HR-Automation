@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition, useRef } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Card } from '@/components/ui/card'
@@ -105,7 +106,7 @@ export function OnboardingWorkspace(props: Props) {
       applyTask(task)
     } else {
       const { error } = await res.json().catch(() => ({ error: 'Failed' }))
-      alert(error || 'Failed to mark complete')
+      toastError('Failed to mark complete', error)
     }
     setBusyTaskId(null)
     startTransition(() => router.refresh())
@@ -128,7 +129,7 @@ export function OnboardingWorkspace(props: Props) {
       applyTask(task)
     } else {
       const { error } = await res.json().catch(() => ({ error: 'Failed' }))
-      alert(error || 'Failed to undo')
+      toastError('Failed to undo', error)
     }
     setBusyTaskId(null)
     startTransition(() => router.refresh())
@@ -144,7 +145,7 @@ export function OnboardingWorkspace(props: Props) {
       applyTask(task)
     } else {
       const { error } = await res.json().catch(() => ({ error: 'Upload failed' }))
-      alert(error || 'Upload failed')
+      toastError('Upload failed', error)
     }
     setBusyTaskId(null)
     startTransition(() => router.refresh())
@@ -162,7 +163,7 @@ export function OnboardingWorkspace(props: Props) {
       applyTask(task)
     } else {
       const { error } = await res.json().catch(() => ({ error: 'Failed' }))
-      alert(error || 'Failed to mark not required')
+      toastError('Failed to mark not required', error)
     }
     setBusyTaskId(null)
     setNotRequiredFor(null)
@@ -189,7 +190,7 @@ export function OnboardingWorkspace(props: Props) {
     const res = await fetch(`/api/onboarding/${props.employeeId}/complete`, { method: 'POST' })
     if (!res.ok) {
       const { error } = await res.json().catch(() => ({ error: 'Failed' }))
-      alert(error || 'Failed')
+      toastError('Failed', error)
       return
     }
     startTransition(() => router.refresh())
@@ -201,7 +202,7 @@ export function OnboardingWorkspace(props: Props) {
     const res = await fetch(`/api/onboarding/${props.employeeId}/apply-template`, { method: 'POST' })
     if (!res.ok) {
       const { error } = await res.json().catch(() => ({ error: 'Failed' }))
-      alert(error || 'Failed to apply checklist')
+      toastError('Failed to apply checklist', error)
     }
     setBusyTaskId(null)
     startTransition(() => router.refresh())

@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { cachedFetch } from '@/lib/client-cache'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -162,7 +163,7 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
     })
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
-      alert(d.error ?? 'Could not cancel the request.')
+      toastError('Could not cancel the request.', d.error)
       return
     }
     fetchLeave(true)

@@ -11,6 +11,7 @@
  * bottom-left box. "Not assessed" and "poor" are different answers.
  */
 import { useState, useEffect, useCallback } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import Link from 'next/link'
 import { BOXES, AXIS_LABELS, boxFor, FLIGHT_RISK } from '@/lib/talent-grid'
 import { Loader2, AlertTriangle } from 'lucide-react'
@@ -203,7 +204,7 @@ function EditDialog({ row, cycle, onClose, onSaved }: {
   async function save() {
     setSaving(true)
     try {
-      await fetch('/api/talent', {
+      const res = await fetch('/api/talent', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -211,6 +212,11 @@ function EditDialog({ row, cycle, onClose, onSaved }: {
           flightRisk: flightRisk || null, successorFor, note,
         }),
       })
+      if (!res.ok) {
+        toastError('Could not save that assessment', (await res.json().catch(() => ({}))).error)
+        return
+      }
+      toastSuccess(`${row.fullName} placed on the grid`)
       onSaved()
     } finally { setSaving(false) }
   }

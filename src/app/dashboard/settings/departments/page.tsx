@@ -9,6 +9,7 @@
  *   - Delete guarded — endpoint refuses if active employees still assigned.
  */
 import { useState, useEffect } from 'react'
+import { toastError } from '@/components/ui/toaster'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -88,7 +89,7 @@ export default function DepartmentsSettingsPage() {
     const res = await fetch(`/api/settings/departments/${id}`, { method: 'DELETE' })
     if (!res.ok) {
       const d = await res.json().catch(() => ({}))
-      alert(d.error || 'Failed to delete')
+      toastError('Failed to delete', d.error)
       return
     }
     await load()

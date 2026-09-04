@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
+import { EmailLink, PhoneLink } from '@/components/ui/contact-link'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -363,8 +364,8 @@ export function BulkResumeUpload({ openRequisitions }: { openRequisitions: Requi
                           <div className="border-t border-slate-100 p-3 bg-slate-50/50 space-y-2">
                             {/* Contact */}
                             <div className="grid grid-cols-2 gap-2 text-xs">
-                              {r.candidate.email && <div><span className="text-slate-500">Email:</span> <span className="text-slate-700">{r.candidate.email}</span></div>}
-                              {r.candidate.phone && <div><span className="text-slate-500">Phone:</span> <span className="text-slate-700">{r.candidate.phone}</span></div>}
+                              {r.candidate.email && <div><span className="text-slate-500">Email:</span> <EmailLink value={r.candidate.email} className="text-slate-700" /></div>}
+                              {r.candidate.phone && <div><span className="text-slate-500">Phone:</span> <PhoneLink value={r.candidate.phone} className="text-slate-700" /></div>}
                               {r.candidate.location && <div><span className="text-slate-500">Location:</span> <span className="text-slate-700">{r.candidate.location}</span></div>}
                               {r.candidate.education && <div><span className="text-slate-500">Education:</span> <span className="text-slate-700">{r.candidate.education}</span></div>}
                             </div>

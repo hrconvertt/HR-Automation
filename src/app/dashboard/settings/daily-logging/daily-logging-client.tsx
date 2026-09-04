@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { toastError, toastSuccess } from '@/components/ui/toaster'
 import type { DailyLoggingConfig } from '@/lib/daily-logging-config'
 
 interface Position { id: string; title: string }
@@ -126,7 +127,8 @@ function LibrarySection({ positions }: { positions: Position[] }) {
       body: JSON.stringify({ action: 'assign-default-position' }),
     })
     const data = await res.json()
-    alert(res.ok ? `Assigned to ${data.count} employees.` : (data.error ?? 'Failed'))
+    if (res.ok) toastSuccess(`Assigned to ${data.count} ${data.count === 1 ? 'employee' : 'employees'}.`)
+    else toastError('Could not assign the metric', data.error)
     void load()
   }
 
@@ -187,72 +189,74 @@ function LibrarySection({ positions }: { positions: Position[] }) {
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-700">
-            <tr>
-              <th className="text-left px-3 py-2 font-medium">Name</th>
-              <th className="text-left px-3 py-2 font-medium">Unit</th>
-              <th className="text-left px-3 py-2 font-medium">Default position</th>
-              <th className="text-left px-3 py-2 font-medium">Default target</th>
-              <th className="text-left px-3 py-2 font-medium">Assigned</th>
-              <th className="text-left px-3 py-2 font-medium">Active</th>
-              <th className="text-right px-3 py-2 font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading && <tr><td colSpan={7} className="px-3 py-4 text-gray-500">Loading…</td></tr>}
-            {!loading && metrics.length === 0 && (
-              <tr><td colSpan={7} className="px-3 py-4 text-gray-500">No metrics yet.</td></tr>
-            )}
-            {metrics.map((m) => (
-              <tr key={m.id} className="border-t border-gray-100">
-                <td className="px-3 py-2 text-gray-900">
-                  <div className="font-medium">{m.name}</div>
-                  {m.description && <div className="text-xs text-gray-500">{m.description}</div>}
-                </td>
-                <td className="px-3 py-2 text-gray-700">{m.unit}</td>
-                <td className="px-3 py-2 text-gray-700">{m.defaultPosition?.title ?? '—'}</td>
-                <td className="px-3 py-2 text-gray-700">
-                  <input
-                    type="number"
-                    defaultValue={m.defaultTarget ?? ''}
-                    onBlur={(e) => {
-                      const v = e.target.value === '' ? null : Number(e.target.value)
-                      if (v !== m.defaultTarget) void patch(m.id, { defaultTarget: v })
-                    }}
-                    className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
-                  />
-                </td>
-                <td className="px-3 py-2 text-gray-700">{m.assignmentCount}</td>
-                <td className="px-3 py-2">
-                  <input
-                    type="checkbox"
-                    checked={m.isActive}
-                    onChange={(e) => void patch(m.id, { isActive: e.target.checked })}
-                  />
-                </td>
-                <td className="px-3 py-2 text-right space-x-2">
-                  {m.defaultPositionId && (
+        <div className="w-full overflow-x-auto">
+            <table className="w-full text-sm">
+            <thead className="bg-gray-50 text-gray-700">
+              <tr>
+                <th className="text-left px-3 py-2 font-medium">Name</th>
+                <th className="text-left px-3 py-2 font-medium">Unit</th>
+                <th className="text-left px-3 py-2 font-medium">Default position</th>
+                <th className="text-left px-3 py-2 font-medium">Default target</th>
+                <th className="text-left px-3 py-2 font-medium">Assigned</th>
+                <th className="text-left px-3 py-2 font-medium">Active</th>
+                <th className="text-right px-3 py-2 font-medium">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && <tr><td colSpan={7} className="px-3 py-4 text-gray-500">Loading…</td></tr>}
+              {!loading && metrics.length === 0 && (
+                <tr><td colSpan={7} className="px-3 py-4 text-gray-500">No metrics yet.</td></tr>
+              )}
+              {metrics.map((m) => (
+                <tr key={m.id} className="border-t border-gray-100">
+                  <td className="px-3 py-2 text-gray-900">
+                    <div className="font-medium">{m.name}</div>
+                    {m.description && <div className="text-xs text-gray-500">{m.description}</div>}
+                  </td>
+                  <td className="px-3 py-2 text-gray-700">{m.unit}</td>
+                  <td className="px-3 py-2 text-gray-700">{m.defaultPosition?.title ?? '—'}</td>
+                  <td className="px-3 py-2 text-gray-700">
+                    <input
+                      type="number"
+                      defaultValue={m.defaultTarget ?? ''}
+                      onBlur={(e) => {
+                        const v = e.target.value === '' ? null : Number(e.target.value)
+                        if (v !== m.defaultTarget) void patch(m.id, { defaultTarget: v })
+                      }}
+                      className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-gray-700">{m.assignmentCount}</td>
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={m.isActive}
+                      onChange={(e) => void patch(m.id, { isActive: e.target.checked })}
+                    />
+                  </td>
+                  <td className="px-3 py-2 text-right space-x-2">
+                    {m.defaultPositionId && (
+                      <button
+                        type="button"
+                        onClick={() => void bulkAssign(m.id)}
+                        className="text-xs text-slate-700 underline"
+                      >
+                        Bulk-assign
+                      </button>
+                    )}
                     <button
                       type="button"
-                      onClick={() => void bulkAssign(m.id)}
+                      onClick={() => void disable(m.id)}
                       className="text-xs text-slate-700 underline"
                     >
-                      Bulk-assign
+                      Disable
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => void disable(m.id)}
-                    className="text-xs text-slate-700 underline"
-                  >
-                    Disable
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )
@@ -351,46 +355,48 @@ function AssignmentsSection({ employees }: { employees: EmployeeOpt[] }) {
           </div>
 
           <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 text-gray-700">
-                <tr>
-                  <th className="text-left px-3 py-2 font-medium">Metric</th>
-                  <th className="text-left px-3 py-2 font-medium">Unit</th>
-                  <th className="text-left px-3 py-2 font-medium">Target</th>
-                  <th className="text-left px-3 py-2 font-medium">Active</th>
-                </tr>
-              </thead>
-              <tbody>
-                {loading && <tr><td colSpan={4} className="px-3 py-4 text-gray-500">Loading…</td></tr>}
-                {!loading && assignments.length === 0 && (
-                  <tr><td colSpan={4} className="px-3 py-4 text-gray-500">No KPIs assigned.</td></tr>
-                )}
-                {assignments.map((a) => (
-                  <tr key={a.id} className="border-t border-gray-100">
-                    <td className="px-3 py-2 text-gray-900 font-medium">{a.metric.name}</td>
-                    <td className="px-3 py-2 text-gray-700">{a.metric.unit}</td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="number"
-                        defaultValue={a.target}
-                        onBlur={(e) => {
-                          const v = Number(e.target.value)
-                          if (v !== a.target) void patchA(a.id, { target: v })
-                        }}
-                        className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
-                      />
-                    </td>
-                    <td className="px-3 py-2">
-                      <input
-                        type="checkbox"
-                        checked={a.isActive}
-                        onChange={(e) => void patchA(a.id, { isActive: e.target.checked })}
-                      />
-                    </td>
+            <div className="w-full overflow-x-auto">
+                <table className="w-full text-sm">
+                <thead className="bg-gray-50 text-gray-700">
+                  <tr>
+                    <th className="text-left px-3 py-2 font-medium">Metric</th>
+                    <th className="text-left px-3 py-2 font-medium">Unit</th>
+                    <th className="text-left px-3 py-2 font-medium">Target</th>
+                    <th className="text-left px-3 py-2 font-medium">Active</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {loading && <tr><td colSpan={4} className="px-3 py-4 text-gray-500">Loading…</td></tr>}
+                  {!loading && assignments.length === 0 && (
+                    <tr><td colSpan={4} className="px-3 py-4 text-gray-500">No KPIs assigned.</td></tr>
+                  )}
+                  {assignments.map((a) => (
+                    <tr key={a.id} className="border-t border-gray-100">
+                      <td className="px-3 py-2 text-gray-900 font-medium">{a.metric.name}</td>
+                      <td className="px-3 py-2 text-gray-700">{a.metric.unit}</td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="number"
+                          defaultValue={a.target}
+                          onBlur={(e) => {
+                            const v = Number(e.target.value)
+                            if (v !== a.target) void patchA(a.id, { target: v })
+                          }}
+                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm"
+                        />
+                      </td>
+                      <td className="px-3 py-2">
+                        <input
+                          type="checkbox"
+                          checked={a.isActive}
+                          onChange={(e) => void patchA(a.id, { isActive: e.target.checked })}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </>
       )}
