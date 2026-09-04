@@ -64,6 +64,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Policies', href: '/dashboard/policies', section: 'Admin', keywords: ['handbook', 'rules', 'playbook'] },
   { label: 'Settings', href: '/dashboard/settings', section: 'Admin', keywords: ['configuration', 'email templates', 'preferences'] },
   { label: 'Interim Rules', href: '/dashboard/settings/interim-rules', section: 'Settings', keywords: ['hr only', 'temporary', 'shortcuts', 'switch off', 'when employees join'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
+  { label: 'Audit Trail', href: '/dashboard/settings/audit', section: 'Settings', keywords: ['who changed', 'history', 'log', 'trail', 'changed the salary', 'evidence', 'when was it changed'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
 ]
 
 /** Rank by how directly the query hits the label, then the keywords. */

@@ -37,6 +37,7 @@ import {
   HelpCircle,
   Mail,
   ShieldCheck,
+  History,
   Sprout,
   Heart,
   Sparkles,
@@ -135,6 +136,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/culture/pulse',
   '/dashboard/people/skills',
   '/dashboard/settings/interim-rules',
+  '/dashboard/settings/audit',
   '/dashboard/time/me',
   '/dashboard/time/everyone',
   '/dashboard/time/approvals',
@@ -454,6 +456,9 @@ const SETTINGS_NAV: NavGroup[] = [
       { href: '/dashboard/settings/users', label: 'Users', icon: UserIcon },
       { href: '/dashboard/settings/time-tracking', label: 'Time Tracking', icon: BarChart3 },
       { href: '/dashboard/settings/interim-rules', label: 'Interim Rules', icon: AlertTriangle, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      // Written to by sixteen API routes since the system went up, and until
+      // now readable by nobody.
+      { href: '/dashboard/settings/audit', label: 'Audit Trail', icon: History, roles: ['HR_ADMIN', 'EXECUTIVE'] },
     ],
   },
 ]
