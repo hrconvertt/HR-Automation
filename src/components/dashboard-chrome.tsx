@@ -128,6 +128,13 @@ const FOCUS_PATHS = new Set([
   '/dashboard/payroll/advances',
   '/dashboard/performance/appraisals',
   '/dashboard/performance/increments',
+  // FOCUS_PATHS is an allowlist: a page missing from it is invisible in the
+  // sidebar however correctly it is registered in the nav below. Four features
+  // shipped and could not be found for exactly that reason.
+  '/dashboard/performance/talent',
+  '/dashboard/culture/pulse',
+  '/dashboard/people/skills',
+  '/dashboard/settings/interim-rules',
   '/dashboard/time/me',
   '/dashboard/time/everyone',
   '/dashboard/time/approvals',
