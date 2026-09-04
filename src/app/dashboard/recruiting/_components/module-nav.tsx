@@ -22,8 +22,10 @@ export interface ModuleNavCounts {
 }
 
 const ITEMS = [
-  { tab: 'requests', label: 'Requests', icon: Inbox, count: 'requests' as const, hint: 'Manager → HR' },
-  { tab: 'requisitions', label: 'Job Requisitions', icon: Briefcase, hint: 'The live hiring board' },
+  // One entry, because it is one record. A request becomes a requisition when
+  // its status flips; nothing else about it changes, and keeping two menu
+  // entries meant checking two screens to know what hiring was in flight.
+  { tab: 'requisitions', label: 'Requisitions', icon: Briefcase, count: 'requests' as const, hint: 'Awaiting approval first' },
   { tab: 'pipeline', label: 'Pipeline', icon: KanbanSquare, hint: 'Candidates by stage' },
   { tab: 'knockouts', label: 'Knockouts', icon: Filter, count: 'knockouts' as const, hint: 'Filtered out' },
   { tab: 'pool', label: 'Talent Pool', icon: Users, count: 'pool' as const, hint: 'Silver medalists' },

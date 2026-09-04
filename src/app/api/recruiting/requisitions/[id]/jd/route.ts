@@ -11,6 +11,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { requisitionAuthorised } from '@/lib/requisition-gate'
 import { verifyToken } from '@/lib/auth'
 import { generateJD } from '@/lib/jd-generator'
 import { trackingToken } from '@/lib/job-posting'
@@ -75,6 +76,13 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     select: { jdContent: true, jdStatus: true, status: true, postedDate: true },
   })
   if (!req) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+  // Nothing reaches a candidate before the requisition is authorised — see
+  // src/lib/requisition-gate.ts. Roles raised before the form existed are
+  // grandfathered.
+  const gate = await requisitionAuthorised(id)
+  if (!gate.ok) return NextResponse.json({ error: gate.reason }, { status: 409 })
+
   if (req.status !== 'OPEN') {
     return NextResponse.json({ error: 'Requisition must be OPEN to publish a JD' }, { status: 409 })
   }

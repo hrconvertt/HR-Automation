@@ -467,8 +467,9 @@ const RECRUITING_NAV: NavGroup[] = [
   {
     label: 'Recruiting',
     items: [
-      { href: '/dashboard/recruiting?tab=requests', label: 'Requests', icon: Inbox },
-      { href: '/dashboard/recruiting?tab=requisitions', label: 'Job Requisitions', icon: FolderOpen },
+      // Requests and requisitions were the same JobRequisition row at two
+      // statuses, under two menu entries, one of which was always empty.
+      { href: '/dashboard/recruiting?tab=requisitions', label: 'Requisitions', icon: FolderOpen },
       { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       { href: '/dashboard/recruiting?tab=pipeline', label: 'Pipeline', icon: BarChart3 },
       { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert },

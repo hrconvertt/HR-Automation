@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { requisitionAuthorised } from '@/lib/requisition-gate'
 
 // GET /api/recruiting/requisitions/[id]/postings — list all postings
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -28,6 +29,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const token = request.cookies.get('hr_token')?.value
     const payload = await verifyToken(token)
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // A job post spends money against a role. It does not go up before the
+    // requisition that authorises the headcount is approved.
+    const gate = await requisitionAuthorised(id)
+    if (!gate.ok) return NextResponse.json({ error: gate.reason }, { status: 409 })
 
     const body = await request.json()
     const { platform, cost, expiresAt, notes } = body

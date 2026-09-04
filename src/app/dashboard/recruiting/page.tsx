@@ -14,6 +14,7 @@ import { AddCandidateButton } from '@/components/recruiting/add-candidate-button
 import { CandidateCard } from '@/components/recruiting/candidate-card'
 import { RequisitionStatusMenu } from '@/components/recruiting/requisition-status-menu'
 import { ManpowerFormButton } from '@/components/recruiting/manpower-form-button'
+import { authorisationForAll } from '@/lib/requisition-gate'
 import { JdReviewButton } from '@/components/recruiting/jd-review-button'
 import { InterviewFeedbackButton } from '@/components/recruiting/interview-feedback-button'
 import { TalentPoolView } from '@/components/recruiting/talent-pool-view'
@@ -120,6 +121,52 @@ function ViewHeader({ title, blurb, actions }: {
   )
 }
 
+/**
+ * Human labels for the enum values.
+ *
+ * FULL_TIME and PART_TIME are how the database spells them, not how anybody
+ * reads them: a column of shouting underscores is harder to scan than the same
+ * words written normally, and the capitals carry no extra meaning.
+ */
+const TYPE_LABEL: Record<string, string> = {
+  FULL_TIME: 'Full-time',
+  PART_TIME: 'Part-time',
+  INTERNSHIP: 'Internship',
+  TRAINEE: 'Trainee',
+  CONTRACT: 'Contract',
+}
+
+/**
+ * Status, said plainly. "Filled" and "Closed" look alike at a glance and mean
+ * opposite things — one is a hire, the other is an abandonment — so they get
+ * different colours rather than two greys.
+ */
+const REQ_STATUS: Record<string, { label: string; tone: string }> = {
+  OPEN:     { label: 'Open',      tone: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
+  PAUSED:   { label: 'Paused',    tone: 'bg-amber-50 text-amber-800 border-amber-200' },
+  FILLED:   { label: 'Filled',    tone: 'bg-sky-50 text-sky-800 border-sky-200' },
+  CLOSED:   { label: 'Closed',    tone: 'bg-slate-50 text-slate-500 border-slate-200' },
+  PENDING:  { label: 'Pending',   tone: 'bg-amber-50 text-amber-800 border-amber-200' },
+  REJECTED: { label: 'Rejected',  tone: 'bg-red-50 text-red-800 border-red-200' },
+}
+
+function TypeChip({ type }: { type: string }) {
+  return (
+    <span className="text-[12px] text-slate-600 whitespace-nowrap">
+      {TYPE_LABEL[type] ?? type.replace(/_/g, ' ').toLowerCase()}
+    </span>
+  )
+}
+
+function StatusChip({ status }: { status: string }) {
+  const s = REQ_STATUS[status] ?? { label: status, tone: 'bg-slate-50 text-slate-600 border-slate-200' }
+  return (
+    <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-0.5 rounded-full border ${s.tone}`}>
+      {s.label}
+    </span>
+  )
+}
+
 const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'warning' | 'default'> = {
   OPEN: 'success',
   FILLED: 'default',
@@ -170,7 +217,10 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
       ? sp.tab
       : sp.stage
         ? 'pipeline'
-        : (isHR && pendingRequests.length > 0 ? 'requests' : 'pipeline')
+        : (isHR && pendingRequests.length > 0 ? 'requisitions' : 'pipeline')
+
+  // Whether each role is authorised to be worked — see requisition-gate.ts.
+  const authorised = await authorisationForAll()
 
   const openRoles = requisitions
     .filter((r) => r.status === 'OPEN')
@@ -338,7 +388,17 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             Result: each row appears in exactly one tab, no double-counting. */}
         <TabsContent value="requisitions" className="mt-0">
           {(() => {
-            const liveReqs = requisitions.filter((r) => r.status !== 'PENDING' && r.status !== 'REJECTED')
+            // Pending rows sit on this list now rather than on a separate
+            // screen. A request and a requisition are the same row at two
+            // statuses, and keeping them apart meant checking two places to
+            // know what hiring was in flight — with one of the two usually
+            // empty. Awaiting approval is pinned to the top, because it is the
+            // only part of the list that needs a decision.
+            const RANK: Record<string, number> = { PENDING: 0, OPEN: 1, PAUSED: 2, FILLED: 3, CLOSED: 4 }
+            const liveReqs = requisitions
+              .filter((r) => r.status !== 'REJECTED')
+              .sort((a, b) => (RANK[a.status] ?? 9) - (RANK[b.status] ?? 9))
+            const awaiting = liveReqs.filter((r) => r.status === 'PENDING').length
             return (
               <>
               <ViewHeader
@@ -354,7 +414,10 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
               <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
                 <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
                   <p className="text-xs text-slate-500">
-                    <span className="font-semibold text-slate-900">{liveReqs.length}</span> {liveReqs.length === 1 ? 'requisition' : 'requisitions'} on the hiring board
+                    <span className="font-semibold text-slate-900">{liveReqs.length}</span> {liveReqs.length === 1 ? 'requisition' : 'requisitions'}
+                    {awaiting > 0 && (
+                      <span className="text-amber-800 font-semibold"> · {awaiting} awaiting approval</span>
+                    )}
                     <span className="ml-3 inline-flex items-center gap-3 text-[11px] text-slate-400 align-middle">
                       <span className="inline-flex items-center gap-1">
                         <span className="w-1.5 h-1.5 rounded-full bg-slate-300" /> not started
@@ -390,10 +453,17 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                     ) : (
                       liveReqs.map((r) => (
                         <TableRow key={r.id}>
-                          <TableCell className="font-medium text-slate-900">{r.title}</TableCell>
-                          <TableCell><Badge variant="secondary">{r.type}</Badge></TableCell>
+                          <TableCell className="font-medium text-slate-900">
+                            {r.title}
+                            {authorised.get(r.id)?.ok === false && (
+                              <span className="block text-[11px] font-normal text-amber-800">
+                                {authorised.get(r.id)?.reason} No JD or job post until it is.
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell><TypeChip type={r.type} /></TableCell>
                           <TableCell className="tabular-nums">{r.vacancies}</TableCell>
-                          <TableCell><Badge variant={STATUS_TONE[r.status] ?? 'secondary'}>{r.status}</Badge></TableCell>
+                          <TableCell><StatusChip status={r.status} /></TableCell>
                           {/* One chip per column, all the same width. Three
                               different-length buttons stacked in a single cell
                               made thirteen rows of ragged edges. */}
@@ -417,7 +487,9 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                           <TableCell className="text-slate-500">{r.closingDate ? formatDate(r.closingDate) : '—'}</TableCell>
                           {isHR && (
                             <TableCell>
-                              <RequisitionStatusMenu requisitionId={r.id} status={r.status} title={r.title} />
+                              {r.status === 'PENDING'
+                                ? <DecideRequestButtons requisitionId={r.id} title={r.title} />
+                                : <RequisitionStatusMenu requisitionId={r.id} status={r.status} title={r.title} />}
                             </TableCell>
                           )}
                         </TableRow>
@@ -580,7 +652,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                       <TableCell className="text-slate-700 text-sm tabular-nums">{formatDate(i.scheduledAt)}</TableCell>
                       <TableCell className="font-medium text-slate-900">{i.candidate.fullName}</TableCell>
                       <TableCell className="text-slate-500">{i.round}</TableCell>
-                      <TableCell><Badge variant="secondary">{i.type}</Badge></TableCell>
+                      <TableCell><TypeChip type={i.type} /></TableCell>
                       <TableCell>
                         {(isHR || isManager) ? (
                           <InterviewFeedbackButton

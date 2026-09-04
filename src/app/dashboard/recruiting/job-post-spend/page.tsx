@@ -21,6 +21,7 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { PLATFORM_LABELS, postingStamp, postingInputValue } from '@/lib/job-posting'
 import { PostingEditButton } from '@/components/recruiting/posting-edit-button'
+import { SpendViewSelect } from './_components/view-select'
 import { AddPostingButton } from '@/components/recruiting/add-posting-button'
 
 const money = (n: number, currency: string) =>
@@ -79,18 +80,22 @@ export default async function JobPostSpendPage({ searchParams }: {
     : [...totals].map(([c, n]) => money(n, c)).join(' · ')
 
   const byRole = new Map<string, {
-    posts: number; running: number; vacancies: number; status: string
+    posts: number; running: number; unpriced: number; vacancies: number; status: string
     paid: Map<string, number>
   }>()
   for (const p of postings) {
     const role = p.requisition.title
     const cur = byRole.get(role) ?? {
-      posts: 0, running: 0,
+      posts: 0, running: 0, unpriced: 0,
       vacancies: p.requisition.vacancies, status: p.requisition.status,
       paid: new Map<string, number>(),
     }
     cur.posts++
-    if (p.cost == null) cur.running++
+    // "Running" means the post is still up — closedAt is the only field that
+    // says so. It used to be inferred from a null cost, which counts a closed
+    // free post as live: QA Engineer read "6 +1 running" with all six closed.
+    if (p.closedAt == null) cur.running++
+    if (p.cost == null) cur.unpriced++
     else cur.paid.set(p.currency, (cur.paid.get(p.currency) ?? 0) + p.cost)
     byRole.set(role, cur)
   }
@@ -118,8 +123,7 @@ export default async function JobPostSpendPage({ searchParams }: {
       <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
         <div className="px-4 py-2.5 border-b border-slate-100 flex items-center gap-2 flex-wrap">
           <h2 className="text-sm font-semibold text-slate-900 mr-2">Spend</h2>
-          <Filter href="?view=role" label="By role" active={view === 'role'} />
-          <Filter href="?view=post" label="By job post" active={view === 'post'} />
+          <SpendViewSelect view={view} />
           {canEdit && (
             <div className="ml-auto">
               <AddPostingButton roles={requisitionOptions} />
@@ -147,7 +151,9 @@ export default async function JobPostSpendPage({ searchParams }: {
                     <tr key={role} className="border-b border-slate-50 hover:bg-slate-50/60">
                       <td className="px-4 py-2.5 text-slate-900">{role}</td>
                       <td className="px-4 py-2.5 text-right text-slate-600 tabular-nums">
-                        {t.posts}{t.running ? <span className="text-amber-700"> +{t.running} running</span> : null}
+                        {t.posts}
+                        {t.running ? <span className="text-amber-700"> · {t.running} still up</span> : null}
+                        {t.unpriced ? <span className="text-slate-400"> · {t.unpriced} cost not recorded</span> : null}
                       </td>
                       <td className="px-4 py-2.5 text-right font-medium text-slate-900 tabular-nums whitespace-nowrap">
                         {sum(t.paid) ? [...t.paid].map(([c, n]) => money(n, c)).join(' · ') : <span className="text-slate-400">Free</span>}
@@ -252,21 +258,6 @@ function Amount({ value, currency }: { value: number | null; currency: string })
   return <>{money(value, currency)}</>
 }
 
-function Filter({ href, label, active }: { href: string; label: string; active: boolean }) {
-  return (
-    <Link
-      href={href}
-      className={
-        'rounded-full px-3 py-1 text-xs font-medium border transition-colors ' +
-        (active
-          ? 'bg-slate-900 text-white border-slate-900'
-          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50')
-      }
-    >
-      {label}
-    </Link>
-  )
-}
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
