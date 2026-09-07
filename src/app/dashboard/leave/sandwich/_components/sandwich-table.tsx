@@ -18,6 +18,7 @@ import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog'
 import { Mail, Copy, Check, Loader2, Undo2, Ban, Calculator, Trash2, MoreHorizontal } from 'lucide-react'
+import { isCurrentPayrollMonth } from '@/lib/payroll-sandwich'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 
 interface Row {
@@ -254,7 +255,10 @@ export function SandwichTable() {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((r) => (
+                {rows.map((r) => {
+                  // Only the month payroll has not yet closed on can be changed.
+                  const open = isCurrentPayrollMonth(r.month, r.year)
+                  return (
                   <tr key={r.id} className="border-b border-slate-50 hover:bg-slate-50/60 align-top">
                     <td className="px-4 py-2.5">
                       <p className="text-slate-900 font-medium">{r.employee.fullName}</p>
@@ -342,6 +346,7 @@ export function SandwichTable() {
                         real decision look like none of them. */}
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-1 justify-end">
+                        {open ? (
                         <button
                           type="button"
                           disabled={writing === r.id}
@@ -357,6 +362,13 @@ export function SandwichTable() {
                             : r.status === 'APPLIED' ? <Ban className="w-3.5 h-3.5" /> : <Undo2 className="w-3.5 h-3.5" />}
                           {r.status === 'APPLIED' ? 'Waive' : 'Reinstate'}
                         </button>
+                        ) : (
+                          // The month has been run and paid. The decision stays
+                          // on the record; it just stops being changeable.
+                          <span className="text-[11px] text-slate-400 whitespace-nowrap" title={`${MONTHS[r.month - 1]} ${r.year} payroll has closed`}>
+                            month closed
+                          </span>
+                        )}
 
                         <DropdownMenu.Root>
                           <DropdownMenu.Trigger asChild>
@@ -388,9 +400,16 @@ export function SandwichTable() {
                                 {r.warningSentAt ? 'Send the warning again' : 'Send a warning'}
                               </DropdownMenu.Item>
                               <DropdownMenu.Separator className="h-px bg-slate-100 my-1" />
+                              {!open && (
+                                <p className="px-2.5 py-2 text-[11px] text-slate-400">
+                                  {MONTHS[r.month - 1]} {r.year} payroll has closed — the
+                                  decision can no longer be changed.
+                                </p>
+                              )}
                               {/* Removing is not the same as waiving, and it is
                                   the only thing here that cannot be undone —
                                   so it sits apart, in red, behind the menu. */}
+                              {open && (
                               <DropdownMenu.Item
                                 onSelect={(e) => {
                                   // Let the menu finish closing before a
@@ -402,13 +421,15 @@ export function SandwichTable() {
                               >
                                 <Trash2 className="w-3.5 h-3.5" /> Remove this record
                               </DropdownMenu.Item>
+                              )}
                             </DropdownMenu.Content>
                           </DropdownMenu.Portal>
                         </DropdownMenu.Root>
                       </div>
                     </td>
                   </tr>
-                ))}
+                  )
+                })}
               </tbody>
             </table>
           </div>

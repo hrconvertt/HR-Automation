@@ -153,3 +153,22 @@ export async function syncSandwichToPayslips(
   }
   return touched
 }
+
+/**
+ * A sandwich decision can only be changed while its own payroll month is still
+ * the current one.
+ *
+ * Once a month is behind us its payroll has been run, approved and in most
+ * cases paid. Reinstating a charge against August in October does not take
+ * money back — it silently rewrites a figure somebody has already been paid
+ * and signed off. The decision stays visible; it just stops being editable.
+ */
+export function isCurrentPayrollMonth(month: number, year: number, now = new Date()): boolean {
+  return month === now.getMonth() + 1 && year === now.getFullYear()
+}
+
+/** Said the same way on screen and in the refusal. */
+export function closedMonthReason(month: number, year: number): string {
+  const label = new Date(year, month - 1, 1).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })
+  return `${label} payroll has closed — this decision can no longer be changed.`
+}

@@ -12,7 +12,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { syncSandwichToPayslips } from '@/lib/payroll-sandwich'
+import { syncSandwichToPayslips, isCurrentPayrollMonth, closedMonthReason } from '@/lib/payroll-sandwich'
 import { verifyToken } from '@/lib/auth'
 import { sendEmail } from '@/lib/email'
 import { warningHtml, buildWarning } from '@/lib/sandwich-server'
@@ -106,6 +106,21 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json({ error: 'Nothing to change' }, { status: 400 })
   }
 
+  // Money changes only while the month is still open. Notes and warning text
+  // stay editable — those correct the record rather than the payment.
+  const touchesMoney = 'status' in data || 'amount' in data || 'days' in data
+  if (touchesMoney) {
+    const existing = await prisma.sandwichDeduction.findUnique({
+      where: { id }, select: { month: true, year: true },
+    })
+    if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (!isCurrentPayrollMonth(existing.month, existing.year)) {
+      return NextResponse.json(
+        { error: closedMonthReason(existing.month, existing.year) }, { status: 409 },
+      )
+    }
+  }
+
   const row = await prisma.sandwichDeduction.update({ where: { id }, data })
   // Waive, reinstate, or a corrected amount — each changes what is owed, so
   // the month's payslip follows the decision rather than waiting for someone
@@ -182,6 +197,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     where: { id }, select: { employeeId: true, month: true, year: true },
   })
   if (!gone) return NextResponse.json({ error: 'Already removed' }, { status: 404 })
+  if (!isCurrentPayrollMonth(gone.month, gone.year)) {
+    return NextResponse.json(
+      { error: closedMonthReason(gone.month, gone.year) }, { status: 409 },
+    )
+  }
   await prisma.sandwichDeduction.delete({ where: { id } })
   // Removing the record has to take the charge off the payslip with it.
   const touched = await syncSandwichToPayslips(gone.employeeId, gone.month, gone.year)
