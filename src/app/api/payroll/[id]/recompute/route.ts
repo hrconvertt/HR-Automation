@@ -15,6 +15,7 @@ import { calculatePayslip } from '@/lib/payroll'
 import { getPayrollConfig } from '@/lib/config'
 import { dayKey } from '@/lib/date-utils'
 import { leaveDaysForMonth } from '@/lib/payroll-leave'
+import { sandwichByEmployee, applySandwich } from '@/lib/payroll-sandwich'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -70,6 +71,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
   const { paid: paidLeaveByEmp, unpaid: unpaidLeaveByEmp } =
     await leaveDaysForMonth(startOfMonth, endOfMonth, holidayKeys)
 
+  // Recompute is how a sandwich decision reaches an existing run: apply or
+  // waive on the Sandwich screen, recompute the month, and the slips follow.
+  const sandwichByEmp = await sandwichByEmployee(month, year)
+
   const otByEmployee: Record<string, number> = {}
   for (const l of attendanceLogs) {
     if (l.overtimeApproved && l.overtimeHours > 0) {
@@ -108,6 +113,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         cfg.eobiEmployeeRate, cfg.eobiCap, cfg.eobiEnabled, cfg.taxEnabled,
         cfg.otAllowanceTargetHours, cfg.otAllowanceCapPkr,
       )
+      const sandwich = sandwichByEmp.get(emp.id) ?? 0
       return {
         employeeId: emp.id,
         basic: result.basic,
@@ -122,7 +128,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         eobi: result.eobi,
         incomeTax: result.incomeTax,
         otherDeductions: 0,
-        netSalary: result.netPay,
+        sandwichDeduction: sandwich,
+        netSalary: applySandwich(result.netPay, sandwich),
         presentDays: result.presentDays,
         workingDays: result.workingDays,
         leaveDays: paidLeave + unpaidLeave,

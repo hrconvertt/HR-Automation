@@ -16,6 +16,7 @@ import { verifyToken } from '@/lib/auth'
 import { dayKey } from '@/lib/date-utils'
 import { assessSandwich, sandwichAmount, isSandwichExempt, exemptionReason } from '@/lib/sandwich'
 import { fullMonthNetFor, buildWarning } from '@/lib/sandwich-server'
+import { syncSandwichToPayslips } from '@/lib/payroll-sandwich'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -166,5 +167,10 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     create: data,
   })
 
-  return NextResponse.json({ ok: true, deduction: row })
+  // A decision that does not reach the payslip is only a note. Recompute
+  // alone would not do it — it skips HR-adjusted slips, which is most of
+  // them — so the charge is pushed onto the month's payslip here.
+  const touched = await syncSandwichToPayslips(leave.employeeId, money.month, money.year)
+
+  return NextResponse.json({ ok: true, deduction: row, payslips: touched })
 }

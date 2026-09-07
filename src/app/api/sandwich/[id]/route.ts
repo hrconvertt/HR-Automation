@@ -12,6 +12,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { syncSandwichToPayslips } from '@/lib/payroll-sandwich'
 import { verifyToken } from '@/lib/auth'
 import { sendEmail } from '@/lib/email'
 import { warningHtml, buildWarning } from '@/lib/sandwich-server'
@@ -106,7 +107,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   const row = await prisma.sandwichDeduction.update({ where: { id }, data })
-  return NextResponse.json({ ok: true, deduction: row })
+  // Waive, reinstate, or a corrected amount — each changes what is owed, so
+  // the month's payslip follows the decision rather than waiting for someone
+  // to remember to recompute.
+  const touched = await syncSandwichToPayslips(row.employeeId, row.month, row.year)
+  return NextResponse.json({ ok: true, deduction: row, payslips: touched })
 }
 
 export async function POST(request: NextRequest, { params }: RouteParams) {
@@ -173,6 +178,12 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   const auth = await gateHR(request)
   if (auth.error) return auth.error
   const { id } = await params
+  const gone = await prisma.sandwichDeduction.findUnique({
+    where: { id }, select: { employeeId: true, month: true, year: true },
+  })
+  if (!gone) return NextResponse.json({ error: 'Already removed' }, { status: 404 })
   await prisma.sandwichDeduction.delete({ where: { id } })
-  return NextResponse.json({ ok: true })
+  // Removing the record has to take the charge off the payslip with it.
+  const touched = await syncSandwichToPayslips(gone.employeeId, gone.month, gone.year)
+  return NextResponse.json({ ok: true, payslips: touched })
 }

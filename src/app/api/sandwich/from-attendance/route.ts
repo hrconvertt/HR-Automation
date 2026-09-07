@@ -22,6 +22,7 @@ import { verifyToken } from '@/lib/auth'
 import { dayKey } from '@/lib/date-utils'
 import { assessSandwich, sandwichAmount } from '@/lib/sandwich'
 import { fullMonthNetFor, buildWarning } from '@/lib/sandwich-server'
+import { syncSandwichToPayslips } from '@/lib/payroll-sandwich'
 
 async function gateHR(request: NextRequest) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
@@ -151,5 +152,10 @@ export async function POST(request: NextRequest) {
     create: data,
   })
 
-  return NextResponse.json({ ok: true, deduction: row })
+  // A decision that does not reach the payslip is only a note. Recompute
+  // alone would not do it — it skips HR-adjusted slips, which is most of
+  // them — so the charge is pushed onto the month's payslip here.
+  const touched = await syncSandwichToPayslips(att.employeeId, money.month, money.year)
+
+  return NextResponse.json({ ok: true, deduction: row, payslips: touched })
 }

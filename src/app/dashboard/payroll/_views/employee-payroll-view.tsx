@@ -186,6 +186,13 @@ export async function EmployeePayrollView({ employeeId, slipId }: {
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <BreakdownRow label="EOBI" value={latest.eobi} negative />
                 <BreakdownRow label="Income Tax" value={latest.incomeTax} negative />
+                {!!latest.sandwichDeduction && (
+                  <BreakdownRow
+                    label="Unpaid days (sandwich)"
+                    value={latest.sandwichDeduction}
+                    negative
+                  />
+                )}
                 <BreakdownRow
                   label="Other Deductions"
                   value={latest.otherDeductions}
@@ -259,7 +266,7 @@ export async function EmployeePayrollView({ employeeId, slipId }: {
               </TableRow>
             ) : (
               history.map((p) => {
-                const deductions = p.eobi + p.incomeTax + p.otherDeductions
+                const deductions = p.eobi + p.incomeTax + p.otherDeductions + (p.sandwichDeduction ?? 0)
                 return (
                   <TableRow key={p.id}>
                     <TableCell className="font-medium text-slate-900">

@@ -181,10 +181,15 @@ export default async function PrintPayslipPage({ params }: PageProps) {
     healthcare: payslip.healthcare,
     loanAndVehicle: (payslip.loanDeduction ?? 0) + (payslip.vehicleDeduction ?? 0),
     advance: payslip.advanceDeduction,
+    // Unpaid days charged by the sandwich rule. Named on the slip rather than
+    // folded into Other Deductions — somebody losing three days' pay is owed
+    // the reason in writing.
+    sandwich: payslip.sandwichDeduction ?? 0,
     other: payslip.otherDeductions,
   }
   const totalDeductions =
-    ded.incomeTax + ded.eobi + ded.healthcare + ded.loanAndVehicle + ded.advance + ded.other
+    ded.incomeTax + ded.eobi + ded.healthcare + ded.loanAndVehicle + ded.advance
+    + ded.sandwich + ded.other
 
   const totalPayments = payslip.grossSalary
   const netPay = payslip.netSalary
@@ -252,13 +257,13 @@ export default async function PrintPayslipPage({ params }: PageProps) {
   const dedLabels = [
     'Income tax', 'EOBI', 'Health care',
     'Deduction (Loan /', 'Monthly Vehicle)', 'Advance Deduction',
-    '', '', '',
+    'Unpaid days (sandwich)', '', '',
     'Other Deductions', '', '', '', '', '', '', '', '', '', '', '',
   ]
   const dedValues = [
     dashed(ded.incomeTax), dashed(ded.eobi), dashed(ded.healthcare),
     '', dashed(ded.loanAndVehicle), dashed(ded.advance),
-    '', '-', '',
+    dashed(ded.sandwich), '-', '',
     dashed(ded.other), '', '', '', '', '', '', '', '', '', '', '',
   ]
 

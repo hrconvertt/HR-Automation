@@ -5,6 +5,7 @@ import { calculatePayslip } from '@/lib/payroll'
 import { getPayrollConfig } from '@/lib/config'
 import { dayKey } from '@/lib/date-utils'
 import { leaveDaysForMonth } from '@/lib/payroll-leave'
+import { sandwichByEmployee, applySandwich } from '@/lib/payroll-sandwich'
 
 /**
  * POST /api/payroll/generate
@@ -137,6 +138,10 @@ export async function POST(request: NextRequest) {
     const { paid: paidLeaveByEmp, unpaid: unpaidLeaveByEmp } =
       await leaveDaysForMonth(startOfMonth, endOfMonth, holidayKeys)
 
+    // Unpaid days the sandwich rule charged for this month. Applied only —
+    // a waived decision leaves no mark on the slip.
+    const sandwichByEmp = await sandwichByEmployee(month, year)
+
     const otByEmployee: Record<string, number> = {}
     for (const l of attendanceLogs) {
       if (l.overtimeApproved && l.overtimeHours > 0) {
@@ -179,6 +184,7 @@ export async function POST(request: NextRequest) {
       eobi: number
       incomeTax: number
       otherDeductions: number
+      sandwichDeduction: number
       netSalary: number
       presentDays: number
       workingDays: number
@@ -300,6 +306,9 @@ export async function POST(request: NextRequest) {
         cfg.otAllowanceCapPkr,
       )
 
+      const sandwich = sandwichByEmp.get(emp.id) ?? 0
+      const netAfterSandwich = applySandwich(result.netPay, sandwich)
+
       payslipsData.push({
         employeeId: emp.id,
         month,
@@ -316,14 +325,15 @@ export async function POST(request: NextRequest) {
         eobi: result.eobi,
         incomeTax: result.incomeTax,
         otherDeductions: 0,
-        netSalary: result.netPay,
+        sandwichDeduction: sandwich,
+        netSalary: netAfterSandwich,
         presentDays: result.presentDays,
         workingDays: result.workingDays,
         leaveDays: paidLeave + unpaidLeave,
         absentDays,
         status: 'DRAFT',
         reference: `Salary ${monthLabels[month - 1]} ${year}`,
-        transactionAmount: result.netPay,
+        transactionAmount: netAfterSandwich,
         adjustmentNote: scaleNote,
       })
     }

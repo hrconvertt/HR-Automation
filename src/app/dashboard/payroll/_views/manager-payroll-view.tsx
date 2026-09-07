@@ -136,6 +136,9 @@ export async function ManagerPayrollView({
               <div className="border-t border-slate-100 pt-3 grid grid-cols-2 md:grid-cols-3 gap-3">
                 <BreakdownRow label="EOBI" value={myPayslip.eobi} negative />
                 <BreakdownRow label="Income Tax" value={myPayslip.incomeTax} negative />
+                {!!myPayslip.sandwichDeduction && (
+                  <BreakdownRow label="Unpaid days (sandwich)" value={myPayslip.sandwichDeduction} negative />
+                )}
                 <BreakdownRow label="Other Deductions" value={myPayslip.otherDeductions} negative />
               </div>
             </div>
