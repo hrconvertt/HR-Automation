@@ -50,6 +50,7 @@ import {
   FileWarning,
   Network,
   CalendarCheck,
+  Sun,
   MessageSquare,
   ClipboardList,
   CheckCircle2,
@@ -549,6 +550,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
     {
       label: 'Attendance',
       items: [
+        { href: '/dashboard/attendance?view=today', label: 'Today', icon: Sun, roles: ['HR_ADMIN'] },
         { href: '/dashboard/attendance?view=grid', label: 'Grid View', icon: CalendarCheck },
         { href: '/dashboard/attendance?view=summary', label: 'Summary View', icon: BarChart3 },
         // The Team Absence Calendar is now part of the main Calendar (leave, WFH

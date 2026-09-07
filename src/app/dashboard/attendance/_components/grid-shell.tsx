@@ -9,8 +9,8 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
-import { Search, Download, CalendarDays, ArrowRight, LayoutGrid, LayoutList, X, Sun, Rows3, Rows4 } from 'lucide-react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { Search, Download, CalendarDays, ArrowRight, X, Rows3, Rows4 } from 'lucide-react'
 import { StatusBadge, StatusLegend, type Status } from '@/components/attendance/status-badge'
 import { getInitials } from '@/lib/utils'
 import { TodayBoard } from './today-board'
@@ -100,7 +100,18 @@ interface ShellProps {
 export function AttendanceGridShell({ role, departments, initialGrid }: ShellProps) {
   // HR lands on the operational "Today" board; the month grid stays one click
   // away. Other roles (Executive/Manager/Lead) land on the grid as before.
-  const [view, setView] = useState<'today' | 'grid' | 'summary'>(role === 'HR_ADMIN' ? 'today' : 'grid')
+  // The sidebar links to ?view=grid and ?view=summary. Those were being
+  // ignored — the view lived only in local state, so clicking Summary View in
+  // the menu navigated and then landed back on whatever the default was.
+  const searchParams = useSearchParams()
+  const viewParam = searchParams.get('view')
+  const asView = (v: string | null): 'today' | 'grid' | 'summary' | null =>
+    v === 'today' || v === 'grid' || v === 'summary' ? v : null
+  // Derived, not stored. With the duplicate tab bar gone the URL is the only
+  // thing that chooses a view, so mirroring it into state would just be a
+  // second copy to keep in step. HR defaults to Today, everyone else to the
+  // grid, exactly as before.
+  const view = asView(viewParam) ?? (role === 'HR_ADMIN' ? 'today' : 'grid')
   const [month, setMonth] = useState<string>(currentReportingMonth())
   const [department, setDepartment] = useState<string>('')
   const [search, setSearch] = useState<string>('')
@@ -129,7 +140,11 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
     // The Today board owns its own fetching + auto-refresh.
     if (view === 'today') return
     // First run with server-rendered data for the same month: nothing to fetch.
-    if (skipFirstFetch.current) {
+    // Only the grid was server-rendered, though. HR lands on Today, so this
+    // effect returned early there without consuming the flag; the first click
+    // on Summary View then spent it and returned without fetching, leaving the
+    // screen blank with no spinner and no error. Summary has its own data.
+    if (skipFirstFetch.current && view === 'grid') {
       skipFirstFetch.current = false
       return
     }
@@ -191,35 +206,9 @@ export function AttendanceGridShell({ role, departments, initialGrid }: ShellPro
         </div>
       </div>
 
-      {/* View tabs */}
-      <div className="inline-flex bg-slate-100 p-1 rounded-lg">
-        {role === 'HR_ADMIN' && (
-          <button
-            onClick={() => setView('today')}
-            className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition ${
-              view === 'today' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Sun className="w-4 h-4" /> Today
-          </button>
-        )}
-        <button
-          onClick={() => setView('grid')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition ${
-            view === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <LayoutGrid className="w-4 h-4" /> Grid View
-        </button>
-        <button
-          onClick={() => setView('summary')}
-          className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition ${
-            view === 'summary' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
-          }`}
-        >
-          <LayoutList className="w-4 h-4" /> Summary View
-        </button>
-      </div>
+      {/* The view is chosen in the sidebar (Today / Grid View / Summary View).
+          There used to be a second set of tabs here saying the same three
+          things, which is why the menu and the page both claimed to own it. */}
 
       {/* TODAY BOARD (HR only — server re-verifies role on every call) */}
       {view === 'today' && role === 'HR_ADMIN' && <TodayBoard canMark />}
