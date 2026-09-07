@@ -15,7 +15,7 @@ import { cachedFetch } from '@/lib/client-cache'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
+import { LeaveCalendar, runsOf, type PlannerData } from '../_components/leave-calendar'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
@@ -76,14 +76,39 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
   const [form, setForm] = useState({
     category: 'LEAVE' as 'LEAVE' | 'WFH',
     leaveType: 'CASUAL',
-    startDate: '',
-    endDate: '',
     firstDayHalf: false,
     lastDayHalf: false,
     reason: '',
   })
   const [file, setFile] = useState<{ name: string; mime: string; base64: string } | null>(null)
   const [fileError, setFileError] = useState('')
+
+  /** The days picked on the calendar, and the month it is showing. */
+  const [days, setDays] = useState<string[]>([])
+  const [calMonth, setCalMonth] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [planner, setPlanner] = useState<PlannerData | null>(null)
+
+  // Holidays, days already booked, and who in the department is away — the
+  // context Workday puts beside its calendar and this form had none of.
+  useEffect(() => {
+    if (!applyOpen) return
+    const [yy, mm] = calMonth.split('-').map(Number)
+    const from = `${calMonth}-01`
+    const to = `${calMonth}-${String(new Date(yy, mm, 0).getDate()).padStart(2, '0')}`
+    let dead = false
+    fetch(`/api/leave/planner?from=${from}&to=${to}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!dead) setPlanner(d) })
+      .catch(() => { /* the calendar still works without the extras */ })
+    return () => { dead = true }
+  }, [applyOpen, calMonth])
+
+  const runs = runsOf(days)
+  const toggleDay = (d: string) =>
+    setDays((prev) => (prev.includes(d) ? prev.filter((x) => x !== d) : [...prev, d]))
 
   // Mirrors the server's own limits, so the refusal happens before the upload
   // rather than after it.
@@ -111,17 +136,20 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
   }
   const [preview, setPreview] = useState<Preview | null>(null)
   useEffect(() => {
-    if (!applyOpen || !form.startDate || !form.endDate || form.endDate < form.startDate) {
+    // The preview endpoint answers for one range. With several runs picked the
+    // summary below the calendar does the talking instead of a wrong number.
+    if (!applyOpen || runs.length !== 1) {
       setPreview(null)
       return
     }
-    const single = form.startDate === form.endDate
+    const only = runs[0]
+    const single = only.from === only.to
     const controller = new AbortController()
     const t = setTimeout(async () => {
       try {
         const params = new URLSearchParams({
-          start: form.startDate,
-          end: form.endDate,
+          start: only.from,
+          end: only.to,
           leaveType: form.category === 'WFH' ? 'CASUAL' : form.leaveType,
           ...(form.firstDayHalf ? { firstDayHalf: '1' } : {}),
           ...(!single && form.lastDayHalf ? { lastDayHalf: '1' } : {}),
@@ -132,7 +160,8 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
       } catch { /* aborted or offline — preview is best-effort */ }
     }, 350)
     return () => { clearTimeout(t); controller.abort() }
-  }, [applyOpen, form.startDate, form.endDate, form.leaveType, form.category,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [applyOpen, days.join(','), form.leaveType, form.category,
     form.firstDayHalf, form.lastDayHalf])
 
   const fetchLeave = useCallback(async (force = false) => {
@@ -153,38 +182,51 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
 
   async function handleApply() {
     setFormError('')
-    if (!form.startDate || !form.endDate) {
-      setFormError('Pick start and end dates.')
+    if (days.length === 0) {
+      setFormError('Pick at least one day on the calendar.')
       return
     }
-    const single = form.startDate === form.endDate
     setSubmitting(true)
-    const res = await fetch('/api/leave', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
+    // Days that are not next to each other cannot be one record — category and
+    // type are per request, and balance, the sandwich rule and the attendance
+    // writes all key off them. So each unbroken run becomes its own request.
+    const failures: string[] = []
+    for (const run of runs) {
+      const single = run.from === run.to
+      const res = await fetch('/api/leave', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
         // Working from home travels the same approval path; it simply spends
         // no balance and marks the day WFH. The type rides along as the
         // carrier, matching every WFH row already on file.
-        category: form.category,
-        leaveType: form.category === 'WFH' ? 'CASUAL' : form.leaveType,
-        startDate: form.startDate,
-        endDate: form.endDate,
-        reason: form.reason,
-        firstDayHalf: form.firstDayHalf,
-        lastDayHalf: single ? false : form.lastDayHalf,
-        attachmentBase64: file?.base64,
-        attachmentMime: file?.mime,
-        attachmentName: file?.name,
-      }),
-    })
-    const data = await res.json()
+          category: form.category,
+          leaveType: form.category === 'WFH' ? 'CASUAL' : form.leaveType,
+          startDate: run.from,
+          endDate: run.to,
+          reason: form.reason,
+          firstDayHalf: runs.length === 1 && form.firstDayHalf,
+          lastDayHalf: runs.length === 1 && !single && form.lastDayHalf,
+          attachmentBase64: file?.base64,
+          attachmentMime: file?.mime,
+          attachmentName: file?.name,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) failures.push(`${run.from}${run.to !== run.from ? ` → ${run.to}` : ''}: ${data.error ?? 'refused'}`)
+    }
     setSubmitting(false)
-    if (!res.ok) { setFormError(data.error ?? 'Failed to submit'); return }
+    if (failures.length) {
+      // Say which ones did not go through — some may well have.
+      setFormError(failures.join('; '))
+      fetchLeave(true)
+      return
+    }
     setApplyOpen(false)
-    setForm({ category: 'LEAVE', leaveType: 'CASUAL', startDate: '', endDate: '',
+    setForm({ category: 'LEAVE', leaveType: 'CASUAL',
       firstDayHalf: false, lastDayHalf: false, reason: '' })
     setFile(null)
+    setDays([])
     fetchLeave(true)
   }
 
@@ -378,7 +420,7 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
 
       {/* Apply dialog */}
       <Dialog open={applyOpen} onOpenChange={setApplyOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Request Leave</DialogTitle>
           </DialogHeader>
@@ -417,22 +459,72 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            {/* Balances beside the calendar, the way Workday puts them —
+                every plan, not only the one you happen to have selected. */}
+            <div className="grid grid-cols-1 sm:grid-cols-[minmax(0,150px)_minmax(0,1fr)] gap-4">
               <div>
-                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Start</label>
-                <Input type="date" value={form.startDate} onChange={(e) => setForm({ ...form, startDate: e.target.value })} />
+                <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Balances</p>
+                <p className="text-[10px] text-slate-400 mb-2">as of today</p>
+                <div className="space-y-2">
+                  {balances.length === 0 && <p className="text-[11px] text-slate-400">None recorded.</p>}
+                  {balances.map((b) => (
+                    <div key={b.id} className="rounded-md border border-slate-200 px-2 py-1.5">
+                      <p className="text-[11px] font-semibold text-slate-700">
+                        {LEAVE_TYPE_LABELS[b.leavePolicy.leaveType] ?? b.leavePolicy.leaveType}
+                      </p>
+                      <p className="text-[13px] tabular-nums text-slate-900">
+                        {b.balance}<span className="text-slate-400 text-[11px]"> / {b.leavePolicy.daysPerYear} left</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400">{b.used} used</p>
+                    </div>
+                  ))}
+                  {planner && planner.headcount > 0 && (
+                    <p className="text-[10px] text-slate-400 pt-1">
+                      {planner.headcount} in your department
+                    </p>
+                  )}
+                </div>
               </div>
+
               <div>
-                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">End</label>
-                <Input type="date" value={form.endDate} onChange={(e) => setForm({ ...form, endDate: e.target.value })} />
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">
+                  Pick your days
+                </label>
+                <LeaveCalendar
+                  month={calMonth}
+                  onMonthChange={setCalMonth}
+                  selected={days}
+                  onToggle={toggleDay}
+                  planner={planner}
+                />
               </div>
             </div>
 
-            {/* Half days. "Half day" used to be an option in the type list,
-                which meant it was always half a Casual day and always the
-                first one — you could not take half a sick day, or finish a
-                range at midday. */}
-            {form.startDate && form.endDate && (
+            {/* What was picked, said back plainly — including the fact that
+                separated days become separate requests. */}
+            {days.length > 0 && (
+              <div className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-[12px] text-slate-700">
+                <p>
+                  <strong>{days.length}</strong> day{days.length === 1 ? '' : 's'} picked
+                  {runs.length > 1 && <> across <strong>{runs.length}</strong> separate stretches</>}.
+                </p>
+                <p className="text-slate-500 mt-0.5">
+                  {runs.map((r) => (r.from === r.to
+                    ? new Date(r.from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+                    : `${new Date(r.from + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })} → ${new Date(r.to + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                  )).join(' · ')}
+                </p>
+                {runs.length > 1 && (
+                  <p className="text-slate-500 mt-1">
+                    Days that are not next to each other are submitted as {runs.length} requests —
+                    one record per stretch, each approved on its own.
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Half days apply to a single unbroken stretch. */}
+            {runs.length === 1 && (
               <div className="flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-700">
                 <label className="inline-flex items-center gap-2">
                   <input
@@ -441,9 +533,9 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
                     onChange={(e) => setForm({ ...form, firstDayHalf: e.target.checked })}
                     className="rounded border-slate-300"
                   />
-                  {form.startDate === form.endDate ? 'Half day' : 'First day is a half day'}
+                  {runs[0].from === runs[0].to ? 'Half day' : 'First day is a half day'}
                 </label>
-                {form.startDate !== form.endDate && (
+                {runs[0].from !== runs[0].to && (
                   <label className="inline-flex items-center gap-2">
                     <input
                       type="checkbox"
