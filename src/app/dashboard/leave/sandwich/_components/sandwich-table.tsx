@@ -43,7 +43,9 @@ interface Row {
 }
 
 interface Pending {
-  leaveId: string
+  /** Null for a day that exists only as a mark on the attendance grid. */
+  leaveId: string | null
+  attendanceId?: string | null
   employee: { id: string; fullName: string; employeeCode: string; designation: string | null }
   leaveType: string
   reason: string
@@ -56,6 +58,14 @@ interface Pending {
   exempt: boolean
   exemptReason: string | null
 }
+
+/**
+ * A stable handle for a pending row. `leaveId` is null on the grid-marked
+ * ones, and `writing === pnd.leaveId` was therefore `null === null` — true
+ * before anyone clicked anything, which disabled both buttons and left the
+ * spinner running from first paint.
+ */
+const pendKey = (p: Pending) => p.leaveId ?? 'att:' + (p.attendanceId ?? 'unknown')
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']
@@ -91,12 +101,21 @@ export function SandwichTable() {
 
   /** Answer the question on a leave nobody has ruled on yet. */
   async function decide(pnd: Pending, apply: boolean) {
-    setWriting(pnd.leaveId)
-    const res = await fetch(`/api/leave/${pnd.leaveId}/sandwich`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ apply, informed: !apply }),
-    })
+    setWriting(pendKey(pnd))
+    // Two kinds of day land in this list. A leave request is decided on the
+    // request; a day that only exists as a mark on the grid has no request to
+    // decide, and gets its own route.
+    const res = pnd.leaveId
+      ? await fetch(`/api/leave/${pnd.leaveId}/sandwich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apply, informed: !apply }),
+      })
+      : await fetch('/api/sandwich/from-attendance', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ attendanceId: pnd.attendanceId, apply, informed: !apply }),
+      })
     setWriting(null)
     if (res.ok) {
       toastSuccess(apply
@@ -173,7 +192,7 @@ export function SandwichTable() {
           </div>
           <div className="divide-y divide-slate-50">
             {pending.map((pnd) => (
-              <div key={pnd.leaveId} className="px-4 py-3 flex items-start justify-between gap-3 flex-wrap">
+              <div key={pendKey(pnd)} className="px-4 py-3 flex items-start justify-between gap-3 flex-wrap">
                 <div className="min-w-0">
                   <p className="text-sm text-slate-900">
                     <span className="font-medium">{pnd.employee.fullName}</span>
@@ -182,7 +201,7 @@ export function SandwichTable() {
                       pnd.exempt
                         ? 'bg-slate-50 text-slate-500 border-slate-200'
                         : 'bg-amber-50 text-amber-800 border-amber-200'
-                    }`}>{pnd.leaveType}</span>
+                    }`}>{pnd.leaveType ?? 'from the grid'}</span>
                   </p>
                   <p className="text-[11px] text-slate-500 mt-0.5 max-w-2xl">
                     {pnd.exempt
@@ -196,16 +215,16 @@ export function SandwichTable() {
                 <div className="flex items-center gap-1.5 flex-shrink-0">
                   <button
                     type="button"
-                    disabled={writing === pnd.leaveId}
+                    disabled={writing === pendKey(pnd)}
                     onClick={() => decide(pnd, true)}
                     className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md border border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
                   >
-                    {writing === pnd.leaveId && <Loader2 className="w-3 h-3 animate-spin" />}
+                    {writing === pendKey(pnd) && <Loader2 className="w-3 h-3 animate-spin" />}
                     Apply sandwich
                   </button>
                   <button
                     type="button"
-                    disabled={writing === pnd.leaveId}
+                    disabled={writing === pendKey(pnd)}
                     onClick={() => decide(pnd, false)}
                     className="inline-flex items-center gap-1 text-[11px] font-medium px-2.5 py-1 rounded-md border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
                   >
