@@ -102,12 +102,40 @@ export function daysUntil(end: Date | string): number {
 }
 
 /**
- * The review opens in the last ten days, which is when there is enough to judge
- * and still time to act on it. It stays open afterwards — probation ending is
- * not a reason the paperwork stops being needed.
+ * The review opens on the first of the month probation ends in, and stays open
+ * afterwards — probation ending is not a reason the paperwork stops being
+ * needed.
+ *
+ * It used to open ten days out, which put it in a different place every time:
+ * a probation ending on the 3rd opened in the previous month, one ending on
+ * the 28th opened three weeks in. A month boundary is a date everyone already
+ * knows without counting, and it gives a full month rather than a week and a
+ * half to gather what the judgement rests on.
+ *
+ * Dates are stored at UTC midnight, so the month is read in UTC and compared
+ * against today in UTC. Doing one in local time and the other in UTC moves the
+ * boundary by a day either side of midnight.
  */
-export const REVIEW_WINDOW_DAYS = 10
+export function reviewOpensOn(end: Date | string): Date {
+  const e = new Date(end)
+  return new Date(Date.UTC(e.getUTCFullYear(), e.getUTCMonth(), 1))
+}
+
+/** Days until the review opens. Zero or negative once it is open. */
+export function daysUntilReviewOpens(end: Date | string): number {
+  const now = new Date()
+  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())
+  return Math.round((reviewOpensOn(end).getTime() - todayUtc) / 86400000)
+}
 
 export function reviewIsDue(end: Date | string): boolean {
-  return daysUntil(end) <= REVIEW_WINDOW_DAYS
+  return daysUntilReviewOpens(end) <= 0
 }
+
+/**
+ * The increment cohort on the Appraisal Forms page still counts days, because
+ * an increment is due in a month rather than on a date and the two questions
+ * are not the same one. Kept separate so changing probation does not quietly
+ * move increments as well.
+ */
+export const INCREMENT_WINDOW_DAYS = 10

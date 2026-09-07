@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
 import { ShieldCheck, Zap, AlertTriangle, CheckCircle, Clock, FileText, Activity } from 'lucide-react'
 import { BackButton } from '@/components/ui/back-button'
+import { reviewIsDue, reviewOpensOn } from '@/lib/probation-review'
 
 interface ProbationRec {
   id: string
@@ -178,6 +179,11 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
   const isHR = me?.role === 'HR_ADMIN'
   const isManager = me?.employee?.id === rec.employee.reportingManagerId
   const daysLeft = Math.floor((new Date(rec.endDate).getTime() - Date.now()) / 86_400_000)
+  // The review opens on the first of the month probation ends in.
+  const reviewOpen = reviewIsDue(rec.endDate)
+  const reviewOpens = reviewOpensOn(rec.endDate).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC',
+  })
   const elapsed = Math.floor((Date.now() - new Date(rec.startDate).getTime()) / 86_400_000)
   const settlingDue = elapsed >= 30 && rec.settlingCheckInAt == null && rec.durationMonths >= 2
 
@@ -388,7 +394,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
               <FileText className="w-3.5 h-3.5" />
               Open review
             </a>
-          ) : daysLeft <= 10 ? (
+          ) : reviewOpen ? (
             <a
               href={`/dashboard/probation/${rec.id}/review`}
               className="inline-flex items-center gap-1.5 rounded-md bg-slate-900 text-white text-xs px-3 py-1.5"
@@ -398,7 +404,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
             </a>
           ) : (
             <span className="text-xs text-slate-400">
-              Opens in the last 10 days — {daysLeft} to go
+              Opens {reviewOpens} — {daysLeft} days of probation to go
             </span>
           )}
         </div>

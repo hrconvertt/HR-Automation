@@ -4,12 +4,13 @@
  * Two cohorts, one list, because from HR's side they are the same job: a form
  * to fill in before a date that is already fixed.
  *
- *   On probation   ten days before probation ends
+ *   On probation   from the first of the month probation ends in
  *   Permanent      ten days before the month their increment falls in
  *
- * Ten days is the existing REVIEW_WINDOW_DAYS — the probation flow already
- * used it, and having appraisals open on a different number would mean two
- * answers to "is this due yet".
+ * The two ask different questions. Probation ends on a date, so its review
+ * opens on a boundary everybody can see coming without counting; an increment
+ * is due in a month rather than on a day, so it still counts days towards it.
+ * Kept as separate rules so moving one does not quietly move the other.
  *
  * Nothing is generated on a schedule. The form opens when somebody opens it;
  * this page is what tells them to.
@@ -21,7 +22,7 @@ import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { isFounder } from '@/lib/review-scope'
-import { REVIEW_WINDOW_DAYS } from '@/lib/probation-review'
+import { INCREMENT_WINDOW_DAYS, reviewIsDue, reviewOpensOn } from '@/lib/probation-review'
 import { INCREMENT_RULES, ruleRange } from '@/lib/pay-split'
 import { incrementDue as nextIncrementDue, daysAway, FIRST_REVIEW_MONTHS } from '@/lib/increment-schedule'
 import { ClipboardList, ShieldCheck, TrendingUp } from 'lucide-react'
@@ -129,8 +130,8 @@ export default async function AppraisalsPage() {
   for (const p of probations) {
     if (p.employee.status !== 'ACTIVE') continue
     if (isFounder(p.employee.designation)) continue
+    if (!reviewIsDue(p.endDate)) continue
     const left = daysAway(p.endDate)
-    if (left > REVIEW_WINDOW_DAYS) continue
     due.push({
       employeeId: p.employeeId,
       fullName: p.employee.fullName,
@@ -163,7 +164,7 @@ export default async function AppraisalsPage() {
     })
     if (!dueDate) continue
     const left = daysAway(dueDate)
-    if (left > REVIEW_WINDOW_DAYS) continue
+    if (left > INCREMENT_WINDOW_DAYS) continue
     due.push({
       employeeId: e.id,
       fullName: e.fullName,
@@ -198,13 +199,13 @@ export default async function AppraisalsPage() {
       <div>
         <h1 className="text-2xl font-bold text-slate-900">Appraisal Forms</h1>
         <p className="text-sm text-slate-500 mt-0.5">
-          Reviews that fall due within {REVIEW_WINDOW_DAYS} days — before probation ends, and
-          before an increment month starts.
+          Probation reviews from the first of the month probation ends in, and increment
+          reviews within {INCREMENT_WINDOW_DAYS} days of the month they fall in.
         </p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <Stat label="Due now" value={String(due.length)} sub={`within ${REVIEW_WINDOW_DAYS} days`} />
+        <Stat label="Due now" value={String(due.length)} sub="open for filling in" />
         <Stat label="Overdue" value={String(overdue.length)} sub="date already passed" />
         <Stat label="Probation" value={String(probationDue.length)} sub={`confirmation at ${ruleRange('PROBATION_TO_PERMANENT')}`} />
         <Stat label="Increment" value={String(incrementDue.length)} sub="on their own track" />
@@ -212,7 +213,7 @@ export default async function AppraisalsPage() {
 
       {due.length === 0 ? (
         <p className="text-sm text-slate-400 text-center py-12 border border-slate-200 rounded-xl bg-white">
-          Nothing due in the next {REVIEW_WINDOW_DAYS} days. Forms appear here on their own as
+          Nothing open yet. Forms appear here on their own as
           dates come round — probation ends and increment months are both already known.
         </p>
       ) : (
@@ -284,12 +285,12 @@ export default async function AppraisalsPage() {
         <ul className="mt-2 space-y-1.5 text-[12px] text-slate-600">
           <li>
             <strong className="text-slate-900">On probation</strong> — the form opens{' '}
-            {REVIEW_WINDOW_DAYS} days before the probation end date on their record.
+            from the first of the month the probation end date on their record falls in.
             Confirmation carries {ruleRange('PROBATION_TO_PERMANENT')}, which is the
             company&apos;s call rather than automatic.
           </li>
           <li>
-            <strong className="text-slate-900">Permanent</strong> — {REVIEW_WINDOW_DAYS} days
+            <strong className="text-slate-900">Permanent</strong> — {INCREMENT_WINDOW_DAYS} days
             before the increment falls due: six months after the last raise on the six-monthly
             track and twelve on the annual one, or {FIRST_REVIEW_MONTHS} months after joining
             for anyone who has not had one yet. The band shown on each row is that person&apos;s

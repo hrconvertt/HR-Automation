@@ -70,7 +70,7 @@ export function ProbationReviewForm({ id }: { id: string }) {
   const [ctx, setCtx] = useState<Context | null>(null)
   const [due, setDue] = useState(false)
   const [daysRemaining, setDaysRemaining] = useState<number>(0)
-  const [windowDays, setWindowDays] = useState(10)
+  const [opensOn, setOpensOn] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<string | null>(null)
@@ -88,7 +88,7 @@ export function ProbationReviewForm({ id }: { id: string }) {
     setCtx(j.context)
     setDue(j.due)
     setDaysRemaining(j.daysRemaining)
-    setWindowDays(j.windowDays)
+    setOpensOn(j.opensOn ?? null)
   }, [id])
 
   useEffect(() => { load() }, [load])
@@ -138,8 +138,10 @@ export function ProbationReviewForm({ id }: { id: string }) {
         <div className="border border-dashed border-slate-200 rounded-xl py-12 text-center">
           <p className="text-sm font-medium text-slate-700">Not due yet</p>
           <p className="text-xs text-slate-500 mt-1">
-            The review opens in the last {windowDays} days of probation —
-            {' '}{daysRemaining} day{daysRemaining === 1 ? '' : 's'} to go
+            The review opens on {opensOn
+              ? new Date(opensOn).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
+              : 'the first of the month probation ends in'} —
+            {' '}{daysRemaining} day{daysRemaining === 1 ? '' : 's'} of probation to go
             {ctx && <> (ends {fmtDate(ctx.endDate)})</>}.
           </p>
         </div>

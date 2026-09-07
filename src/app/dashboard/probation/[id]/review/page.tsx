@@ -1,7 +1,7 @@
 /**
  * /dashboard/probation/[id]/review — the probationary performance review form.
  *
- * Opens in the last ten days of probation, which is when there is enough to
+ * Opens on the first of the month probation ends in, which is when there is enough to
  * judge and still time to act on it.
  */
 import { cookies } from 'next/headers'

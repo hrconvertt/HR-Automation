@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
-import { reviewIsDue, REVIEW_WINDOW_DAYS, daysUntil } from '@/lib/probation-review'
+import { reviewIsDue, reviewOpensOn, daysUntilReviewOpens, daysUntil } from '@/lib/probation-review'
 
 async function findRecord(id: string) {
   return prisma.probationRecord.findFirst({
@@ -74,7 +74,8 @@ export async function GET(
   return NextResponse.json({
     due,
     daysRemaining: daysUntil(rec.endDate),
-    windowDays: REVIEW_WINDOW_DAYS,
+    opensOn: reviewOpensOn(rec.endDate).toISOString(),
+    daysUntilOpen: daysUntilReviewOpens(rec.endDate),
     review,
     context: {
       probationId: rec.id,
