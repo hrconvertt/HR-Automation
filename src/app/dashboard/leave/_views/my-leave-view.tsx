@@ -65,14 +65,42 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
   const [submitting, setSubmitting] = useState(false)
   const [formError, setFormError] = useState('')
 
-  // The form's `leaveType` field uses combined values that include half-day
-  // variants (e.g. CASUAL_HALF). Submitted to the API as { leaveType, firstDayHalf }.
+  /**
+   * Everything a leave record can actually hold. The API has accepted
+   * `category`, the two half-day flags and an attachment since it was written;
+   * this form only ever sent a type, two dates and a reason. So there was no
+   * way to request work from home, no way to take half a *sick* day, no way to
+   * make the *last* day of a range a half day — and no way to attach the
+   * evidence that the Friday/Monday rule refuses the request without.
+   */
   const [form, setForm] = useState({
+    category: 'LEAVE' as 'LEAVE' | 'WFH',
     leaveType: 'CASUAL',
     startDate: '',
     endDate: '',
+    firstDayHalf: false,
+    lastDayHalf: false,
     reason: '',
   })
+  const [file, setFile] = useState<{ name: string; mime: string; base64: string } | null>(null)
+  const [fileError, setFileError] = useState('')
+
+  // Mirrors the server's own limits, so the refusal happens before the upload
+  // rather than after it.
+  const ALLOWED_MIME = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+  async function pickFile(f: File | null) {
+    setFileError('')
+    if (!f) { setFile(null); return }
+    if (!ALLOWED_MIME.includes(f.type.toLowerCase())) {
+      setFileError('Evidence must be a PDF, JPG or PNG.'); return
+    }
+    if (f.size > 5 * 1024 * 1024) { setFileError('Evidence must be under 5 MB.'); return }
+    const buf = await f.arrayBuffer()
+    let bin = ''
+    const bytes = new Uint8Array(buf)
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i])
+    setFile({ name: f.name, mime: f.type, base64: btoa(bin) })
+  }
 
   // ── Live impact preview: chargeable days + overlap + balance-after ──────
   type Preview = {
@@ -87,16 +115,16 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
       setPreview(null)
       return
     }
-    const isHalf = form.leaveType === 'HALF_DAY'
-    const realType = isHalf ? 'CASUAL' : form.leaveType
+    const single = form.startDate === form.endDate
     const controller = new AbortController()
     const t = setTimeout(async () => {
       try {
         const params = new URLSearchParams({
           start: form.startDate,
           end: form.endDate,
-          leaveType: realType,
-          ...(isHalf ? { firstDayHalf: '1' } : {}),
+          leaveType: form.category === 'WFH' ? 'CASUAL' : form.leaveType,
+          ...(form.firstDayHalf ? { firstDayHalf: '1' } : {}),
+          ...(!single && form.lastDayHalf ? { lastDayHalf: '1' } : {}),
         })
         const res = await fetch(`/api/leave/preview?${params}`, { signal: controller.signal })
         if (res.ok) setPreview(await res.json())
@@ -104,7 +132,8 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
       } catch { /* aborted or offline — preview is best-effort */ }
     }, 350)
     return () => { clearTimeout(t); controller.abort() }
-  }, [applyOpen, form.startDate, form.endDate, form.leaveType])
+  }, [applyOpen, form.startDate, form.endDate, form.leaveType, form.category,
+    form.firstDayHalf, form.lastDayHalf])
 
   const fetchLeave = useCallback(async (force = false) => {
     setLoading(true)
@@ -128,30 +157,34 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
       setFormError('Pick start and end dates.')
       return
     }
-    // "Half day" → treat as a half day of CASUAL (Convertt default for short absences)
-    const isHalf = form.leaveType === 'HALF_DAY'
-    const realType = isHalf ? 'CASUAL' : form.leaveType
-    if (isHalf && form.startDate !== form.endDate) {
-      setFormError('Half day applies to a single day only — set start and end to the same date.')
-      return
-    }
+    const single = form.startDate === form.endDate
     setSubmitting(true)
     const res = await fetch('/api/leave', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        leaveType: realType,
+        // Working from home travels the same approval path; it simply spends
+        // no balance and marks the day WFH. The type rides along as the
+        // carrier, matching every WFH row already on file.
+        category: form.category,
+        leaveType: form.category === 'WFH' ? 'CASUAL' : form.leaveType,
         startDate: form.startDate,
         endDate: form.endDate,
         reason: form.reason,
-        firstDayHalf: isHalf,
+        firstDayHalf: form.firstDayHalf,
+        lastDayHalf: single ? false : form.lastDayHalf,
+        attachmentBase64: file?.base64,
+        attachmentMime: file?.mime,
+        attachmentName: file?.name,
       }),
     })
     const data = await res.json()
     setSubmitting(false)
     if (!res.ok) { setFormError(data.error ?? 'Failed to submit'); return }
     setApplyOpen(false)
-    setForm({ leaveType: 'CASUAL', startDate: '', endDate: '', reason: '' })
+    setForm({ category: 'LEAVE', leaveType: 'CASUAL', startDate: '', endDate: '',
+      firstDayHalf: false, lastDayHalf: false, reason: '' })
+    setFile(null)
     fetchLeave(true)
   }
 
@@ -350,18 +383,40 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
             <DialogTitle>Request Leave</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
+            {/* What kind of day this is. Work from home was simply not
+                offerable here before, though a quarter of the records are. */}
             <div>
-              <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Leave Type</label>
-              <Select value={form.leaveType} onValueChange={(v) => setForm({ ...form, leaveType: v })}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SUBMITTABLE_LEAVE_TYPES.map((t) => (
-                    <SelectItem key={t} value={t}>{LEAVE_TYPE_LABELS[t]} Leave</SelectItem>
-                  ))}
-                  <SelectItem value="HALF_DAY">Half day</SelectItem>
-                </SelectContent>
-              </Select>
+              <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Request</label>
+              <div className="inline-flex bg-slate-100 p-1 rounded-lg w-full">
+                {([['LEAVE', 'Leave'], ['WFH', 'Work from home']] as const).map(([v, label]) => (
+                  <button
+                    key={v}
+                    type="button"
+                    onClick={() => setForm({ ...form, category: v })}
+                    className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition ${
+                      form.category === v ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
             </div>
+
+            {form.category === 'LEAVE' && (
+              <div>
+                <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Leave Type</label>
+                <Select value={form.leaveType} onValueChange={(v) => setForm({ ...form, leaveType: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {SUBMITTABLE_LEAVE_TYPES.map((t) => (
+                      <SelectItem key={t} value={t}>{LEAVE_TYPE_LABELS[t]} Leave</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Start</label>
@@ -373,6 +428,52 @@ export default function MyLeaveView({ employeeName }: { employeeId: string; empl
               </div>
             </div>
 
+            {/* Half days. "Half day" used to be an option in the type list,
+                which meant it was always half a Casual day and always the
+                first one — you could not take half a sick day, or finish a
+                range at midday. */}
+            {form.startDate && form.endDate && (
+              <div className="flex flex-wrap gap-x-5 gap-y-2 text-[13px] text-slate-700">
+                <label className="inline-flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={form.firstDayHalf}
+                    onChange={(e) => setForm({ ...form, firstDayHalf: e.target.checked })}
+                    className="rounded border-slate-300"
+                  />
+                  {form.startDate === form.endDate ? 'Half day' : 'First day is a half day'}
+                </label>
+                {form.startDate !== form.endDate && (
+                  <label className="inline-flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={form.lastDayHalf}
+                      onChange={(e) => setForm({ ...form, lastDayHalf: e.target.checked })}
+                      className="rounded border-slate-300"
+                    />
+                    Last day is a half day
+                  </label>
+                )}
+              </div>
+            )}
+
+            {/* Evidence. Sick leave and WFH on a Friday or Monday are refused
+                without it, and there was no way to attach one from here. */}
+            <div>
+              <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">
+                Evidence {form.category === 'WFH' || form.leaveType === 'SICK'
+                  ? <span className="text-slate-400 normal-case tracking-normal font-normal">— required on a Friday or Monday</span>
+                  : <span className="text-slate-400 normal-case tracking-normal font-normal">— optional</span>}
+              </label>
+              <input
+                type="file"
+                accept="application/pdf,image/jpeg,image/png"
+                onChange={(e) => pickFile(e.target.files?.[0] ?? null)}
+                className="block w-full text-[13px] text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border file:border-slate-300 file:bg-white file:text-slate-700 file:text-[13px]"
+              />
+              {file && <p className="text-[11px] text-slate-500 mt-1">Attached: {file.name}</p>}
+              {fileError && <p className="text-[11px] text-red-700 mt-1">{fileError}</p>}
+            </div>
 
             <div>
               <label className="block text-[11px] uppercase tracking-wider font-semibold text-slate-600 mb-1">Reason</label>
