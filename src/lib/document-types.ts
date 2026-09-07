@@ -7,6 +7,7 @@ export const DOC_TYPES = [
   { value: 'EDUCATIONAL_CERTIFICATE', label: 'Educational Certificate' },
   { value: 'EXPERIENCE', label: 'Experience Letter' },
   { value: 'OFFER_LETTER', label: 'Offer Letter' },
+  { value: 'EMPLOYMENT_AGREEMENT', label: 'Employment Agreement' },
   { value: 'NDA', label: 'NDA' },
   { value: 'SALARY_SLIP', label: 'Salary Slip' },
   { value: 'MEDICAL_REPORT', label: 'Medical Report' },

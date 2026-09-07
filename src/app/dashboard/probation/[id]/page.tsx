@@ -11,6 +11,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { ShieldCheck, Zap, AlertTriangle, CheckCircle, Clock, FileText, Activity } from 'lucide-react'
 import { BackButton } from '@/components/ui/back-button'
 import { reviewIsDue, reviewOpensOn } from '@/lib/probation-review'
+import { Day3Documents } from './_components/day3-documents'
 
 interface ProbationRec {
   id: string
@@ -328,35 +329,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           </span>
         </div>
 
-        <div className="divide-y divide-slate-100">
-          {[
-            {
-              type: 'employment_agreement',
-              name: 'Employment Agreement',
-              sub: 'Appointment, salary, probation, leave and conduct policies',
-            },
-            {
-              type: 'nda',
-              name: 'Non-Disclosure Agreement',
-              sub: 'Confidentiality, intellectual property and non-solicitation',
-            },
-          ].map((doc) => (
-            <div key={doc.type} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-900">{doc.name}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{doc.sub}</p>
-              </div>
-              <a
-                href={`/api/documents/generate?type=${doc.type}&employeeId=${rec.employee.id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex-shrink-0"
-              >
-                <Button variant="outline" size="sm">Open</Button>
-              </a>
-            </div>
-          ))}
-        </div>
+        <Day3Documents employeeId={rec.employee.id} />
       </Card>
       {/* Settling check-in */}
       <Card className="p-5">
