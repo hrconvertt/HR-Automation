@@ -14,6 +14,7 @@
  * follow the request rather than the other way round.
  */
 import { prisma } from '@/lib/prisma'
+import { spendLeaveBalance, refundLeaveBalance } from '@/lib/leave-balance'
 
 /**
  * Marks a request as having been born from a grid cell rather than typed by
@@ -75,8 +76,14 @@ export async function leaveRequestForGridMark(opts: {
       approvalComment: 'Approved on marking — HR records attendance and leave together '
         + 'while employees are not yet using the system.',
     },
-    select: { requestId: true },
+    select: { requestId: true, leaveType: true },
   })
+
+  // An approved day spends balance. The approve route does this; creating the
+  // request already-approved skipped it entirely, so the grid took the day off
+  // the calendar and left the entitlement untouched.
+  await spendLeaveBalance(prisma, employeeId, created.leaveType, date.getUTCFullYear(), 1)
+
   return { created: true, requestId: created.requestId }
 }
 
@@ -96,7 +103,7 @@ export async function withdrawGridLeave(employeeId: string, date: Date): Promise
       status: 'APPROVED',
       reason: { contains: GRID_ORIGIN },
     },
-    select: { id: true },
+    select: { id: true, leaveType: true, days: true },
   })
   if (!mine) return false
   await prisma.leaveRequest.update({
@@ -106,5 +113,8 @@ export async function withdrawGridLeave(employeeId: string, date: Date): Promise
       rejectedReason: 'The attendance grid no longer marks this day as leave.',
     },
   })
+  // And hand the day back, or unmarking a cell would quietly cost somebody a
+  // day of entitlement.
+  await refundLeaveBalance(prisma, employeeId, mine.leaveType, date.getUTCFullYear(), mine.days)
   return true
 }
