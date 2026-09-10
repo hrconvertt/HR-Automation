@@ -33,6 +33,14 @@ export interface WorkspaceCandidate {
   knockoutStatus: string
   matchScore: number | null
   appliedAt: string
+  /** Last time anything moved on this record. */
+  movedAt: string
+  /**
+   * Days since anything moved. Computed here, against the request's own clock,
+   * rather than in the browser: reading the clock during render is impure, and
+   * it would disagree between the server's markup and the client's.
+   */
+  daysInStatus: number
   cvUrl: string | null
   currentRole: string | null
   currentCompany: string | null
@@ -40,6 +48,15 @@ export interface WorkspaceCandidate {
   email: string
   phone: string | null
   inTalentPool: boolean
+  /** REFERRAL | LINKEDIN | PORTAL | CAREERS_PAGE | WALK_IN | OTHER */
+  source: string | null
+  educationLevel: string | null
+  location: string | null
+  /** Country code the candidate is authorised to work in. */
+  workAuthorization: string | null
+  openToRemote: boolean
+  /** JSON array on the record; parsed to a list here. */
+  skills: string[]
 }
 
 export interface WorkspaceDetail {
@@ -113,9 +130,11 @@ export async function requisitionWorkspace(
         orderBy: [{ matchScore: 'desc' }, { createdAt: 'desc' }],
         select: {
           id: true, fullName: true, stage: true, knockoutStatus: true,
-          matchScore: true, createdAt: true, cvUrl: true, currentRole: true,
-          currentCompany: true, experience: true, email: true, phone: true,
-          inTalentPool: true,
+          matchScore: true, createdAt: true, updatedAt: true, cvUrl: true,
+          currentRole: true, currentCompany: true, experience: true,
+          yearsExperience: true, email: true, phone: true, inTalentPool: true,
+          source: true, educationLevel: true, location: true,
+          workAuthorization: true, openToRemote: true, skills: true,
         },
       },
     },
@@ -128,6 +147,18 @@ export async function requisitionWorkspace(
     })
     : null
 
+  /** `skills` is a JSON array on the record; a bad value must not break a list. */
+  const parseSkills = (raw: string | null): string[] => {
+    if (!raw) return []
+    try {
+      const v = JSON.parse(raw)
+      return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []
+    } catch {
+      // Older rows were written comma-separated.
+      return raw.split(',').map((x) => x.trim()).filter(Boolean)
+    }
+  }
+
   const shape = (c: (typeof full.candidates)[number]): WorkspaceCandidate => ({
     id: c.id,
     fullName: c.fullName,
@@ -135,13 +166,23 @@ export async function requisitionWorkspace(
     knockoutStatus: c.knockoutStatus,
     matchScore: c.matchScore,
     appliedAt: c.createdAt.toISOString(),
+    movedAt: c.updatedAt.toISOString(),
+    daysInStatus: days(c.updatedAt, now),
     cvUrl: c.cvUrl,
     currentRole: c.currentRole,
     currentCompany: c.currentCompany,
-    experience: c.experience,
+    // yearsExperience is the number the intake form collects; `experience` is
+    // the older float. Prefer the explicit one, fall back to the legacy.
+    experience: c.yearsExperience ?? c.experience,
     email: c.email,
     phone: c.phone,
     inTalentPool: c.inTalentPool,
+    source: c.source,
+    educationLevel: c.educationLevel,
+    location: c.location,
+    workAuthorization: c.workAuthorization,
+    openToRemote: c.openToRemote,
+    skills: parseSkills(c.skills),
   })
 
   // Active / Inactive is Workday's split, and it is the useful one: who is
