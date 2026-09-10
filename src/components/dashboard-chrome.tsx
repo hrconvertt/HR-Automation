@@ -128,6 +128,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/settings/salary-structure',
   '/dashboard/settings/tax-slabs',
   '/dashboard/payroll/advances',
+  '/dashboard/payroll/command-center',
   '/dashboard/performance/appraisals',
   '/dashboard/performance/increments',
   // FOCUS_PATHS is an allowlist: a page missing from it is invisible in the
@@ -599,6 +600,12 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
     {
       label: 'Payroll',
       items: [
+        {
+          href: '/dashboard/payroll/command-center',
+          label: 'Pay Cycle Command Center',
+          icon: Activity,
+          roles: ['HR_ADMIN', 'EXECUTIVE'],
+        },
         { href: '/dashboard/payroll', label: 'Payroll Run', icon: Banknote },
         {
           href: '/dashboard/payroll/slips',
