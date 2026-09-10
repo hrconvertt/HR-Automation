@@ -4,7 +4,7 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { searchDestinations } from '@/lib/nav-search'
 import RolePreviewSwitcher from '@/components/role-preview-switcher'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   LayoutDashboard,
@@ -697,80 +697,169 @@ interface SearchResultItem {
   href: string
 }
 
+/**
+ * Search, with somewhere to start.
+ *
+ * The bar only ever did anything once you had typed two characters. An empty
+ * search box is a blank stare: it cannot tell you what it searches, it forgets
+ * everything you have ever looked for, and it knows nothing about what is
+ * waiting for you. Workday answers all three on focus — recent searches, the
+ * tasks assigned to you, and a row of "I'm looking for..." categories — so the
+ * box is useful before you type rather than only after.
+ *
+ * The categories are this app's, not Workday's: People, Leave, Payroll,
+ * Documents, Screens. Picking one narrows the results rather than navigating,
+ * because narrowing is the thing you cannot otherwise do from here.
+ */
+
+const RECENT_KEY = 'hr_recent_searches'
+const RECENT_MAX = 6
+
+type Scope = 'all' | 'employee' | 'leave' | 'payslip' | 'document' | 'screen'
+
+const SCOPES: { value: Scope; label: string }[] = [
+  { value: 'employee', label: 'People' },
+  { value: 'leave', label: 'Leave' },
+  { value: 'payslip', label: 'Payroll' },
+  { value: 'document', label: 'Documents' },
+  { value: 'screen', label: 'Screens' },
+]
+
+interface MyTask {
+  id: string
+  name: string
+  assignedAt: string
+  status: string
+}
+
+/** Reading storage can throw outright in a locked-down browser. */
+function readRecent(): string[] {
+  try {
+    const raw = localStorage.getItem(RECENT_KEY)
+    const list = raw ? JSON.parse(raw) : []
+    return Array.isArray(list) ? list.filter((x) => typeof x === 'string').slice(0, RECENT_MAX) : []
+  } catch { return [] }
+}
+
+/** "20 hours ago" — the way Workday dates a task in this list. */
+function since(iso: string): string {
+  const ms = Date.now() - new Date(iso).getTime()
+  const h = Math.floor(ms / 3_600_000)
+  if (h < 1) return 'just now'
+  if (h < 24) return h + ' hour' + (h === 1 ? '' : 's') + ' ago'
+  const d = Math.floor(h / 24)
+  return d + ' day' + (d === 1 ? '' : 's') + ' ago'
+}
+
 function SearchBar({ role }: { role: string }) {
   const router = useRouter()
-  // The bar is always on screen. Hidden behind an icon, nobody could tell the
-  // app had search at all, and Ctrl+K only helps people who already know.
   const [open, setOpen] = useState(true)
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<SearchResultItem[]>([])
   const [loading, setLoading] = useState(false)
-  const wrapperRef = useState<HTMLDivElement | null>(null)
-  const containerRef = useState<HTMLDivElement | null>(null)
-  // Using plain refs via useState is awkward; use useRef-style with state setter
-  // ↑ keep simple: manage via direct DOM querySelector below
+  /** The panel opens on focus, not only once you have typed. */
+  const [focused, setFocused] = useState(false)
+  const [recent, setRecent] = useState<string[]>([])
+  const [scope, setScope] = useState<Scope>('all')
+  const [tasks, setTasks] = useState<MyTask[]>([])
+  const [recentLoaded, setRecentLoaded] = useState(false)
 
-  // Global Cmd/Ctrl+K to open
+  // Read on first focus rather than on mount: nothing is needed until the
+  // panel opens, and storage is an external system best touched in an event
+  // rather than synchronously down an effect body.
+  const openPanel = useCallback(() => {
+    setFocused(true)
+    if (!recentLoaded) { setRecent(readRecent()); setRecentLoaded(true) }
+  }, [recentLoaded])
+
+  // What is waiting for you, fetched once the panel is first opened rather
+  // than on every keystroke.
+  useEffect(() => {
+    if (!focused || tasks.length > 0) return
+    let dead = false
+    fetch('/api/tasks/assignments?scope=mine')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (dead || !d) return
+        type Row = {
+          id: string; customName: string | null; assignedAt: string; status: string
+          template: { name: string } | null
+        }
+        const open = (d.assignments ?? [])
+          .filter((a: Row) => a.status !== 'COMPLETED' && a.status !== 'CANCELLED')
+          .slice(0, 4)
+          .map((a: Row) => ({
+            id: a.id,
+            name: a.customName ?? a.template?.name ?? 'Task',
+            assignedAt: a.assignedAt,
+            status: a.status,
+          }))
+        setTasks(open)
+      })
+      .catch(() => { /* the panel still works without them */ })
+    return () => { dead = true }
+  }, [focused, tasks.length])
+
+  const remember = useCallback((term: string) => {
+    const t = term.trim()
+    if (t.length < 2) return
+    setRecent((prev) => {
+      const next = [t, ...prev.filter((x) => x.toLowerCase() !== t.toLowerCase())].slice(0, RECENT_MAX)
+      try { localStorage.setItem(RECENT_KEY, JSON.stringify(next)) } catch { /* not fatal */ }
+      return next
+    })
+  }, [])
+
+  const clearRecent = useCallback(() => {
+    setRecent([])
+    try { localStorage.removeItem(RECENT_KEY) } catch { /* not fatal */ }
+  }, [])
+
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setOpen(true)
+        document.getElementById('hr-search-input')?.focus()
       }
-      if (e.key === 'Escape') {
-        setQuery('')
-      }
+      if (e.key === 'Escape') { setQuery(''); setFocused(false) }
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [])
 
-  // Click-outside to close
   useEffect(() => {
     if (!open) return
     function onClick(e: MouseEvent) {
       const el = document.getElementById('hr-search-wrapper')
-      if (el && !el.contains(e.target as Node)) {
-        setResults([])
-        setQuery('')
-      }
+      if (el && !el.contains(e.target as Node)) setFocused(false)
     }
     document.addEventListener('mousedown', onClick)
     return () => document.removeEventListener('mousedown', onClick)
   }, [open])
 
-  // Debounced fetch
   useEffect(() => {
-    if (!open || query.trim().length < 2) {
-      setResults([])
-      return
-    }
+    if (!open || query.trim().length < 2) { setResults([]); return }
     setLoading(true)
     const t = setTimeout(async () => {
       try {
-        const res = await fetch(`/api/search?q=${encodeURIComponent(query)}&limit=20`, {
-          cache: 'no-store',
-        })
-        if (res.ok) {
-          const data = await res.json()
-          setResults(data.results ?? [])
-        }
-      } catch {
-        /* ignore */
-      } finally {
-        setLoading(false)
-      }
+        const res = await fetch('/api/search?q=' + encodeURIComponent(query) + '&limit=20', { cache: 'no-store' })
+        if (res.ok) setResults((await res.json()).results ?? [])
+      } catch { /* ignore */ } finally { setLoading(false) }
     }, 200)
     return () => clearTimeout(t)
   }, [query, open])
 
-  // Screens, matched in the browser — no round trip, so a destination appears
-  // the moment you have typed enough of its name.
   const pages = useMemo(() => searchDestinations(query, role), [query, role])
 
-  // suppress unused
-  void wrapperRef
-  void containerRef
+  // Documents covers policies and letters — one word for one idea.
+  const shown = useMemo(() => {
+    if (scope === 'all') return results
+    if (scope === 'document') return results.filter((r) => r.type === 'policy' || r.type === 'letter')
+    if (scope === 'screen') return []
+    return results.filter((r) => r.type === scope)
+  }, [results, scope])
+  const shownPages = scope === 'all' || scope === 'screen' ? pages : []
 
   function iconFor(type: SearchResultItem['type']) {
     if (type === 'employee') return <UserIcon className="w-4 h-4 text-slate-500" />
@@ -781,86 +870,164 @@ function SearchBar({ role }: { role: string }) {
     return <Search className="w-4 h-4 text-slate-500" />
   }
 
+  const typing = query.trim().length >= 1
+  const panelOpen = focused || typing || loading
+  const scopeLabel = SCOPES.find((x) => x.value === scope)?.label.toLowerCase()
+
   return (
     <div id="hr-search-wrapper" className="relative w-full sm:w-[340px] max-w-full min-w-0">
-      {(
-        <div className="relative">
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-md border border-gray-300 bg-white shadow-sm">
-            <Search className="w-4 h-4 text-gray-400" />
-            <input
-              autoFocus
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search people, leave, payroll, onboarding…"
-              className="flex-1 outline-none text-sm bg-transparent"
-            />
-            <kbd className="text-[10px] text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">
-              Esc
-            </kbd>
-          </div>
-          {(query.trim().length >= 1 || loading) && (
-            <div className="absolute top-full left-0 right-0 mt-1 max-h-[400px] overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg z-50">
-              {loading && (
-                <div className="px-3 py-2 text-xs text-gray-500">Searching…</div>
-              )}
-              {pages.length > 0 && (
-                <div className="border-b border-gray-100">
-                  <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
-                    Go to
-                  </p>
-                  {pages.map((d) => (
-                    <button
-                      key={d.href}
-                      type="button"
-                      onClick={() => { router.push(d.href); setQuery(''); setResults([]) }}
-                      className="flex items-center gap-2 w-full text-left px-3 py-2 hover:bg-gray-50"
-                    >
-                      <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                      <span className="flex-1 min-w-0">
-                        <span className="block text-sm font-medium text-gray-900 truncate">{d.label}</span>
-                        <span className="block text-xs text-gray-500 truncate">{d.section}</span>
-                      </span>
-                    </button>
-                  ))}
+      <div className="relative">
+        <div className={'flex items-center gap-2 px-3 py-1.5 rounded-md border bg-white shadow-sm '
+          + (panelOpen ? 'border-slate-400 ring-2 ring-slate-900/10' : 'border-gray-300')}>
+          <Search className="w-4 h-4 text-gray-400" />
+          <input
+            id="hr-search-input"
+            type="text"
+            value={query}
+            onFocus={openPanel}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') remember(query) }}
+            placeholder="Search people, leave, payroll, onboarding…"
+            className="flex-1 outline-none text-sm bg-transparent"
+          />
+          {query ? (
+            <button type="button" onClick={() => setQuery('')} aria-label="Clear search"
+              className="text-gray-400 hover:text-gray-700">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          ) : (
+            <kbd className="text-[10px] text-gray-400 border border-gray-200 rounded px-1.5 py-0.5">Esc</kbd>
+          )}
+        </div>
+
+        {panelOpen && (
+          <div className="absolute top-full left-0 right-0 mt-1 max-h-[460px] overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg z-50">
+            {!typing && (
+              <>
+                {recent.length > 0 && (
+                  <div className="border-b border-gray-100 pb-1">
+                    <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                        Recent searches
+                      </p>
+                      <button type="button" onClick={clearRecent}
+                        className="text-[11px] text-slate-500 hover:text-slate-900">
+                        Clear
+                      </button>
+                    </div>
+                    {recent.map((t) => (
+                      <button key={t} type="button" onClick={() => { setQuery(t); setFocused(true) }}
+                        className="flex items-center gap-2.5 w-full text-left px-3 py-1.5 hover:bg-gray-50">
+                        <Clock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                        <span className="text-[13px] text-slate-700 italic truncate">{t}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {tasks.length > 0 && (
+                  <div className="border-b border-gray-100 pb-1">
+                    <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
+                      <p className="text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                        My tasks
+                      </p>
+                      <button type="button"
+                        onClick={() => { router.push('/dashboard/tasks'); setFocused(false) }}
+                        className="text-[11px] text-slate-500 hover:text-slate-900">
+                        See all
+                      </button>
+                    </div>
+                    {tasks.map((t) => (
+                      <button key={t.id} type="button"
+                        onClick={() => { router.push('/dashboard/tasks'); setFocused(false) }}
+                        className="flex items-start gap-2.5 w-full text-left px-3 py-1.5 hover:bg-gray-50">
+                        <Inbox className="w-4 h-4 text-slate-400 flex-shrink-0 mt-0.5" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-[13px] text-slate-800 truncate">{t.name}</span>
+                          <span className="block text-[11px] text-slate-400">
+                            My Tasks · {since(t.assignedAt)}
+                            {t.status === 'IN_PROGRESS' ? ' · in progress' : ''}
+                          </span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="px-3 py-2.5">
+                  <p className="text-[13px] text-slate-600 mb-2">I&apos;m looking for…</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SCOPES.map((sc) => (
+                      <button
+                        key={sc.value}
+                        type="button"
+                        onClick={() => setScope(scope === sc.value ? 'all' : sc.value)}
+                        className={'text-[12px] px-3 py-1.5 rounded-full border transition '
+                          + (scope === sc.value
+                            ? 'bg-slate-900 text-white border-slate-900'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50')}
+                      >
+                        {sc.label}
+                      </button>
+                    ))}
+                  </div>
+                  {scope !== 'all' && (
+                    <p className="text-[11px] text-slate-400 mt-2">
+                      Results will be narrowed to {scopeLabel}.
+                    </p>
+                  )}
                 </div>
-              )}
-              {!loading && results.length === 0 && pages.length === 0 && (
-                <div className="px-3 py-2 text-xs text-gray-500">No results.</div>
-              )}
-              {!loading && results.length > 0 && (
-                <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
-                  Records
-                </p>
-              )}
-              {!loading &&
-                results.map((r) => (
-                  <button
-                    key={`${r.type}-${r.id}`}
-                    type="button"
-                    onClick={() => {
-                      router.push(r.href)
-                      setOpen(false)
-                      setQuery('')
-                    }}
-                    className="flex items-start gap-2 w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0"
-                  >
+              </>
+            )}
+
+            {typing && (
+              <>
+                {loading && <div className="px-3 py-2 text-xs text-gray-500">Searching…</div>}
+                {shownPages.length > 0 && (
+                  <div className="border-b border-gray-100">
+                    <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                      Go to
+                    </p>
+                    {shownPages.map((d) => (
+                      <button key={d.href} type="button"
+                        onClick={() => { remember(query); router.push(d.href); setQuery(''); setResults([]); setFocused(false) }}
+                        className="flex items-center gap-2 w-full text-left px-3 py-2 hover:bg-gray-50">
+                        <ArrowRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-medium text-gray-900 truncate">{d.label}</span>
+                          <span className="block text-xs text-gray-500 truncate">{d.section}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {!loading && shown.length === 0 && shownPages.length === 0 && (
+                  <div className="px-3 py-2 text-xs text-gray-500">
+                    No results{scope !== 'all' ? ' in ' + scopeLabel : ''}.
+                  </div>
+                )}
+                {!loading && shown.length > 0 && (
+                  <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                    Records
+                  </p>
+                )}
+                {!loading && shown.map((r) => (
+                  <button key={r.type + '-' + r.id} type="button"
+                    onClick={() => { remember(query); router.push(r.href); setQuery(''); setFocused(false) }}
+                    className="flex items-start gap-2 w-full text-left px-3 py-2 hover:bg-gray-50 border-b border-gray-50 last:border-0">
                     <div className="mt-0.5">{iconFor(r.type)}</div>
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{r.title}</p>
-                      {r.subtitle && (
-                        <p className="text-xs text-gray-500 truncate">{r.subtitle}</p>
-                      )}
+                      {r.subtitle && <p className="text-xs text-gray-500 truncate">{r.subtitle}</p>}
                     </div>
-                    <span className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">
-                      {r.type}
-                    </span>
+                    <span className="text-[10px] uppercase tracking-wide text-gray-400 mt-0.5">{r.type}</span>
                   </button>
                 ))}
-            </div>
-          )}
-        </div>
-      )}
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
