@@ -97,6 +97,8 @@ export interface DayContext {
   isHoliday: boolean
   onLOA: boolean
   onLeave: boolean
+  /** An approved work-from-home request covers this day. */
+  onWfh: boolean
   halfDay: boolean
 }
 
@@ -122,12 +124,19 @@ export function deriveDayStatus(ctx: DayContext): CellStatus {
     if (log.status === 'PRESENT' || log.status === 'LATE') {
       return log.workType === 'WFH' ? 'WFH' : 'P'
     }
+    // A day is normally stored as PRESENT with workType WFH. The write APIs
+    // also accept WFH as an input status, and six rows made it into the table
+    // stored that way — read them rather than falling through to "on leave".
+    if (log.status === 'WFH') return 'WFH'
     if (log.status === 'WEEKEND') return 'WE'
     if (log.status === 'HOLIDAY') return 'HO'
     if (log.status === 'ABSENT') return 'A'
   }
   if (ctx.onLOA) return 'LOA'
   if (ctx.onLeave) return ctx.halfDay ? 'H' : 'L'
+  // Approved work from home with nothing marked yet is a working day, not an
+  // absence — and certainly not leave.
+  if (ctx.onWfh) return 'WFH'
   return 'A'
 }
 
@@ -179,6 +188,9 @@ export interface MonthComputeCtx {
   getLeaveHalf(iso: string): boolean | undefined
   /** The leave type + reason for this day, when the day is leave. */
   getLeaveNote?(iso: string): string | undefined
+  /** Covered by an approved work-from-home request. Optional so callers that
+   *  predate work-from-home requests keep compiling. */
+  onWfh?(iso: string): boolean
   isHoliday(iso: string): boolean
   onLOA(iso: string): boolean
 }
@@ -214,6 +226,7 @@ export function computeEmployeeMonth(ctx: MonthComputeCtx): { days: ComputedDay[
           isHoliday: ctx.isHoliday(iso),
           onLOA: ctx.onLOA(iso),
           onLeave: leaveHalf !== undefined,
+          onWfh: ctx.onWfh?.(iso) ?? false,
           halfDay: leaveHalf === true,
         })
     if (!isFuture && !preJoin) {
@@ -233,6 +246,8 @@ interface RangeBuckets {
   logBucket: Map<string, { status: string; workType: string }>
   /** `${empId}|${iso}` → halfDay flag */
   leaveDayBucket: Map<string, boolean>
+  /** `${empId}|${iso}` covered by an approved work-from-home request */
+  wfhDaySet: Set<string>
   /** `${empId}|${iso}` → the leave type + reason, for the hover tooltip */
   leaveNoteBucket: Map<string, string>
   /** iso → true for PUBLIC holidays */
@@ -259,7 +274,10 @@ async function loadRangeBuckets(
         fromDate: { lte: rangeEnd },
         toDate: { gte: rangeStart },
       },
-      select: { employeeId: true, fromDate: true, toDate: true, firstDayHalf: true, lastDayHalf: true, leaveType: true, reason: true },
+      // `category` was not selected or filtered, so an approved WFH request
+      // was loaded as though it were leave and every one of its days rendered
+      // L. Working from home is not time off.
+      select: { employeeId: true, fromDate: true, toDate: true, firstDayHalf: true, lastDayHalf: true, leaveType: true, reason: true, category: true },
     }),
     prisma.holiday.findMany({
       where: { type: 'PUBLIC', date: { gte: rangeStart, lte: rangeEnd } },
@@ -282,6 +300,7 @@ async function loadRangeBuckets(
   }
 
   const leaveDayBucket = new Map<string, boolean>()
+  const wfhDaySet = new Set<string>()
   // What the leave was actually for, keyed employeeId|day. "Leave (Full Day)"
   // on hover says nothing about which leave — this carries the type and the
   // reason through to the grid tooltip.
@@ -295,12 +314,18 @@ async function loadRangeBuckets(
       const isFirst = cur.getTime() === new Date(lv.fromDate).setHours(0, 0, 0, 0)
       const isLast = cur.getTime() === new Date(lv.toDate).setHours(0, 0, 0, 0)
       const half = (isFirst && lv.firstDayHalf) || (isLast && lv.lastDayHalf)
-      leaveDayBucket.set(`${lv.employeeId}|${dayKey(cur)}`, half)
-      const typeLabel = lv.leaveType.charAt(0) + lv.leaveType.slice(1).toLowerCase()
-      leaveNoteBucket.set(
-        `${lv.employeeId}|${dayKey(cur)}`,
-        lv.reason ? `${typeLabel} leave — ${lv.reason}` : `${typeLabel} leave`,
-      )
+      const key = `${lv.employeeId}|${dayKey(cur)}`
+      if (lv.category === 'WFH') {
+        wfhDaySet.add(key)
+        leaveNoteBucket.set(key, lv.reason ? `Work from home — ${lv.reason}` : 'Work from home')
+      } else {
+        leaveDayBucket.set(key, half)
+        const typeLabel = lv.leaveType.charAt(0) + lv.leaveType.slice(1).toLowerCase()
+        leaveNoteBucket.set(
+          key,
+          lv.reason ? `${typeLabel} leave — ${lv.reason}` : `${typeLabel} leave`,
+        )
+      }
       cur.setDate(cur.getDate() + 1)
     }
   }
@@ -320,7 +345,7 @@ async function loadRangeBuckets(
     }
   }
 
-  return { logBucket, leaveDayBucket, leaveNoteBucket, holidaySet, loaSet }
+  return { logBucket, leaveDayBucket, wfhDaySet, leaveNoteBucket, holidaySet, loaSet }
 }
 
 /** Build a MonthComputeCtx for one employee out of the bulk range buckets. */
@@ -339,6 +364,7 @@ function empMonthCtx(
     joiningDate,
     getLog: (iso) => buckets.logBucket.get(`${empId}|${iso}`),
     getLeaveHalf: (iso) => buckets.leaveDayBucket.get(`${empId}|${iso}`),
+    onWfh: (iso) => buckets.wfhDaySet.has(`${empId}|${iso}`),
     getLeaveNote: (iso) => buckets.leaveNoteBucket.get(`${empId}|${iso}`),
     isHoliday: (iso) => buckets.holidaySet.has(iso),
     onLOA: (iso) => buckets.loaSet.has(`${empId}|${iso}`),
