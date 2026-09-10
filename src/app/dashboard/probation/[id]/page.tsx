@@ -11,7 +11,7 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@
 import { ShieldCheck, Zap, AlertTriangle, CheckCircle, Clock, FileText, Activity } from 'lucide-react'
 import { BackButton } from '@/components/ui/back-button'
 import { reviewIsDue, reviewOpensOn } from '@/lib/probation-review'
-import { Day3Documents } from './_components/day3-documents'
+import { DocumentRows, DAY3, EMPLOYMENT_LETTER } from './_components/document-rows'
 
 interface ProbationRec {
   id: string
@@ -274,32 +274,29 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
         </div>
       </Card>
 
-      {/* The employment letter on file. The probation decision is judged
-          against the terms this letter set, so it belongs on the page where
-          that decision is made rather than only on the profile. */}
-      {rec.employee.documents?.length > 0 && (
-        <Card className="p-4 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center flex-shrink-0">
-              <FileText className="w-4 h-4" />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-900">Employment Letter</p>
-              <p className="text-[11px] text-slate-500 mt-0.5 truncate">
-                {rec.employee.documents[0].name} · uploaded {fmt(rec.employee.documents[0].createdAt)}
-              </p>
-            </div>
+      {/* The employment letter. The probation decision is judged against the
+          terms this letter set, so it belongs on the page where that decision
+          is made rather than only on the profile.
+
+          It used to render only when a letter was already on file, which meant
+          the sixteen people without one saw nothing here at all — no gap and
+          no way to close it. Now the row is always present: Open issues the
+          letter, Upload files the signed copy back. */}
+      <Card className="overflow-hidden">
+        <div className="flex items-start gap-3 px-5 py-4 border-b border-slate-100">
+          <div className="w-9 h-9 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center flex-shrink-0">
+            <FileText className="w-4 h-4" />
           </div>
-          <a
-            href={`/api/documents/${rec.employee.documents[0].id}/download`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex-shrink-0"
-          >
-            <Button size="sm" variant="outline">View</Button>
-          </a>
-        </Card>
-      )}
+          <div className="min-w-0">
+            <h2 className="text-sm font-semibold text-slate-900">Employment Letter</h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Issued on the Convertt letterhead, signed by the Director Administration.
+            </p>
+          </div>
+        </div>
+
+        <DocumentRows employeeId={rec.employee.id} docs={EMPLOYMENT_LETTER} />
+      </Card>
 
       {/* Day-3 paperwork — the Employment Agreement and the NDA are signed in
           the first days on the job, well before the Day-30 check-in. Each
@@ -329,7 +326,7 @@ export default function ProbationDetailPage({ params }: { params: Promise<{ id: 
           </span>
         </div>
 
-        <Day3Documents employeeId={rec.employee.id} />
+        <DocumentRows employeeId={rec.employee.id} docs={DAY3} />
       </Card>
       {/* Settling check-in */}
       <Card className="p-5">

@@ -47,12 +47,22 @@ export default async function ProbationPage() {
         select: {
           id: true, fullName: true, employeeCode: true, designation: true,
           employeeType: true, department: { select: { name: true } },
+          // Whether the employment letter is on file. Sixteen of the
+          // twenty-two records had none, and nothing on any screen said so —
+          // the letter's card on the record simply did not render.
+          documents: {
+            where: { type: 'OFFER_LETTER' },
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: { id: true },
+          },
         },
       },
     },
     orderBy: [{ status: 'asc' }, { endDate: 'desc' }],
   })
 
+  const missingLetters = records.filter((r) => r.employee.documents.length === 0).length
   const live = records.filter((r) => ['ACTIVE', 'UNDER_REVIEW'].includes(r.status))
   const closed = records.filter((r) => !['ACTIVE', 'UNDER_REVIEW'].includes(r.status))
   const today = new Date()
@@ -62,7 +72,7 @@ export default async function ProbationPage() {
       <div>
         <h1 className="text-lg font-semibold text-slate-900">Probation Period Tracker</h1>
         <p className="text-xs text-slate-500 mt-0.5">
-          {live.length} in progress · {closed.length} closed · click a name for the full record
+          {live.length} in progress · {closed.length} closed{missingLetters > 0 ? ` · ${missingLetters} without an employment letter on file` : ''} · click a name for the full record
         </p>
       </div>
 
@@ -89,6 +99,7 @@ type Row = {
     designation: string | null
     employeeType: string
     department: { name: string } | null
+    documents: { id: string }[]
   }
 }
 
@@ -120,6 +131,7 @@ function Section({ title, rows, today, empty }: {
             <tr>
               <Th>Employee</Th>
               <Th>Designation</Th>
+              <Th>Letter</Th>
               <Th>Probation</Th>
               <Th right>Days left</Th>
               <Th right>Rating</Th>
@@ -131,7 +143,7 @@ function Section({ title, rows, today, empty }: {
           </thead>
           <tbody>
             {rows.length === 0 ? (
-              <tr><td colSpan={9} className="py-8 text-center text-slate-400">{empty}</td></tr>
+              <tr><td colSpan={10} className="py-8 text-center text-slate-400">{empty}</td></tr>
             ) : rows.map((r) => {
               const daysLeft = Math.ceil((r.endDate.getTime() - today.getTime()) / 86400000)
               const live = ['ACTIVE', 'UNDER_REVIEW'].includes(r.status)
@@ -158,6 +170,25 @@ function Section({ title, rows, today, empty }: {
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-slate-700">{r.employee.designation ?? '—'}</td>
+                  <td className="px-3 py-2.5">
+                    {r.employee.documents.length > 0 ? (
+                      <a
+                        href={`/api/documents/${r.employee.documents[0].id}/download`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-medium text-emerald-700 hover:underline whitespace-nowrap"
+                      >
+                        On file
+                      </a>
+                    ) : (
+                      <Link
+                        href={`/dashboard/probation/${r.employee.id}`}
+                        className="text-[11px] font-medium text-amber-700 hover:underline whitespace-nowrap"
+                      >
+                        Missing
+                      </Link>
+                    )}
+                  </td>
                   <td className="px-3 py-2.5 text-slate-600 whitespace-nowrap">
                     {formatDate(r.startDate)} – {formatDate(r.endDate)}
                   </td>

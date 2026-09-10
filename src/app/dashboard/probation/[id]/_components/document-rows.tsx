@@ -1,53 +1,80 @@
 'use client'
 
 /**
- * Day-3 paperwork — generate it, then put the signed copy back.
+ * The paperwork rows on a probation record — generate it, then put the signed
+ * copy back.
  *
- * "Open" produced a blank agreement with signature slots and that was the end
- * of the trail: the signed copy lived in somebody's email or a drawer, and the
- * row said "Open" forever, whether it had been signed on day three or not at
- * all. There was no way to tell the two apart from this screen.
+ * "Open" produced a blank with signature slots and that was the end of the
+ * trail: the signed copy lived in somebody's email or a drawer, and the row
+ * said "Open" forever, whether it had been signed on day three or not at all.
+ * There was no way to tell the two apart from this screen.
  *
  * Uploading files it against the employee like any other document, so it shows
  * on their profile rather than only here, and the row says Submitted.
+ *
+ * Was day3-documents.tsx, which carried the Employment Agreement and the NDA.
+ * The employment letter now uses the same rows, because it had the opposite
+ * problem: its card only appeared for the six people who already had one, so
+ * the sixteen who did not showed nothing at all — no gap, no way to fix it.
  */
 
 import { useState, useEffect, useCallback } from 'react'
-import { FileText, Upload, Check, Loader2, ExternalLink } from 'lucide-react'
+import { FileText, Upload, Check, Loader2, ExternalLink, AlertCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toastSuccess, toastError } from '@/components/ui/toaster'
 
-interface Day3Doc {
-  /** The generator's slug, e.g. employment_agreement. */
-  slug: string
+export interface DocRow {
   /** The EmployeeDocument type the signed copy is filed under. */
   docType: string
   name: string
   sub: string
+  /** Where "Open" leads — the document to print, sign and hand back. */
+  openHref: (employeeId: string) => string
+  /** Say so in amber when nothing is on file. Reserved for the ones that matter. */
+  flagWhenMissing?: boolean
   /** Set when a signed copy is already on file. */
   uploaded: { id: string; name: string; createdAt: string } | null
 }
 
-/** The two documents signed in the first days on the job. */
-const DAY3: Day3Doc[] = [
+/**
+ * The letter Convertt issues on the letterhead — the same document as the six
+ * already on file. Deliberately not /api/documents/generate?type=offer_letter,
+ * which builds a longer pre-hire offer with counter-signature slots that
+ * matches nothing in anybody's file.
+ */
+export const EMPLOYMENT_LETTER: DocRow[] = [
   {
-    slug: 'employment_agreement', docType: 'EMPLOYMENT_AGREEMENT',
+    docType: 'OFFER_LETTER',
+    name: 'Employment Letter',
+    sub: 'Designation, joining date, compensation and probation — the terms this review judges against',
+    openHref: (id) => `/api/documents/employment-letter?employeeId=${id}`,
+    flagWhenMissing: true,
+    uploaded: null,
+  },
+]
+
+/** The two documents signed in the first days on the job. */
+export const DAY3: DocRow[] = [
+  {
+    docType: 'EMPLOYMENT_AGREEMENT',
     name: 'Employment Agreement',
     sub: 'Appointment, salary, probation, leave and conduct policies',
+    openHref: (id) => `/api/documents/generate?type=employment_agreement&employeeId=${id}`,
     uploaded: null,
   },
   {
-    slug: 'nda', docType: 'NDA',
+    docType: 'NDA',
     name: 'Non-Disclosure Agreement',
     sub: 'Confidentiality, intellectual property and non-solicitation',
+    openHref: (id) => `/api/documents/generate?type=nda&employeeId=${id}`,
     uploaded: null,
   },
 ]
 
 const ACCEPT = 'application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
-export function Day3Documents({ employeeId }: { employeeId: string }) {
-  const [state, setState] = useState<Day3Doc[]>(DAY3)
+export function DocumentRows({ employeeId, docs }: { employeeId: string; docs: DocRow[] }) {
+  const [state, setState] = useState<DocRow[]>(docs)
   const [busy, setBusy] = useState<string | null>(null)
 
   // The page around this is a client component, so what is already on file is
@@ -57,9 +84,9 @@ export function Day3Documents({ employeeId }: { employeeId: string }) {
       const res = await fetch(`/api/documents?employeeId=${employeeId}`)
       if (!res.ok) return
       const d = await res.json()
-      const docs: { id: string; type: string; name: string; createdAt: string }[] = d.documents ?? []
-      setState(DAY3.map((row) => {
-        const hit = docs
+      const found: { id: string; type: string; name: string; createdAt: string }[] = d.documents ?? []
+      setState(docs.map((row) => {
+        const hit = found
           .filter((x) => x.type === row.docType)
           .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]
         return hit
@@ -67,7 +94,7 @@ export function Day3Documents({ employeeId }: { employeeId: string }) {
           : row
       }))
     } catch { /* the rows still work without it */ }
-  }, [employeeId])
+  }, [employeeId, docs])
 
   // The fetch runs first, so the state lands in a promise callback rather than
   // straight down the effect body.
@@ -77,7 +104,7 @@ export function Day3Documents({ employeeId }: { employeeId: string }) {
     return () => { cancelled = true }
   }, [load])
 
-  async function upload(doc: Day3Doc, file: File | null) {
+  async function upload(doc: DocRow, file: File | null) {
     if (!file) return
     setBusy(doc.docType)
     try {
@@ -111,15 +138,19 @@ export function Day3Documents({ employeeId }: { employeeId: string }) {
             <div className="min-w-0">
               <p className="text-sm font-medium text-slate-900 flex items-center gap-2">
                 {doc.name}
-                {done && (
+                {done ? (
                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-emerald-50 text-emerald-800 border-emerald-200">
                     <Check className="w-3 h-3" /> Submitted
                   </span>
-                )}
+                ) : doc.flagWhenMissing ? (
+                  <span className="inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border bg-amber-50 text-amber-800 border-amber-200">
+                    <AlertCircle className="w-3 h-3" /> Not on file
+                  </span>
+                ) : null}
               </p>
               <p className="text-xs text-slate-500 mt-0.5">
                 {done
-                  ? `Signed copy on file — ${new Date(doc.uploaded!.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
+                  ? `${doc.uploaded!.name} · ${new Date(doc.uploaded!.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`
                   : doc.sub}
               </p>
             </div>
@@ -136,11 +167,7 @@ export function Day3Documents({ employeeId }: { employeeId: string }) {
                   </Button>
                 </a>
               ) : (
-                <a
-                  href={`/api/documents/generate?type=${doc.slug}&employeeId=${employeeId}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
+                <a href={doc.openHref(employeeId)} target="_blank" rel="noopener noreferrer">
                   <Button variant="outline" size="sm">
                     <FileText className="w-3.5 h-3.5 mr-1.5" /> Open
                   </Button>
