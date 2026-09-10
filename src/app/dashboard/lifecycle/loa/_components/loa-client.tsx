@@ -33,6 +33,15 @@ interface LoaRow {
   employee: { id: string; fullName: string; employeeCode: string; designation: string }
 }
 
+interface LoaPolicy {
+  type: string
+  totalDays: number
+  workingDays: boolean
+  jobProtected: boolean
+  basis: string | null
+  summary: string
+}
+
 const LOA_TYPES = [
   { value: 'MEDICAL', label: 'Medical' },
   { value: 'MATERNITY', label: 'Maternity' },
@@ -212,6 +221,22 @@ function StartLoaDialog({ open, onClose, onDone }: { open: boolean; onClose: () 
   const [type, setType] = useState('MEDICAL')
   const [startDate, setStartDate] = useState('')
   const [expectedReturn, setExpectedReturn] = useState('')
+  // What the country actually grants for the chosen type, so the entitlement
+  // is on screen at the moment the dates are picked rather than remembered.
+  const [policies, setPolicies] = useState<LoaPolicy[]>([])
+  useEffect(() => {
+    if (!open) return
+    let dead = false
+    fetch('/api/loa?status=OPEN')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!dead && d?.policies) setPolicies(d.policies) })
+      .catch(() => { /* the dialog still works without it */ })
+    return () => { dead = true }
+  }, [open])
+  const entitlement = policies.find((p) => p.type === type) ?? null
+  const requestedDays = startDate && expectedReturn && expectedReturn > startDate
+    ? Math.round((new Date(expectedReturn).getTime() - new Date(startDate).getTime()) / 86_400_000)
+    : null
   const [paid, setPaid] = useState(false)
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
@@ -278,6 +303,30 @@ function StartLoaDialog({ open, onClose, onDone }: { open: boolean; onClose: () 
             <select className={inputCls} value={type} onChange={(e) => setType(e.target.value)}>
               {LOA_TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
+            {entitlement ? (
+              <div className="mt-1.5 rounded-md border border-slate-200 bg-slate-50 px-2.5 py-2">
+                <p className="text-[12px] text-slate-800">
+                  Entitlement: <strong>{entitlement.summary}</strong>
+                  {entitlement.jobProtected && (
+                    <span className="text-slate-500"> · job-protected</span>
+                  )}
+                </p>
+                {entitlement.basis && (
+                  <p className="text-[11px] text-slate-500 mt-0.5">{entitlement.basis}</p>
+                )}
+                {requestedDays != null && requestedDays > entitlement.totalDays && (
+                  <p className="text-[11px] text-amber-800 mt-1">
+                    These dates run {requestedDays - entitlement.totalDays} day
+                    {requestedDays - entitlement.totalDays === 1 ? '' : 's'} past the entitlement —
+                    allowed, but the excess is normally unpaid.
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="mt-1.5 text-[11px] text-slate-400">
+                No statutory entitlement on record for this type — it is agreed case by case.
+              </p>
+            )}
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

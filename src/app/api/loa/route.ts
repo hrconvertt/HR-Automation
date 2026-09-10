@@ -4,6 +4,9 @@ import {
   LOA_TYPES, LOA_STATUSES, LOA_TYPE_LABEL, LOA_EMPLOYEE_SELECT,
   type LoaType, requireLoaHR, serializeLoa,
 } from '@/lib/loa'
+import {
+  countryFor, loaPolicyFor, loaPoliciesFor, describeLoaPolicy, DEFAULT_COUNTRY,
+} from '@/lib/policy-scope'
 
 // GET /api/loa?status=  — HR_ADMIN only. status filter: ACTIVE | RETURNED | EXTENDED
 // (special value OPEN = ACTIVE + EXTENDED, what the "Active" tab shows).
@@ -25,7 +28,17 @@ export async function GET(request: NextRequest) {
     include: { employee: { select: LOA_EMPLOYEE_SELECT } },
   })
 
-  return NextResponse.json({ loas: rows.map(serializeLoa) })
+  // The entitlements in force, so the screen can say what a maternity leave is
+  // actually worth instead of leaving HR to remember twelve weeks.
+  const forCountry = searchParams.get('country')
+  const policies = await loaPoliciesFor(
+    forCountry === 'AE' ? 'AE' : DEFAULT_COUNTRY,
+  )
+
+  return NextResponse.json({
+    loas: rows.map(serializeLoa),
+    policies: policies.map((p) => ({ ...p, summary: describeLoaPolicy(p) })),
+  })
 }
 
 // POST /api/loa — start a leave of absence. HR_ADMIN only, preview-blocked.
@@ -55,6 +68,20 @@ export async function POST(request: NextRequest) {
   if (expectedReturn <= startDate) {
     return NextResponse.json({ error: 'Expected return must be after the start date' }, { status: 400 })
   }
+
+  // What the country grants for this type, and how the request compares.
+  // Reported, not refused: a leave can legitimately run past the paid
+  // entitlement — the UAE grants 45 unpaid days beyond maternity, and an
+  // unpaid extension is a normal outcome. Silence would be the failure here,
+  // not the overrun.
+  const country = await countryFor(employeeId)
+  const policy = await loaPolicyFor(country, type, startDate)
+  const requestedDays = Math.round(
+    (expectedReturn.getTime() - startDate.getTime()) / 86_400_000,
+  )
+  const overBy = policy && requestedDays > policy.totalDays
+    ? requestedDays - policy.totalDays
+    : 0
 
   const employee = await prisma.employee.findUnique({
     where: { id: employeeId },
@@ -92,7 +119,14 @@ export async function POST(request: NextRequest) {
   })
 
   return NextResponse.json(
-    { loa: serializeLoa(created), typeLabel: LOA_TYPE_LABEL[type] },
+    {
+      loa: serializeLoa(created),
+      typeLabel: LOA_TYPE_LABEL[type],
+      // What it was measured against, and by how much it runs over.
+      entitlement: policy
+        ? { ...policy, summary: describeLoaPolicy(policy), requestedDays, overBy }
+        : null,
+    },
     { status: 201 },
   )
 }

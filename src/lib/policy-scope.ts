@@ -127,3 +127,72 @@ export async function payCurrencyFor(employeeId: string): Promise<string> {
   if (s?.currency) return s.currency
   return COUNTRY_CURRENCY[await countryFor(employeeId)]
 }
+
+export interface ResolvedLoaPolicy {
+  country: CountryCode
+  type: string
+  totalDays: number
+  workingDays: boolean
+  fullPayDays: number
+  halfPayDays: number
+  unpaidDays: number
+  jobProtected: boolean
+  basis: string | null
+}
+
+/**
+ * What a leave of absence of this type is worth in this country.
+ *
+ * Returns null where no entitlement is on record — sabbatical and unpaid
+ * personal leave are agreements rather than entitlements, and saying "0 days"
+ * for them would be wrong in a way that reads as authoritative.
+ */
+export async function loaPolicyFor(
+  country: CountryCode, type: string, on: Date = new Date(),
+): Promise<ResolvedLoaPolicy | null> {
+  const row = await prisma.leaveOfAbsencePolicy.findFirst({
+    where: { country, type, effectiveFrom: { lte: on } },
+    orderBy: { effectiveFrom: 'desc' },
+  })
+  if (!row) return null
+  return {
+    country: asCountry(row.country), type: row.type,
+    totalDays: row.totalDays, workingDays: row.workingDays,
+    fullPayDays: row.fullPayDays, halfPayDays: row.halfPayDays,
+    unpaidDays: row.unpaidDays, jobProtected: row.jobProtected, basis: row.basis,
+  }
+}
+
+/** Every leave-of-absence entitlement in force for a country. */
+export async function loaPoliciesFor(
+  country: CountryCode, on: Date = new Date(),
+): Promise<ResolvedLoaPolicy[]> {
+  const rows = await prisma.leaveOfAbsencePolicy.findMany({
+    where: { country, effectiveFrom: { lte: on } },
+    orderBy: [{ type: 'asc' }, { effectiveFrom: 'desc' }],
+  })
+  const seen = new Set<string>()
+  const out: ResolvedLoaPolicy[] = []
+  for (const r of rows) {
+    if (seen.has(r.type)) continue
+    seen.add(r.type)
+    out.push({
+      country: asCountry(r.country), type: r.type,
+      totalDays: r.totalDays, workingDays: r.workingDays,
+      fullPayDays: r.fullPayDays, halfPayDays: r.halfPayDays,
+      unpaidDays: r.unpaidDays, jobProtected: r.jobProtected, basis: r.basis,
+    })
+  }
+  return out
+}
+
+/** Said in one line, for a dialog: "12 weeks — 84 days, fully paid". */
+export function describeLoaPolicy(p: ResolvedLoaPolicy): string {
+  const unit = p.workingDays ? 'working days' : 'days'
+  const parts: string[] = []
+  if (p.fullPayDays) parts.push(`${p.fullPayDays} at full pay`)
+  if (p.halfPayDays) parts.push(`${p.halfPayDays} at half pay`)
+  if (p.unpaidDays) parts.push(`${p.unpaidDays} unpaid`)
+  const split = parts.length > 1 ? ` — ${parts.join(', ')}` : parts.length === 1 && p.halfPayDays === 0 && p.unpaidDays === 0 ? ', fully paid' : ''
+  return `${p.totalDays} ${unit}${split}`
+}

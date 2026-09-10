@@ -448,6 +448,45 @@ model AttendanceCorrection {
 // HR-created. While ACTIVE the employee is flagged "On Leave of Absence" on
 // their profile and shown as LOA in the attendance grid; payroll generation
 // flags them for HR review (unpaid LOA days pro-rate the payslip).
+/// What a leave of absence is actually worth, by country.
+///
+/// Workday splits short balance-based Time Off from long, event-based,
+/// job-protected Leave of Absence — and this app already had that split:
+/// maternity and paternity live in LeaveOfAbsence, not in the leave-request
+/// dropdown. What was missing was any entitlement behind them. Nothing said
+/// maternity is twelve weeks, nothing checked a duration, and `paid` was a
+/// single boolean for a UAE entitlement that is 45 days full pay then 15 at
+/// half.
+///
+/// Scoped and effective-dated for the same reason as LeavePolicy: the Annex
+/// governs, and changing this year's rule must not rewrite last year's leave.
+model LeaveOfAbsencePolicy {
+  id            String   @id @default(cuid())
+  /// PK | AE — whose law grants it.
+  country       String
+  /// MEDICAL | MATERNITY | PATERNITY | SABBATICAL | UNPAID_PERSONAL
+  type          String
+  effectiveFrom DateTime @default(dbgenerated("'2020-01-01'::timestamp"))
+  /// Total entitlement. Calendar days unless workingDays is set.
+  totalDays     Int
+  /// True where the statute counts working days rather than calendar days.
+  workingDays   Boolean  @default(false)
+  /// How the total splits by pay. Must add up to totalDays.
+  fullPayDays   Int      @default(0)
+  halfPayDays   Int      @default(0)
+  unpaidDays    Int      @default(0)
+  /// Dismissal prohibited while the leave runs.
+  jobProtected  Boolean  @default(false)
+  /// The statute or policy clause this comes from, for the person reading it.
+  basis         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([country, type, effectiveFrom])
+  @@index([country, type])
+  @@map("leave_of_absence_policies")
+}
+
 model LeaveOfAbsence {
   id             String    @id @default(cuid())
   employeeId     String
