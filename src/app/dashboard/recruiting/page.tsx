@@ -26,6 +26,8 @@ import { BulkJDUpload } from '@/components/recruiting/bulk-jd-upload'
 import { BulkResumeUpload } from '@/components/recruiting/bulk-resume-upload'
 import { RecruitingDashboardView } from './_components/dashboard-view'
 import { recruitingDashboard } from '@/lib/queries/recruiting-dashboard'
+import { RequisitionWorkspaceView } from './_components/workspace-view'
+import { requisitionWorkspace } from '@/lib/queries/requisition-workspace'
 
 const AVATAR_PALETTE = [
   'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
@@ -182,7 +184,7 @@ const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'war
   FAIL: 'destructive',
 }
 
-export default async function RecruitingPage({ searchParams }: { searchParams?: Promise<{ tab?: string; stage?: string; role?: string }> }) {
+export default async function RecruitingPage({ searchParams }: { searchParams?: Promise<{ tab?: string; stage?: string; role?: string; req?: string; sub?: string }> }) {
   const sp = (await searchParams) ?? {}
   const { role, myEmployeeId } = await resolveContext()
   const { requisitions, candidates, interviews, poolCandidates } = await getData()
@@ -214,7 +216,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
 
   // Which view the sidebar highlights and the shell renders. Resolved on the
   // server from the URL, so no Client Component needs `useSearchParams`.
-  const VIEWS = ['dashboard', 'requests', 'requisitions', 'pipeline', 'knockouts', 'pool', 'schedule']
+  const VIEWS = ['dashboard', 'workspace', 'requests', 'requisitions', 'pipeline', 'knockouts', 'pool', 'schedule']
   // The module now opens on its dashboard, the way Recruiting opens in
   // Workday. HR used to be thrown straight at the approval queue whenever a
   // request was pending; that signal has not been lost — the Requisitions
@@ -225,6 +227,11 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
       : sp.stage
         ? 'pipeline'
         : 'dashboard'
+
+  // The workspace is the heaviest query here, so it only runs for its own view.
+  const workspace = activeView === 'workspace'
+    ? await requisitionWorkspace(sp.req)
+    : { rail: [], selected: null }
 
   // Whether each role is authorised to be worked — see requisition-gate.ts.
   const authorised = await authorisationForAll()
@@ -256,6 +263,18 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           gets the full width — it was competing with a column of its own. */}
       <Tabs className="min-w-0" value={activeView}>
         {/* View selection lives in the module sidebar (see _components/module-nav). */}
+
+        <TabsContent value="workspace" className="mt-0">
+          <ViewHeader
+            title="Requisition Workspace"
+            blurb="One role at a time — who is in it, where they are, and what the role asked for."
+          />
+          <RequisitionWorkspaceView
+            data={workspace}
+            sub={sp.sub === 'details' ? 'details' : 'candidates'}
+            canAct={isHR || isManager}
+          />
+        </TabsContent>
 
         <TabsContent value="dashboard" className="mt-0">
           <ViewHeader

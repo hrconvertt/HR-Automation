@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   LayoutDashboard,
+  KanbanSquare,
   Users,
   Clock,
   CalendarDays,
@@ -481,6 +482,8 @@ const RECRUITING_NAV: NavGroup[] = [
       // Requests and requisitions were the same JobRequisition row at two
       // statuses, under two menu entries, one of which was always empty.
       { href: '/dashboard/recruiting?tab=requisitions', label: 'Requisitions', icon: FolderOpen },
+      // One role opened up: its candidates, its stage counts, its own terms.
+      { href: '/dashboard/recruiting?tab=workspace', label: 'Requisition Workspace', icon: KanbanSquare },
       { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       { href: '/dashboard/recruiting?tab=pipeline', label: 'Pipeline', icon: BarChart3 },
       { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert },
