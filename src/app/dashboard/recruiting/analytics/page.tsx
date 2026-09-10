@@ -19,6 +19,8 @@ import { Card } from '@/components/ui/card'
 import {
   Activity, AlertTriangle, BanknoteIcon, FileText, Timer, TrendingUp, Users,
 } from 'lucide-react'
+import { SourceMix, SOURCE_ORDER, type SourceMixData } from './_components/source-mix'
+import { STAGES } from '@/lib/queries/recruiting-dashboard'
 
 const TARGET_TTF_DAYS = 30
 const TARGET_OFFER_ACCEPT_PCT = 80
@@ -164,6 +166,44 @@ async function getSpend() {
   return { line, posts: postings.length, running, roles: new Set(postings.map((p) => p.requisitionId)).size }
 }
 
+/**
+ * Candidates by the channel they came through, and the same cut by stage.
+ *
+ * A candidate with no source recorded is counted as OTHER rather than dropped:
+ * leaving them out would quietly shrink the totals the percentages divide.
+ */
+async function getSourceMix(): Promise<SourceMixData> {
+  const rows = await prisma.candidate.findMany({ select: { source: true, stage: true } })
+  const norm = (s: string | null) => {
+    const key = (s ?? '').toUpperCase()
+    return SOURCE_ORDER.includes(key) ? key : 'OTHER'
+  }
+
+  const bySourceCount = new Map<string, number>()
+  const byStageCount = new Map<string, Record<string, number>>()
+  for (const r of rows) {
+    const src = norm(r.source)
+    bySourceCount.set(src, (bySourceCount.get(src) ?? 0) + 1)
+    const stage = byStageCount.get(r.stage) ?? {}
+    stage[src] = (stage[src] ?? 0) + 1
+    byStageCount.set(r.stage, stage)
+  }
+
+  return {
+    total: rows.length,
+    bySource: SOURCE_ORDER.map((key) => ({ key, count: bySourceCount.get(key) ?? 0 })),
+    byStage: STAGES.map((st) => {
+      const counts = byStageCount.get(st.key) ?? {}
+      return {
+        key: st.key,
+        label: st.label,
+        total: Object.values(counts).reduce((a, b) => a + b, 0),
+        bySource: counts,
+      }
+    }),
+  }
+}
+
 export default async function RecruitingAnalyticsPage() {
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
@@ -174,8 +214,8 @@ export default async function RecruitingAnalyticsPage() {
     redirect('/dashboard/recruiting')
   }
 
-  const [kpis, health, spend] = await Promise.all([
-    getRecruitingKpis(), getPipelineHealth(), getSpend(),
+  const [kpis, health, spend, sourceMix] = await Promise.all([
+    getRecruitingKpis(), getPipelineHealth(), getSpend(), getSourceMix(),
   ])
 
   return (
@@ -262,6 +302,8 @@ export default async function RecruitingAnalyticsPage() {
           />
         </div>
       </Card>
+
+      <SourceMix data={sourceMix} />
 
       <p className="text-[11px] text-slate-400">
         Stage timings are measured from a candidate&apos;s last update, not from stage history,
