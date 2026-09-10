@@ -475,6 +475,9 @@ const RECRUITING_NAV: NavGroup[] = [
   {
     label: 'Recruiting',
     items: [
+      // The module's landing view — the pipeline ring and the queues waiting
+      // on somebody. Recruiting opens here now, the way it does in Workday.
+      { href: '/dashboard/recruiting?tab=dashboard', label: 'Dashboard', icon: LayoutDashboard },
       // Requests and requisitions were the same JobRequisition row at two
       // statuses, under two menu entries, one of which was always empty.
       { href: '/dashboard/recruiting?tab=requisitions', label: 'Requisitions', icon: FolderOpen },

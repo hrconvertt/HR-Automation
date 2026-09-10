@@ -24,6 +24,8 @@ import { BulkPipelineActions } from '@/components/recruiting/bulk-pipeline-actio
 import { PipelineRoleFilter } from '@/components/recruiting/pipeline-role-filter'
 import { BulkJDUpload } from '@/components/recruiting/bulk-jd-upload'
 import { BulkResumeUpload } from '@/components/recruiting/bulk-resume-upload'
+import { RecruitingDashboardView } from './_components/dashboard-view'
+import { recruitingDashboard } from '@/lib/queries/recruiting-dashboard'
 
 const AVATAR_PALETTE = [
   'bg-slate-100 text-slate-700', 'bg-slate-100 text-slate-700',
@@ -184,6 +186,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   const sp = (await searchParams) ?? {}
   const { role, myEmployeeId } = await resolveContext()
   const { requisitions, candidates, interviews, poolCandidates } = await getData()
+  const dashboard = await recruitingDashboard()
 
   const isHR      = role === 'HR_ADMIN'
   const isManager = role === 'MANAGER'
@@ -211,13 +214,17 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
 
   // Which view the sidebar highlights and the shell renders. Resolved on the
   // server from the URL, so no Client Component needs `useSearchParams`.
-  const VIEWS = ['requests', 'requisitions', 'pipeline', 'knockouts', 'pool', 'schedule']
+  const VIEWS = ['dashboard', 'requests', 'requisitions', 'pipeline', 'knockouts', 'pool', 'schedule']
+  // The module now opens on its dashboard, the way Recruiting opens in
+  // Workday. HR used to be thrown straight at the approval queue whenever a
+  // request was pending; that signal has not been lost — the Requisitions
+  // entry in the module sidebar still carries the count.
   const activeView =
     sp.tab && VIEWS.includes(sp.tab)
       ? sp.tab
       : sp.stage
         ? 'pipeline'
-        : (isHR && pendingRequests.length > 0 ? 'requisitions' : 'pipeline')
+        : 'dashboard'
 
   // Whether each role is authorised to be worked — see requisition-gate.ts.
   const authorised = await authorisationForAll()
@@ -249,6 +256,14 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
           gets the full width — it was competing with a column of its own. */}
       <Tabs className="min-w-0" value={activeView}>
         {/* View selection lives in the module sidebar (see _components/module-nav). */}
+
+        <TabsContent value="dashboard" className="mt-0">
+          <ViewHeader
+            title="Dashboard"
+            blurb="Where every candidate stands, and what is waiting on somebody."
+          />
+          <RecruitingDashboardView data={dashboard} />
+        </TabsContent>
 
         {/* Pipeline (kanban) — shortlist only (PASSED + OVERRIDDEN).
             Failed knockouts live in the Knockouts tab. */}
