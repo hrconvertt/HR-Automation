@@ -75,7 +75,7 @@ async function main() {
   // Create leave policies
   for (const policy of LEAVE_POLICIES) {
     await prisma.leavePolicy.upsert({
-      where: { employeeType_leaveType: { employeeType: policy.employeeType, leaveType: policy.leaveType } },
+      where: { country_employeeType_leaveType_effectiveFrom: { country: 'PK', employeeType: policy.employeeType, leaveType: policy.leaveType , effectiveFrom: new Date('2020-01-01T00:00:00Z') } },
       update: {},
       create: policy,
     })

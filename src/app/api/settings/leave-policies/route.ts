@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { BASE_EFFECTIVE_FROM } from '@/lib/policy-scope'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 
@@ -56,9 +57,13 @@ export async function POST(request: NextRequest) {
   const accrualPerMonth = employeeType === 'PERMANENT' ? null : 1
 
   const policy = await prisma.leavePolicy.upsert({
-    where: { employeeType_leaveType: { employeeType, leaveType } },
+    where: {
+      country_employeeType_leaveType_effectiveFrom: {
+        country: 'PK', employeeType, leaveType, effectiveFrom: BASE_EFFECTIVE_FROM,
+      },
+    },
     update: { daysPerYear, accrualPerMonth },
-    create: { employeeType, leaveType, daysPerYear, accrualPerMonth },
+    create: { country: 'PK', effectiveFrom: BASE_EFFECTIVE_FROM, employeeType, leaveType, daysPerYear, accrualPerMonth },
   })
   return NextResponse.json({ policy })
 }

@@ -90,6 +90,39 @@ model Session {
 
 // ─── ORGANISATION ────────────────────────────────────────────────────────────
 
+/// The companies that actually employ people.
+///
+/// The Playbook is explicit: "Every offer letter, NDA, and form must name the
+/// correct legal entity for the employee's country — the brand name alone is
+/// never the contracting party." Convertt is a brand over two employers, and
+/// the app knew about neither.
+///
+/// Country is kept separately on the worker because the two answer different
+/// questions: the entity is who signs the contract, the country is whose law
+/// and whose entitlements apply. They happen to line up today.
+model LegalEntity {
+  id           String     @id @default(cuid())
+  /// Short code used in documents and payroll references.
+  code         String     @unique
+  /// Registered name, as it must appear on a contract.
+  legalName    String
+  /// What it trades as, where that differs.
+  tradingName  String?
+  /// ISO-ish country code the entity is registered in: PK | AE.
+  country      String
+  /// Default pay currency for its employees.
+  currency     String
+  registeredAddress String?
+  /// Where an employee has no entity set, this one is assumed.
+  isDefault    Boolean    @default(false)
+  active       Boolean    @default(true)
+  employees    Employee[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@map("legal_entities")
+}
+
 model Department {
   id             String         @id @default(cuid())
   code           String         @unique // BD, UIUX, WBS …
@@ -173,7 +206,11 @@ model Employee {
   city                String?
   stateProvince       String?
   postalCode          String?
+  /// Whose employment law applies: PK | AE. Drives every entitlement.
   country             String?
+  /// Which company employs them — what a contract or NDA must name.
+  legalEntityId       String?
+  legalEntity         LegalEntity? @relation(fields: [legalEntityId], references: [id])
   // "Full name as per CNIC", which can differ from the everyday fullName.
   cnicFullName        String?
   // Set when the new joiner submits the Employee Information intake form.
@@ -610,6 +647,14 @@ model Holiday {
 
 model LeavePolicy {
   id              String   @id @default(cuid())
+  /// Whose law this entitlement comes from: PK | AE. Workday scopes time-off
+  /// plans by eligibility rather than branching in code; this is the smallest
+  /// version of that — the rule is a row, not an if-statement.
+  country         String   @default("PK")
+  /// The rule applies from this date. Policy is versioned rather than edited,
+  /// so changing an entitlement cannot silently rewrite what a past year's
+  /// leave actually was.
+  effectiveFrom   DateTime @default(dbgenerated("'2020-01-01'::timestamp"))
   employeeType    String // PERMANENT | PROBATION | INTERNSHIP | TRAINING
   leaveType       String // CASUAL | SICK | EARNED | ANNUAL | MATERNITY | PATERNITY | UNPAID
   daysPerYear     Int
@@ -623,7 +668,8 @@ model LeavePolicy {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  @@unique([employeeType, leaveType])
+  @@unique([country, employeeType, leaveType, effectiveFrom])
+  @@index([country, employeeType, leaveType])
   @@map("leave_policies")
 }
 
@@ -777,6 +823,8 @@ model Salary {
   id               String   @id @default(cuid())
   employeeId       String   @unique
   employee         Employee @relation(fields: [employeeId], references: [id])
+  /// PKR or AED. Every figure before this column existed is PKR.
+  currency            String   @default("PKR")
   basic            Float
   houseRent        Float    @default(0)
   utilities        Float    @default(0)
