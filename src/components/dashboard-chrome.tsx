@@ -138,6 +138,7 @@ const FOCUS_PATHS = new Set([
   '/dashboard/people/skills',
   '/dashboard/settings/interim-rules',
   '/dashboard/settings/audit',
+  '/dashboard/leave/half-day',
   '/dashboard/time/me',
   '/dashboard/time/everyone',
   '/dashboard/time/approvals',
@@ -629,6 +630,9 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
         { href: '/dashboard/leave/requests', label: 'Leave Requests', icon: Inbox },
         { href: '/dashboard/leave/approved', label: 'Leave Approved', icon: CheckCircle2 },
         { href: '/dashboard/leave/rejected', label: 'Leave Rejected', icon: X },
+        // Half a day is a flag on a request rather than a leave type, so it
+        // could not be found by filtering the type list.
+        { href: '/dashboard/leave/half-day', label: 'Half Days', icon: Clock },
         // A pay charge, not a balance charge — its own list for that reason.
         { href: '/dashboard/leave/sandwich', label: 'Sandwich Deductions', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       ],

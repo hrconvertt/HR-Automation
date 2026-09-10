@@ -39,9 +39,13 @@ export async function GET(request: NextRequest) {
   // LEAVE | WFH. Absent means leave, so every existing caller and every row
   // written before the column existed keeps behaving exactly as before.
   const category = (searchParams.get('category') ?? 'LEAVE').toUpperCase()
+  // Half days are a flag on the request, not a type, so they cannot be found
+  // by filtering leaveType — which is why they had nowhere of their own.
+  const halfDayOnly = searchParams.get('halfDay') === '1'
 
   const where: Record<string, unknown> = {}
   if (status) where.status = status
+  if (halfDayOnly) where.OR = [{ firstDayHalf: true }, { lastDayHalf: true }]
   where.category = category === 'WFH'
     ? 'WFH'
     : { in: ['LEAVE'] }

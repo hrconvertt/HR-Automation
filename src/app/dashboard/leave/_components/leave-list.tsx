@@ -50,6 +50,8 @@ interface Props {
   title: string
   subtitle: string
   statuses: string[] // e.g. ['PENDING','PENDING_HR'] or ['APPROVED']
+  /** Only requests carrying a half-day flag. */
+  halfDay?: boolean
   category?: 'LEAVE' | 'WFH'
   /** HR only — lets a record be re-typed and given its reason. */
   canEdit?: boolean
@@ -123,7 +125,7 @@ function fileKind(name: string, mime?: string | null): string {
   return 'File'
 }
 
-export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEdit = false }: Props) {
+export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', halfDay = false, canEdit = false }: Props) {
   const [rows, setRows] = useState<LeaveRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -133,7 +135,7 @@ export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEd
     setLoading(true)
     return Promise.all(
       statuses.map((s) =>
-        fetch(`/api/leave?status=${encodeURIComponent(s)}&category=${category}`).then((r) =>
+        fetch(`/api/leave?status=${encodeURIComponent(s)}&category=${category}${halfDay ? '&halfDay=1' : ''}`).then((r) =>
           r.ok ? r.json() : { requests: [] },
         ),
       ),
@@ -151,7 +153,7 @@ export function LeaveList({ title, subtitle, statuses, category = 'LEAVE', canEd
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statuses.join(','), category])
+  }, [statuses.join(','), category, halfDay])
 
   useEffect(() => { load() }, [load])
 

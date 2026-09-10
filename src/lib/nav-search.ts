@@ -27,6 +27,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Time Tracking', href: '/dashboard/time', section: 'Core', keywords: ['clock', 'hours', 'timesheet', 'overtime'] },
   { label: 'Attendance', href: '/dashboard/attendance', section: 'Core', keywords: ['present', 'absent', 'grid', 'daily'] },
   { label: 'Leave', href: '/dashboard/leave', section: 'Core', keywords: ['holiday', 'time off', 'vacation', 'sick', 'wfh', 'annual'] },
+  { label: 'Half Days', href: '/dashboard/leave/half-day', section: 'Leave', keywords: ['half day', 'halfday', 'part day', 'morning off', 'afternoon off', '0.5'] },
   { label: 'Leave — Rejected', href: '/dashboard/leave/rejected', section: 'Leave', keywords: ['rejected', 'declined', 'cancelled'] },
   { label: 'Payroll', href: '/dashboard/payroll', section: 'Core', keywords: ['salary', 'pay', 'payslip', 'bank', 'wages'] },
   { label: 'Payroll Configuration', href: '/dashboard/payroll/configuration', section: 'Payroll', keywords: ['tax', 'eobi', 'gratuity', 'provident', 'slabs', 'settings'] },
