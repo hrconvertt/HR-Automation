@@ -13,6 +13,7 @@ import { Card } from '@/components/ui/card'
 import { ExternalLink, Briefcase } from 'lucide-react'
 import { STAGE_COLORS } from './stage-donut'
 import { WorkspaceCandidates } from './workspace-candidates'
+import { STAGES } from '@/lib/queries/recruiting-dashboard'
 import type { RequisitionWorkspace, RailItem, WorkspaceDetail } from '@/lib/queries/requisition-workspace'
 
 const STATUS_TONE: Record<string, string> = {
@@ -115,6 +116,17 @@ function Panel({ req, sub, canAct }: {
   canAct: boolean
 }) {
   const base = `/dashboard/recruiting?tab=workspace&req=${req.id}`
+
+  // Knocked-out candidates are not listed for anyone outside HR and managers,
+  // so they must not be counted for them either — a row of numbers that does
+  // not add up to the table under it is its own kind of wrong.
+  const inactive = canAct
+    ? req.inactive
+    : req.inactive.filter((c) => c.knockoutStatus !== 'FAILED')
+  const visible = [...req.active, ...inactive]
+  const counts = new Map<string, number>()
+  for (const c of visible) counts.set(c.stage, (counts.get(c.stage) ?? 0) + 1)
+  const stages = STAGES.map((s) => ({ key: s.key, label: s.label, count: counts.get(s.key) ?? 0 }))
   return (
     <Card className="flex-1 min-w-0 overflow-hidden">
       <div className="px-5 py-4 border-b border-slate-100">
@@ -183,7 +195,7 @@ function Panel({ req, sub, canAct }: {
         <div className="p-5">
           {/* The same stage row as the dashboard, recounted for this role. */}
           <div className="grid grid-cols-3 sm:grid-cols-6 gap-y-3 mb-4">
-            {req.stages.map((s) => {
+            {stages.map((s) => {
               const zero = s.count === 0
               return (
                 <div key={s.key} className="px-1">
@@ -205,11 +217,7 @@ function Panel({ req, sub, canAct }: {
             })}
           </div>
 
-          <WorkspaceCandidates
-            active={req.active}
-            inactive={canAct ? req.inactive : req.inactive.filter((c) => c.knockoutStatus !== 'FAILED')}
-            canAct={canAct}
-          />
+          <WorkspaceCandidates active={req.active} inactive={inactive} canAct={canAct} />
         </div>
       )}
     </Card>
