@@ -39,7 +39,6 @@ import {
   Mail,
   ShieldCheck,
   History,
-  Sprout,
   Heart,
   Sparkles,
   AlertTriangle,
@@ -78,84 +77,13 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const FOCUS_MODE = process.env.NEXT_PUBLIC_FOCUS_MODE !== 'false'
-const FOCUS_PATHS = new Set([
-  '/dashboard',
-  '/dashboard/time',
-  '/dashboard/attendance',
-  '/dashboard/leave',
-  '/dashboard/leave/me',
-  '/dashboard/leave/requests',
-  '/dashboard/leave/approved',
-  '/dashboard/leave/rejected',
-  '/dashboard/leave/sandwich',
-  '/dashboard/policies',
-  '/dashboard/letters',
-  '/dashboard/letters/employment',
-  '/dashboard/employees',
-  '/dashboard/payroll',
-  '/dashboard/recruiting',
-  '/dashboard/onboarding',
-  '/dashboard/lifecycle',
-  '/dashboard/performance',
-  '/dashboard/learning',
-  '/dashboard/probation',
-  '/dashboard/assets',
-  '/dashboard/documents',
-  '/dashboard/settings',
-  '/dashboard/settings/notifications',
-  '/dashboard/settings/holidays',
-  '/dashboard/help',
-  '/dashboard/admin/seed',
-  '/dashboard/admin/health',
-  '/dashboard/culture',
-  '/dashboard/culture/overview',
-  '/dashboard/culture/events',
-  '/dashboard/culture/promotions',
-  '/dashboard/culture/promotion-events',
-  '/dashboard/culture/recognition',
-  '/dashboard/culture/birthdays',
-  '/dashboard/culture/anniversaries',
-  '/dashboard/lifecycle/verification',
-  '/dashboard/lifecycle/exit',
-  '/dashboard/lifecycle/job-changes',
-  '/dashboard/lifecycle/loa',
-  '/dashboard/calendar',
-  '/dashboard/org-chart',
-  '/dashboard/settings/roles',
-  '/dashboard/leadership-chat',
-  '/dashboard/settings/daily-logging',
-  '/dashboard/settings/bank-codes',
-  '/dashboard/settings/salary-structure',
-  '/dashboard/settings/tax-slabs',
-  '/dashboard/payroll/advances',
-  '/dashboard/payroll/command-center',
-  '/dashboard/performance/appraisals',
-  '/dashboard/performance/increments',
-  // FOCUS_PATHS is an allowlist: a page missing from it is invisible in the
-  // sidebar however correctly it is registered in the nav below. Four features
-  // shipped and could not be found for exactly that reason.
-  '/dashboard/performance/talent',
-  '/dashboard/culture/pulse',
-  '/dashboard/people/skills',
-  '/dashboard/settings/interim-rules',
-  '/dashboard/settings/audit',
-  '/dashboard/leave/half-day',
-  '/dashboard/time/me',
-  '/dashboard/time/everyone',
-  '/dashboard/time/approvals',
-  '/dashboard/time/conflicts',
-  '/dashboard/attendance/calendar',
-  '/dashboard/attendance/corrections',
-])
-
 /**
  * Built, but not shown yet.
  *
- * Separate from FOCUS_PATHS on purpose. Focus mode is "what are we polishing
- * this week" and is driven by an env var; this is "this module is finished
- * enough to exist but nobody should find it yet", which is a decision, not a
- * setting. Deleting a line here is the whole of switching one back on.
+ * All that is left of the two lists that used to hide things. Focus mode was
+ * an env-driven allowlist of what to show; this is "somebody decided this one
+ * stays out of the way", which is a decision rather than a setting. Deleting a
+ * line here is the whole of switching one back on.
  *
  * The routes still work if the URL is typed — nothing is torn out, only
  * unlinked, so turning it back on cannot have broken anything in the meantime.
@@ -167,13 +95,19 @@ const HIDDEN_PATHS = new Set([
   '/dashboard/assets',
 ])
 
+/**
+ * Focus mode is gone.
+ *
+ * It was an allowlist of every path allowed in the sidebar, so a page missing
+ * from it was invisible however correctly it was registered below — the file's
+ * own comment counted four features that shipped and could not be found for
+ * exactly that reason. Every module is in the sidebar now; the only thing that
+ * hides one is HIDDEN_PATHS, which is a decision somebody made on purpose
+ * rather than a list that has to be kept in step with the nav.
+ */
 function applyFocus(groups: NavGroup[]): NavGroup[] {
-  const visible = groups
+  return groups
     .map((g) => ({ ...g, items: g.items.filter((i) => !HIDDEN_PATHS.has(i.href)) }))
-    .filter((g) => g.items.length > 0)
-  if (!FOCUS_MODE) return visible
-  return visible
-    .map((g) => ({ ...g, items: g.items.filter((i) => FOCUS_PATHS.has(i.href)) }))
     .filter((g) => g.items.length > 0)
 }
 
@@ -224,7 +158,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
     {
       label: 'Developer',
       items: [
-        { href: '/dashboard/admin/seed', label: 'Demo Data', icon: Sprout },
         { href: '/dashboard/admin/health', label: 'System Health', icon: Heart },
       ],
     },
@@ -1227,15 +1160,6 @@ export default function DashboardChrome({
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        {FOCUS_MODE && !nested && (
-          <div className="mx-2 mt-3 mb-1 px-3 py-2 rounded-md bg-slate-500/10 border border-slate-500/30 text-slate-200 text-[10px] leading-snug">
-            <p className="font-semibold uppercase tracking-wider">Focus Mode</p>
-            <p className="mt-0.5 text-slate-100/80">
-              Polishing Attendance, Leave, Policies, People &amp; Payroll. Other modules hidden.
-            </p>
-          </div>
-        )}
 
         <nav className="flex-1 overflow-y-auto scrollbar-none py-4 px-2 space-y-5">
           {nested && (
