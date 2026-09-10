@@ -262,7 +262,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             title="Dashboard"
             blurb="Where every candidate stands, and what is waiting on somebody."
           />
-          <RecruitingDashboardView data={dashboard} />
+          <RecruitingDashboardView data={dashboard} canSeeKnockouts={isHR || isManager} />
         </TabsContent>
 
         {/* Pipeline (kanban) — shortlist only (PASSED + OVERRIDDEN).

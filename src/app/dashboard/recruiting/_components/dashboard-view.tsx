@@ -13,7 +13,15 @@ import { ClipboardList, UserSearch, Filter, Users, Briefcase } from 'lucide-reac
 import { StageDonut, STAGE_COLORS, RING_STAGES } from './stage-donut'
 import type { RecruitingDashboard, TaskItem } from '@/lib/queries/recruiting-dashboard'
 
-export function RecruitingDashboardView({ data }: { data: RecruitingDashboard }) {
+export function RecruitingDashboardView({ data, canSeeKnockouts }: {
+  data: RecruitingDashboard
+  /**
+   * The Knockouts view is HR and managers only — it names people a hard filter
+   * turned away and says why. The card has to answer to the same gate, or the
+   * dashboard hands out on its landing page exactly what that view withholds.
+   */
+  canSeeKnockouts: boolean
+}) {
   const { total, inPipeline, stages, openRequisitions, feedbackDue, toScreen, knockedOut } = data
   const ring = stages.filter((s) => RING_STAGES.includes(s.key))
   const rejected = stages.find((s) => s.key === 'REJECTED')
@@ -98,8 +106,8 @@ export function RecruitingDashboardView({ data }: { data: RecruitingDashboard })
         </p>
       </Card>
 
-      {/* The three queues that are waiting on a person. */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {/* The queues that are waiting on a person. */}
+      <div className={`grid gap-4 md:grid-cols-2 ${canSeeKnockouts ? 'xl:grid-cols-3' : ''}`}>
         <TaskCard
           icon={<ClipboardList className="w-4 h-4" />}
           title="Interview Feedback Due"
@@ -116,14 +124,16 @@ export function RecruitingDashboardView({ data }: { data: RecruitingDashboard })
           href="/dashboard/recruiting?tab=pipeline"
           empty="Nobody is sitting unread."
         />
-        <TaskCard
-          icon={<Filter className="w-4 h-4" />}
-          title="Knocked Out"
-          items={knockedOut}
-          unit="candidate"
-          href="/dashboard/recruiting?tab=knockouts"
-          empty="Nobody has been filtered out."
-        />
+        {canSeeKnockouts && (
+          <TaskCard
+            icon={<Filter className="w-4 h-4" />}
+            title="Knocked Out"
+            items={knockedOut}
+            unit="candidate"
+            href="/dashboard/recruiting?tab=knockouts"
+            empty="Nobody has been filtered out."
+          />
+        )}
       </div>
     </div>
   )
