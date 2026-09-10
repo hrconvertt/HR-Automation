@@ -42,6 +42,12 @@ export function RequisitionWorkspaceView({ data, sub, canAct }: {
   data: RequisitionWorkspace
   /** Which panel tab is open — candidates or the role's own terms. */
   sub: 'candidates' | 'details'
+  /**
+   * HR and managers. The same expression gates the Knockouts view, and it has
+   * to gate this one too: the Inactive tab holds the declined *and* the
+   * knocked-out, and the board deliberately shows knocked-out candidates
+   * nowhere else. It also decides whether the action bar exists.
+   */
   canAct: boolean
 }) {
   const { rail, selected } = data
@@ -199,7 +205,11 @@ function Panel({ req, sub, canAct }: {
             })}
           </div>
 
-          <WorkspaceCandidates active={req.active} inactive={req.inactive} canAct={canAct} />
+          <WorkspaceCandidates
+            active={req.active}
+            inactive={canAct ? req.inactive : req.inactive.filter((c) => c.knockoutStatus !== 'FAILED')}
+            canAct={canAct}
+          />
         </div>
       )}
     </Card>
