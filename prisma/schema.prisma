@@ -377,6 +377,15 @@ model Employee {
   interviewScorecards   Scorecard[]            @relation("InterviewScorecards")
   talentAssessments     TalentAssessment[]
   skills                EmployeeSkill[]
+  // Talent — the manager's Team Insights and HR's succession plans.
+  skillInterests        SkillInterest[]
+  developmentItems      DevelopmentItem[]
+  checkIns              CheckIn[]              @relation("CheckInAbout")
+  checkInsHeld          CheckIn[]              @relation("CheckInHeldBy")
+  mentoring             Mentorship[]           @relation("MentorOf")
+  mentoredBy            Mentorship[]           @relation("MenteeOf")
+  successionsHeld       SuccessionPlan[]       @relation("SuccessionIncumbent")
+  successorFor          SuccessionCandidate[]
   appraisals            AppraisalForm[]        @relation("AppraisalSubject")
   appraisalsGiven       AppraisalForm[]        @relation("AppraisalAppraiser")
   appraisalsReviewed    AppraisalForm[]        @relation("AppraisalReviewer")
@@ -2796,11 +2805,14 @@ model TalentAssessment {
 
 /// A skill somebody has. Not a marketplace — an answer to "who can cover this".
 model Skill {
-  id        String          @id @default(cuid())
-  name      String          @unique
-  category  String?
-  createdAt DateTime        @default(now())
-  holders   EmployeeSkill[]
+  id               String            @id @default(cuid())
+  name             String            @unique
+  category         String?
+  createdAt        DateTime          @default(now())
+  holders          EmployeeSkill[]
+  interests        SkillInterest[]
+  developmentItems DevelopmentItem[]
+  mentorships      Mentorship[]
 
   @@map("skills")
 }
@@ -2819,6 +2831,139 @@ model EmployeeSkill {
   @@unique([employeeId, skillId])
   @@index([skillId])
   @@map("employee_skills")
+}
+
+// ─── TALENT: Team Insights and Succession ─────────────────────────────────────
+// What a manager needs to grow a report and what HR needs to cover a role:
+// what the person wants to learn, the plan for it, the one-to-ones where it is
+// discussed, who could teach them, and who could step into whose job.
+
+/// A skill somebody wants to grow into — distinct from one they already hold.
+/// "Wants Shopify" and "knows Shopify" answer different questions.
+model SkillInterest {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  skillId    String
+  skill      Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([employeeId, skillId])
+  @@index([skillId])
+  @@map("skill_interests")
+}
+
+/// One concrete step in somebody's development — a course, a stretch task, a
+/// shadowing week — optionally tied to the skill it builds.
+model DevelopmentItem {
+  id          String    @id @default(cuid())
+  employeeId  String
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  title       String
+  detail      String?
+  skillId     String?
+  skill       Skill?    @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  status      String    @default("NOT_STARTED") // NOT_STARTED | IN_PROGRESS | COMPLETED
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdById String // User.id
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([employeeId, status])
+  @@map("development_items")
+}
+
+/// A one-to-one between a manager and a report. The topics are what it is for.
+model CheckIn {
+  id           String         @id @default(cuid())
+  employeeId   String
+  employee     Employee       @relation("CheckInAbout", fields: [employeeId], references: [id], onDelete: Cascade)
+  managerId    String?
+  manager      Employee?      @relation("CheckInHeldBy", fields: [managerId], references: [id], onDelete: SetNull)
+  scheduledFor DateTime
+  status       String         @default("SCHEDULED") // SCHEDULED | DONE | CANCELLED
+  notes        String?
+  completedAt  DateTime?
+  createdById  String // User.id
+  topics       CheckInTopic[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  @@index([employeeId, scheduledFor])
+  @@index([managerId, status])
+  @@map("check_ins")
+}
+
+model CheckInTopic {
+  id        String   @id @default(cuid())
+  checkInId String
+  checkIn   CheckIn  @relation(fields: [checkInId], references: [id], onDelete: Cascade)
+  title     String
+  /// Where it came from — MANUAL | GOAL | DEVELOPMENT | INTEREST — and the row
+  /// it points at, so the same suggestion is not added to a check-in twice.
+  source    String   @default("MANUAL")
+  sourceId  String?
+  done      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([checkInId])
+  @@map("check_in_topics")
+}
+
+/// Somebody who can teach a skill, paired with somebody who wants it.
+model Mentorship {
+  id           String    @id @default(cuid())
+  mentorId     String
+  mentor       Employee  @relation("MentorOf", fields: [mentorId], references: [id], onDelete: Cascade)
+  menteeId     String
+  mentee       Employee  @relation("MenteeOf", fields: [menteeId], references: [id], onDelete: Cascade)
+  skillId      String?
+  skill        Skill?    @relation(fields: [skillId], references: [id], onDelete: SetNull)
+  status       String    @default("PROPOSED") // PROPOSED | ACTIVE | ENDED
+  message      String?
+  proposedById String // User.id
+  startedAt    DateTime?
+  endedAt      DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([menteeId, status])
+  @@index([mentorId, status])
+  @@map("mentorships")
+}
+
+/// A role worth covering, who holds it, and who could take it over.
+model SuccessionPlan {
+  id          String                @id @default(cuid())
+  roleTitle   String
+  incumbentId String?
+  incumbent   Employee?             @relation("SuccessionIncumbent", fields: [incumbentId], references: [id], onDelete: SetNull)
+  /// Critical roles are what the scorecard counts.
+  critical    Boolean               @default(true)
+  note        String?
+  createdById String // User.id
+  candidates  SuccessionCandidate[]
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+
+  @@map("succession_plans")
+}
+
+model SuccessionCandidate {
+  id         String         @id @default(cuid())
+  planId     String
+  plan       SuccessionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  readiness  String         @default("ONE_YEAR") // READY_NOW | ONE_YEAR | TWO_PLUS_YEARS
+  note       String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@unique([planId, employeeId])
+  @@index([employeeId])
+  @@map("succession_candidates")
 }
 
 // ─── EMAIL TEMPLATES ──────────────────────────────────────────────────────────

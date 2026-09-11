@@ -8,6 +8,10 @@
  * Deliberately not a marketplace. The question this answers is "who can cover
  * Shopify while Rayyan is at the university", and that needs a list of names
  * against a capability, not a gig board.
+ *
+ * HR records anyone's skills, anyone records their own, and a manager records
+ * their direct reports' — the manager is who knows how deep a report's skill
+ * actually goes, and Team Insights is where they say so.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
@@ -19,6 +23,23 @@ export const LEVELS = [
   { value: 3, label: 'Strong' },
   { value: 4, label: 'Can teach it' },
 ]
+
+/** HR, the person themselves, or their direct reporting manager. */
+async function mayRecordFor(
+  payload: { userId: string; role: string },
+  employeeId: string,
+): Promise<boolean> {
+  if (payload.role === 'HR_ADMIN' || payload.role === 'EXECUTIVE') return true
+  const me = await prisma.employee.findFirst({
+    where: { userId: payload.userId }, select: { id: true },
+  })
+  if (!me) return false
+  if (me.id === employeeId) return true
+  const target = await prisma.employee.findUnique({
+    where: { id: employeeId }, select: { reportingManagerId: true },
+  })
+  return target?.reportingManagerId === me.id
+}
 
 export async function GET(request: NextRequest) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
@@ -68,13 +89,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'employeeId and skillName are required' }, { status: 400 })
   }
 
-  // Only HR sets other people's skills; anyone may set their own.
-  const me = await prisma.employee.findFirst({
-    where: { userId: payload.userId }, select: { id: true },
-  })
-  const isHr = payload.role === 'HR_ADMIN' || payload.role === 'EXECUTIVE'
-  if (!isHr && me?.id !== body.employeeId) {
-    return NextResponse.json({ error: 'You can only record your own skills.' }, { status: 403 })
+  if (!(await mayRecordFor(payload, body.employeeId))) {
+    return NextResponse.json(
+      { error: 'You can only record skills for yourself or your direct reports.' },
+      { status: 403 },
+    )
   }
 
   // Case-insensitive match, so "Shopify" and "shopify" do not become two
@@ -118,11 +137,7 @@ export async function DELETE(request: NextRequest) {
   })
   if (!row) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const me = await prisma.employee.findFirst({
-    where: { userId: payload.userId }, select: { id: true },
-  })
-  const isHr = payload.role === 'HR_ADMIN' || payload.role === 'EXECUTIVE'
-  if (!isHr && me?.id !== row.employeeId) {
+  if (!(await mayRecordFor(payload, row.employeeId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 

@@ -185,6 +185,8 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
+        // Check-ins, development plans and mentors for each report.
+        { href: '/dashboard/team-insights', label: 'Team Insights', icon: Compass },
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
       { href: '/dashboard/probation/tracker', label: 'Probation Tracker', icon: ClipboardList },
       ],
@@ -349,7 +351,11 @@ const PERFORMANCE_NAV: NavGroup[] = [
       { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
       { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
       { href: '/dashboard/performance/appraisals', label: 'Appraisal Forms', icon: ClipboardList },
+      // Growing people: the manager's hub, and HR's view of cover and skills.
+      { href: '/dashboard/team-insights', label: 'Team Insights', icon: Compass, roles: ['HR_ADMIN', 'MANAGER', 'EXECUTIVE'] },
       { href: '/dashboard/performance/talent', label: 'Talent Review', icon: Grid3x3, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      { href: '/dashboard/performance/succession', label: 'Succession Planning', icon: Network, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      { href: '/dashboard/performance/skills', label: 'Skills Dashboard', icon: Target, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       { href: '/dashboard/performance?tab=showcause', label: 'Show Cause', icon: FileWarning, roles: ['HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
       { href: '/dashboard/performance?tab=pip', label: 'PIP', icon: AlertTriangle, roles: ['HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
       { href: '/dashboard/performance/increments', label: 'Increments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
@@ -509,6 +515,8 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
   // LIFECYCLE_NAV documents above.
   '/dashboard/daily-log': PERFORMANCE_NAV,
   '/dashboard/daily-review': PERFORMANCE_NAV,
+  // Team Insights sits beside Talent Review and Succession in the menu.
+  '/dashboard/team-insights': PERFORMANCE_NAV,
   '/dashboard/settings': SETTINGS_NAV,
   '/dashboard/letters': LETTERS_NAV,
   '/dashboard/recruiting': RECRUITING_NAV,
