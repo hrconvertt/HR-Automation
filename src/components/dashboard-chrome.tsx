@@ -8,6 +8,10 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   LayoutDashboard,
+  BookOpen,
+  Compass,
+  ScrollText,
+  Bookmark,
   KanbanSquare,
   Users,
   Clock,
@@ -576,9 +580,22 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
   ],
   '/dashboard/learning': [
     {
-      label: 'Training & Development',
+      // The learner's side first, the way Workday's Learning opens: your own
+      // shelves, the whole catalogue, what you have done, what you kept.
+      label: 'Learning',
       items: [
-        { href: '/dashboard/learning', label: 'Programs', icon: GraduationCap },
+        { href: '/dashboard/learning?tab=my', label: 'My Learning', icon: BookOpen },
+        { href: '/dashboard/learning?tab=discover', label: 'Discover', icon: Compass },
+        { href: '/dashboard/learning?tab=transcript', label: 'My Transcript', icon: ScrollText },
+        { href: '/dashboard/learning?tab=library', label: 'My Library', icon: Bookmark },
+        { href: '/dashboard/people/skills', label: 'Skills and Experience', icon: Target },
+      ],
+    },
+    {
+      // Running the catalogue. Same three views as before, now one tab away.
+      label: 'Programs & Records',
+      items: [
+        { href: '/dashboard/learning?tab=programs', label: 'Programs', icon: GraduationCap },
         { href: '/dashboard/learning?tab=records', label: 'Enrolments', icon: Users },
         { href: '/dashboard/learning?tab=certs', label: 'Certifications', icon: Award },
       ],

@@ -11,19 +11,102 @@ import { redirect } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { LearningClient } from './learning-client'
+import { MyLearning, type LearningView, type CourseCard, type TranscriptRow } from './_components/my-learning'
+import { parseLessons, parseQuiz, PROGRAM_TYPES } from '@/lib/learning'
 
 export default async function LearningPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ tab?: string }>
+  searchParams?: Promise<{ tab?: string; topic?: string }>
 }) {
   const sp = (await searchParams) ?? {}
+  // My Learning is the front door for everyone now. The three management views
+  // are still here, one tab away, exactly as they were.
+  const MY_VIEWS: LearningView[] = ['my', 'discover', 'transcript', 'library']
+  const view: LearningView | null = MY_VIEWS.includes(sp.tab as LearningView)
+    ? (sp.tab as LearningView)
+    : sp.tab === 'programs' || sp.tab === 'records' || sp.tab === 'certs'
+      ? null
+      : 'my'
   const tab = sp.tab === 'records' || sp.tab === 'certs' ? sp.tab : 'programs'
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
   if (!payload) redirect('/login')
   const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
   const isHR = role === 'HR_ADMIN'
+
+  if (view) {
+    // Everything below is the signed-in person's own. A sign-in with no
+    // employee record can still browse; the id below matches nothing, so the
+    // queries return empty rather than branching.
+    const empId = payload.employeeId ?? null
+    const none = '__no-employee__'
+    const [catalogue, mine, saves, me] = await Promise.all([
+      prisma.trainingProgram.findMany({
+        orderBy: [{ type: 'asc' }, { title: 'asc' }],
+        select: {
+          id: true, title: true, type: true, description: true,
+          duration: true, provider: true, lessons: true, quiz: true,
+        },
+      }),
+      prisma.trainingRecord.findMany({
+        where: { employeeId: empId ?? none },
+        orderBy: { createdAt: 'desc' },
+        include: { program: { select: { title: true, type: true } } },
+      }),
+      prisma.learningSave.findMany({
+        where: { employeeId: empId ?? none },
+        select: { programId: true },
+      }),
+      prisma.employee.findUnique({ where: { id: empId ?? none }, select: { fullName: true } }),
+    ])
+
+    // One status per course — the newest record wins if there are several.
+    const latest = new Map<string, (typeof mine)[number]>()
+    for (const r of mine) if (!latest.has(r.programId)) latest.set(r.programId, r)
+    const saved = new Set(saves.map((s) => s.programId))
+
+    const courses: CourseCard[] = catalogue.map((p) => {
+      const r = latest.get(p.id)
+      return {
+        id: p.id,
+        title: p.title,
+        type: p.type,
+        description: p.description,
+        duration: p.duration,
+        provider: p.provider,
+        hasContent: parseLessons(p.lessons).length > 0 || parseQuiz(p.quiz).length > 0,
+        myStatus: (r?.status as CourseCard['myStatus']) ?? null,
+        myScore: r?.score ?? null,
+        saved: saved.has(p.id),
+      }
+    })
+    const transcript: TranscriptRow[] = mine.map((r) => ({
+      id: r.id,
+      programId: r.programId,
+      title: r.program.title,
+      type: r.program.type,
+      status: r.status,
+      score: r.score,
+      startDate: r.startDate.toISOString(),
+      endDate: r.endDate?.toISOString() ?? null,
+    }))
+    const topic = (PROGRAM_TYPES as readonly string[]).includes(sp.topic ?? '') ? sp.topic! : null
+
+    // Keyed so a new tab or topic mounts fresh state from fresh data, rather
+    // than a Discover filter carrying over from wherever you came from.
+    return (
+      <MyLearning
+        key={`${view}-${topic ?? ''}`}
+        view={view}
+        courses={courses}
+        transcript={transcript}
+        linked={!!empId}
+        firstName={me?.fullName.split(' ')[0] ?? null}
+        topic={topic}
+      />
+    )
+  }
 
   const [programs, records, certs, staff] = await Promise.all([
     prisma.trainingProgram.findMany({

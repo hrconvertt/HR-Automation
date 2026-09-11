@@ -328,6 +328,7 @@ model Employee {
   celebrationCards    CelebrationCard[]        @relation("CelebrationCards")
   notifications       Notification[]
   compensationHistory CompensationHistory[]
+  learningSaves       LearningSave[]
   trainingRecords     TrainingRecord[]
   showCauses          ShowCause[]
   terminations        Termination[]
@@ -1848,6 +1849,8 @@ model TrainingProgram {
   quiz         Json?
   passingScore Int              @default(70) // % needed on the quiz to complete
   records      TrainingRecord[]
+  // People who put this on their own list.
+  saves        LearningSave[]
   createdAt    DateTime         @default(now())
 
   @@map("training_programs")
@@ -1868,6 +1871,21 @@ model TrainingRecord {
   createdAt   DateTime        @default(now())
 
   @@map("training_records")
+}
+
+/// A course somebody put on their own list: "Saved for later" in My Learning,
+/// and the whole of My Library. One row per person per course; un-saving
+/// deletes it, because a list you curate is not a history anyone audits.
+model LearningSave {
+  id         String          @id @default(cuid())
+  employeeId String
+  employee   Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  programId  String
+  program    TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+
+  @@unique([employeeId, programId])
+  @@map("learning_saves")
 }
 
 model Certification {
