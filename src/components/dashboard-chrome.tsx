@@ -424,8 +424,10 @@ const RECRUITING_NAV: NavGroup[] = [
     // end. The list used to put New Job Description second from last, after
     // the candidates it exists to attract.
     items: [
-      // The module's landing view — the pipeline ring and the queues waiting
-      // on somebody. Recruiting opens here now, the way it does in Workday.
+      // The module's landing view — the scorecard, the queues waiting on
+      // somebody, the pipeline ring and the source charts. Recruiting opens
+      // here, the way it does in Workday. Analytics had its own entry; it is
+      // part of this page now.
       { href: '/dashboard/recruiting?tab=dashboard', label: 'Dashboard', icon: LayoutDashboard },
 
       // 1. The role. Requests and requisitions were the same JobRequisition row
@@ -447,9 +449,8 @@ const RECRUITING_NAV: NavGroup[] = [
       // letter on the person's own profile, and a second empty board listing
       // "0 pending · 0 total" only invited the question of which was the real
       // one. The route still exists for anything linking to it.
-      // The metrics used to sit above every view in this module. They belong
-      // on one page of their own, which is this.
-      { href: '/dashboard/recruiting/analytics', label: 'Analytics', icon: TrendingUp },
+      // Analytics is not here either: its metrics are on the Dashboard now,
+      // next to the pipeline and queues they describe.
     ],
   },
 ]

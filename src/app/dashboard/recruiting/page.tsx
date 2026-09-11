@@ -26,6 +26,7 @@ import { BulkJDUpload } from '@/components/recruiting/bulk-jd-upload'
 import { BulkResumeUpload } from '@/components/recruiting/bulk-resume-upload'
 import { RecruitingDashboardView } from './_components/dashboard-view'
 import { recruitingDashboard } from '@/lib/queries/recruiting-dashboard'
+import { recruitingAnalytics } from '@/lib/queries/recruiting-analytics'
 import { RequisitionWorkspaceView } from './_components/workspace-view'
 import { requisitionWorkspace } from '@/lib/queries/requisition-workspace'
 
@@ -233,6 +234,13 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
     ? await requisitionWorkspace(sp.req)
     : { rail: [], selected: null }
 
+  // The analytics panels on the dashboard — same gate their own page had:
+  // HR, executives and managers. Only fetched when the dashboard is showing.
+  const canSeeAnalytics = isHR || isManager || role === 'EXECUTIVE'
+  const analytics = activeView === 'dashboard' && canSeeAnalytics
+    ? await recruitingAnalytics()
+    : null
+
   // Whether each role is authorised to be worked — see requisition-gate.ts.
   const authorised = await authorisationForAll()
 
@@ -250,8 +258,8 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
     <div className="space-y-5">
       {/* Every view says what it is. Clicking Pipeline used to land on an
           unlabelled board — the sidebar was the only thing naming it, and the
-          sidebar collapses. The KPI cards that used to sit here instead have
-          their own page now (Analytics).
+          sidebar collapses. The KPI cards that used to sit above every view
+          are on the Dashboard view now, merged with the pipeline and queues.
 
           Actions sit with the view they act on. Bulk Upload JDs, Bulk Screen
           Resumes and New Requisition were shown above all six views, so three
@@ -281,7 +289,11 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             title="Dashboard"
             blurb="Where every candidate stands, and what is waiting on somebody."
           />
-          <RecruitingDashboardView data={dashboard} canSeeKnockouts={isHR || isManager} />
+          <RecruitingDashboardView
+            data={dashboard}
+            canSeeKnockouts={isHR || isManager}
+            analytics={analytics}
+          />
         </TabsContent>
 
         {/* Pipeline (kanban) — shortlist only (PASSED + OVERRIDDEN).
