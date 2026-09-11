@@ -385,25 +385,47 @@ const LIFECYCLE_NAV: NavGroup[] = [
  * sidebar like Employee Lifecycle rather than stacking every section under a
  * list on a single screen.
  */
+// Grouped by what is being set up — the company, time, pay, then the system
+// itself — rather than in the order the pages happened to be built.
 const SETTINGS_NAV: NavGroup[] = [
   {
     label: 'Settings',
     items: [
       { href: '/dashboard/settings', label: 'Overview', icon: Settings },
+    ],
+  },
+  {
+    label: 'Company',
+    items: [
       { href: '/dashboard/settings/organization', label: 'Organization', icon: Network },
+      { href: '/dashboard/settings/departments', label: 'Departments', icon: Users },
+      { href: '/dashboard/settings/users', label: 'Users', icon: UserIcon },
+      { href: '/dashboard/settings/roles', label: 'Roles', icon: ShieldCheck },
+    ],
+  },
+  {
+    label: 'Time & Leave',
+    items: [
       { href: '/dashboard/settings/working-days', label: 'Working Days & Hours', icon: CalendarCheck },
       { href: '/dashboard/settings/holidays', label: 'Holidays & WFH', icon: CalendarDays },
       { href: '/dashboard/settings/leave-policies', label: 'Leave Policies', icon: PlaneIcon },
-      { href: '/dashboard/settings/departments', label: 'Departments', icon: Users },
+      { href: '/dashboard/settings/time-tracking', label: 'Time Tracking', icon: BarChart3 },
+      { href: '/dashboard/settings/daily-logging', label: 'Daily Logging', icon: ClipboardList },
+    ],
+  },
+  {
+    label: 'Pay',
+    items: [
       { href: '/dashboard/settings/salary-structure', label: 'Salary Structure', icon: Banknote },
       { href: '/dashboard/settings/tax-slabs', label: 'Income Tax Slabs', icon: Banknote },
       // The bank list payroll codes against — was a hardcoded map until now.
       { href: '/dashboard/settings/bank-codes', label: 'Bank Codes', icon: Landmark, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+    ],
+  },
+  {
+    label: 'System',
+    items: [
       { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell },
-      { href: '/dashboard/settings/roles', label: 'Roles', icon: ShieldCheck },
-      { href: '/dashboard/settings/daily-logging', label: 'Daily Logging', icon: ClipboardList },
-      { href: '/dashboard/settings/users', label: 'Users', icon: UserIcon },
-      { href: '/dashboard/settings/time-tracking', label: 'Time Tracking', icon: BarChart3 },
       { href: '/dashboard/settings/interim-rules', label: 'Interim Rules', icon: AlertTriangle, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       // Written to by sixteen API routes since the system went up, and until
       // now readable by nobody.
@@ -1105,6 +1127,18 @@ export default function DashboardChrome({
     // carries one, and require the bare link to have no tab active.
     const [hrefPath, hrefQuery] = href.split('?')
     if (!pathname.startsWith(hrefPath)) return false
+    // A module's Overview link (/dashboard/settings) is a prefix of every page
+    // in the module, so it lit up beside whichever page was open. On a prefix
+    // match, give way to any sibling link that matches more of the path.
+    if (pathname !== hrefPath) {
+      const moreSpecific = navGroups.some((g) =>
+        g.items.some((i) => {
+          const p = i.href.split('?')[0]
+          return p.length > hrefPath.length && (pathname === p || pathname.startsWith(p + '/'))
+        }),
+      )
+      if (moreSpecific) return false
+    }
     const tabInHref = new URLSearchParams(hrefQuery ?? '').get('tab')
     if (tabInHref) return currentTab === tabInHref
     const siblingTabbed = pathname === hrefPath && currentTab

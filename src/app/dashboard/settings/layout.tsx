@@ -16,14 +16,15 @@ import {
 
 const SECTIONS = [
   { href: '/dashboard/settings',                 label: 'Overview',              icon: Building2,    sub: 'All settings at a glance' },
+  // Same order as SETTINGS_NAV in dashboard-chrome.tsx: company, time, pay.
   { href: '/dashboard/settings/organization',    label: 'Organization',          icon: Building2,    sub: 'Company name, tax IDs' },
+  { href: '/dashboard/settings/departments',     label: 'Departments',           icon: Users,        sub: 'Org units + heads' },
+  { href: '/dashboard/settings/roles',           label: 'Roles',                 icon: ShieldCheck,  sub: 'Access matrix' },
   { href: '/dashboard/settings/working-days',    label: 'Working Days & Hours',  icon: Calendar,     sub: 'Schedule + holidays' },
   { href: '/dashboard/settings/leave-policies',  label: 'Leave Policies',        icon: Plane,        sub: 'Days by leave type × tier' },
-  { href: '/dashboard/settings/departments',     label: 'Departments',           icon: Users,        sub: 'Org units + heads' },
+  { href: '/dashboard/settings/daily-logging',   label: 'Daily Logging',         icon: ClipboardList,sub: 'KPI library + rules' },
   { href: '/dashboard/settings/salary-structure', label: 'Salary Structure',      icon: Calculator,   sub: 'Basic % + component library' },
   { href: '/dashboard/settings/tax-slabs',       label: 'Income Tax Slabs',      icon: Calculator,   sub: 'FBR brackets by tax year' },
-  { href: '/dashboard/settings/roles',           label: 'Roles',                 icon: ShieldCheck,  sub: 'Access matrix' },
-  { href: '/dashboard/settings/daily-logging',   label: 'Daily Logging',         icon: ClipboardList,sub: 'KPI library + rules' },
 ] as const
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
