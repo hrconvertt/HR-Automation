@@ -90,9 +90,16 @@ interface NavGroup {
  *
  *   /dashboard/assets — the register and its 48 imported assets are in place;
  *     hidden at Tahreem's request on 2 Sep 2026 until she says otherwise.
+ *   /dashboard/email-queue — hidden at her request on 11 Sep 2026. Unlinked,
+ *     not removed: creating an offer still drafts its email into the queue
+ *     for review, and that flow needs the route to exist.
+ *   /dashboard/compensation — hidden at her request on 11 Sep 2026. It sat
+ *     in three roles' sidebars; one line here takes it out of all of them.
  */
 const HIDDEN_PATHS = new Set([
   '/dashboard/assets',
+  '/dashboard/email-queue',
+  '/dashboard/compensation',
 ])
 
 /**
