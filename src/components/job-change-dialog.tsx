@@ -42,11 +42,14 @@ export default function JobChangeDialog({
   onClose,
   onCreated,
   presetEmployeeId,
+  presetChangeType,
 }: {
   open: boolean
   onClose: () => void
   onCreated?: () => void
   presetEmployeeId?: string
+  /** Opens on this change type — Team Insights has one button per type. */
+  presetChangeType?: ChangeType
 }) {
   const [options, setOptions] = useState<Options | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -62,7 +65,7 @@ export default function JobChangeDialog({
   useEffect(() => {
     if (!open) return
     setEmployeeId(presetEmployeeId ?? '')
-    setChangeType('PROMOTION')
+    setChangeType(presetChangeType ?? 'PROMOTION')
     setToDesignation('')
     setToDepartmentId('')
     setToManagerId('')
@@ -76,7 +79,7 @@ export default function JobChangeDialog({
       })
       .then(setOptions)
       .catch((e) => setLoadError(e.message))
-  }, [open, presetEmployeeId])
+  }, [open, presetEmployeeId, presetChangeType])
 
   const selected = useMemo(
     () => options?.employees.find((e) => e.id === employeeId) ?? null,

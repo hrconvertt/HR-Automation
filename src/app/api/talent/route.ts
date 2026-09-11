@@ -10,8 +10,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { performanceFromScore, currentCycle } from '@/lib/talent-grid'
-import { isFounder } from '@/lib/review-scope'
-import { overallAverage, type Ratings } from '@/lib/appraisal-form'
+import { talentRows, appraisalScore } from '@/lib/queries/talent-rows'
 
 const RISKS = new Set(['LOW', 'MEDIUM', 'HIGH'])
 
@@ -30,45 +29,7 @@ export async function GET(request: NextRequest) {
   const g = await gate(request)
   if (!g.ok) return g.res
   const cycle = request.nextUrl.searchParams.get('cycle') || currentCycle()
-
-  const employees = await prisma.employee.findMany({
-    where: { status: 'ACTIVE' },
-    orderBy: { fullName: 'asc' },
-    select: {
-      id: true, fullName: true, designation: true, joiningDate: true,
-      department: { select: { name: true } },
-      appraisals: {
-        orderBy: { periodTo: 'desc' }, take: 1,
-        select: { id: true, ratings: true, periodTo: true, status: true },
-      },
-      talentAssessments: { where: { cycleLabel: cycle }, take: 1 },
-    },
-  })
-
-  const rows = employees.filter((e) => !isFounder(e.designation)).map((e) => {
-    const appraisal = e.appraisals[0] ?? null
-    const raw = appraisal
-      ? overallAverage((appraisal.ratings as Ratings | null) ?? {}, 'appraiser')
-      : null
-    // A form with nothing scored averages zero, which is not "poor" — it is
-    // "not assessed", and putting it in the bottom row would be a lie.
-    const score = raw != null && raw > 0 ? raw : null
-    const a = e.talentAssessments[0] ?? null
-    return {
-      employeeId: e.id,
-      fullName: e.fullName,
-      designation: e.designation,
-      department: e.department?.name ?? null,
-      appraisalId: appraisal?.id ?? null,
-      appraisalScore: score,
-      performance: performanceFromScore(score),
-      potential: a?.potential ?? null,
-      flightRisk: a?.flightRisk ?? null,
-      successorFor: a?.successorFor ?? null,
-      note: a?.note ?? null,
-    }
-  })
-
+  const rows = await talentRows(cycle)
   return NextResponse.json({ cycle, rows })
 }
 
@@ -94,10 +55,7 @@ export async function PATCH(request: NextRequest) {
   })
   if (!emp) return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
 
-  const raw = emp.appraisals[0]
-    ? overallAverage((emp.appraisals[0].ratings as Ratings | null) ?? {}, 'appraiser')
-    : null
-  const score = raw != null && raw > 0 ? raw : null
+  const score = emp.appraisals[0] ? appraisalScore(emp.appraisals[0].ratings) : null
 
   const data = {
     potential: typeof body.potential === 'number' && [1, 2, 3].includes(body.potential)

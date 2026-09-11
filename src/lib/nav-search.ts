@@ -47,6 +47,9 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Pulse', href: '/dashboard/culture/pulse', section: 'People & Culture', keywords: ['engagement', 'survey', 'enps', 'how people feel', 'morale'] },
   { label: 'Talent Review', href: '/dashboard/performance/talent', section: 'Performance', keywords: ['nine box', '9-box', 'potential', 'succession', 'flight risk'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
   { label: 'Skills', href: '/dashboard/people/skills', section: 'People', keywords: ['who can cover', 'capability', 'expertise', 'cover'] },
+  { label: 'Team Insights', href: '/dashboard/team-insights', section: 'People', keywords: ['manager hub', 'check-in', 'one to one', '1:1', 'mentor', 'development plan', 'career'] },
+  { label: 'Succession Planning', href: '/dashboard/performance/succession', section: 'People', keywords: ['successor', 'nine box', '9-box', 'bench', 'cover a role', 'flight risk'] },
+  { label: 'Skills Dashboard', href: '/dashboard/performance/skills', section: 'People', keywords: ['skill gaps', 'adoption', 'mentoring', 'engagement'] },
 
   { label: 'Employee Lifecycle', href: '/dashboard/lifecycle', section: 'Talent', keywords: ['joiner', 'mover', 'leaver'] },
   { label: 'Onboarding', href: '/dashboard/onboarding', section: 'Lifecycle', keywords: ['new hire', 'joining', 'induction', 'day 1', 'documents'] },

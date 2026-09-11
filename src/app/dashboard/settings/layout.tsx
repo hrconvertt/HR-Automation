@@ -11,7 +11,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   Building2, Calendar, Calculator, Users, Plane,
-  Mail, ShieldCheck, ClipboardList,
+  Mail, ShieldCheck,
 } from 'lucide-react'
 
 const SECTIONS = [
@@ -22,7 +22,6 @@ const SECTIONS = [
   { href: '/dashboard/settings/roles',           label: 'Roles',                 icon: ShieldCheck,  sub: 'Access matrix' },
   { href: '/dashboard/settings/working-days',    label: 'Working Days & Hours',  icon: Calendar,     sub: 'Schedule + holidays' },
   { href: '/dashboard/settings/leave-policies',  label: 'Leave Policies',        icon: Plane,        sub: 'Days by leave type × tier' },
-  { href: '/dashboard/settings/daily-logging',   label: 'Daily Logging',         icon: ClipboardList,sub: 'KPI library + rules' },
   { href: '/dashboard/settings/salary-structure', label: 'Salary Structure',      icon: Calculator,   sub: 'Basic % + component library' },
   { href: '/dashboard/settings/tax-slabs',       label: 'Income Tax Slabs',      icon: Calculator,   sub: 'FBR brackets by tax year' },
 ] as const
