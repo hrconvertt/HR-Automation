@@ -415,21 +415,30 @@ const SETTINGS_NAV: NavGroup[] = [
 const RECRUITING_NAV: NavGroup[] = [
   {
     label: 'Recruiting',
+    // In the order the work happens: the overview, then raise the role, write
+    // it up and advertise it, work the people who apply, and look back at the
+    // end. The list used to put New Job Description second from last, after
+    // the candidates it exists to attract.
     items: [
       // The module's landing view — the pipeline ring and the queues waiting
       // on somebody. Recruiting opens here now, the way it does in Workday.
       { href: '/dashboard/recruiting?tab=dashboard', label: 'Dashboard', icon: LayoutDashboard },
-      // Requests and requisitions were the same JobRequisition row at two
-      // statuses, under two menu entries, one of which was always empty.
+
+      // 1. The role. Requests and requisitions were the same JobRequisition row
+      //    at two statuses, under two menu entries, one of which was always empty.
       { href: '/dashboard/recruiting?tab=requisitions', label: 'Requisitions', icon: FolderOpen },
-      // One role opened up: its candidates, its stage counts, its own terms.
-      { href: '/dashboard/recruiting?tab=workspace', label: 'Requisition Workspace', icon: KanbanSquare },
-      { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
-      { href: '/dashboard/recruiting?tab=pipeline', label: 'Pipeline', icon: BarChart3 },
-      { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert },
-      { href: '/dashboard/recruiting?tab=pool', label: 'Talent Pool', icon: Users },
-      { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },
       { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText },
+      { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+
+      // 2. The candidates. The board first, because it is where the day starts;
+      //    then one role opened up; then the ones a hard filter turned away.
+      { href: '/dashboard/recruiting?tab=pipeline', label: 'Pipeline', icon: BarChart3 },
+      { href: '/dashboard/recruiting?tab=workspace', label: 'Requisition Workspace', icon: KanbanSquare },
+      { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert },
+      { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },
+
+      // 3. Afterwards. The people worth keeping, and how the hiring went.
+      { href: '/dashboard/recruiting?tab=pool', label: 'Talent Pool', icon: Users },
       // Offers is not in the sidebar. The offer that matters is the employment
       // letter on the person's own profile, and a second empty board listing
       // "0 pending · 0 total" only invited the question of which was the real
