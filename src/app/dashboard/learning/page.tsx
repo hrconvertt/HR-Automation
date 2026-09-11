@@ -13,6 +13,7 @@ import { prisma } from '@/lib/prisma'
 import { LearningClient } from './learning-client'
 import { MyLearning, type LearningView, type CourseCard, type TranscriptRow } from './_components/my-learning'
 import { parseLessons, parseQuiz, PROGRAM_TYPES } from '@/lib/learning'
+import type { PathSummary } from '@/lib/learning-path-types'
 
 export default async function LearningPage({
   searchParams,
@@ -22,7 +23,7 @@ export default async function LearningPage({
   const sp = (await searchParams) ?? {}
   // My Learning is the front door for everyone now. The three management views
   // are still here, one tab away, exactly as they were.
-  const MY_VIEWS: LearningView[] = ['my', 'discover', 'transcript', 'library']
+  const MY_VIEWS: LearningView[] = ['my', 'discover', 'transcript', 'library', 'paths']
   const view: LearningView | null = MY_VIEWS.includes(sp.tab as LearningView)
     ? (sp.tab as LearningView)
     : sp.tab === 'programs' || sp.tab === 'records' || sp.tab === 'certs'
@@ -41,7 +42,7 @@ export default async function LearningPage({
     // queries return empty rather than branching.
     const empId = payload.employeeId ?? null
     const none = '__no-employee__'
-    const [catalogue, mine, saves, me] = await Promise.all([
+    const [catalogue, mine, saves, me, pathRows] = await Promise.all([
       prisma.trainingProgram.findMany({
         orderBy: [{ type: 'asc' }, { title: 'asc' }],
         select: {
@@ -59,6 +60,20 @@ export default async function LearningPage({
         select: { programId: true },
       }),
       prisma.employee.findUnique({ where: { id: empId ?? none }, select: { fullName: true } }),
+      // Your own paths, and the ones other people set to Everyone.
+      prisma.learningPath.findMany({
+        where: { OR: [{ ownerId: empId ?? none }, { visibility: 'EVERYONE' }] },
+        orderBy: { updatedAt: 'desc' },
+        include: {
+          owner: { select: { fullName: true } },
+          _count: { select: { items: true } },
+          items: {
+            orderBy: { position: 'asc' },
+            take: 3,
+            include: { program: { select: { id: true, title: true, type: true } } },
+          },
+        },
+      }),
     ])
 
     // One status per course — the newest record wins if there are several.
@@ -93,6 +108,16 @@ export default async function LearningPage({
     }))
     const topic = (PROGRAM_TYPES as readonly string[]).includes(sp.topic ?? '') ? sp.topic! : null
 
+    const paths: PathSummary[] = pathRows.map((p) => ({
+      id: p.id,
+      title: p.title,
+      visibility: p.visibility,
+      items: p._count.items,
+      mine: p.ownerId === empId,
+      owner: p.ownerId === empId ? null : p.owner.fullName,
+      covers: p.items.map((i) => ({ id: i.program.id, title: i.program.title, type: i.program.type })),
+    }))
+
     // Keyed so a new tab or topic mounts fresh state from fresh data, rather
     // than a Discover filter carrying over from wherever you came from.
     return (
@@ -104,6 +129,7 @@ export default async function LearningPage({
         linked={!!empId}
         firstName={me?.fullName.split(' ')[0] ?? null}
         topic={topic}
+        paths={paths}
       />
     )
   }

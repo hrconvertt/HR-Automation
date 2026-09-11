@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   LayoutDashboard,
+  ListOrdered,
   BookOpen,
   Compass,
   ScrollText,
@@ -589,6 +590,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
         { href: '/dashboard/learning?tab=discover', label: 'Discover', icon: Compass },
         { href: '/dashboard/learning?tab=transcript', label: 'My Transcript', icon: ScrollText },
         { href: '/dashboard/learning?tab=library', label: 'My Library', icon: Bookmark },
+        { href: '/dashboard/learning?tab=paths', label: 'My Learning Paths', icon: ListOrdered },
         { href: '/dashboard/people/skills', label: 'Skills and Experience', icon: Target },
       ],
     },

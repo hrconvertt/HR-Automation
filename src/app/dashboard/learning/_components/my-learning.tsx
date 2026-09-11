@@ -12,9 +12,9 @@
  *     profile. Nobody here has one yet (zero skills on record), so a row with
  *     that title would be recommending on nothing. The shelves are by type
  *     until there is something real to recommend from.
- *   Learning paths and Career Hub plans — Workday products with nothing behind
- *     them in this system. Their menu items would have been buttons that did
- *     nothing.
+ *   Career Hub plans — a Workday product with nothing behind it here, so a
+ *     menu item for it would be a button that does nothing. Learning paths
+ *     are real, and are in the menu.
  */
 
 import { useState, useMemo, useRef, useEffect } from 'react'
@@ -22,16 +22,19 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   Eye, MoreVertical, Bookmark, BookmarkMinus, PlayCircle, Link2, ChevronLeft,
-  ChevronRight, Search, type LucideIcon,
+  ChevronRight, Search, ListPlus, FolderPlus, type LucideIcon,
 } from 'lucide-react'
 import { toastSuccess, toastError } from '@/components/ui/toaster'
 import { CourseCover } from './course-cover'
+import { AddToPathDialog } from './add-to-path-dialog'
+import { PathsView } from './paths-view'
+import type { PathSummary } from '@/lib/learning-path-types'
 import {
   PROGRAM_TYPES, PROGRAM_TYPE_LABELS, RECORD_STATUS_LABELS, RECORD_STATUS_TONE,
   type ProgramType, type RecordStatus,
 } from '@/lib/learning'
 
-export type LearningView = 'my' | 'discover' | 'transcript' | 'library'
+export type LearningView = 'my' | 'discover' | 'transcript' | 'library' | 'paths'
 
 export interface CourseCard {
   id: string
@@ -72,7 +75,7 @@ const day = (iso: string | null) =>
     ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
     : '—'
 
-export function MyLearning({ view, courses: initial, transcript, linked, firstName, topic }: {
+export function MyLearning({ view, courses: initial, transcript, linked, firstName, topic, paths }: {
   view: LearningView
   courses: CourseCard[]
   transcript: TranscriptRow[]
@@ -81,10 +84,17 @@ export function MyLearning({ view, courses: initial, transcript, linked, firstNa
   firstName: string | null
   /** Discover opens filtered to this type when a shelf's "View more" sent you. */
   topic: string | null
+  /** Your paths, and the ones other people share with everyone. */
+  paths: PathSummary[]
 }) {
   const router = useRouter()
   const [courses, setCourses] = useState(initial)
   const [busy, setBusy] = useState<string | null>(null)
+  // The Add to / Create Learning Path dialog, and the course it is about.
+  const [pathDialog, setPathDialog] = useState<{
+    program: { id: string; title: string } | null
+    startNew: boolean
+  } | null>(null)
 
   async function toggleSave(c: CourseCard) {
     if (!linked) return
@@ -133,7 +143,15 @@ export function MyLearning({ view, courses: initial, transcript, linked, firstNa
     }
   }
 
-  const actions = { linked, busy, onSave: toggleSave, onStart: start, onCopy: copyLink }
+  const actions: Actions = {
+    linked,
+    busy,
+    onSave: toggleSave,
+    onStart: start,
+    onCopy: copyLink,
+    onAddToPath: (c) => setPathDialog({ program: { id: c.id, title: c.title }, startNew: false }),
+    onCreatePath: (c) => setPathDialog({ program: { id: c.id, title: c.title }, startNew: true }),
+  }
 
   return (
     <div className="space-y-8 min-w-0">
@@ -148,6 +166,17 @@ export function MyLearning({ view, courses: initial, transcript, linked, firstNa
       {view === 'discover' && <DiscoverView courses={courses} topic={topic} actions={actions} />}
       {view === 'library' && <LibraryView courses={courses} actions={actions} />}
       {view === 'transcript' && <TranscriptView rows={transcript} courses={courses} />}
+      {view === 'paths' && (
+        <PathsView paths={paths} linked={linked} onCreate={() => setPathDialog({ program: null, startNew: true })} />
+      )}
+
+      <AddToPathDialog
+        open={pathDialog !== null}
+        program={pathDialog?.program ?? null}
+        startNew={pathDialog?.startNew ?? false}
+        onClose={() => setPathDialog(null)}
+        onDone={() => router.refresh()}
+      />
     </div>
   )
 }
@@ -158,6 +187,8 @@ interface Actions {
   onSave: (c: CourseCard) => void
   onStart: (c: CourseCard) => void
   onCopy: (c: CourseCard) => void
+  onAddToPath: (c: CourseCard) => void
+  onCreatePath: (c: CourseCard) => void
 }
 
 /* ── My Learning ─────────────────────────────────────────────────────────── */
@@ -355,6 +386,8 @@ function Card({ c, actions, className = '' }: { c: CourseCard; actions: Actions;
               disabled={!actions.linked || actions.busy === c.id}
               onClick={act(actions.onSave)}
             />
+            <MenuItem icon={ListPlus} label="Add to Learning Path" disabled={!actions.linked} onClick={act(actions.onAddToPath)} />
+            <MenuItem icon={FolderPlus} label="Create Learning Path" disabled={!actions.linked} onClick={act(actions.onCreatePath)} />
             <MenuItem
               icon={PlayCircle}
               label={c.myStatus ? `Already ${RECORD_STATUS_LABELS[c.myStatus].toLowerCase()}` : 'Start this course'}
