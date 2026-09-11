@@ -39,7 +39,19 @@ export const CERT_EXPIRY_WINDOW_DAYS = 60
 
 // ── Course content ──────────────────────────────────────────────────────────
 // A program teaches first (ordered lessons) then tests with MCQs.
-export interface Lesson { title: string; body: string }
+/** TEXT is read on the page; VIDEO plays a linked video; FILE opens a linked document. */
+export const LESSON_KINDS = ['TEXT', 'VIDEO', 'FILE'] as const
+export type LessonKind = (typeof LESSON_KINDS)[number]
+export interface Lesson {
+  title: string
+  body: string
+  /** Absent on lessons written before kinds existed — those are TEXT. */
+  kind?: LessonKind
+  /** The video or document a VIDEO / FILE lesson points at. */
+  url?: string
+  /** How long it takes, so the lesson list can say so. */
+  minutes?: number
+}
 export interface QuizQuestion { question: string; options: string[]; correct: number }
 
 /** Coerce the JSON columns into typed arrays, tolerating null/legacy shapes. */
@@ -47,7 +59,14 @@ export function parseLessons(json: unknown): Lesson[] {
   if (!Array.isArray(json)) return []
   return json
     .filter((l): l is Lesson => !!l && typeof l === 'object')
-    .map((l) => ({ title: String((l as Lesson).title ?? ''), body: String((l as Lesson).body ?? '') }))
+    .map((l) => {
+      const out: Lesson = { title: String(l.title ?? ''), body: String(l.body ?? '') }
+      if ((LESSON_KINDS as readonly string[]).includes(String(l.kind))) out.kind = l.kind as LessonKind
+      if (typeof l.url === 'string' && l.url.trim()) out.url = l.url.trim()
+      const m = Number(l.minutes)
+      if (Number.isFinite(m) && m > 0) out.minutes = Math.round(m)
+      return out
+    })
 }
 export function parseQuiz(json: unknown): QuizQuestion[] {
   if (!Array.isArray(json)) return []
@@ -78,4 +97,67 @@ export function certExpiryState(expiry: Date | string | null | undefined):
   if (days < 0) return 'expired'
   if (days <= CERT_EXPIRY_WINDOW_DAYS) return 'expiring'
   return 'valid'
+}
+
+// ── Lesson helpers ──────────────────────────────────────────────────────────
+
+/** A lesson as it may be stored: bounded, and carrying a link only if it is http(s). */
+export function sanitiseLesson(l: Lesson): Lesson {
+  const out: Lesson = { title: l.title.slice(0, 200), body: l.body.slice(0, 20000) }
+  if (l.kind && l.kind !== 'TEXT') out.kind = l.kind
+  if (l.url && /^https?:\/\//i.test(l.url)) out.url = l.url.slice(0, 1000)
+  if (l.minutes) out.minutes = Math.max(1, Math.min(600, l.minutes))
+  return out
+}
+
+/**
+ * The embeddable form of a video link, or null when it is not one of the hosts
+ * that can be framed. youtube-nocookie keeps YouTube from setting tracking
+ * cookies until the video is actually played.
+ */
+export function videoEmbed(url: string): string | null {
+  try {
+    const u = new URL(url)
+    const host = u.hostname.replace(/^www\./, '').replace(/^m\./, '')
+    if (host === 'youtu.be') {
+      const id = u.pathname.slice(1).split('/')[0]
+      return id ? `https://www.youtube-nocookie.com/embed/${id}` : null
+    }
+    if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+      if (u.pathname === '/watch') {
+        const id = u.searchParams.get('v')
+        return id ? `https://www.youtube-nocookie.com/embed/${id}` : null
+      }
+      const m = u.pathname.match(/^\/(?:embed|shorts|live)\/([\w-]+)/)
+      return m ? `https://www.youtube-nocookie.com/embed/${m[1]}` : null
+    }
+    if (host === 'vimeo.com') {
+      const m = u.pathname.match(/^\/(\d+)/)
+      return m ? `https://player.vimeo.com/video/${m[1]}` : null
+    }
+    if (host === 'player.vimeo.com') return url
+    if (host === 'drive.google.com') {
+      const m = u.pathname.match(/\/file\/d\/([\w-]+)/)
+      return m ? `https://drive.google.com/file/d/${m[1]}/preview` : null
+    }
+    return null
+  } catch {
+    return null
+  }
+}
+
+/** A file served directly (.mp4 / .webm / .ogg) plays in a plain <video>. */
+export function isDirectVideo(url: string): boolean {
+  return /\.(mp4|webm|ogg)(\?|#|$)/i.test(url)
+}
+
+/** The lessons a learner has done: whole numbers, in range, each once, in order. */
+export function parseCompleted(json: unknown, lessonCount: number): number[] {
+  if (!Array.isArray(json)) return []
+  const seen = new Set<number>()
+  for (const v of json) {
+    const n = Number(v)
+    if (Number.isInteger(n) && n >= 0 && n < lessonCount) seen.add(n)
+  }
+  return [...seen].sort((a, b) => a - b)
 }

@@ -1,13 +1,16 @@
 /**
- * A single training program: the teaching content first, then the MCQ quiz.
- * HR can build the content; everyone else reads the lessons and takes the quiz.
+ * A single course: the player for learners, the builder for HR.
+ *
+ * Everything learner-specific here is the signed-in person's own. A sign-in
+ * with no employee record still gets the course; its id matches nothing, so
+ * those queries come back empty rather than branching.
  */
 import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import { parseLessons, parseQuiz } from '@/lib/learning'
-import { ProgramDetailClient } from './program-detail-client'
+import { parseLessons, parseQuiz, parseCompleted } from '@/lib/learning'
+import { CoursePlayer } from './course-player'
 
 export default async function ProgramDetailPage({
   params,
@@ -24,17 +27,33 @@ export default async function ProgramDetailPage({
   const program = await prisma.trainingProgram.findUnique({ where: { id } })
   if (!program) notFound()
 
-  const myRecord = payload.employeeId
-    ? await prisma.trainingRecord.findFirst({
-        where: { programId: id, employeeId: payload.employeeId },
-        select: { status: true, score: true },
-        orderBy: { createdAt: 'desc' },
-      })
-    : null
+  const empId = payload.employeeId ?? null
+  const none = '__no-employee__'
+  const lessons = parseLessons(program.lessons)
+
+  const [myRecord, ratingAgg, myRating, save] = await Promise.all([
+    prisma.trainingRecord.findFirst({
+      where: { programId: id, employeeId: empId ?? none },
+      select: { status: true, score: true, completedLessons: true, required: true, dueDate: true },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.learningRating.aggregate({
+      where: { programId: id }, _avg: { stars: true }, _count: { _all: true },
+    }),
+    prisma.learningRating.findUnique({
+      where: { employeeId_programId: { employeeId: empId ?? none, programId: id } },
+      select: { stars: true },
+    }),
+    prisma.learningSave.findUnique({
+      where: { employeeId_programId: { employeeId: empId ?? none, programId: id } },
+      select: { id: true },
+    }),
+  ])
 
   return (
-    <ProgramDetailClient
+    <CoursePlayer
       isHR={isHR}
+      linked={!!empId}
       program={{
         id: program.id,
         title: program.title,
@@ -43,10 +62,24 @@ export default async function ProgramDetailPage({
         provider: program.provider,
         duration: program.duration,
         passingScore: program.passingScore,
-        lessons: parseLessons(program.lessons),
+        lessons,
         quiz: parseQuiz(program.quiz),
       }}
-      myRecord={myRecord}
+      record={myRecord
+        ? {
+          status: myRecord.status,
+          score: myRecord.score,
+          completed: parseCompleted(myRecord.completedLessons, lessons.length),
+          required: myRecord.required,
+          dueDate: myRecord.dueDate?.toISOString() ?? null,
+        }
+        : null}
+      rating={{
+        mine: myRating?.stars ?? null,
+        average: ratingAgg._avg.stars ?? null,
+        count: ratingAgg._count._all,
+      }}
+      saved={!!save}
     />
   )
 }

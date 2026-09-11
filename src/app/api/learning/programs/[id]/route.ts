@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
-import { PROGRAM_TYPES, parseLessons, parseQuiz } from '@/lib/learning'
+import { PROGRAM_TYPES, parseLessons, parseQuiz, sanitiseLesson } from '@/lib/learning'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -39,7 +39,8 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
   // Course content — sanitise the lesson/quiz shapes before storing.
   if (body.lessons !== undefined) {
-    data.lessons = parseLessons(body.lessons).map((l) => ({ title: l.title.slice(0, 200), body: l.body.slice(0, 20000) }))
+    // Kind, link and length survive the save now; a link that is not http(s) does not.
+    data.lessons = parseLessons(body.lessons).map(sanitiseLesson)
   }
   if (body.quiz !== undefined) {
     data.quiz = parseQuiz(body.quiz).map((q) => ({

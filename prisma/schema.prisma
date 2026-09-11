@@ -329,6 +329,8 @@ model Employee {
   notifications       Notification[]
   compensationHistory CompensationHistory[]
   learningSaves       LearningSave[]
+  learningPaths       LearningPath[]
+  learningRatings     LearningRating[]
   trainingRecords     TrainingRecord[]
   showCauses          ShowCause[]
   terminations        Termination[]
@@ -1851,6 +1853,9 @@ model TrainingProgram {
   records      TrainingRecord[]
   // People who put this on their own list.
   saves        LearningSave[]
+  ratings      LearningRating[]
+  pathItems    LearningPathItem[]
+  assignments  LearningAssignment[]
   createdAt    DateTime         @default(now())
 
   @@map("training_programs")
@@ -1868,6 +1873,12 @@ model TrainingRecord {
   score       Float?
   certificate String?
   notes       String?
+  /// Lesson indices the learner has marked done, in the course's own order.
+  completedLessons Json?
+  /// Set when HR assigns the course as required learning; false when chosen.
+  required     Boolean   @default(false)
+  dueDate      DateTime?
+  assignedById String?
   createdAt   DateTime        @default(now())
 
   @@map("training_records")
@@ -1886,6 +1897,71 @@ model LearningSave {
 
   @@unique([employeeId, programId])
   @@map("learning_saves")
+}
+
+/// One person's star rating of a course, 1-5. Re-rating replaces it.
+model LearningRating {
+  id         String          @id @default(cuid())
+  employeeId String
+  employee   Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  programId  String
+  program    TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  stars      Int
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@unique([employeeId, programId])
+  @@map("learning_ratings")
+}
+
+/// An ordered list of courses somebody put together — Workday's Learning Path.
+model LearningPath {
+  id          String             @id @default(cuid())
+  ownerId     String
+  owner       Employee           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  /// PRIVATE — only the owner can open it. EVERYONE — anyone signed in can.
+  visibility  String             @default("PRIVATE")
+  items       LearningPathItem[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@map("learning_paths")
+}
+
+model LearningPathItem {
+  id        String          @id @default(cuid())
+  pathId    String
+  path      LearningPath    @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  programId String
+  program   TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  position  Int
+  createdAt DateTime        @default(now())
+
+  @@unique([pathId, programId])
+  @@map("learning_path_items")
+}
+
+/// HR sending a course to a group as required learning, with a deadline — the
+/// part of a Workday learning campaign this system can actually carry out.
+/// The per-person obligation lives on TrainingRecord (required + dueDate);
+/// this row is the record of the decision and who it went to.
+model LearningAssignment {
+  id          String          @id @default(cuid())
+  programId   String
+  program     TrainingProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  /// ALL | DEPARTMENT | EMPLOYEES
+  audience    String
+  /// The department id, or the employee ids, the audience was drawn from.
+  audienceRef Json?
+  dueDays     Int
+  note        String?
+  assigned    Int             @default(0)
+  createdById String?
+  createdAt   DateTime        @default(now())
+
+  @@map("learning_assignments")
 }
 
 model Certification {
