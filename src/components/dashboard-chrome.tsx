@@ -100,11 +100,14 @@ interface NavGroup {
  *     for review, and that flow needs the route to exist.
  *   /dashboard/compensation — hidden at her request on 11 Sep 2026. It sat
  *     in three roles' sidebars; one line here takes it out of all of them.
+ *   /dashboard/settings/daily-logging — hidden at her request on 11 Sep
+ *     2026. The KPI rules it edits keep the values already saved.
  */
 const HIDDEN_PATHS = new Set([
   '/dashboard/assets',
   '/dashboard/email-queue',
   '/dashboard/compensation',
+  '/dashboard/settings/daily-logging',
 ])
 
 /**
