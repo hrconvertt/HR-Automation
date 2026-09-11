@@ -331,6 +331,11 @@ model Employee {
   learningSaves       LearningSave[]
   learningPaths       LearningPath[]
   learningRatings     LearningRating[]
+  scheduleShifts      ScheduleShift[]      @relation("ScheduleShifts")
+  schedulePreference  SchedulePreference?  @relation("SchedulePreference")
+  openShiftsFilled    OpenShift[]          @relation("OpenShiftsFilled")
+  swapsRequested      ShiftSwap[]          @relation("SwapsRequested")
+  swapsReceived       ShiftSwap[]          @relation("SwapsReceived")
   trainingRecords     TrainingRecord[]
   showCauses          ShowCause[]
   terminations        Termination[]
@@ -1962,6 +1967,105 @@ model LearningAssignment {
   createdAt   DateTime        @default(now())
 
   @@map("learning_assignments")
+}
+
+/// A day that is not somebody's standing pattern: an extra shift, changed
+/// hours, or a day off. The pattern itself (timings + workDays on Employee) is
+/// never copied into rows — a week is worked out from it, and only the
+/// exceptions are stored, so a change to someone's hours is one edit, not a
+/// thousand.
+model ScheduleShift {
+  id          String   @id @default(cuid())
+  employeeId  String
+  employee    Employee @relation("ScheduleShifts", fields: [employeeId], references: [id], onDelete: Cascade)
+  /// UTC midnight, like every date in this app.
+  date        DateTime
+  /// EXTRA   — a shift on top of the pattern (a weekend, a covered open shift)
+  /// CHANGED — the day's hours or place differ from the pattern
+  /// OFF     — no shift that day
+  kind        String
+  startMin    Int?
+  endMin      Int?
+  breakMin    Int      @default(60)
+  /// OFFICE | WFH
+  location    String   @default("OFFICE")
+  note        String?
+  openShiftId String?
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([employeeId, date])
+  @@map("schedule_shifts")
+}
+
+/// A shift somebody is needed for and nobody has yet — Workday's Open Shifts.
+model OpenShift {
+  id           String    @id @default(cuid())
+  title        String
+  date         DateTime
+  startMin     Int
+  endMin       Int
+  breakMin     Int       @default(0)
+  /// OFFICE | WFH
+  location     String    @default("OFFICE")
+  departmentId String?
+  note         String?
+  /// OPEN | FILLED | CANCELLED
+  status       String    @default("OPEN")
+  postedById   String?
+  filledById   String?
+  filledBy     Employee? @relation("OpenShiftsFilled", fields: [filledById], references: [id], onDelete: SetNull)
+  filledAt     DateTime?
+  createdAt    DateTime  @default(now())
+
+  @@index([status, date])
+  @@map("open_shifts")
+}
+
+/// One person handing a shift to a coworker, or trading one for one.
+model ShiftSwap {
+  id            String    @id @default(cuid())
+  requesterId   String
+  requester     Employee  @relation("SwapsRequested", fields: [requesterId], references: [id], onDelete: Cascade)
+  targetId      String
+  target        Employee  @relation("SwapsReceived", fields: [targetId], references: [id], onDelete: Cascade)
+  /// The requester's shift being given (a ScheduleShift id).
+  shiftId       String
+  /// The coworker's shift taken in exchange; null is a straight hand-over.
+  targetShiftId String?
+  note          String?
+  /// PENDING_COWORKER | PENDING_MANAGER | APPROVED | DECLINED | CANCELLED
+  status        String    @default("PENDING_COWORKER")
+  decidedById   String?
+  decidedAt     DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([targetId, status])
+  @@map("shift_swaps")
+}
+
+/// What somebody would like their schedule to be — Change My Schedule
+/// Preferences. A preference, not a rule: it is shown to whoever builds the
+/// schedule and changes nothing on its own.
+model SchedulePreference {
+  id            String   @id @default(cuid())
+  employeeId    String   @unique
+  employee      Employee @relation("SchedulePreference", fields: [employeeId], references: [id], onDelete: Cascade)
+  weeklyHours   Int?
+  /// OFFICE | WFH | HYBRID
+  location      String?
+  /// Mon,Tue,Wed,… — the days they would rather work
+  preferredDays String?
+  onCall        Boolean  @default(false)
+  standby       Boolean  @default(false)
+  effectiveFrom DateTime
+  note          String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@map("schedule_preferences")
 }
 
 model Certification {

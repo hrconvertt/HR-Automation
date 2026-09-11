@@ -8,6 +8,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
 import {
   LayoutDashboard,
+  CalendarRange,
   ListOrdered,
   BookOpen,
   Compass,
@@ -554,6 +555,15 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       label: 'Time Tracking',
       items: [
         { href: '/dashboard/time/me', label: 'My Time', icon: User },
+        // Your week, shift by shift — worked out from your standing hours,
+        // holidays and approved leave. Shaped after Workday's schedule.
+        { href: '/dashboard/time/schedule', label: 'My Schedule', icon: CalendarDays },
+        {
+          href: '/dashboard/time/schedule/team',
+          label: 'Team Schedule',
+          icon: CalendarRange,
+          roles: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'],
+        },
         {
           href: '/dashboard/time/everyone',
           label: 'Everyone',
