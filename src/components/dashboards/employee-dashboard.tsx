@@ -15,6 +15,7 @@ import {
 import { formatCurrency, formatDate } from '@/lib/utils'
 import { TimeClockCard } from '@/components/time-clock-card'
 import { SeedLeaveBalancesButton } from '@/components/seed-leave-balances-button'
+import { RequiredLearningCard } from '@/components/dashboards/required-learning-card'
 
 async function getEmployeeData(employeeId: string) {
   const now = new Date()
@@ -260,6 +261,10 @@ export async function EmployeeDashboard({
           {emp?.department?.name ? ` · ${emp.department.name}` : ''}
         </p>
       </div>
+
+      {/* Required learning HR has sent, soonest deadline first. Renders
+          nothing when nothing is owed. */}
+      <RequiredLearningCard employeeId={employeeId} />
 
       {/* My Probation — only while in-progress */}
       {data.myProbation && (() => {

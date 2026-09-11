@@ -14,6 +14,41 @@ import { LearningClient } from './learning-client'
 import { MyLearning, type LearningView, type CourseCard, type TranscriptRow } from './_components/my-learning'
 import { parseLessons, parseQuiz, PROGRAM_TYPES } from '@/lib/learning'
 import type { PathSummary } from '@/lib/learning-path-types'
+import type { TeamRow } from './_components/team-view'
+import { DEPARTED_STATUSES } from '@/lib/learning-assign'
+
+/**
+ * The required learning of the people who report to you, for My Team's
+ * Learning. An ordinary function, so the clock is not read during render.
+ */
+async function loadTeam(empId: string | null): Promise<TeamRow[]> {
+  if (!empId) return []
+  const today = new Date()
+  today.setUTCHours(0, 0, 0, 0)
+  const rows = await prisma.trainingRecord.findMany({
+    where: {
+      required: true,
+      employee: { reportingManagerId: empId, deletedAt: null, status: { notIn: DEPARTED_STATUSES } },
+    },
+    orderBy: [{ dueDate: 'asc' }, { createdAt: 'asc' }],
+    include: {
+      employee: { select: { id: true, fullName: true } },
+      program: { select: { id: true, title: true, type: true } },
+    },
+  })
+  return rows.map((r) => ({
+    id: r.id,
+    employeeId: r.employee.id,
+    employeeName: r.employee.fullName,
+    programId: r.program.id,
+    title: r.program.title,
+    type: r.program.type,
+    status: r.status,
+    score: r.score,
+    dueDate: r.dueDate?.toISOString() ?? null,
+    overdue: !!r.dueDate && r.dueDate < today && r.status !== 'COMPLETED',
+  }))
+}
 
 export default async function LearningPage({
   searchParams,
@@ -23,7 +58,7 @@ export default async function LearningPage({
   const sp = (await searchParams) ?? {}
   // My Learning is the front door for everyone now. The three management views
   // are still here, one tab away, exactly as they were.
-  const MY_VIEWS: LearningView[] = ['my', 'discover', 'transcript', 'library', 'paths']
+  const MY_VIEWS: LearningView[] = ['my', 'discover', 'transcript', 'library', 'paths', 'team']
   const view: LearningView | null = MY_VIEWS.includes(sp.tab as LearningView)
     ? (sp.tab as LearningView)
     : sp.tab === 'programs' || sp.tab === 'records' || sp.tab === 'certs'
@@ -42,7 +77,7 @@ export default async function LearningPage({
     // queries return empty rather than branching.
     const empId = payload.employeeId ?? null
     const none = '__no-employee__'
-    const [catalogue, mine, saves, me, pathRows] = await Promise.all([
+    const [catalogue, mine, saves, me, pathRows, teamRows] = await Promise.all([
       prisma.trainingProgram.findMany({
         orderBy: [{ type: 'asc' }, { title: 'asc' }],
         select: {
@@ -74,6 +109,7 @@ export default async function LearningPage({
           },
         },
       }),
+      loadTeam(empId),
     ])
 
     // One status per course — the newest record wins if there are several.
@@ -130,6 +166,7 @@ export default async function LearningPage({
         firstName={me?.fullName.split(' ')[0] ?? null}
         topic={topic}
         paths={paths}
+        team={teamRows}
       />
     )
   }

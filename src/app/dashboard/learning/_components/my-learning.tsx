@@ -28,13 +28,14 @@ import { toastSuccess, toastError } from '@/components/ui/toaster'
 import { CourseCover } from './course-cover'
 import { AddToPathDialog } from './add-to-path-dialog'
 import { PathsView } from './paths-view'
+import { TeamView, type TeamRow } from './team-view'
 import type { PathSummary } from '@/lib/learning-path-types'
 import {
   PROGRAM_TYPES, PROGRAM_TYPE_LABELS, RECORD_STATUS_LABELS, RECORD_STATUS_TONE,
   type ProgramType, type RecordStatus,
 } from '@/lib/learning'
 
-export type LearningView = 'my' | 'discover' | 'transcript' | 'library' | 'paths'
+export type LearningView = 'my' | 'discover' | 'transcript' | 'library' | 'paths' | 'team'
 
 export interface CourseCard {
   id: string
@@ -75,7 +76,7 @@ const day = (iso: string | null) =>
     ? new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
     : '—'
 
-export function MyLearning({ view, courses: initial, transcript, linked, firstName, topic, paths }: {
+export function MyLearning({ view, courses: initial, transcript, linked, firstName, topic, paths, team }: {
   view: LearningView
   courses: CourseCard[]
   transcript: TranscriptRow[]
@@ -86,6 +87,8 @@ export function MyLearning({ view, courses: initial, transcript, linked, firstNa
   topic: string | null
   /** Your paths, and the ones other people share with everyone. */
   paths: PathSummary[]
+  /** The required learning of the people who report to you. */
+  team: TeamRow[]
 }) {
   const router = useRouter()
   const [courses, setCourses] = useState(initial)
@@ -169,6 +172,7 @@ export function MyLearning({ view, courses: initial, transcript, linked, firstNa
       {view === 'paths' && (
         <PathsView paths={paths} linked={linked} onCreate={() => setPathDialog({ program: null, startNew: true })} />
       )}
+      {view === 'team' && <TeamView rows={team} />}
 
       <AddToPathDialog
         open={pathDialog !== null}

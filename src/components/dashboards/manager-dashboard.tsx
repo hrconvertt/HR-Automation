@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Users, CalendarDays, Clock, Timer, ArrowUpRight, Cake } from 'lucide-react'
 import { formatDate, getInitials } from '@/lib/utils'
 import { ManagerAnalytics } from './manager-analytics'
+import { RequiredLearningCard } from './required-learning-card'
+import { TeamLearningCard } from './team-learning-card'
 
 async function getManagerData(managerEmployeeId: string) {
   const now = new Date()
@@ -196,6 +198,14 @@ export async function ManagerDashboard({
           iconColor="text-slate-700"
           iconBg="bg-slate-50"
         />
+      </div>
+
+      {/* Learning — what you owe yourself, and who on your team owes what.
+          Each card renders nothing when there is nothing to say, and the
+          row hides itself when both are empty. */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 empty:hidden">
+        <RequiredLearningCard employeeId={managerEmployeeId} />
+        <TeamLearningCard managerEmployeeId={managerEmployeeId} />
       </div>
 
       {/* Richer analytics — Team Pulse / Health / Performance / Workload / Compensation */}

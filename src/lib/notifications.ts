@@ -23,6 +23,7 @@ export type NotificationType =
   | 'OVERTIME_REJECTED'    // overtime declined → notify employee (hours they won't be paid)
   | 'GOAL_ASSIGNED'        // a manager/HR created a goal for an employee
   | 'GOAL_COMMENT'         // a manager commented on a goal
+  | 'LEARNING_ASSIGNED'    // HR sent a course as required learning, with a due date
   | 'ANOMALY'              // attendance or other anomaly
   | 'GENERAL'
 

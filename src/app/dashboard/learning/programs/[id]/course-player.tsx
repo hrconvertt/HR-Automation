@@ -28,11 +28,12 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Check, Lock, ListChecks, FileText, BookOpen, Star, Bookmark,
   ExternalLink, ChevronRight, Loader2, Pencil, Plus, Trash2, Save,
-  CheckCircle2, XCircle, RotateCcw, CalendarClock, PlayCircle, ArrowUp, ArrowDown,
+  CheckCircle2, XCircle, RotateCcw, CalendarClock, PlayCircle, ArrowUp, ArrowDown, Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { toastSuccess, toastError } from '@/components/ui/toaster'
 import { CourseCover } from '../../_components/course-cover'
+import { AssignDialog, type AssignOptions } from './assign-dialog'
 import {
   PROGRAM_TYPE_LABELS, LESSON_KINDS, videoEmbed, isDirectVideo,
   type Lesson, type LessonKind, type QuizQuestion, type ProgramType,
@@ -89,7 +90,7 @@ function fileName(url: string): string {
   }
 }
 
-export function CoursePlayer({ isHR, linked, program, record, rating: initialRating, saved: initialSaved }: {
+export function CoursePlayer({ isHR, linked, program, record, rating: initialRating, saved: initialSaved, assign }: {
   isHR: boolean
   /** False when the sign-in has no employee record: the course reads, but nothing is saved. */
   linked: boolean
@@ -97,6 +98,8 @@ export function CoursePlayer({ isHR, linked, program, record, rating: initialRat
   record: PlayerRecord | null
   rating: PlayerRating
   saved: boolean
+  /** HR only: who the course can be sent to, for Assign as required learning. */
+  assign?: AssignOptions | null
 }) {
   const router = useRouter()
   const [building, setBuilding] = useState(false)
@@ -106,6 +109,7 @@ export function CoursePlayer({ isHR, linked, program, record, rating: initialRat
   const [rating, setRating] = useState<PlayerRating>(initialRating)
   const [saved, setSaved] = useState(initialSaved)
   const [busy, setBusy] = useState(false)
+  const [assigning, setAssigning] = useState(false)
 
   const { lessons, quiz } = program
   const quizIndex = lessons.length
@@ -236,6 +240,11 @@ export function CoursePlayer({ isHR, linked, program, record, rating: initialRat
                   <Pencil className="w-3.5 h-3.5" /> {building ? 'Back to course' : 'Build content'}
                 </Button>
               )}
+              {isHR && assign && (
+                <Button size="sm" className="gap-1.5 h-8" onClick={() => setAssigning(true)}>
+                  <Send className="w-3.5 h-3.5" /> Assign
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -341,6 +350,16 @@ export function CoursePlayer({ isHR, linked, program, record, rating: initialRat
             </ol>
           </aside>
         </div>
+      )}
+
+      {isHR && assign && (
+        <AssignDialog
+          programId={program.id}
+          programTitle={program.title}
+          open={assigning}
+          onClose={() => setAssigning(false)}
+          options={assign}
+        />
       )}
     </div>
   )

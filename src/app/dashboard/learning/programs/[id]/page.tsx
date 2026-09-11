@@ -11,6 +11,8 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseLessons, parseQuiz, parseCompleted } from '@/lib/learning'
 import { CoursePlayer } from './course-player'
+import type { AssignOptions } from './assign-dialog'
+import { DEPARTED_STATUSES } from '@/lib/learning-assign'
 
 export default async function ProgramDetailPage({
   params,
@@ -30,6 +32,8 @@ export default async function ProgramDetailPage({
   const empId = payload.employeeId ?? null
   const none = '__no-employee__'
   const lessons = parseLessons(program.lessons)
+  // Who the course can be sent to. Fetched for HR only — nobody else sees Assign.
+  const assign = isHR ? await assignOptions() : null
 
   const [myRecord, ratingAgg, myRating, save] = await Promise.all([
     prisma.trainingRecord.findFirst({
@@ -80,6 +84,32 @@ export default async function ProgramDetailPage({
         count: ratingAgg._count._all,
       }}
       saved={!!save}
+      assign={assign}
     />
   )
+}
+
+/** Current staff and the departments they sit in, with a head-count each. */
+async function assignOptions(): Promise<AssignOptions> {
+  const staff = await prisma.employee.findMany({
+    where: { deletedAt: null, status: { notIn: DEPARTED_STATUSES } },
+    select: {
+      id: true, fullName: true, employeeCode: true, departmentId: true,
+      department: { select: { name: true } },
+    },
+    orderBy: { fullName: 'asc' },
+  })
+  const departments = new Map<string, { id: string; name: string; people: number }>()
+  for (const s of staff) {
+    if (!s.departmentId || !s.department) continue
+    const d = departments.get(s.departmentId) ?? { id: s.departmentId, name: s.department.name, people: 0 }
+    d.people++
+    departments.set(s.departmentId, d)
+  }
+  return {
+    departments: [...departments.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    staff: staff.map((s) => ({
+      id: s.id, fullName: s.fullName, employeeCode: s.employeeCode, department: s.department?.name ?? null,
+    })),
+  }
 }
