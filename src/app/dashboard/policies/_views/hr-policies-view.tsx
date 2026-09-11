@@ -1,19 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import Link from 'next/link'
-import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
-import { FileText, Plus, ExternalLink, Search, Send, Archive, Edit3, Check, Eye, Sparkles } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
+import { Plus, Search, Check, Sparkles } from 'lucide-react'
 import { recommendAudience } from '@/lib/policy-access'
+import { PolicyList } from '@/components/policies/policy-list'
 
 type Policy = {
   id: string
@@ -56,8 +52,8 @@ const CATEGORIES = ['ALL', 'LEAVE', 'CODE_OF_CONDUCT', 'IT', 'SECURITY', 'COMPEN
 const POLICY_TYPES = ['HR_POLICY', 'LEAVE_POLICY', 'CODE_OF_CONDUCT', 'NDA_TEMPLATE', 'IT_SECURITY', 'HEALTH_SAFETY', 'ANTI_HARASSMENT', 'OTHER']
 
 const catLabels: Record<string, string> = {
-  ALL: 'All', LEAVE: 'Leave', CODE_OF_CONDUCT: 'Code of Conduct',
-  IT: 'IT', SECURITY: 'Security', COMPENSATION: 'Compensation', GENERAL: 'General',
+  ALL: 'All categories', LEAVE: 'Leave', CODE_OF_CONDUCT: 'Code of Conduct',
+  IT: 'IT', SECURITY: 'Confidentiality & Security', COMPENSATION: 'Compensation', GENERAL: 'General',
 }
 
 export default function HRPoliciesView() {
@@ -155,32 +151,23 @@ export default function HRPoliciesView() {
   }
 
   const visible = policies.filter((p) => showArchived || p.status !== 'ARCHIVED')
-
-  const stats = {
-    total: visible.length,
-    // "Active" = workflow ACTIVE + legacy PUBLISHED rows.
-    published: visible.filter((p) => p.status === 'ACTIVE' || p.status === 'PUBLISHED').length,
-    drafts: visible.filter((p) => p.status === 'DRAFT').length,
-    archived: visible.filter((p) => p.status === 'ARCHIVED').length,
-  }
+  // "Live" = workflow ACTIVE + legacy PUBLISHED rows.
+  const liveCount = policies.filter((p) => p.status === 'ACTIVE' || p.status === 'PUBLISHED').length
+  const draftCount = policies.filter((p) => p.status === 'DRAFT').length
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Policies</h1>
-          <p className="text-gray-500 text-sm mt-0.5">Manage policy documents, categories and audiences</p>
+          <p className="text-gray-500 text-sm mt-0.5">
+            {liveCount} live for employees{draftCount ? ` · ${draftCount} draft${draftCount === 1 ? '' : 's'} only you can see` : ''}.
+            {' '}Click <span className="font-medium text-slate-700">Open policy</span> to read one, or <span className="font-medium text-slate-700">Edit details</span> to change it.
+          </p>
         </div>
         <Button onClick={openCreate}>
-          <Plus className="w-4 h-4 mr-1" /> New Policy
+          <Plus className="w-4 h-4" /> New policy
         </Button>
-      </div>
-
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total" value={stats.total} icon={FileText} color="bg-slate-50 text-slate-700" />
-        <StatCard label="Published" value={stats.published} icon={Send} color="bg-slate-50 text-slate-700" />
-        <StatCard label="Drafts" value={stats.drafts} icon={Edit3} color="bg-slate-50 text-slate-700" />
-        <StatCard label="Archived" value={stats.archived} icon={Archive} color="bg-slate-100 text-slate-600" />
       </div>
 
       <div className="flex items-center gap-3 flex-wrap">
@@ -189,103 +176,44 @@ export default function HRPoliciesView() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search title, description or content…"
+            placeholder="Search policies by name or content…"
             className="border-0 focus-visible:ring-0 px-1"
           />
         </div>
-        <div className="flex gap-1 flex-wrap">
-          {CATEGORIES.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCategory(c)}
-              className={`px-3 py-1 rounded-full text-xs font-medium ${
-                category === c ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-              }`}
-            >
-              {catLabels[c]}
-            </button>
-          ))}
+        <div className="w-56">
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {CATEGORIES.map((c) => (
+                <SelectItem key={c} value={c}>{catLabels[c]}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <label className="flex items-center gap-1 text-xs text-slate-600">
-          <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
-          Show archived
+        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            className="h-4 w-4"
+            checked={showArchived}
+            onChange={(e) => setShowArchived(e.target.checked)}
+          />
+          Include archived policies
         </label>
       </div>
 
-      <Card>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Title</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Version</TableHead>
-              <TableHead>Audience</TableHead>
-              <TableHead>Effective</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-gray-400">Loading…</TableCell>
-              </TableRow>
-            ) : visible.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="text-center py-10 text-gray-400">
-                  <FileText className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  No policies match these filters.
-                </TableCell>
-              </TableRow>
-            ) : visible.map((p) => {
-              return (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <Link href={`/dashboard/policies/${p.id}`} className="font-medium text-gray-900 hover:text-slate-700">
-                      {p.title}
-                    </Link>
-                    {p.description && <p className="text-xs text-slate-500 mt-0.5">{p.description}</p>}
-                  </TableCell>
-                  <TableCell><Badge variant="secondary">{catLabels[p.category] ?? p.category}</Badge></TableCell>
-                  <TableCell><StatusBadge status={p.status} /></TableCell>
-                  <TableCell className="text-gray-500 text-sm">v{p.version}</TableCell>
-                  <TableCell className="text-gray-600 text-sm">
-                    <AudienceCell rolesJson={p.audienceRoles} />
-                  </TableCell>
-                  <TableCell className="text-gray-500 text-sm">{p.effectiveDate ? formatDate(p.effectiveDate) : '—'}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center gap-1 justify-end">
-                      {p.status === 'DRAFT' && (
-                        <Link href={`/dashboard/policies/${p.id}`} title="Send for Review">
-                          <Button size="sm"><Send className="w-3.5 h-3.5" /></Button>
-                        </Link>
-                      )}
-                      {p.status === 'APPROVED' && (
-                        <Link href={`/dashboard/policies/${p.id}`} title="Activate">
-                          <Button size="sm" className="bg-slate-700 hover:bg-slate-700">Activate</Button>
-                        </Link>
-                      )}
-                      <Button size="sm" variant="ghost" onClick={() => openEdit(p)} title="Edit">
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </Button>
-                      {p.url && (
-                        <a href={p.url} target="_blank" rel="noreferrer" title="Open PDF">
-                          <Button size="sm" variant="ghost"><ExternalLink className="w-3.5 h-3.5" /></Button>
-                        </a>
-                      )}
-                      {p.status !== 'ARCHIVED' && (
-                        <Button size="sm" variant="ghost" onClick={() => handleArchive(p.id)} title="Archive">
-                          <Archive className="w-3.5 h-3.5" />
-                        </Button>
-                      )}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </Card>
+      {loading ? (
+        <div className="py-10 text-center text-sm text-slate-400">Loading…</div>
+      ) : (
+        <PolicyList
+          policies={visible}
+          onEdit={(id) => {
+            const p = policies.find((x) => x.id === id)
+            if (p) openEdit(p)
+          }}
+          onArchive={handleArchive}
+          emptyText="No policies match this search."
+        />
+      )}
 
       {/* Create / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -422,55 +350,6 @@ export default function HRPoliciesView() {
 
     </div>
   )
-}
-
-function StatCard({ label, value, icon: Icon, color }: { label: string; value: number; icon: React.ComponentType<{ className?: string }>; color: string }) {
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-3">
-        <div className={`p-2 rounded-lg ${color}`}><Icon className="w-5 h-5" /></div>
-        <div>
-          <p className="text-xl font-bold">{value}</p>
-          <p className="text-xs text-slate-500">{label}</p>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-/** Compact audience badges for the table. "Everyone" when all 5 selected; otherwise lists role labels. */
-function AudienceCell({ rolesJson }: { rolesJson: string | null | undefined }) {
-  const roles = parseAudienceRolesClient(rolesJson)
-  const isEveryone = ALL_AUDIENCE_ROLES.every((r) => roles.includes(r)) && roles.length === ALL_AUDIENCE_ROLES.length
-  if (isEveryone) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
-        <Eye className="w-3 h-3" /> Everyone
-      </span>
-    )
-  }
-  const labelFor = (r: string) => AUDIENCE_OPTIONS.find((o) => o.role === r)?.label ?? r
-  return (
-    <div className="flex flex-wrap gap-1">
-      {roles.map((r) => (
-        <span
-          key={r}
-          className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-50 text-slate-700 text-[11px] font-medium border border-slate-100"
-        >
-          {labelFor(r)}
-        </span>
-      ))}
-    </div>
-  )
-}
-
-function StatusBadge({ status }: { status: string }) {
-  // ACTIVE (new workflow) + PUBLISHED (legacy) both render as "Active".
-  if (status === 'ACTIVE' || status === 'PUBLISHED') return <Badge variant="success">Active</Badge>
-  if (status === 'ARCHIVED') return <Badge variant="secondary">Archived</Badge>
-  if (status === 'IN_REVIEW') return <Badge variant="warning">In Review</Badge>
-  if (status === 'APPROVED') return <Badge variant="default">Approved · Awaiting HR</Badge>
-  return <Badge variant="warning">Draft</Badge>
 }
 
 // CoverageDialog removed — acknowledgement UI is hidden. API endpoint

@@ -17,6 +17,7 @@
  * are words rather than points on a scale.
  */
 import { Card } from '@/components/ui/card'
+import { SOURCE_ORDER, type SourceMixData } from '@/lib/queries/recruiting-analytics'
 
 /** Categorical slots 1-6, in order — validated as a set on the light surface. */
 const SOURCE_COLORS: Record<string, string> = {
@@ -35,17 +36,6 @@ const SOURCE_LABEL: Record<string, string> = {
   CAREERS_PAGE: 'Careers page',
   WALK_IN: 'Walk-in',
   OTHER: 'Other',
-}
-
-/** Fixed order, so a source keeps its colour as the counts move. */
-export const SOURCE_ORDER = ['REFERRAL', 'LINKEDIN', 'PORTAL', 'CAREERS_PAGE', 'WALK_IN', 'OTHER']
-
-export interface SourceMixData {
-  /** Total candidates per source, whatever stage they reached. */
-  bySource: { key: string; count: number }[]
-  /** Per stage, the count from each source. */
-  byStage: { key: string; label: string; total: number; bySource: Record<string, number> }[]
-  total: number
 }
 
 export function SourceMix({ data }: { data: SourceMixData }) {

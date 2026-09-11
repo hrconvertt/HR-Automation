@@ -1,5 +1,18 @@
 /**
- * Recruiting's landing view — the pipeline ring, then the queues.
+ * Recruiting's landing view — the scorecard, the queues, the pipeline, and
+ * where candidates come from.
+ *
+ * This used to be two pages: the dashboard (pipeline ring and queues) and
+ * Recruiting Analytics (KPIs, pipeline health, advertising, sources). Reading
+ * one without the other meant a decision needed two screens — the ring said how
+ * many candidates were in screening, and a different page said screening was
+ * the slowest stage. They are one page now, ordered the way a decision is
+ * made: how hiring is going, what is waiting on somebody, where the pipeline
+ * stands, and which channels are worth the money. Nothing was dropped from
+ * either page.
+ *
+ * The analytics panels are HR, executive and manager only, as their page was.
+ * Anyone else sees the ring and the queues.
  *
  * Two things in Workday's version are deliberately absent. The banner of
  * article cards across the top is Workday's content-delivery feature and there
@@ -11,9 +24,12 @@ import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { ClipboardList, UserSearch, Filter, Users, Briefcase } from 'lucide-react'
 import { StageDonut, STAGE_COLORS, RING_STAGES } from './stage-donut'
+import { SourceMix } from './source-mix'
+import { AnalyticsKpis, PipelineHealthCard, AdvertisingCard, StageTimingNote } from './analytics-panels'
 import type { RecruitingDashboard, TaskItem } from '@/lib/queries/recruiting-dashboard'
+import type { RecruitingAnalytics } from '@/lib/queries/recruiting-analytics'
 
-export function RecruitingDashboardView({ data, canSeeKnockouts }: {
+export function RecruitingDashboardView({ data, canSeeKnockouts, analytics }: {
   data: RecruitingDashboard
   /**
    * The Knockouts view is HR and managers only — it names people a hard filter
@@ -21,121 +37,176 @@ export function RecruitingDashboardView({ data, canSeeKnockouts }: {
    * dashboard hands out on its landing page exactly what that view withholds.
    */
   canSeeKnockouts: boolean
+  /** Null for roles that could not open Recruiting Analytics. */
+  analytics: RecruitingAnalytics | null
 }) {
   const { total, inPipeline, stages, openRequisitions, feedbackDue, toScreen, knockedOut } = data
   const ring = stages.filter((s) => RING_STAGES.includes(s.key))
   const rejected = stages.find((s) => s.key === 'REJECTED')
 
   return (
-    <div className="space-y-4">
-      {/* Candidate pipeline. Named for what it counts: Workday's card is "My
-          Candidates" because Workday assigns candidates to a recruiter, and
-          nothing here does. */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
-              <Users className="w-4 h-4" />
-            </div>
-            <h2 className="text-base font-semibold text-slate-900">Candidate Pipeline</h2>
-          </div>
-          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
-            <Briefcase className="w-3.5 h-3.5" />
-            {openRequisitions} open {openRequisitions === 1 ? 'requisition' : 'requisitions'}
-          </span>
+    <div className="space-y-7">
+      {/* 1. The scorecard — is hiring on target? */}
+      {analytics && (
+        <Section
+          title="How hiring is going"
+          blurb="How hiring is actually going. Each number says what it is worked from."
+        >
+          <AnalyticsKpis kpis={analytics.kpis} />
+        </Section>
+      )}
+
+      {/* 2. The queues that are waiting on a person. */}
+      <Section
+        title="Waiting on somebody"
+        blurb="Work that is stuck until someone acts on it."
+      >
+        <div className={`grid gap-4 md:grid-cols-2 ${canSeeKnockouts ? 'xl:grid-cols-3' : ''}`}>
+          <TaskCard
+            icon={<ClipboardList className="w-4 h-4" />}
+            title="Interview Feedback Due"
+            items={feedbackDue}
+            unit="interview"
+            href="/dashboard/recruiting?tab=schedule"
+            empty="Every interview that has happened has a result."
+          />
+          <TaskCard
+            icon={<UserSearch className="w-4 h-4" />}
+            title="Waiting to be Screened"
+            items={toScreen}
+            unit="candidate"
+            href="/dashboard/recruiting?tab=pipeline"
+            empty="Nobody is sitting unread."
+          />
+          {canSeeKnockouts && (
+            <TaskCard
+              icon={<Filter className="w-4 h-4" />}
+              title="Knocked Out"
+              items={knockedOut}
+              unit="candidate"
+              href="/dashboard/recruiting?tab=knockouts"
+              empty="Nobody has been filtered out."
+            />
+          )}
         </div>
+      </Section>
 
-        <div className="flex items-center gap-6 flex-wrap lg:flex-nowrap">
-          <StageDonut stages={stages} inPipeline={inPipeline} />
+      {/* 3. Where every candidate stands, and whether they are moving. */}
+      <Section
+        title="Pipeline"
+        blurb="Where every candidate stands, and whether they are moving."
+      >
+        {/* Candidate pipeline. Named for what it counts: Workday's card is "My
+            Candidates" because Workday assigns candidates to a recruiter, and
+            nothing here does. */}
+        <Card className="p-5">
+          <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center">
+                <Users className="w-4 h-4" />
+              </div>
+              <h2 className="text-base font-semibold text-slate-900">Candidate Pipeline</h2>
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
+              <Briefcase className="w-3.5 h-3.5" />
+              {openRequisitions} open {openRequisitions === 1 ? 'requisition' : 'requisitions'}
+            </span>
+          </div>
 
-          {/* The comparison happens here, in numbers, not on the arcs. */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-1 gap-y-4 min-w-0">
-            {ring.map((s) => {
-              const zero = s.count === 0
-              return (
+          <div className="flex items-center gap-6 flex-wrap lg:flex-nowrap">
+            <StageDonut stages={stages} inPipeline={inPipeline} />
+
+            {/* The comparison happens here, in numbers, not on the arcs. */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:flex lg:flex-1 gap-y-4 min-w-0">
+              {ring.map((s) => {
+                const zero = s.count === 0
+                return (
+                  <Link
+                    key={s.key}
+                    href="/dashboard/recruiting?tab=pipeline"
+                    className="lg:flex-1 px-4 lg:border-l border-slate-100 first:lg:border-l-0 min-w-0 group"
+                  >
+                    <p
+                      className={`text-2xl font-semibold leading-none ${zero ? 'text-slate-300' : 'text-slate-900 group-hover:underline'}`}
+                      style={{ fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      {s.count}
+                    </p>
+                    <p className={`text-xs mt-1.5 truncate ${zero ? 'text-slate-300' : 'text-slate-600'}`}>
+                      {s.label}
+                    </p>
+                    <span
+                      className="block w-2 h-2 rounded-full mt-2"
+                      style={{ background: zero ? '#e2e8f0' : STAGE_COLORS[s.key] }}
+                    />
+                  </Link>
+                )
+              })}
+
+              {/* Outside the ring, and shown as such: a rejected candidate has
+                  left the pipeline, so they are not part of what it divides. */}
+              {rejected && (
                 <Link
-                  key={s.key}
                   href="/dashboard/recruiting?tab=pipeline"
-                  className="lg:flex-1 px-4 lg:border-l border-slate-100 first:lg:border-l-0 min-w-0 group"
+                  className="lg:flex-1 px-4 lg:border-l-2 border-l border-slate-200 min-w-0 group"
                 >
                   <p
-                    className={`text-2xl font-semibold leading-none ${zero ? 'text-slate-300' : 'text-slate-900 group-hover:underline'}`}
+                    className={`text-2xl font-semibold leading-none ${rejected.count === 0 ? 'text-slate-300' : 'text-slate-500 group-hover:underline'}`}
                     style={{ fontVariantNumeric: 'tabular-nums' }}
                   >
-                    {s.count}
+                    {rejected.count}
                   </p>
-                  <p className={`text-xs mt-1.5 truncate ${zero ? 'text-slate-300' : 'text-slate-600'}`}>
-                    {s.label}
+                  <p className={`text-xs mt-1.5 truncate ${rejected.count === 0 ? 'text-slate-300' : 'text-slate-500'}`}>
+                    Rejected
                   </p>
                   <span
                     className="block w-2 h-2 rounded-full mt-2"
-                    style={{ background: zero ? '#e2e8f0' : STAGE_COLORS[s.key] }}
+                    style={{ background: rejected.count === 0 ? '#e2e8f0' : STAGE_COLORS.REJECTED }}
                   />
                 </Link>
-              )
-            })}
-
-            {/* Outside the ring, and shown as such: a rejected candidate has
-                left the pipeline, so they are not part of what it divides. */}
-            {rejected && (
-              <Link
-                href="/dashboard/recruiting?tab=pipeline"
-                className="lg:flex-1 px-4 lg:border-l-2 border-l border-slate-200 min-w-0 group"
-              >
-                <p
-                  className={`text-2xl font-semibold leading-none ${rejected.count === 0 ? 'text-slate-300' : 'text-slate-500 group-hover:underline'}`}
-                  style={{ fontVariantNumeric: 'tabular-nums' }}
-                >
-                  {rejected.count}
-                </p>
-                <p className={`text-xs mt-1.5 truncate ${rejected.count === 0 ? 'text-slate-300' : 'text-slate-500'}`}>
-                  Rejected
-                </p>
-                <span
-                  className="block w-2 h-2 rounded-full mt-2"
-                  style={{ background: rejected.count === 0 ? '#e2e8f0' : STAGE_COLORS.REJECTED }}
-                />
-              </Link>
-            )}
+              )}
+            </div>
           </div>
-        </div>
 
-        <p className="text-[11px] text-slate-400 mt-4">
-          The ring counts the {inPipeline} {inPipeline === 1 ? 'candidate' : 'candidates'} still in play.
-          {' '}{total} on record in total.
-        </p>
-      </Card>
+          <p className="text-[11px] text-slate-400 mt-4">
+            The ring counts the {inPipeline} {inPipeline === 1 ? 'candidate' : 'candidates'} still in play.
+            {' '}{total} on record in total.
+          </p>
+        </Card>
 
-      {/* The queues that are waiting on a person. */}
-      <div className={`grid gap-4 md:grid-cols-2 ${canSeeKnockouts ? 'xl:grid-cols-3' : ''}`}>
-        <TaskCard
-          icon={<ClipboardList className="w-4 h-4" />}
-          title="Interview Feedback Due"
-          items={feedbackDue}
-          unit="interview"
-          href="/dashboard/recruiting?tab=schedule"
-          empty="Every interview that has happened has a result."
-        />
-        <TaskCard
-          icon={<UserSearch className="w-4 h-4" />}
-          title="Waiting to be Screened"
-          items={toScreen}
-          unit="candidate"
-          href="/dashboard/recruiting?tab=pipeline"
-          empty="Nobody is sitting unread."
-        />
-        {canSeeKnockouts && (
-          <TaskCard
-            icon={<Filter className="w-4 h-4" />}
-            title="Knocked Out"
-            items={knockedOut}
-            unit="candidate"
-            href="/dashboard/recruiting?tab=knockouts"
-            empty="Nobody has been filtered out."
-          />
-        )}
-      </div>
+        {analytics && <PipelineHealthCard health={analytics.health} />}
+      </Section>
+
+      {/* 4. Which channels bring people in, and what they cost. */}
+      {analytics && (
+        <Section
+          title="Sources and spend"
+          blurb="Which channels bring candidates in, how far they get, and what advertising has cost."
+        >
+          <AdvertisingCard spend={analytics.spend} kpis={analytics.kpis} />
+          <SourceMix data={analytics.sourceMix} />
+        </Section>
+      )}
+
+      {analytics && <StageTimingNote />}
     </div>
+  )
+}
+
+/** A labelled band of the page, so each part says what question it answers. */
+function Section({ title, blurb, children }: {
+  title: string
+  blurb: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="space-y-3">
+      <div className="border-b border-slate-200 pb-2">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-600">{title}</h2>
+        <p className="text-xs text-slate-400 mt-0.5">{blurb}</p>
+      </div>
+      <div className="space-y-4">{children}</div>
+    </section>
   )
 }
 
