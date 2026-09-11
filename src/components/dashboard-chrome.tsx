@@ -602,6 +602,8 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
         { href: '/dashboard/learning?tab=programs', label: 'Programs', icon: GraduationCap },
         { href: '/dashboard/learning?tab=records', label: 'Enrolments', icon: Users },
         { href: '/dashboard/learning?tab=certs', label: 'Certifications', icon: Award },
+        { href: '/dashboard/learning?tab=admin', label: 'Learning Admin', icon: BarChart3, roles: ['HR_ADMIN'] },
+        { href: '/dashboard/learning?tab=content', label: 'Manage Content', icon: FolderOpen, roles: ['HR_ADMIN'] },
       ],
     },
   ],

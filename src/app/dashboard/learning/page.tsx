@@ -15,6 +15,9 @@ import { MyLearning, type LearningView, type CourseCard, type TranscriptRow } fr
 import { parseLessons, parseQuiz, PROGRAM_TYPES } from '@/lib/learning'
 import type { PathSummary } from '@/lib/learning-path-types'
 import type { TeamRow } from './_components/team-view'
+import { LearningAdmin } from './_components/learning-admin'
+import { ContentManager } from './_components/content-manager'
+import { learningAdminData, contentData } from '@/lib/queries/learning-admin'
 import { DEPARTED_STATUSES } from '@/lib/learning-assign'
 
 /**
@@ -70,6 +73,12 @@ export default async function LearningPage({
   if (!payload) redirect('/login')
   const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
   const isHR = role === 'HR_ADMIN'
+
+  // HR's two views for running the catalogue, shaped after Workday's Learning
+  // Admin and Manage Learning Content. Anyone else asking for them lands on
+  // My Learning instead, through the branch below.
+  if (isHR && sp.tab === 'admin') return <LearningAdmin data={await learningAdminData()} />
+  if (isHR && sp.tab === 'content') return <ContentManager rows={await contentData()} />
 
   if (view) {
     // Everything below is the signed-in person's own. A sign-in with no
