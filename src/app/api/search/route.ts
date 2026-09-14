@@ -4,7 +4,7 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 interface SearchResult {
-  type: 'employee' | 'payslip' | 'policy' | 'leave' | 'letter'
+  type: 'employee' | 'payslip' | 'policy' | 'leave' | 'letter' | 'department'
   id: string
   title: string
   subtitle?: string
@@ -191,6 +191,35 @@ export async function GET(request: NextRequest) {
         title: l.letterNumber ?? l.letterType,
         subtitle: `${l.employee.fullName}${l.purpose ? ' · ' + l.purpose : ''}`,
         href: '/dashboard/letters',
+      })
+    }
+  } catch {}
+
+  // Departments — Workday lists the supervisory organization beside the tasks.
+  // The org chart is open to every role, so the names are too; only HR is
+  // taken to the page that edits them.
+  try {
+    const departments = await prisma.department.findMany({
+      where: { OR: [{ name: ic(q) }, { code: ic(q) }] },
+      select: {
+        id: true,
+        code: true,
+        name: true,
+        head: { select: { fullName: true } },
+        _count: { select: { employees: true } },
+      },
+      take: perBucket,
+    })
+    for (const d of departments) {
+      results.push({
+        type: 'department',
+        id: d.id,
+        title: `${d.name} (${d.code})`,
+        subtitle: [
+          `${d._count.employees} ${d._count.employees === 1 ? 'person' : 'people'}`,
+          d.head ? `Head: ${d.head.fullName}` : null,
+        ].filter(Boolean).join(' · '),
+        href: isHR ? '/dashboard/settings/departments' : '/dashboard/org-chart',
       })
     }
   } catch {}
