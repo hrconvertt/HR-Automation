@@ -11,7 +11,6 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import SettingsSidebar from '@/components/settings-sidebar'
 import { Lock, User as UserIcon, Bell, Settings2, ChevronRight, ShieldAlert } from 'lucide-react'
 
 interface MeUser {
@@ -55,9 +54,9 @@ export default function AccountPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
-        <SettingsSidebar role={user?.role} />
-
+      {/* The My Account list is in the app sidebar (SETTINGS_NAV), so it is not
+          repeated beside the content here. */}
+      <div>
         <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader className="border-b border-slate-100"><CardTitle>Account overview</CardTitle></CardHeader>

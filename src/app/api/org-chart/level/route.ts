@@ -15,7 +15,7 @@ import { LEVELS } from '@/lib/promotion'
 export async function PATCH(request: NextRequest) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
   if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  const role = request.cookies.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? request.cookies.get('hr_preview_role')?.value : undefined) ?? payload.role
   if (role !== 'HR_ADMIN') return NextResponse.json({ error: 'HR only' }, { status: 403 })
 
   const body = await request.json().catch(() => ({}))

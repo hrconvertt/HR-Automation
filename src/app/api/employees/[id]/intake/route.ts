@@ -18,7 +18,7 @@ interface RouteParams { params: Promise<{ id: string }> }
 async function gate(request: NextRequest, employeeId: string) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  const role = request.cookies.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? request.cookies.get('hr_preview_role')?.value : undefined) ?? payload.role
   const me = await prisma.user.findUnique({
     where: { id: payload.userId },
     select: { employee: { select: { id: true } } },

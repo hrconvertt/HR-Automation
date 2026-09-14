@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
@@ -188,6 +189,11 @@ const STATUS_TONE: Record<string, 'success' | 'secondary' | 'destructive' | 'war
 export default async function RecruitingPage({ searchParams }: { searchParams?: Promise<{ tab?: string; stage?: string; role?: string; req?: string; sub?: string }> }) {
   const sp = (await searchParams) ?? {}
   const { role, myEmployeeId } = await resolveContext()
+  // Candidates, requisitions and interviews are for the people who hire. Search
+  // offered this page to every role and nothing here turned an employee away,
+  // so anyone could read the whole candidate list. Same three roles the
+  // module's analytics already allowed.
+  if (role !== 'HR_ADMIN' && role !== 'MANAGER' && role !== 'EXECUTIVE') redirect('/dashboard')
   const { requisitions, candidates, interviews, poolCandidates } = await getData()
   const dashboard = await recruitingDashboard()
 

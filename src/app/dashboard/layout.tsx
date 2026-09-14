@@ -107,6 +107,7 @@ export default async function DashboardLayout({
       departmentName={departmentName}
       mustChangePass={user.mustChangePass}
       canUseLeadershipChat={canUseChat}
+      myEmployeeId={user.employee?.id ?? null}
     >
       <MfaBanner role={role} mfaEnabled={mfaEnabled} />
       {children}

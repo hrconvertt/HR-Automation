@@ -24,7 +24,7 @@ export default async function IntakePage({ params }: PageProps) {
     where: { id: payload.userId },
     select: { role: true, employee: { select: { id: true } } },
   })
-  const role = cookieStore.get('hr_preview_role')?.value ?? me?.role
+  const role = (me?.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined) ?? me?.role
   const isHR = role === 'HR_ADMIN'
   const isSelf = me?.employee?.id === employeeId
   if (!isHR && !isSelf) {

@@ -41,7 +41,6 @@ import {
   PieChart,
   Inbox,
   ChevronDown,
-  HelpCircle,
   Mail,
   ShieldCheck,
   History,
@@ -127,6 +126,9 @@ function applyFocus(groups: NavGroup[]): NavGroup[] {
     .filter((g) => g.items.length > 0)
 }
 
+/** Everyone who works a leave or WFH queue — every role but EMPLOYEE. */
+const APPROVER_ROLES = ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE', 'FINANCE']
+
 const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
   HR_ADMIN: [
     {
@@ -148,9 +150,10 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/lifecycle', label: 'Employee Lifecycle', icon: UserPlus },
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
         { href: '/dashboard/learning', label: 'Training & Development', icon: GraduationCap },
-        { href: '/dashboard/career/flex-teams', label: 'Flex Teams', icon: Compass },
-        { href: '/dashboard/journeys/studio', label: 'Journeys', icon: KanbanSquare },
-        { href: '/dashboard/my-journeys', label: 'My Journeys', icon: ListOrdered },
+        // Flex Teams and My Journeys are inside Career Hub (CAREER_NAV), and the
+        // Journeys studio is inside Employee Lifecycle beside Onboarding — each
+        // was a top-level entry with no module menu of its own.
+        { href: '/dashboard/career', label: 'Career Hub', icon: Compass },
         { href: '/dashboard/org-chart', label: 'Org Chart', icon: Network },
       ],
     },
@@ -171,7 +174,8 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
-        { href: '/dashboard/help/case-management', label: 'Case Management', icon: HelpCircle },
+        // Case Management is inside the Help Center menu (HELP_NAV); a second
+        // top-level entry to the same page is gone.
       ],
     },
     {
@@ -191,19 +195,19 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
         { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
+        // Team Insights (check-ins, development plans, mentors) is inside Team
+        // Performance's menu; it was listed here as well.
         { href: '/dashboard/performance', label: 'Team Performance', icon: TrendingUp },
-        // Check-ins, development plans and mentors for each report.
-        { href: '/dashboard/team-insights', label: 'Team Insights', icon: Compass },
+        // Probation Tracker only redirected to this same page, so it is gone.
         { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
-      { href: '/dashboard/probation/tracker', label: 'Probation Tracker', icon: ClipboardList },
       ],
     },
     {
       label: 'My Workspace',
       items: [
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
+        // My Journeys and Flex Teams are inside Career Hub's menu.
         { href: '/dashboard/career', label: 'Career Hub', icon: Compass },
-        { href: '/dashboard/my-journeys', label: 'My Journeys', icon: ListOrdered },
         { href: '/dashboard/learning', label: 'Training & Development', icon: GraduationCap },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
@@ -236,9 +240,9 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'My Growth',
       items: [
         { href: '/dashboard/performance', label: 'My Reviews', icon: TrendingUp },
-        // Where to grow: manager suggestions, mentors, flex teams, career paths.
+        // Where to grow: manager suggestions, mentors, flex teams, career paths,
+        // and My Journeys — all inside Career Hub's menu.
         { href: '/dashboard/career', label: 'Career Hub', icon: Compass },
-        { href: '/dashboard/my-journeys', label: 'My Journeys', icon: ListOrdered },
         { href: '/dashboard/learning', label: 'My Training', icon: GraduationCap },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
       ],
@@ -361,8 +365,10 @@ const PERFORMANCE_NAV: NavGroup[] = [
       { href: '/dashboard/performance?tab=goals', label: 'Goals', icon: Target },
       { href: '/dashboard/performance?tab=reviews', label: 'Reviews', icon: ClipboardCheck },
       { href: '/dashboard/daily-log', label: 'Daily Log', icon: ClipboardList },
-      { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3 },
-      { href: '/dashboard/performance/appraisals', label: 'Appraisal Forms', icon: ClipboardList },
+      // Roles mirror each page's gate: Team Review turns employees away, and
+      // Appraisal Forms sends anyone but HR, managers and executives back.
+      { href: '/dashboard/daily-review', label: 'Team Review', icon: BarChart3, roles: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'] },
+      { href: '/dashboard/performance/appraisals', label: 'Appraisal Forms', icon: ClipboardList, roles: ['HR_ADMIN', 'MANAGER', 'EXECUTIVE'] },
       // Growing people: the manager's hub, and HR's view of cover and skills.
       { href: '/dashboard/team-insights', label: 'Team Insights', icon: Compass, roles: ['HR_ADMIN', 'MANAGER', 'EXECUTIVE'] },
       { href: '/dashboard/performance/talent', label: 'Talent Review', icon: Grid3x3, roles: ['HR_ADMIN', 'EXECUTIVE'] },
@@ -371,7 +377,8 @@ const PERFORMANCE_NAV: NavGroup[] = [
       { href: '/dashboard/performance?tab=showcause', label: 'Show Cause', icon: FileWarning, roles: ['HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
       { href: '/dashboard/performance?tab=pip', label: 'PIP', icon: AlertTriangle, roles: ['HR_ADMIN', 'MANAGER', 'EMPLOYEE'] },
       { href: '/dashboard/performance/increments', label: 'Increments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
-      { href: '/dashboard/culture', label: 'Recognition', icon: Sparkles },
+      // Recognition was here too, linking to People & Culture — the module it
+      // lives in and every role already has in the main menu.
     ],
   },
 ]
@@ -380,20 +387,26 @@ const LIFECYCLE_NAV: NavGroup[] = [
   {
     label: 'Employee Lifecycle',
     items: [
-      { href: '/dashboard/lifecycle', label: 'Overview', icon: Users },
+      // Roles mirror each page's own gate. A manager reaches this menu from
+      // their top-level Probation entry, and used to be offered six pages that
+      // sent them back to the dashboard or said "Access denied".
+      { href: '/dashboard/lifecycle', label: 'Overview', icon: Users, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       // Verification comes first because it comes first: a hire lands here the
       // moment the offer is accepted, and onboarding starts once the checks are
       // running. The sidebar reads in the order the lifecycle happens.
-      { href: '/dashboard/lifecycle/verification', label: 'Background Verification', icon: ShieldCheck },
-      { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus },
+      { href: '/dashboard/lifecycle/verification', label: 'Background Verification', icon: ShieldCheck, roles: ['HR_ADMIN'] },
+      { href: '/dashboard/onboarding', label: 'Onboarding', icon: UserPlus, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      // The journeys HR builds and hands out — Onboarding, Transition to
+      // Management — sit beside Onboarding rather than at the top level.
+      { href: '/dashboard/journeys/studio', label: 'Journeys', icon: KanbanSquare, roles: ['HR_ADMIN'] },
       // Probation lives INSIDE the lifecycle (its natural stage position).
-      // The top-level HR nav entry was removed so it isn't duplicated;
-      // Managers keep their top-level Probation entry (no lifecycle nav).
-      { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck },
-      { href: '/dashboard/lifecycle/job-changes', label: 'Job Changes', icon: TrendingUp },
-      { href: '/dashboard/lifecycle/loa', label: 'Leave of Absence', icon: PlaneIcon },
-      { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert },
-      { href: '/dashboard/lifecycle/exit', label: 'Exit Clearance', icon: LogOut },
+      // HR reaches it here; managers keep a top-level Probation entry that
+      // opens this same menu, filtered to what they can use.
+      { href: '/dashboard/probation', label: 'Probation', icon: ShieldCheck, roles: ['HR_ADMIN', 'MANAGER', 'EXECUTIVE'] },
+      { href: '/dashboard/lifecycle/job-changes', label: 'Job Changes', icon: TrendingUp, roles: ['HR_ADMIN', 'MANAGER'] },
+      { href: '/dashboard/lifecycle/loa', label: 'Leave of Absence', icon: PlaneIcon, roles: ['HR_ADMIN'] },
+      { href: '/dashboard/lifecycle/termination', label: 'Terminations', icon: ShieldAlert, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      { href: '/dashboard/lifecycle/exit', label: 'Exit Clearance', icon: LogOut, roles: ['HR_ADMIN', 'EXECUTIVE'] },
     ],
   },
 ]
@@ -405,37 +418,44 @@ const LIFECYCLE_NAV: NavGroup[] = [
  */
 // Grouped by what is being set up — the company, time, pay, then the system
 // itself — rather than in the order the pages happened to be built.
+//
+// The organisation sections are HR's: each page either redirects anyone else
+// or says "Access denied", and the Overview sends non-HR to their own Account.
+// Every role used to be shown all of them and none of their own settings, so
+// the personal pages have their own group at the end, open to everyone.
+const HR_ONLY = ['HR_ADMIN']
 const SETTINGS_NAV: NavGroup[] = [
   {
     label: 'Settings',
     items: [
-      { href: '/dashboard/settings', label: 'Overview', icon: Settings },
+      { href: '/dashboard/settings', label: 'Overview', icon: Settings, roles: HR_ONLY },
     ],
   },
   {
     label: 'Company',
     items: [
-      { href: '/dashboard/settings/organization', label: 'Organization', icon: Network },
-      { href: '/dashboard/settings/departments', label: 'Departments', icon: Users },
-      { href: '/dashboard/settings/users', label: 'Users', icon: UserIcon },
-      { href: '/dashboard/settings/roles', label: 'Roles', icon: ShieldCheck },
+      { href: '/dashboard/settings/organization', label: 'Organization', icon: Network, roles: HR_ONLY },
+      { href: '/dashboard/settings/departments', label: 'Departments', icon: Users, roles: HR_ONLY },
+      { href: '/dashboard/settings/users', label: 'Users', icon: UserIcon, roles: HR_ONLY },
+      { href: '/dashboard/settings/roles', label: 'Roles', icon: ShieldCheck, roles: HR_ONLY },
     ],
   },
   {
     label: 'Time & Leave',
     items: [
-      { href: '/dashboard/settings/working-days', label: 'Working Days & Hours', icon: CalendarCheck },
-      { href: '/dashboard/settings/holidays', label: 'Holidays & WFH', icon: CalendarDays },
-      { href: '/dashboard/settings/leave-policies', label: 'Leave Policies', icon: PlaneIcon },
-      { href: '/dashboard/settings/time-tracking', label: 'Time Tracking', icon: BarChart3 },
-      { href: '/dashboard/settings/daily-logging', label: 'Daily Logging', icon: ClipboardList },
+      { href: '/dashboard/settings/working-days', label: 'Working Days & Hours', icon: CalendarCheck, roles: HR_ONLY },
+      { href: '/dashboard/settings/holidays', label: 'Holidays & WFH', icon: CalendarDays, roles: HR_ONLY },
+      { href: '/dashboard/settings/leave-policies', label: 'Leave Policies', icon: PlaneIcon, roles: HR_ONLY },
+      { href: '/dashboard/settings/time-tracking', label: 'Time Tracking', icon: BarChart3, roles: HR_ONLY },
+      // Hidden by HIDDEN_PATHS, which now applies to module menus as well.
+      { href: '/dashboard/settings/daily-logging', label: 'Daily Logging', icon: ClipboardList, roles: HR_ONLY },
     ],
   },
   {
     label: 'Pay',
     items: [
-      { href: '/dashboard/settings/salary-structure', label: 'Salary Structure', icon: Banknote },
-      { href: '/dashboard/settings/tax-slabs', label: 'Income Tax Slabs', icon: Banknote },
+      { href: '/dashboard/settings/salary-structure', label: 'Salary Structure', icon: Banknote, roles: HR_ONLY },
+      { href: '/dashboard/settings/tax-slabs', label: 'Income Tax Slabs', icon: Banknote, roles: HR_ONLY },
       // The bank list payroll codes against — was a hardcoded map until now.
       { href: '/dashboard/settings/bank-codes', label: 'Bank Codes', icon: Landmark, roles: ['HR_ADMIN', 'EXECUTIVE'] },
     ],
@@ -443,11 +463,22 @@ const SETTINGS_NAV: NavGroup[] = [
   {
     label: 'System',
     items: [
-      { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell },
       { href: '/dashboard/settings/interim-rules', label: 'Interim Rules', icon: AlertTriangle, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       // Written to by sixteen API routes since the system went up, and until
       // now readable by nobody.
       { href: '/dashboard/settings/audit', label: 'Audit Trail', icon: History, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+    ],
+  },
+  {
+    // Your own settings, the same five pages the account screens list. These
+    // were reachable only from the account menu, never from this sidebar.
+    label: 'My Account',
+    items: [
+      { href: '/dashboard/settings/account', label: 'Account', icon: User },
+      { href: '/dashboard/settings/profile', label: 'Profile & Photo', icon: UserIcon },
+      { href: '/dashboard/settings/password', label: 'Password', icon: ShieldCheck },
+      { href: '/dashboard/settings/notifications', label: 'Notifications', icon: Bell },
+      { href: '/dashboard/settings/preferences', label: 'Preferences', icon: Settings },
     ],
   },
 ]
@@ -474,14 +505,16 @@ const RECRUITING_NAV: NavGroup[] = [
       // 1. The role. Requests and requisitions were the same JobRequisition row
       //    at two statuses, under two menu entries, one of which was always empty.
       { href: '/dashboard/recruiting?tab=requisitions', label: 'Requisitions', icon: FolderOpen },
-      { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText },
+      // HR and hiring managers write JDs; the page says "Access denied" to anyone else.
+      { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText, roles: ['HR_ADMIN', 'MANAGER'] },
       { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
 
       // 2. The candidates. The board first, because it is where the day starts;
       //    then one role opened up; then the ones a hard filter turned away.
       { href: '/dashboard/recruiting?tab=pipeline', label: 'Pipeline', icon: BarChart3 },
       { href: '/dashboard/recruiting?tab=workspace', label: 'Requisition Workspace', icon: KanbanSquare },
-      { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert },
+      // The Knockouts view only renders for HR and managers; an executive got a blank page.
+      { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert, roles: ['HR_ADMIN', 'MANAGER'] },
       { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },
 
       // 3. Afterwards. The people worth keeping, and how the hiring went.
@@ -536,6 +569,57 @@ const HELP_NAV: NavGroup[] = [
   },
 ]
 
+/**
+ * Career Hub module menu — where to grow. Flex Teams and My Journeys were
+ * top-level entries with no module menu, so opening either dropped the sidebar
+ * back to the main nav.
+ */
+const CAREER_NAV: NavGroup[] = [
+  {
+    label: 'Career Hub',
+    items: [
+      { href: '/dashboard/career', label: 'Career Hub', icon: Compass },
+      { href: '/dashboard/career/path', label: 'Career Path Builder', icon: TrendingUp },
+      { href: '/dashboard/career/flex-teams', label: 'Flex Teams', icon: Users },
+      { href: '/dashboard/my-journeys', label: 'My Journeys', icon: ListOrdered },
+    ],
+  },
+]
+
+/**
+ * Training & Development module menu. Hoisted so Skills and Experience, which
+ * lives on /dashboard/people/skills, keeps this menu on screen too.
+ */
+const LEARNING_NAV: NavGroup[] = [
+  {
+    // The learner's side first, the way Workday's Learning opens: your own
+    // shelves, the whole catalogue, what you have done, what you kept.
+    label: 'Learning',
+    items: [
+      { href: '/dashboard/learning?tab=my', label: 'My Learning', icon: BookOpen },
+      { href: '/dashboard/learning?tab=discover', label: 'Discover', icon: Compass },
+      { href: '/dashboard/learning?tab=transcript', label: 'My Transcript', icon: ScrollText },
+      { href: '/dashboard/learning?tab=library', label: 'My Library', icon: Bookmark },
+      { href: '/dashboard/learning?tab=paths', label: 'My Learning Paths', icon: ListOrdered },
+      { href: '/dashboard/learning?tab=team', label: "My Team's Learning", icon: Users, roles: ['MANAGER', 'HR_ADMIN'] },
+      { href: '/dashboard/people/skills', label: 'Skills and Experience', icon: Target },
+    ],
+  },
+  {
+    // Running the catalogue. Same three views as before, now one tab away.
+    // Enrolments and Certifications name every person, so they are HR's and
+    // the executives'; the page shows anyone else the Programs catalogue.
+    label: 'Programs & Records',
+    items: [
+      { href: '/dashboard/learning?tab=programs', label: 'Programs', icon: GraduationCap },
+      { href: '/dashboard/learning?tab=records', label: 'Enrolments', icon: Users, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      { href: '/dashboard/learning?tab=certs', label: 'Certifications', icon: Award, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      { href: '/dashboard/learning?tab=admin', label: 'Learning Admin', icon: BarChart3, roles: ['HR_ADMIN'] },
+      { href: '/dashboard/learning?tab=content', label: 'Manage Content', icon: FolderOpen, roles: ['HR_ADMIN'] },
+    ],
+  },
+]
+
 const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/performance': PERFORMANCE_NAV,
   // Two of the module's own pages live outside /dashboard/performance. Without
@@ -554,11 +638,20 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
   // Same module, different path roots — keep the sidebar on screen.
   '/dashboard/onboarding': LIFECYCLE_NAV,
   '/dashboard/probation': LIFECYCLE_NAV,
+  // The journeys studio (and the older /dashboard/journeys board) belong to
+  // Employee Lifecycle. Note '/dashboard/journeys' is not a prefix of
+  // '/dashboard/my-journeys', which is Career Hub's.
+  '/dashboard/journeys': LIFECYCLE_NAV,
+  '/dashboard/career': CAREER_NAV,
+  '/dashboard/my-journeys': CAREER_NAV,
+  '/dashboard/learning': LEARNING_NAV,
+  '/dashboard/people': LEARNING_NAV,
   '/dashboard/culture': [
     {
       label: 'People & Culture',
       items: [
-        { href: '/dashboard/culture/overview', label: 'Overview', icon: BarChart3 },
+        // HR and executives only — the page says "Access denied" to anyone else.
+        { href: '/dashboard/culture/overview', label: 'Overview', icon: BarChart3, roles: ['HR_ADMIN', 'EXECUTIVE'] },
         // Events, Promotions and Promotion Events are one section now, reached
         // through the tab bar on the page — a single sidebar entry.
         { href: '/dashboard/culture/events', label: 'Events & Promotions', icon: CalendarDays },
@@ -643,36 +736,10 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
           icon: FileText,
           roles: ['HR_ADMIN'],
         },
-        { href: '/dashboard/payroll/register', label: 'Slip Register', icon: FolderOpen },
+        // The register carries every person's pay; the page sends anyone else back.
+        { href: '/dashboard/payroll/register', label: 'Slip Register', icon: FolderOpen, roles: ['HR_ADMIN', 'FINANCE', 'EXECUTIVE'] },
         { href: '/dashboard/payroll/advances', label: 'Loans & Advances', icon: Banknote, roles: ['HR_ADMIN'] },
         { href: '/dashboard/payroll/configuration', label: 'Configuration', icon: Settings, roles: ['HR_ADMIN'] },
-      ],
-    },
-  ],
-  '/dashboard/learning': [
-    {
-      // The learner's side first, the way Workday's Learning opens: your own
-      // shelves, the whole catalogue, what you have done, what you kept.
-      label: 'Learning',
-      items: [
-        { href: '/dashboard/learning?tab=my', label: 'My Learning', icon: BookOpen },
-        { href: '/dashboard/learning?tab=discover', label: 'Discover', icon: Compass },
-        { href: '/dashboard/learning?tab=transcript', label: 'My Transcript', icon: ScrollText },
-        { href: '/dashboard/learning?tab=library', label: 'My Library', icon: Bookmark },
-        { href: '/dashboard/learning?tab=paths', label: 'My Learning Paths', icon: ListOrdered },
-        { href: '/dashboard/learning?tab=team', label: "My Team's Learning", icon: Users, roles: ['MANAGER', 'HR_ADMIN'] },
-        { href: '/dashboard/people/skills', label: 'Skills and Experience', icon: Target },
-      ],
-    },
-    {
-      // Running the catalogue. Same three views as before, now one tab away.
-      label: 'Programs & Records',
-      items: [
-        { href: '/dashboard/learning?tab=programs', label: 'Programs', icon: GraduationCap },
-        { href: '/dashboard/learning?tab=records', label: 'Enrolments', icon: Users },
-        { href: '/dashboard/learning?tab=certs', label: 'Certifications', icon: Award },
-        { href: '/dashboard/learning?tab=admin', label: 'Learning Admin', icon: BarChart3, roles: ['HR_ADMIN'] },
-        { href: '/dashboard/learning?tab=content', label: 'Manage Content', icon: FolderOpen, roles: ['HR_ADMIN'] },
       ],
     },
   ],
@@ -681,7 +748,9 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       label: 'Leave',
       items: [
         { href: '/dashboard/leave/me', label: 'My Leave', icon: PlaneIcon },
-        { href: '/dashboard/leave/requests', label: 'Leave Requests', icon: Inbox },
+        // The request queues send an employee straight back to My Leave, where
+        // their own requests (leave and WFH) already are.
+        { href: '/dashboard/leave/requests', label: 'Leave Requests', icon: Inbox, roles: APPROVER_ROLES },
         { href: '/dashboard/leave/approved', label: 'Leave Approved', icon: CheckCircle2 },
         { href: '/dashboard/leave/rejected', label: 'Leave Rejected', icon: X },
         // Half a day is a flag on a request rather than a leave type, so it
@@ -694,7 +763,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
     {
       label: 'Work From Home',
       items: [
-        { href: '/dashboard/leave/wfh/requests', label: 'WFH Requests', icon: Inbox },
+        { href: '/dashboard/leave/wfh/requests', label: 'WFH Requests', icon: Inbox, roles: APPROVER_ROLES },
         { href: '/dashboard/leave/wfh/approved', label: 'WFH Approved', icon: CheckCircle2 },
       ],
     },
@@ -705,26 +774,38 @@ function getActiveNav(
   pathname: string,
   baseGroups: NavGroup[],
   role: string,
+  myEmployeeId: string | null,
 ): { groups: NavGroup[]; nested: boolean } {
   // An employee profile's sections belong in the sidebar like every other
   // module's. They cannot be a static NESTED_NAV entry because the links carry
   // the employee's id, so the group is built from the path being viewed.
+  // 'new' and 'trash' are pages of their own under /dashboard/employees.
   const profile = pathname.match(/^\/dashboard\/employees\/([^/]+)$/)
-  if (profile && profile[1] !== 'new') {
+  if (profile && profile[1] !== 'new' && profile[1] !== 'trash') {
     const base = `/dashboard/employees/${profile[1]}`
+    // Mirrors the profile page's own section gates, so a manager looking at a
+    // report is not offered Compensation (salary is HR, executives, finance,
+    // or your own record — see src/lib/can-see-salary.ts). A manager's
+    // team membership cannot be known here; the page itself checks it and
+    // falls back to Overview for a section the viewer may not open.
+    const own = !!myEmployeeId && profile[1] === myEmployeeId
+    const isHR = role === 'HR_ADMIN'
+    const isExec = role === 'EXECUTIVE'
+    const isManager = role === 'MANAGER'
+    const sections: { item: NavItem; show: boolean }[] = [
+      { item: { href: `${base}?tab=overview`, label: 'Overview', icon: User }, show: true },
+      { item: { href: `${base}?tab=lifecycle`, label: 'Lifecycle', icon: UserPlus }, show: isHR || isExec || own || isManager },
+      { item: { href: `${base}?tab=compensation`, label: 'Compensation', icon: Banknote }, show: isHR || isExec || role === 'FINANCE' || own },
+      { item: { href: `${base}?tab=leave`, label: 'Leave', icon: PlaneIcon }, show: isHR || own || isManager },
+      { item: { href: `${base}?tab=documents`, label: 'Documents', icon: FolderOpen }, show: isHR || own },
+      { item: { href: `${base}?tab=performance`, label: 'Performance', icon: TrendingUp }, show: isHR || isExec || own || isManager },
+      { item: { href: `${base}?tab=assets`, label: 'Assets', icon: Package }, show: isHR || own || isManager },
+    ]
     return {
       nested: true,
       groups: [{
         label: 'Employee',
-        items: [
-          { href: `${base}?tab=overview`, label: 'Overview', icon: User },
-          { href: `${base}?tab=lifecycle`, label: 'Lifecycle', icon: UserPlus },
-          { href: `${base}?tab=compensation`, label: 'Compensation', icon: Banknote },
-          { href: `${base}?tab=leave`, label: 'Leave', icon: PlaneIcon },
-          { href: `${base}?tab=documents`, label: 'Documents', icon: FolderOpen },
-          { href: `${base}?tab=performance`, label: 'Performance', icon: TrendingUp },
-          { href: `${base}?tab=assets`, label: 'Assets', icon: Package },
-        ],
+        items: sections.filter((s) => s.show).map((s) => s.item),
       }],
     }
   }
@@ -734,7 +815,9 @@ function getActiveNav(
       const filtered = NESTED_NAV[prefix]
         .map((g) => ({
           ...g,
-          items: g.items.filter((i) => !i.roles || i.roles.includes(role)),
+          // HIDDEN_PATHS applies inside module menus too. It used to run only
+          // on the main nav, so Settings still listed Daily Logging.
+          items: g.items.filter((i) => (!i.roles || i.roles.includes(role)) && !HIDDEN_PATHS.has(i.href)),
         }))
         .filter((g) => g.items.length > 0)
       return { groups: filtered, nested: true }
@@ -1118,6 +1201,8 @@ interface Props {
   departmentName: string | null
   mustChangePass: boolean
   canUseLeadershipChat?: boolean
+  /** The signed-in person's employee id, so a profile's menu knows "your own". */
+  myEmployeeId?: string | null
   children: React.ReactNode
 }
 
@@ -1129,6 +1214,7 @@ export default function DashboardChrome({
   departmentName,
   mustChangePass,
   canUseLeadershipChat = false,
+  myEmployeeId = null,
   children,
 }: Props) {
   const pathname = usePathname()
@@ -1254,7 +1340,7 @@ export default function DashboardChrome({
           : g,
       )
     : baseGroups
-  const { groups: activeGroups, nested } = getActiveNav(pathname, navGroupsWithChat, role)
+  const { groups: activeGroups, nested } = getActiveNav(pathname, navGroupsWithChat, role, myEmployeeId)
   const navGroups = nested ? activeGroups : applyFocus(activeGroups)
 
   const displayRole = (() => {

@@ -18,7 +18,7 @@ export default async function EmploymentLetterPage() {
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
   if (!payload) redirect('/login')
-  const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined) ?? payload.role
   if (role !== 'HR_ADMIN') {
     return (
       <div className="rounded-2xl bg-slate-50 border border-slate-100 p-6">

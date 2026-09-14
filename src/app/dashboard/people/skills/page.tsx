@@ -11,7 +11,7 @@ export default async function SkillsPage() {
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
   if (!payload) redirect('/login')
-  const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined) ?? payload.role
 
   const people = await prisma.employee.findMany({
     where: { status: 'ACTIVE' },

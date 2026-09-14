@@ -22,7 +22,7 @@ const MAX_SIGNATURE_BYTES = 400_000
 async function gateHR(request: NextRequest) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  const role = request.cookies.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? request.cookies.get('hr_preview_role')?.value : undefined) ?? payload.role
   if (role !== 'HR_ADMIN') {
     return { error: NextResponse.json({ error: 'HR only' }, { status: 403 }) }
   }

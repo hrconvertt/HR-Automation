@@ -8,10 +8,8 @@ import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import SettingsSidebar from '@/components/settings-sidebar'
 
 export default function ProfilePage() {
-  const [role, setRole] = useState<string | undefined>()
   const [fullName, setFullName] = useState('')
   const [pronouns, setPronouns] = useState('')
   const [photoUrl, setPhotoUrl] = useState<string | null>(null)
@@ -23,7 +21,6 @@ export default function ProfilePage() {
   useEffect(() => {
     fetch('/api/profile').then((r) => r.json()).then((d) => {
       if (d.user) {
-        setRole(d.user.role)
         setFullName(d.user.employee?.fullName ?? '')
         setPronouns(d.user.pronouns ?? '')
         setPhotoUrl(d.user.employee?.photoUrl ?? null)
@@ -68,9 +65,8 @@ export default function ProfilePage() {
         <p className="text-sm text-slate-500 mt-1">How you appear across Convertt HR — visible to your team.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
-        <SettingsSidebar role={role} />
-
+      {/* My Account is listed in the app sidebar, not beside the form. */}
+      <div>
         <div className="min-w-0">
           <Card>
             <CardHeader className="border-b border-slate-100"><CardTitle>Profile details</CardTitle></CardHeader>

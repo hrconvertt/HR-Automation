@@ -1,40 +1,53 @@
 'use client'
 
 /**
- * Settings shell — left sub-nav (desktop) / top dropdown (mobile).
+ * Settings shell — the active section, plus a section picker on small screens.
  * Each settings section is its own route under /dashboard/settings/*.
- * Account/Profile/Password/Preferences are personal — they don't
- * appear in the HR org-settings rail; users reach them via the
- * top-right account menu.
+ *
+ * The section list lives in the app sidebar (SETTINGS_NAV in
+ * dashboard-chrome.tsx). The mobile picker below mirrors it: My Account for
+ * everyone, the organisation sections for HR only — it used to offer every
+ * role HR's eight sections and none of their own.
  */
-import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
-import {
-  Building2, Calendar, Calculator, Users, Plane,
-  Mail, ShieldCheck,
-} from 'lucide-react'
 
-const SECTIONS = [
-  { href: '/dashboard/settings',                 label: 'Overview',              icon: Building2,    sub: 'All settings at a glance' },
-  // Same order as SETTINGS_NAV in dashboard-chrome.tsx: company, time, pay.
-  { href: '/dashboard/settings/organization',    label: 'Organization',          icon: Building2,    sub: 'Company name, tax IDs' },
-  { href: '/dashboard/settings/departments',     label: 'Departments',           icon: Users,        sub: 'Org units + heads' },
-  { href: '/dashboard/settings/roles',           label: 'Roles',                 icon: ShieldCheck,  sub: 'Access matrix' },
-  { href: '/dashboard/settings/working-days',    label: 'Working Days & Hours',  icon: Calendar,     sub: 'Schedule + holidays' },
-  { href: '/dashboard/settings/leave-policies',  label: 'Leave Policies',        icon: Plane,        sub: 'Days by leave type × tier' },
-  { href: '/dashboard/settings/salary-structure', label: 'Salary Structure',      icon: Calculator,   sub: 'Basic % + component library' },
-  { href: '/dashboard/settings/tax-slabs',       label: 'Income Tax Slabs',      icon: Calculator,   sub: 'FBR brackets by tax year' },
+const PERSONAL = [
+  { href: '/dashboard/settings/account',       label: 'Account' },
+  { href: '/dashboard/settings/profile',       label: 'Profile' },
+  { href: '/dashboard/settings/password',      label: 'Password' },
+  { href: '/dashboard/settings/notifications', label: 'Notifications' },
+  { href: '/dashboard/settings/preferences',   label: 'Preferences' },
+] as const
+
+// Same order as SETTINGS_NAV in dashboard-chrome.tsx: company, time, pay.
+const HR_SECTIONS = [
+  { href: '/dashboard/settings',                  label: 'Overview' },
+  { href: '/dashboard/settings/organization',     label: 'Organization' },
+  { href: '/dashboard/settings/departments',      label: 'Departments' },
+  { href: '/dashboard/settings/users',            label: 'Users' },
+  { href: '/dashboard/settings/roles',            label: 'Roles' },
+  { href: '/dashboard/settings/working-days',     label: 'Working Days & Hours' },
+  { href: '/dashboard/settings/holidays',         label: 'Holidays & WFH' },
+  { href: '/dashboard/settings/leave-policies',   label: 'Leave Policies' },
+  { href: '/dashboard/settings/time-tracking',    label: 'Time Tracking' },
+  { href: '/dashboard/settings/salary-structure', label: 'Salary Structure' },
+  { href: '/dashboard/settings/tax-slabs',        label: 'Income Tax Slabs' },
 ] as const
 
 export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
+  const [isHR, setIsHR] = useState(false)
 
-  function isActive(href: string) {
-    if (href === '/dashboard/settings') return pathname === '/dashboard/settings'
-    return pathname === href || pathname.startsWith(href + '/')
-  }
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((r) => r.json())
+      .then((d) => setIsHR(d?.user?.role === 'HR_ADMIN'))
+      .catch(() => {})
+  }, [])
 
-  const activeLabel = SECTIONS.find((s) => isActive(s.href))?.label ?? 'Overview'
+  const sections = isHR ? [...PERSONAL, ...HR_SECTIONS] : [...PERSONAL]
+  const current = sections.some((s) => s.href === pathname) ? pathname : ''
 
   return (
     <div className="space-y-5">
@@ -43,25 +56,21 @@ export default function SettingsLayout({ children }: { children: React.ReactNode
         <p className="text-sm text-slate-500 mt-1">Configure how Convertt HR works for your organization.</p>
       </div>
 
-      {/* Mobile dropdown */}
+      {/* Mobile section picker — the app sidebar is collapsed on small screens. */}
       <div className="lg:hidden">
-        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Section</label>
+        <label className="block text-xs font-semibold text-slate-500 uppercase mb-1">Go to settings section</label>
         <select
-          value={pathname}
-          onChange={(e) => { window.location.href = e.target.value }}
+          value={current}
+          onChange={(e) => { if (e.target.value) window.location.href = e.target.value }}
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white"
         >
-          {SECTIONS.map((s) => (
+          {!current && <option value="">Choose a section</option>}
+          {sections.map((s) => (
             <option key={s.href} value={s.href}>{s.label}</option>
           ))}
         </select>
-        <p className="mt-2 text-xs text-slate-500">Active: <span className="font-medium text-slate-700">{activeLabel}</span></p>
       </div>
 
-      {/* The section list moved into the app sidebar (SETTINGS_NAV), so this
-          renders only the active section — one view at a time, like Employee
-          Lifecycle. The mobile dropdown above stays, since the app sidebar is
-          collapsed on small screens. */}
       <div className="min-w-0">{children}</div>
     </div>
   )

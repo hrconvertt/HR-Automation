@@ -145,10 +145,13 @@ export async function ExecutiveDashboard() {
           Operational details (attendance, individual exits, named hires) live in{' '}
           <Link href="/dashboard/employees" className="text-slate-700 hover:underline">Workforce</Link>.
         </p>
+        {/* Revenue is set on System Health, which is HR's page. This dashboard
+            is the executive's, and a "Configure" link there only sent them
+            straight back here — so it says who sets it instead. */}
         {(m.monthlyRevenue == null) && (
-          <Link href="/dashboard/admin/health" className="inline-flex items-center gap-1 text-slate-700 hover:underline">
-            <Settings className="w-3 h-3" /> Configure monthly revenue
-          </Link>
+          <span className="inline-flex items-center gap-1 text-slate-500">
+            <Settings className="w-3 h-3" /> Monthly revenue is not set yet — HR adds it under System Health
+          </span>
         )}
       </div>
     </div>

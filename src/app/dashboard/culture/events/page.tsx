@@ -19,7 +19,7 @@ export default async function CultureEventsPage() {
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
   if (!payload) redirect('/login')
-  const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined) ?? payload.role
   const isHR = role === 'HR_ADMIN'
 
   const events = await prisma.companyEvent.findMany({

@@ -12,12 +12,10 @@ import { useRouter } from 'next/navigation'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import SettingsSidebar from '@/components/settings-sidebar'
 import { ShieldAlert, LogOut } from 'lucide-react'
 
 export default function PasswordPage() {
   const router = useRouter()
-  const [role, setRole] = useState<string | undefined>(undefined)
   const [mustChange, setMustChange] = useState(false)
   const [current, setCurrent] = useState('')
   const [next, setNext] = useState('')
@@ -28,7 +26,6 @@ export default function PasswordPage() {
 
   useEffect(() => {
     fetch('/api/auth/me').then((r) => r.json()).then((d) => {
-      setRole(d.user?.role)
       setMustChange(!!d.user?.mustChangePass)
     }).catch(() => {})
   }, [])
@@ -77,9 +74,8 @@ export default function PasswordPage() {
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
-        <SettingsSidebar role={role} />
-
+      {/* My Account is listed in the app sidebar, not beside the form. */}
+      <div>
         <div className="min-w-0 space-y-5">
           <Card>
             <CardHeader className="border-b border-slate-100"><CardTitle>Change password</CardTitle></CardHeader>

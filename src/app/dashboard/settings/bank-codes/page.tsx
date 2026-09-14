@@ -15,7 +15,7 @@ export default async function BankCodesPage() {
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
   if (!payload) redirect('/login')
-  const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined) ?? payload.role
   if (role !== 'HR_ADMIN' && role !== 'EXECUTIVE') redirect('/dashboard/settings')
 
   return (

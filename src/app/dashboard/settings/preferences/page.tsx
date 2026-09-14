@@ -8,7 +8,6 @@
 import { useEffect, useState } from 'react'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import SettingsSidebar from '@/components/settings-sidebar'
 import { Sun, Moon, Monitor } from 'lucide-react'
 
 const LANGUAGES = [
@@ -40,7 +39,6 @@ const TIMEZONES = [
 ] as const
 
 export default function PreferencesPage() {
-  const [role, setRole] = useState<string | undefined>()
   const [theme, setTheme] = useState<'LIGHT' | 'DARK' | 'SYSTEM'>('LIGHT')
   const [language, setLanguage] = useState<string>('EN')
   const [timezone, setTimezone] = useState<string>('Asia/Karachi')
@@ -50,7 +48,6 @@ export default function PreferencesPage() {
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
-    fetch('/api/auth/me').then((r) => r.json()).then((d) => setRole(d.user?.role)).catch(() => {})
     fetch('/api/profile/preferences').then((r) => r.json()).then((d) => {
       if (d.theme) setTheme(d.theme)
       if (d.language) setLanguage(d.language)
@@ -79,9 +76,8 @@ export default function PreferencesPage() {
         <p className="text-sm text-slate-500 mt-1">Personalize how the app looks and what others see about you.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[260px,1fr] gap-6">
-        <SettingsSidebar role={role} />
-
+      {/* My Account is listed in the app sidebar, not beside the form. */}
+      <div>
         <div className="min-w-0 space-y-4">
           <Card>
             <CardHeader className="border-b border-slate-100"><CardTitle>Appearance</CardTitle></CardHeader>

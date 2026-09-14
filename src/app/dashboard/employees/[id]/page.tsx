@@ -257,6 +257,20 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
   const lifecycleShowsComp = isHR || isViewingOwn
   const lifecycleShowsReviews = isHR || isViewingOwn || (isManager && isMyTeamMember)
 
+  // The section links in the sidebar are real navigations. A section this
+  // viewer may not open rendered as a blank page under its own name, so fall
+  // back to Overview instead.
+  const sectionAllowed: Record<string, boolean> = {
+    overview: true,
+    lifecycle: showLifecycleTab,
+    compensation: showCompensation,
+    leave: showLeave,
+    documents: showDocuments,
+    performance: showPerformanceTab,
+    assets: showAssets,
+  }
+  const shownTab = sectionAllowed[activeTab] ? activeTab : 'overview'
+
   // Manager options + manager name lookup for the editable Role History card.
   const managerOptions = (isHR && !isPreviewMode)
     ? await prisma.employee.findMany({
@@ -457,7 +471,7 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
           module. TabsList is gone rather than duplicated beside it. */}
       {/* Keyed on the section so a sidebar link — a real navigation — lands on
           the right one rather than falling back to the first. */}
-      <Tabs key={activeTab} defaultValue={activeTab}>
+      <Tabs key={shownTab} defaultValue={shownTab}>
         <div className="min-w-0 w-full">
 
         {/* Overview */}

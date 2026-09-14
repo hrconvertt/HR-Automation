@@ -67,12 +67,16 @@ export default async function LearningPage({
     : sp.tab === 'programs' || sp.tab === 'records' || sp.tab === 'certs'
       ? null
       : 'my'
-  const tab = sp.tab === 'records' || sp.tab === 'certs' ? sp.tab : 'programs'
   const cookieStore = await cookies()
   const payload = await verifyToken(cookieStore.get('hr_token')?.value)
   if (!payload) redirect('/login')
-  const role = cookieStore.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? cookieStore.get('hr_preview_role')?.value : undefined) ?? payload.role
   const isHR = role === 'HR_ADMIN'
+  // Enrolments and Certifications are company-wide registers — every person's
+  // training record and certificate by name. Only HR and executives are shown
+  // them in the menu, and anyone else asking lands on the Programs catalogue.
+  const seesRegisters = isHR || role === 'EXECUTIVE'
+  const tab = seesRegisters && (sp.tab === 'records' || sp.tab === 'certs') ? sp.tab : 'programs'
 
   // HR's two views for running the catalogue, shaped after Workday's Learning
   // Admin and Manage Learning Content. Anyone else asking for them lands on

@@ -17,7 +17,7 @@ import { presetByKey, EVENT_CATEGORIES, EVENT_STATUSES } from '@/lib/event-prese
 async function gate(request: NextRequest, write = false) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
   if (!payload) return { error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
-  const role = request.cookies.get('hr_preview_role')?.value ?? payload.role
+  const role = (payload.role === 'HR_ADMIN' ? request.cookies.get('hr_preview_role')?.value : undefined) ?? payload.role
   if (role !== 'HR_ADMIN' && role !== 'EXECUTIVE') {
     return { error: NextResponse.json({ error: 'HR only' }, { status: 403 }) }
   }
