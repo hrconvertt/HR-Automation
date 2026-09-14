@@ -62,7 +62,11 @@ export default async function PrintShowCausePage({ params }: PageProps) {
     )
   }
 
-  if (!notice.issueDate || (notice.status !== 'ISSUED' && notice.status !== 'RESPONDED' && notice.status !== 'RESOLVED' && notice.status !== 'ESCALATED_TO_PIP')) {
+  // A notice stays printable after it has been escalated: a termination or a
+  // PIP started from it does not unmake the notice, and the notice is exactly
+  // what the termination file needs to show.
+  const PRINTABLE = ['ISSUED', 'RESPONDED', 'RESOLVED', 'ESCALATED_TO_PIP', 'ESCALATED_TERMINATION']
+  if (!notice.issueDate || !PRINTABLE.includes(notice.status)) {
     return (
       <div style={{ padding: 40 }}>
         <h1 style={{ fontSize: 20, fontWeight: 700 }}>Notice not yet issued</h1>

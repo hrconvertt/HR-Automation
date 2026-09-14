@@ -51,7 +51,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     employeeId: termination.employeeId,
     type: 'GENERAL',
     title: 'Meeting requested by HR',
-    message: `You are required to attend a meeting on ${scheduledAt.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' })}${location ? ` at ${location}` : ''}. Details will follow via email.`,
+    message: `You are required to attend a meeting on ${scheduledAt.toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Karachi' })}${location ? ` at ${location}` : ''}. Details will follow via email.`,
     link: `/dashboard/lifecycle/termination/${id}`,
   }).catch(() => {})
 
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         employeeId: termination.employeeId,
         toEmail: (await prisma.employee.findUnique({ where: { id: termination.employeeId }, select: { email: true } }))?.email ?? '',
         toName: termination.employee.fullName,
-        subject: `Meeting Requested — ${scheduledAt.toLocaleDateString('en-GB', { dateStyle: 'long' })}`,
-        bodyHtml: `<p>Dear ${termination.employee.fullName},</p><p>You are formally requested to attend a meeting scheduled for <strong>${scheduledAt.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short' })}</strong>${location ? ` at <strong>${location}</strong>` : ''}.</p>${notes ? `<p>Agenda: ${notes}</p>` : ''}<p>Please confirm your attendance.</p><p>Regards,<br/>Human Resources<br/>Convertt</p>`,
+        subject: `Meeting Requested — ${scheduledAt.toLocaleDateString('en-GB', { dateStyle: 'long', timeZone: 'Asia/Karachi' })}`,
+        bodyHtml: `<p>Dear ${termination.employee.fullName},</p><p>You are formally requested to attend a meeting scheduled for <strong>${scheduledAt.toLocaleString('en-GB', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Asia/Karachi' })}</strong>${location ? ` at <strong>${location}</strong>` : ''}.</p>${notes ? `<p>Agenda: ${notes}</p>` : ''}<p>Please confirm your attendance.</p><p>Regards,<br/>Human Resources<br/>Convertt</p>`,
         trigger: 'TERMINATION',
         triggerRefId: id,
         status: 'DRAFT',

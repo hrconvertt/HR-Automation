@@ -265,7 +265,10 @@ function StageActionCard({ t, canAct, busy, onAction }: {
           </div>
           <Button
             disabled={!canAct || busy || !scheduledAt}
-            onClick={() => onAction('schedule-meeting', { scheduledAt, location: location || null, notes: agenda || null })}
+            // datetime-local has no timezone. Converted here, where the browser
+            // knows it is Pakistan time; sent raw, the server read 11:30 as UTC
+            // and stored the meeting five hours late.
+            onClick={() => onAction('schedule-meeting', { scheduledAt: new Date(scheduledAt).toISOString(), location: location || null, notes: agenda || null })}
           >
             {busy ? 'Saving…' : 'Schedule Meeting'}
           </Button>
@@ -298,7 +301,7 @@ function StageActionCard({ t, canAct, busy, onAction }: {
             <Button
               className="mt-3"
               disabled={!canAct || busy || !heldAt || !meetingNotes.trim()}
-              onClick={() => onAction('record-meeting', { heldAt, notes: meetingNotes })}
+              onClick={() => onAction('record-meeting', { heldAt: new Date(heldAt).toISOString(), notes: meetingNotes })}
             >
               {busy ? 'Saving…' : 'Record Outcome'}
             </Button>
