@@ -1,6 +1,6 @@
 /**
  * POST /api/talent/mentorships — suggest a mentor to a report.
- * body: { menteeId, mentorId, skillId?, message? }
+ * body: { menteeId, mentorId, skillId?, type?, message? }
  *
  * The report's manager or HR. Both people are told, with the manager's note —
  * Workday's "share with a message". It starts as Suggested; either of them,
@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { notify } from '@/lib/notifications'
+import { MENTORSHIP_TYPE_VALUES, mentorshipTypeLabel } from '@/lib/talent-labels'
 import { resolveTalentAccess, canManageTalent, cleanText } from '@/lib/talent'
 
 export async function POST(request: NextRequest) {
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest) {
   if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const body = (await request.json().catch(() => ({}))) as {
-    menteeId?: string; mentorId?: string; skillId?: string; message?: string
+    menteeId?: string; mentorId?: string; skillId?: string; type?: string; message?: string
   }
   const menteeId = typeof body.menteeId === 'string' ? body.menteeId : ''
   const mentorId = typeof body.mentorId === 'string' ? body.mentorId : ''
@@ -32,6 +33,7 @@ export async function POST(request: NextRequest) {
       { status: 403 },
     )
   }
+  const type = MENTORSHIP_TYPE_VALUES.includes(body.type ?? '') ? body.type! : 'CAREER'
 
   const [mentee, mentor] = await Promise.all([
     prisma.employee.findUnique({ where: { id: menteeId }, select: { id: true, fullName: true, status: true } }),
@@ -60,23 +62,25 @@ export async function POST(request: NextRequest) {
 
   const message = cleanText(body.message, 1000)
   const created = await prisma.mentorship.create({
-    data: { menteeId, mentorId, skillId: skill?.id ?? null, message, proposedById: access.userId },
+    data: { menteeId, mentorId, skillId: skill?.id ?? null, type, message, proposedById: access.userId },
     select: { id: true },
   })
 
   const about = skill ? ` for ${skill.name}` : ''
+  const kind = mentorshipTypeLabel(type).toLowerCase()
   await Promise.all([
     notify({
       employeeId: menteeId,
       type: 'GENERAL',
       title: 'A mentor was suggested for you',
-      message: `${access.userName} suggested ${mentor.fullName} as a mentor${about}.${message ? ` “${message}”` : ''}`,
+      message: `${access.userName} suggested ${mentor.fullName} as your ${kind}${about}.${message ? ` “${message}”` : ''}`,
+      link: '/dashboard/career',
     }),
     notify({
       employeeId: mentorId,
       type: 'GENERAL',
       title: 'You were suggested as a mentor',
-      message: `${access.userName} suggested you as a mentor to ${mentee.fullName}${about}.${message ? ` “${message}”` : ''}`,
+      message: `${access.userName} suggested you as ${mentee.fullName}’s ${kind}${about}.${message ? ` “${message}”` : ''}`,
     }),
   ])
 

@@ -26,6 +26,7 @@ import { ResignationBanner } from '@/components/resignation-banner'
 import EmployeeSelfUploadCard from '@/components/employee-self-upload-card'
 import AddAssetDialog from '@/components/add-asset-dialog'
 import ChangeJobButton from '@/components/change-job-button'
+import { ProfileTalentCards } from '@/components/talent/profile-talent-cards'
 import RehireButton from '@/components/rehire-button'
 import { JOB_CHANGE_TYPE_LABEL, type JobChangeType } from '@/lib/job-changes'
 import { LOA_TYPE_LABEL, type LoaType } from '@/lib/loa'
@@ -588,6 +589,18 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
                 </dl>
               </CardContent>
             </Card>
+
+            {/* Skills, Job History and Start Job Change — the talent side of
+                the profile, beside Job Information as Workday lays it out. */}
+            <ProfileTalentCards
+              employeeId={employee.id}
+              active={employee.status === 'ACTIVE'}
+              canManage={canEditFull || (isManager && isMyTeamMember && !isPreviewMode)}
+              canOpenTalent={isHR || isExec || isViewingOwn || (isManager && isMyTeamMember)}
+              joiningDate={employee.joiningDate}
+              hiringDesignation={employee.hiringDesignation}
+              designation={employee.designation}
+            />
           </div>
 
           {/* HR-only system roles panel — multi-role assignment */}
