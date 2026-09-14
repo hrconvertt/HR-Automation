@@ -2936,6 +2936,47 @@ model PulseResponse {
   @@map("pulse_responses")
 }
 
+/// An Employee Voice question. The six built-in questions live in code and
+/// get a row here only when HR edits or switches one off; custom questions
+/// are rows. Answers are stored on PulseResponse.scores under the key, so a
+/// question keeps its history when its wording is tidied.
+model PulseQuestion {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  driverKey   String
+  text        String
+  /// 5 for the built-in agreement questions, 10 for custom ones.
+  scale       Int      @default(10)
+  builtIn     Boolean  @default(false)
+  enabled     Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("pulse_questions")
+}
+
+/// What will be done about a driver — Employee Voice's action plan.
+model PulseAction {
+  id          String    @id @default(cuid())
+  driverKey   String
+  roundId     String?
+  title       String
+  detail      String?
+  ownerId     String? // Employee.id
+  dueDate     DateTime?
+  status      String    @default("OPEN") // OPEN | DONE
+  note        String?
+  completedAt DateTime?
+  createdById String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, driverKey])
+  @@map("pulse_actions")
+}
+
 /// Where somebody sits on performance against potential.
 ///
 /// Performance comes off the appraisal score where there is one, so the grid

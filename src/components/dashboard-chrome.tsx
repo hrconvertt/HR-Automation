@@ -563,7 +563,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
         // through the tab bar on the page — a single sidebar entry.
         { href: '/dashboard/culture/events', label: 'Events & Promotions', icon: CalendarDays },
         { href: '/dashboard/culture/recognition', label: 'Recognition', icon: Heart },
-        { href: '/dashboard/culture/pulse', label: 'Pulse', icon: Activity },
+        { href: '/dashboard/culture/pulse', label: 'Employee Voice', icon: Activity },
         { href: '/dashboard/culture/birthdays', label: 'Birthdays', icon: Sparkles },
         { href: '/dashboard/culture/anniversaries', label: 'Anniversaries', icon: Award },
       ],

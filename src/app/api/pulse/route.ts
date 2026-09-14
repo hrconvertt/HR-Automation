@@ -5,14 +5,15 @@
  *   POST           submit my answers (once per round)
  *   PATCH          HR: open, close, or create a round
  *
- * Results are not served here — see /api/pulse/[id]/results, which enforces
- * the response floor. Keeping them apart means the endpoint that knows who
- * answered is never the endpoint that returns what was said.
+ * Results are not served here — see /api/pulse/[id]/results and the Employee
+ * Voice page, both of which enforce the response floor. Keeping them apart
+ * means the endpoint that knows who answered is never the endpoint that
+ * returns what was said.
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
-import { DRIVER_KEYS } from '@/lib/pulse'
+import { voiceQuestions } from '@/lib/voice-server'
 
 export async function GET(request: NextRequest) {
   const payload = await verifyToken(request.cookies.get('hr_token')?.value)
@@ -69,10 +70,13 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'That round is not open.' }, { status: 400 })
   }
 
+  // The questions switched on right now, each on its own scale: 1–5 for the
+  // six built-in questions, 0–10 for HR's custom ones.
   const scores: Record<string, number> = {}
-  for (const k of DRIVER_KEYS) {
-    const v = body.scores?.[k]
-    if (typeof v === 'number' && Number.isInteger(v) && v >= 1 && v <= 5) scores[k] = v
+  for (const q of (await voiceQuestions()).filter((x) => x.enabled)) {
+    const v = body.scores?.[q.key]
+    const lo = q.scale === 10 ? 0 : 1
+    if (typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= q.scale) scores[q.key] = v
   }
   if (Object.keys(scores).length === 0) {
     return NextResponse.json({ error: 'Answer at least one question.' }, { status: 400 })
@@ -114,6 +118,7 @@ export async function PATCH(request: NextRequest) {
     const closes = body.closesAt
       ? new Date(body.closesAt + 'T23:59:59Z')
       : new Date(opens.getTime() + 14 * 86_400_000)
+    if (closes <= opens) return NextResponse.json({ error: 'The round must close after it opens.' }, { status: 400 })
     const round = await prisma.pulseRound.create({
       data: {
         title: (body.title?.trim() || quarterLabel(opens)).slice(0, 120),
