@@ -96,9 +96,9 @@ export const NAV_DESTINATIONS: NavDestination[] = [
  */
 export const NAV_TASKS: NavDestination[] = [
   // Everyone
-  { label: 'Request Leave', href: '/dashboard/leave/me', section: 'Leave › My Leave', keywords: ['apply', 'apply for leave', 'time off', 'holiday', 'sick', 'annual', 'create'] },
-  { label: 'Request a Letter', href: '/dashboard/letters', section: 'Letters', keywords: ['experience letter', 'salary certificate', 'noc', 'visa', 'create', 'apply'] },
-  { label: 'Give Kudos', href: '/dashboard/culture/recognition', section: 'People & Culture › Recognition', keywords: ['recognise', 'recognize', 'appreciate', 'thank', 'create'] },
+  { label: 'Request Leave', href: '/dashboard/leave/me', section: 'Leave › My Leave', keywords: ['apply', 'apply for leave', 'time off', 'holiday', 'sick', 'annual', 'create leave request'] },
+  { label: 'Request a Letter', href: '/dashboard/letters', section: 'Letters', keywords: ['experience letter', 'salary certificate', 'noc', 'visa', 'create letter request', 'apply'] },
+  { label: 'Give Kudos', href: '/dashboard/culture/recognition', section: 'People & Culture › Recognition', keywords: ['recognise', 'recognize', 'appreciate', 'thank', 'create kudos'] },
   { label: 'Add New Goal', href: '/dashboard/performance?tab=goals', section: 'Performance › Goals', keywords: ['create goal', 'okr', 'objective', 'target', 'new'] },
   { label: 'Change My Schedule Preferences', href: '/dashboard/time/schedule', section: 'Time Tracking › My Schedule', keywords: ['shift', 'hours', 'edit', 'update'] },
 
@@ -106,7 +106,7 @@ export const NAV_TASKS: NavDestination[] = [
   { label: 'Request to Hire', href: '/dashboard/recruiting', section: 'Recruiting', keywords: ['create requisition', 'new role', 'headcount', 'hire', 'new'], roles: ['MANAGER'] },
   { label: 'Add Candidate', href: '/dashboard/recruiting?tab=pipeline', section: 'Recruiting › Pipeline', keywords: ['create candidate', 'applicant', 'resume', 'cv', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
   { label: 'Assign Task', href: '/dashboard/tasks', section: 'My Tasks › Team Tasks', keywords: ['create task', 'to do', 'delegate', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
-  { label: 'Schedule a Check-in', href: '/dashboard/team-insights', section: 'Team Insights', keywords: ['one to one', '1:1', 'meeting', 'create', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
+  { label: 'Schedule a Check-in', href: '/dashboard/team-insights', section: 'Team Insights', keywords: ['one to one', '1:1', 'meeting', 'create check-in', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
   { label: 'Create Performance Improvement Plan', href: '/dashboard/performance?tab=pip', section: 'Performance › PIP', keywords: ['pip', 'improvement', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
   { label: 'Flag a Show Cause Concern', href: '/dashboard/performance?tab=showcause', section: 'Performance › Show Cause', keywords: ['create show cause', 'notice', 'disciplinary', 'warning', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
 
@@ -157,6 +157,11 @@ export function searchDestinations(query: string, role: string, limit = 6): NavD
   return rank(NAV_DESTINATIONS, query, role, limit)
 }
 
-export function searchTasks(query: string, role: string, limit = 7): NavDestination[] {
+/**
+ * No short cap: "create" should list every task you can start, the way
+ * Workday's does, and the panel scrolls. A bare "create" keyword on a few
+ * tasks used to outrank every "create …" one and push HR's own off the list.
+ */
+export function searchTasks(query: string, role: string, limit = 30): NavDestination[] {
   return rank(NAV_TASKS, query, role, limit)
 }
