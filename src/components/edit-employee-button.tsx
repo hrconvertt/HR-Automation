@@ -11,6 +11,7 @@ import {
 import { Pencil } from 'lucide-react'
 import { LEVELS, LEVEL_LABEL } from '@/lib/promotion'
 import { FILER_STATUSES } from '@/lib/income-tax'
+import { NATIONALITIES, toNationality } from '@/lib/nationalities'
 
 interface Department { id: string; name: string; code: string }
 interface ManagerOption { id: string; fullName: string; designation: string; employeeCode: string }
@@ -82,7 +83,9 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
   const [error, setError] = useState('')
   const [departments, setDepartments] = useState<Department[]>([])
   const [managers, setManagers] = useState<ManagerOption[]>([])
-  const [form, setForm] = useState({ ...initialData })
+  // Nationality is chosen from a list now; a record holding the country
+  // ("Pakistan") opens with its nationality ("Pakistani") selected.
+  const [form, setForm] = useState({ ...initialData, nationalityCountry: toNationality(initialData.nationalityCountry) })
 
   useEffect(() => {
     fetch('/api/employees/departments')
@@ -120,9 +123,9 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
   }
 
   const WORK_DAYS_OPTIONS = [
-    { value: 'Mon,Tue,Wed,Thu,Fri', label: 'Mon – Fri' },
-    { value: 'Mon,Tue,Wed,Thu,Fri,Sat', label: 'Mon – Sat' },
-    { value: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', label: 'Mon – Sun' },
+    { value: 'Mon,Tue,Wed,Thu,Fri', label: 'Monday – Friday' },
+    { value: 'Mon,Tue,Wed,Thu,Fri,Sat', label: 'Monday – Saturday' },
+    { value: 'Mon,Tue,Wed,Thu,Fri,Sat,Sun', label: 'Monday – Sunday' },
   ]
 
   return (
@@ -184,7 +187,18 @@ export default function EditEmployeeButton({ employeeId, initialData }: EditEmpl
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
-                  <Input value={form.nationalityCountry ?? ''} onChange={(e) => f('nationalityCountry', e.target.value)} placeholder="Pakistani" />
+                  <Select value={form.nationalityCountry ?? ''} onValueChange={(v) => f('nationalityCountry', v)}>
+                    <SelectTrigger><SelectValue placeholder="Select nationality" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {/* A value typed in before this was a dropdown stays selectable rather than vanishing. */}
+                      {form.nationalityCountry && !NATIONALITIES.includes(form.nationalityCountry) && (
+                        <SelectItem value={form.nationalityCountry}>{form.nationalityCountry}</SelectItem>
+                      )}
+                      {NATIONALITIES.map((n) => (
+                        <SelectItem key={n} value={n}>{n}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Personal Email</label>

@@ -37,7 +37,7 @@ export const FIELD_MAP: Record<string, { field: string; kind: FieldKind; label: 
   dob:                 { field: 'dob',                 kind: 'date',   label: 'Date of Birth',         hint: '' },
   gender:              { field: 'gender',              kind: 'string', label: 'Gender',                hint: 'Male, Female or Other' },
   maritalStatus:       { field: 'maritalStatus',       kind: 'string', label: 'Marital Status',        hint: 'Single, Married, Divorced or Widowed' },
-  nationalityCountry:  { field: 'nationalityCountry',  kind: 'string', label: 'Nationality',           hint: 'country name' },
+  nationalityCountry:  { field: 'nationalityCountry',  kind: 'string', label: 'Nationality',           hint: 'the nationality, e.g. Pakistani — not the country' },
   address:             { field: 'address',             kind: 'string', label: 'Permanent Address',     hint: 'the permanent / home address' },
   temporaryAddress:    { field: 'temporaryAddress',    kind: 'string', label: 'Temporary Address',     hint: 'the current address, only if clearly distinct from the permanent one' },
   phone:               { field: 'phone',               kind: 'string', label: 'Phone',                 hint: 'mobile number' },
