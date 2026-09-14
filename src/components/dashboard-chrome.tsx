@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { searchDestinations } from '@/lib/nav-search'
+import { searchDestinations, searchTasks } from '@/lib/nav-search'
 import RolePreviewSwitcher from '@/components/role-preview-switcher'
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu'
@@ -166,10 +166,10 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/email-queue', label: 'Email Queue', icon: Mail },
-        { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
-        { href: '/dashboard/help', label: 'Help Center', icon: HelpCircle },
+        { href: '/dashboard/help/case-management', label: 'Case Management', icon: HelpCircle },
       ],
     },
     {
@@ -210,7 +210,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
     {
       label: 'Support',
       items: [
-        { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
@@ -243,7 +243,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'Support',
       items: [
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
-        { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
@@ -271,7 +271,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
     {
       label: 'Support',
       items: [
-        { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
@@ -291,7 +291,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'Support',
       items: [
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
-        { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
@@ -324,7 +324,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'Support',
       items: [
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
-        { href: '/dashboard/helpdesk', label: 'Help Desk', icon: LifeBuoy },
+        { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
@@ -515,6 +515,23 @@ const LETTERS_NAV: NavGroup[] = [
   },
 ]
 
+/**
+ * Help Center — answers first, then cases. Case Management is the service
+ * team's view; executives read its counts, never case contents.
+ */
+const HELP_NAV: NavGroup[] = [
+  {
+    label: 'Help Center',
+    items: [
+      { href: '/dashboard/help', label: 'Find Answers', icon: LifeBuoy },
+      { href: '/dashboard/help/cases/new', label: 'Create Case', icon: MessageSquare },
+      { href: '/dashboard/help/cases', label: 'My Cases', icon: Inbox },
+      { href: '/dashboard/help/case-management', label: 'Case Management', icon: BarChart3, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      { href: '/dashboard/help/manage', label: 'Manage Articles', icon: FileText, roles: ['HR_ADMIN'] },
+    ],
+  },
+]
+
 const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/performance': PERFORMANCE_NAV,
   // Two of the module's own pages live outside /dashboard/performance. Without
@@ -525,6 +542,7 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/daily-review': PERFORMANCE_NAV,
   // Team Insights sits beside Talent Review and Succession in the menu.
   '/dashboard/team-insights': PERFORMANCE_NAV,
+  '/dashboard/help': HELP_NAV,
   '/dashboard/settings': SETTINGS_NAV,
   '/dashboard/letters': LETTERS_NAV,
   '/dashboard/recruiting': RECRUITING_NAV,
@@ -722,7 +740,7 @@ function getActiveNav(
 }
 
 interface SearchResultItem {
-  type: 'employee' | 'payslip' | 'policy' | 'leave' | 'letter'
+  type: 'employee' | 'payslip' | 'policy' | 'leave' | 'letter' | 'department'
   id: string
   title: string
   subtitle?: string
@@ -747,9 +765,10 @@ interface SearchResultItem {
 const RECENT_KEY = 'hr_recent_searches'
 const RECENT_MAX = 6
 
-type Scope = 'all' | 'employee' | 'leave' | 'payslip' | 'document' | 'screen'
+type Scope = 'all' | 'task' | 'employee' | 'leave' | 'payslip' | 'document' | 'screen'
 
 const SCOPES: { value: Scope; label: string }[] = [
+  { value: 'task', label: 'Tasks' },
   { value: 'employee', label: 'People' },
   { value: 'leave', label: 'Leave' },
   { value: 'payslip', label: 'Payroll' },
@@ -883,15 +902,19 @@ function SearchBar({ role }: { role: string }) {
   }, [query, open])
 
   const pages = useMemo(() => searchDestinations(query, role), [query, role])
+  const actions = useMemo(() => searchTasks(query, role), [query, role])
 
-  // Documents covers policies and letters — one word for one idea.
+  // Documents covers policies and letters, and People covers the departments
+  // they sit in — one word for one idea.
   const shown = useMemo(() => {
     if (scope === 'all') return results
     if (scope === 'document') return results.filter((r) => r.type === 'policy' || r.type === 'letter')
-    if (scope === 'screen') return []
+    if (scope === 'employee') return results.filter((r) => r.type === 'employee' || r.type === 'department')
+    if (scope === 'screen' || scope === 'task') return []
     return results.filter((r) => r.type === scope)
   }, [results, scope])
   const shownPages = scope === 'all' || scope === 'screen' ? pages : []
+  const shownActions = scope === 'all' || scope === 'task' ? actions : []
 
   function iconFor(type: SearchResultItem['type']) {
     if (type === 'employee') return <UserIcon className="w-4 h-4 text-slate-500" />
@@ -899,6 +922,7 @@ function SearchBar({ role }: { role: string }) {
     if (type === 'policy') return <FileText className="w-4 h-4 text-slate-500" />
     if (type === 'leave') return <PlaneIcon className="w-4 h-4 text-slate-500" />
     if (type === 'letter') return <MailIcon className="w-4 h-4 text-slate-500" />
+    if (type === 'department') return <Network className="w-4 h-4 text-slate-500" />
     return <Search className="w-4 h-4 text-slate-500" />
   }
 
@@ -919,7 +943,7 @@ function SearchBar({ role }: { role: string }) {
             onFocus={openPanel}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') remember(query) }}
-            placeholder="Search people, leave, payroll, onboarding…"
+            placeholder="Search people, tasks, screens…"
             className="flex-1 outline-none text-sm bg-transparent"
           />
           {query ? (
@@ -1014,6 +1038,24 @@ function SearchBar({ role }: { role: string }) {
 
             {typing && (
               <>
+                {shownActions.length > 0 && (
+                  <div className="border-b border-gray-100">
+                    <p className="px-3 pt-2 pb-1 text-[10px] uppercase tracking-wider text-gray-400 font-semibold">
+                      Tasks
+                    </p>
+                    {shownActions.map((t) => (
+                      <button key={t.label} type="button"
+                        onClick={() => { remember(query); router.push(t.href); setQuery(''); setResults([]); setFocused(false) }}
+                        className="flex items-start gap-2.5 w-full text-left px-3 py-2 hover:bg-gray-50">
+                        <ClipboardList className="w-4 h-4 text-slate-500 flex-shrink-0 mt-0.5" />
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-sm font-medium text-gray-900 truncate">{t.label}</span>
+                          <span className="block text-xs text-gray-500 truncate">Task · {t.section}</span>
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {loading && <div className="px-3 py-2 text-xs text-gray-500">Searching…</div>}
                 {shownPages.length > 0 && (
                   <div className="border-b border-gray-100">
@@ -1033,7 +1075,7 @@ function SearchBar({ role }: { role: string }) {
                     ))}
                   </div>
                 )}
-                {!loading && shown.length === 0 && shownPages.length === 0 && (
+                {!loading && shown.length === 0 && shownPages.length === 0 && shownActions.length === 0 && (
                   <div className="px-3 py-2 text-xs text-gray-500">
                     No results{scope !== 'all' ? ' in ' + scopeLabel : ''}.
                   </div>

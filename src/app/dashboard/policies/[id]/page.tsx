@@ -4,18 +4,20 @@ import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseAudienceRoles } from '@/lib/policy-access'
-import { ArrowLeft, ExternalLink, Calendar, Users, FileText } from 'lucide-react'
+import { ArrowLeft, ExternalLink, Calendar, Users, FileText, CalendarDays } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { renderMarkdown } from '@/lib/markdown'
 import { PrintButton } from '@/components/policies/print-button'
 import { PolicyApprovalActions } from '@/components/policy-approval-actions'
+import { knowledgeFor, relatedTo } from '@/lib/help-center-server'
+import { ArticleFooter } from '@/components/help/article-footer'
 
 /**
- * Policy reader page — Notion / Stripe Docs style:
- *   • Slim breadcrumb header with status pill
- *   • Two-column body on desktop (content + a quiet metadata sidebar)
- *   • Larger reading typography, comfortable line-height
- *   • Print button (browser-native — no extra deps)
+ * A policy, read the way the Help Center reads an article — Workday's layout:
+ * the category over a large title, when it was last updated, the body, then
+ * tags, related articles, "Was this article helpful?" and "Still need help?
+ * Create a case". The approval workflow and the facts HR needs stay in the
+ * quiet sidebar, and the page still prints clean.
  */
 export default async function PolicyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -93,53 +95,70 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
     GENERAL: 'General',
   }
 
+  // The reading footer: related answers from the Help Center, and this
+  // reader's own "was it helpful" vote.
+  const live = policy.status === 'ACTIVE' || policy.status === 'PUBLISHED'
+  const tags = ['policy', (categoryLabel[policy.category] ?? policy.category).toLowerCase()]
+  const [entries, vote] = live
+    ? await Promise.all([
+        knowledgeFor(user.role),
+        user.employee
+          ? prisma.articleFeedback.findUnique({
+              where: { refType_refId_employeeId: { refType: 'POLICY', refId: policy.id, employeeId: user.employee.id } },
+              select: { helpful: true },
+            })
+          : null,
+      ])
+    : [[], null]
+
   return (
     <div className="policy-print-root max-w-6xl mx-auto">
       {/* Slim breadcrumb row */}
       <div className="flex items-center justify-between gap-3 mb-5 print:hidden">
-        <Link href="/dashboard/policies" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-900 transition">
-          <ArrowLeft className="w-4 h-4" />
-          <span>Policies</span>
-        </Link>
+        <div className="flex items-center gap-3 text-sm">
+          <Link href="/dashboard/policies" className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 transition">
+            <ArrowLeft className="w-4 h-4" />
+            <span>Policies</span>
+          </Link>
+          <span className="text-slate-300">·</span>
+          <Link href="/dashboard/help?cat=POLICIES" className="text-slate-500 underline underline-offset-2 hover:text-slate-900">Help Center</Link>
+        </div>
         <PrintButton />
       </div>
 
-      {/* Hero — quiet, no decorative gradient. Title + status + a single
-          fact line. Everything secondary goes in the sidebar. */}
-      <header className="border-b border-slate-200 pb-5 mb-8">
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">
-          <FileText className="w-3.5 h-3.5" />
-          <span>{categoryLabel[policy.category] ?? policy.category}</span>
-          <span className="text-slate-300">·</span>
-          <span>v{policy.version}</span>
-          {policy.status !== 'PUBLISHED' && (
-            <>
-              <span className="text-slate-300">·</span>
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${policy.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-600' : 'bg-slate-100 text-slate-900'}`}>
+      {/* Two-column body: the article left, the facts and workflow right. */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-10 items-start">
+        <article className="min-w-0 bg-white border border-slate-200 rounded-2xl p-6 lg:p-10 print:border-0 print:p-0">
+          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+            <span>Policies</span>
+            <span className="text-slate-300">·</span>
+            <span>{categoryLabel[policy.category] ?? policy.category}</span>
+            <span className="text-slate-300">·</span>
+            <span>v{policy.version}</span>
+            {policy.status !== 'PUBLISHED' && policy.status !== 'ACTIVE' && (
+              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${policy.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
                 {policy.status}
               </span>
-            </>
+            )}
+          </p>
+          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight tracking-tight mt-1">
+            {policy.title}
+          </h1>
+          <p className="text-sm text-slate-500 mt-3 flex items-center gap-2 border-b border-slate-100 pb-5">
+            <CalendarDays className="w-4 h-4" />
+            Last updated {policy.updatedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+          {policy.description && (
+            <p className="text-lg font-semibold text-slate-900 mt-6 leading-relaxed">{policy.description}</p>
           )}
-        </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight tracking-tight">
-          {policy.title}
-        </h1>
-        {policy.description && (
-          <p className="text-base text-slate-600 mt-3 leading-relaxed max-w-2xl">{policy.description}</p>
-        )}
-      </header>
 
-      {/* Two-column body: content left, sidebar right. Stacks on mobile. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-10 items-start">
-        {/* Reader pane */}
-        <article className="min-w-0">
           {policy.content ? (
             <div
-              className="prose prose-slate prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-8 prose-h2:mb-3 prose-h3:mt-6 prose-h3:mb-2 prose-p:leading-relaxed prose-li:my-1 max-w-none"
+              className="prose prose-slate prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-8 prose-h2:mb-3 prose-h3:mt-6 prose-h3:mb-2 prose-p:leading-relaxed prose-li:my-1 max-w-none mt-4"
               dangerouslySetInnerHTML={{ __html: renderMarkdown(policy.content) }}
             />
           ) : (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center">
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center mt-6">
               <p className="text-sm text-slate-500">
                 No in-app content for this policy.
                 {policy.url ? ' See the attached document below.' : ''}
@@ -150,7 +169,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
           {policy.url && (
             <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 flex items-center justify-between gap-3">
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center flex-shrink-0">
+                <div className="w-9 h-9 rounded-lg bg-white text-slate-700 flex items-center justify-center flex-shrink-0">
                   <FileText className="w-4 h-4" />
                 </div>
                 <div className="min-w-0">
@@ -162,11 +181,23 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
                 href={policy.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-700 hover:text-slate-700 flex-shrink-0"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 underline underline-offset-2 flex-shrink-0"
               >
-                Open <ExternalLink className="w-3.5 h-3.5" />
+                Open document <ExternalLink className="w-3.5 h-3.5" />
               </a>
             </div>
+          )}
+
+          {live && (
+            <ArticleFooter
+              tags={tags}
+              related={relatedTo(entries, { kind: 'POLICY', id: policy.id, category: 'POLICIES', tags })}
+              refType="POLICY"
+              refId={policy.id}
+              myVote={vote?.helpful ?? null}
+              caseType="POLICY"
+              caseTitle={policy.title}
+            />
           )}
         </article>
 

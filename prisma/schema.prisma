@@ -2285,21 +2285,70 @@ model PolicyAcknowledgment {
 model HelpDeskTicket {
   id           String        @id @default(cuid())
   ticketId     String        @unique @default(cuid())
+  /// CASE000017 — what people read out on a call. Assigned max+1 at creation.
+  caseNumber   Int?          @unique
+  /// Who the case is for. They get every notification about it.
   employeeId   String
   employee     Employee      @relation(fields: [employeeId], references: [id])
-  category     String // PAYROLL | LEAVE | ATTENDANCE | POLICY | IT | OTHER
+  /// User.id of whoever raised it — the person, their manager, or HR on their behalf.
+  createdById  String?
+  category     String // case type: LEAVE | ATTENDANCE | PAYROLL | BENEFITS | DOCUMENTS | POLICY | EXPENSES | IT | CONFIDENTIAL | GENERAL (legacy OTHER)
+  /// Which team works it: HR | PAYROLL | FINANCE | IT | HR_CONFIDENTIAL
+  serviceTeam  String?
   subject      String
   description  String
   priority     String        @default("MEDIUM") // LOW | MEDIUM | HIGH | URGENT
-  status       String        @default("OPEN") // OPEN | IN_PROGRESS | RESOLVED | CLOSED
-  assignedToId String?
+  status       String        @default("OPEN") // OPEN (new) | IN_PROGRESS | ON_HOLD | RESOLVED | CLOSED
+  assignedToId String? // User.id of the specialist
   resolvedAt   DateTime?
   resolution   String?
+  attachmentName  String?
+  attachmentMime  String?
+  attachmentBytes Bytes?
   replies      TicketReply[]
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 
+  @@index([employeeId, createdAt])
+  @@index([status, serviceTeam])
   @@map("help_desk_tickets")
+}
+
+/// A Help Center article HR writes — the "Find Answers" side of the Help
+/// Center. Policies and the in-app guides are listed beside these without
+/// being copied into this table.
+model HelpArticle {
+  id            String   @id @default(cuid())
+  title         String
+  category      String // HUMAN_RESOURCES | LEAVE | PAYROLL | BENEFITS | POLICIES | IT | USING_THE_APP
+  summary       String?
+  body          String // markdown
+  tags          String[] @default([])
+  /// Roles that see it. Empty means everyone.
+  audienceRoles String[] @default([])
+  status        String   @default("DRAFT") // DRAFT | PUBLISHED
+  createdById   String
+  updatedById   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status, category])
+  @@map("help_articles")
+}
+
+/// "Was this article helpful?" — one vote per person per article, policy or guide.
+model ArticleFeedback {
+  id         String   @id @default(cuid())
+  refType    String // ARTICLE | POLICY | GUIDE
+  refId      String
+  employeeId String
+  helpful    Boolean
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([refType, refId, employeeId])
+  @@index([refType, refId])
+  @@map("article_feedback")
 }
 
 model TicketReply {

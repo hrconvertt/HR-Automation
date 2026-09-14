@@ -1,83 +1,53 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+/**
+ * The old Help Desk endpoint, kept so anything still calling it works.
+ * Cases live in the Help Center now — see /api/help/cases — and this route
+ * reads and writes the same records with the same privacy: the person a case
+ * is for, whoever raised it, and HR.
+ */
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
-import { verifyToken } from '@/lib/auth'
-
-async function resolveMe(request: NextRequest) {
-  const token = request.cookies.get('hr_token')?.value
-  const payload = await verifyToken(token)
-  if (!payload) return null
-  const user = await prisma.user.findUnique({
-    where: { id: payload.userId },
-    include: { employee: { select: { id: true } } },
-  })
-  if (!user) return null
-  const previewRole =
-    user.role === 'HR_ADMIN' ? request.cookies.get('hr_preview_role')?.value : undefined
-  return {
-    actualRole: user.role,
-    effectiveRole: previewRole ?? user.role,
-    employeeId: user.employee?.id ?? null,
-  }
-}
+import { resolveTalentAccess } from '@/lib/talent'
+import { caseScope, createCase } from '@/lib/help-center-server'
+import { CASE_TYPE_VALUES } from '@/lib/help-center'
 
 export async function GET(request: NextRequest) {
-  const me = await resolveMe(request)
-  if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  let where: Record<string, unknown> = {}
-  if (me.effectiveRole === 'EMPLOYEE' && me.employeeId) {
-    where = { employeeId: me.employeeId }
-  } else if (me.effectiveRole === 'MANAGER' && me.employeeId) {
-    where = {
-      OR: [
-        { employeeId: me.employeeId },
-        { employee: { reportingManagerId: me.employeeId } },
-      ],
-    }
-  }
-
+  const access = await resolveTalentAccess(request)
+  if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const tickets = await prisma.helpDeskTicket.findMany({
-    where,
+    where: caseScope(access),
     orderBy: { createdAt: 'desc' },
     take: 50,
-    include: {
+    // Selected rather than included, so attachment bytes never ride along in a list.
+    select: {
+      id: true, ticketId: true, caseNumber: true, subject: true, category: true, serviceTeam: true,
+      priority: true, status: true, createdAt: true, updatedAt: true,
       employee: { select: { fullName: true, employeeCode: true } },
       _count: { select: { replies: true } },
     },
   })
-
   return NextResponse.json({ tickets })
 }
 
 export async function POST(request: NextRequest) {
-  const me = await resolveMe(request)
-  if (!me) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const access = await resolveTalentAccess(request)
+  if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (access.isPreviewMode) return NextResponse.json({ error: 'Switch back to HR view to create tickets' }, { status: 403 })
+  if (!access.employeeId) return NextResponse.json({ error: 'No employee linked' }, { status: 400 })
 
-  // Block HR in preview mode from creating
-  if (me.actualRole === 'HR_ADMIN' && me.effectiveRole !== 'HR_ADMIN') {
-    return NextResponse.json({ error: 'Switch back to HR view to create tickets' }, { status: 403 })
-  }
-
-  const empId = me.employeeId
-  if (!empId) return NextResponse.json({ error: 'No employee linked' }, { status: 400 })
-
-  const body = await request.json()
-  const { subject, category, priority, description } = body
-
-  if (!subject || !description) {
+  const body = (await request.json().catch(() => ({}))) as { subject?: string; category?: string; priority?: string; description?: string }
+  if (!body.subject || !body.description) {
     return NextResponse.json({ error: 'subject and description are required' }, { status: 400 })
   }
-
-  const ticket = await prisma.helpDeskTicket.create({
-    data: {
-      employeeId: empId,
-      subject,
-      category: category ?? 'OTHER',
-      priority: priority ?? 'MEDIUM',
-      description,
-      status: 'OPEN',
-    },
+  const type = body.category && CASE_TYPE_VALUES.includes(body.category) ? body.category : 'GENERAL'
+  const created = await createCase({
+    forEmployeeId: access.employeeId,
+    createdByUserId: access.userId,
+    createdByEmployeeId: access.employeeId,
+    createdByName: access.userName,
+    type,
+    title: body.subject.slice(0, 150),
+    description: body.description,
+    priority: body.priority,
   })
-
-  return NextResponse.json({ ticket }, { status: 201 })
+  return NextResponse.json({ ticket: created }, { status: 201 })
 }

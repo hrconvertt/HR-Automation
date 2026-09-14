@@ -47,6 +47,10 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Pulse', href: '/dashboard/culture/pulse', section: 'People & Culture', keywords: ['engagement', 'survey', 'enps', 'how people feel', 'morale'] },
   { label: 'Talent Review', href: '/dashboard/performance/talent', section: 'Performance', keywords: ['nine box', '9-box', 'potential', 'succession', 'flight risk'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
   { label: 'Skills', href: '/dashboard/people/skills', section: 'People', keywords: ['who can cover', 'capability', 'expertise', 'cover'] },
+  { label: 'Help Center', href: '/dashboard/help', section: 'Help', keywords: ['help', 'faq', 'answers', 'question', 'how do i', 'support'] },
+  { label: 'Create Case', href: '/dashboard/help/cases/new', section: 'Help', keywords: ['case', 'ticket', 'help desk', 'raise', 'complaint', 'concern', 'issue'] },
+  { label: 'My Cases', href: '/dashboard/help/cases', section: 'Help', keywords: ['cases', 'tickets', 'help desk'] },
+  { label: 'Case Management', href: '/dashboard/help/case-management', section: 'Help', keywords: ['help dashboard', 'open cases', 'service team'] },
   { label: 'Career Hub', href: '/dashboard/career', section: 'People', keywords: ['career', 'grow', 'mentor', 'suggestions', 'next role', 'skill interests'] },
   { label: 'Career Path Builder', href: '/dashboard/career/path', section: 'People', keywords: ['career path', 'next move', 'promotion path', 'plan'] },
   { label: 'Flex Teams', href: '/dashboard/career/flex-teams', section: 'People', keywords: ['flex team', 'project', 'gig', 'stretch'] },
@@ -75,14 +79,60 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Audit Trail', href: '/dashboard/settings/audit', section: 'Settings', keywords: ['who changed', 'history', 'log', 'trail', 'changed the salary', 'evidence', 'when was it changed'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
 ]
 
+/**
+ * The things search can start.
+ *
+ * Workday's search answers "create" with tasks — Create Audit Log, Create
+ * Calculated Field — not only with the screens those tasks live on. Somebody
+ * who types a verb wants to do something, and "Leave" is one step further from
+ * "Request Leave" than it needs to be.
+ *
+ * Each label is the button's own wording, so the task and the dialog it opens
+ * read the same; `section` names the screen the button is on. There is no
+ * route that opens a dialog by itself, so a task takes you to that screen and
+ * the button is the first thing on it. Roles mirror who sees the button.
+ */
+export const NAV_TASKS: NavDestination[] = [
+  // Everyone
+  { label: 'Request Leave', href: '/dashboard/leave/me', section: 'Leave › My Leave', keywords: ['apply', 'apply for leave', 'time off', 'holiday', 'sick', 'annual', 'create'] },
+  { label: 'Request a Letter', href: '/dashboard/letters', section: 'Letters', keywords: ['experience letter', 'salary certificate', 'noc', 'visa', 'create', 'apply'] },
+  { label: 'Give Kudos', href: '/dashboard/culture/recognition', section: 'People & Culture › Recognition', keywords: ['recognise', 'recognize', 'appreciate', 'thank', 'create'] },
+  { label: 'Add New Goal', href: '/dashboard/performance?tab=goals', section: 'Performance › Goals', keywords: ['create goal', 'okr', 'objective', 'target', 'new'] },
+  { label: 'Change My Schedule Preferences', href: '/dashboard/time/schedule', section: 'Time Tracking › My Schedule', keywords: ['shift', 'hours', 'edit', 'update'] },
+
+  // People managers
+  { label: 'Request to Hire', href: '/dashboard/recruiting', section: 'Recruiting', keywords: ['create requisition', 'new role', 'headcount', 'hire', 'new'], roles: ['MANAGER'] },
+  { label: 'Add Candidate', href: '/dashboard/recruiting?tab=pipeline', section: 'Recruiting › Pipeline', keywords: ['create candidate', 'applicant', 'resume', 'cv', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
+  { label: 'Assign Task', href: '/dashboard/tasks', section: 'My Tasks › Team Tasks', keywords: ['create task', 'to do', 'delegate', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
+  { label: 'Schedule a Check-in', href: '/dashboard/team-insights', section: 'Team Insights', keywords: ['one to one', '1:1', 'meeting', 'create', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
+  { label: 'Create Performance Improvement Plan', href: '/dashboard/performance?tab=pip', section: 'Performance › PIP', keywords: ['pip', 'improvement', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
+  { label: 'Flag a Show Cause Concern', href: '/dashboard/performance?tab=showcause', section: 'Performance › Show Cause', keywords: ['create show cause', 'notice', 'disciplinary', 'warning', 'new'], roles: ['HR_ADMIN', 'MANAGER'] },
+
+  // HR
+  { label: 'Add New Employee', href: '/dashboard/employees', section: 'People', keywords: ['create employee', 'hire', 'new hire', 'joiner', 'onboard', 'new'], roles: ['HR_ADMIN'] },
+  { label: 'New Requisition', href: '/dashboard/recruiting?tab=requisitions', section: 'Recruiting › Requisitions', keywords: ['create requisition', 'job opening', 'vacancy', 'role'], roles: ['HR_ADMIN'] },
+  { label: 'New Job Description', href: '/dashboard/recruiting/new-jd', section: 'Recruiting', keywords: ['create jd', 'jd', 'job description', 'write'], roles: ['HR_ADMIN'] },
+  { label: 'Open New Review Cycle', href: '/dashboard/performance?tab=reviews', section: 'Performance › Reviews', keywords: ['create review cycle', 'appraisal', 'start review', 'new'], roles: ['HR_ADMIN'] },
+  { label: 'New Job Change', href: '/dashboard/lifecycle/job-changes', section: 'Employee Lifecycle › Job Changes', keywords: ['create job change', 'promotion', 'transfer', 'designation change'], roles: ['HR_ADMIN'] },
+  { label: 'Start Leave of Absence', href: '/dashboard/lifecycle/loa', section: 'Employee Lifecycle › Leave of Absence', keywords: ['create loa', 'loa', 'sabbatical', 'maternity', 'unpaid', 'new'], roles: ['HR_ADMIN'] },
+  { label: 'Verify an Employer', href: '/dashboard/lifecycle/verification', section: 'Employee Lifecycle › Background Verification', keywords: ['create verification', 'background check', 'reference', 'new'], roles: ['HR_ADMIN'] },
+  { label: 'Run Payroll', href: '/dashboard/payroll', section: 'Payroll › Payroll Run', keywords: ['create payroll', 'generate payslips', 'salary', 'pay run'], roles: ['HR_ADMIN'] },
+  { label: 'New Advance', href: '/dashboard/payroll/advances', section: 'Payroll › Loans & Advances', keywords: ['create advance', 'loan', 'salary advance'], roles: ['HR_ADMIN'] },
+  { label: 'New Policy', href: '/dashboard/policies', section: 'Policies', keywords: ['create policy', 'handbook', 'rule'], roles: ['HR_ADMIN'] },
+  { label: 'New Program', href: '/dashboard/learning?tab=programs', section: 'Training & Development › Programs', keywords: ['create program', 'course', 'training', 'learning'], roles: ['HR_ADMIN'] },
+  { label: 'Add Company Event', href: '/dashboard/culture/events', section: 'People & Culture › Events', keywords: ['create event', 'celebration', 'party', 'new'], roles: ['HR_ADMIN'] },
+  { label: 'Add Department', href: '/dashboard/settings/departments', section: 'Settings › Departments', keywords: ['create department', 'organization', 'org', 'team', 'new'], roles: ['HR_ADMIN'] },
+  { label: 'Add Holiday', href: '/dashboard/settings/holidays', section: 'Settings › Holidays & WFH', keywords: ['create holiday', 'public holiday', 'gazetted', 'new'], roles: ['HR_ADMIN'] },
+]
+
 /** Rank by how directly the query hits the label, then the keywords. */
-export function searchDestinations(
-  query: string, role: string, limit = 6,
+function rank(
+  list: NavDestination[], query: string, role: string, limit: number,
 ): NavDestination[] {
   const q = query.trim().toLowerCase()
   if (!q) return []
   const scored: { d: NavDestination; score: number }[] = []
-  for (const d of NAV_DESTINATIONS) {
+  for (const d of list) {
     if (d.roles && !d.roles.includes(role)) continue
     const label = d.label.toLowerCase()
     let score = 0
@@ -99,4 +149,12 @@ export function searchDestinations(
     .sort((a, b) => b.score - a.score || a.d.label.localeCompare(b.d.label))
     .slice(0, limit)
     .map((x) => x.d)
+}
+
+export function searchDestinations(query: string, role: string, limit = 6): NavDestination[] {
+  return rank(NAV_DESTINATIONS, query, role, limit)
+}
+
+export function searchTasks(query: string, role: string, limit = 7): NavDestination[] {
+  return rank(NAV_TASKS, query, role, limit)
 }
