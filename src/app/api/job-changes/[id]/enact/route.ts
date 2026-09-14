@@ -100,6 +100,19 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }),
   ])
 
+  // Whoever has just got their first direct report is a new manager: any
+  // journey set to assign itself to new managers goes to them.
+  if (managerChanged && typeof empUpdate.reportingManagerId === 'string') {
+    const newManagerId = empUpdate.reportingManagerId
+    const reports = await prisma.employee.count({
+      where: { reportingManagerId: newManagerId, status: 'ACTIVE', deletedAt: null },
+    })
+    if (reports === 1) {
+      const { autoAssignJourneys } = await import('@/lib/experience-server')
+      await autoAssignJourneys('NEW_MANAGER', newManagerId).catch((err) => console.error('[journey auto-assign]', err))
+    }
+  }
+
   await notify({
     employeeId: jc.employeeId,
     type: 'GENERAL',

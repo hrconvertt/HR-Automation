@@ -149,6 +149,8 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
         { href: '/dashboard/learning', label: 'Training & Development', icon: GraduationCap },
         { href: '/dashboard/career/flex-teams', label: 'Flex Teams', icon: Compass },
+        { href: '/dashboard/journeys/studio', label: 'Journeys', icon: KanbanSquare },
+        { href: '/dashboard/my-journeys', label: 'My Journeys', icon: ListOrdered },
         { href: '/dashboard/org-chart', label: 'Org Chart', icon: Network },
       ],
     },
@@ -201,6 +203,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
         { href: '/dashboard/career', label: 'Career Hub', icon: Compass },
+        { href: '/dashboard/my-journeys', label: 'My Journeys', icon: ListOrdered },
         { href: '/dashboard/learning', label: 'Training & Development', icon: GraduationCap },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
@@ -235,6 +238,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/performance', label: 'My Reviews', icon: TrendingUp },
         // Where to grow: manager suggestions, mentors, flex teams, career paths.
         { href: '/dashboard/career', label: 'Career Hub', icon: Compass },
+        { href: '/dashboard/my-journeys', label: 'My Journeys', icon: ListOrdered },
         { href: '/dashboard/learning', label: 'My Training', icon: GraduationCap },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
       ],

@@ -124,6 +124,13 @@ export async function POST(request: NextRequest) {
       include: { tasks: true, employee: { select: { fullName: true, reportingManagerId: true } } },
     })
 
+    // Guided journeys set to assign themselves to every new joiner — the
+    // employee-facing side of onboarding, beside HR's task list above.
+    if (type === 'ONBOARDING') {
+      const { autoAssignJourneys } = await import('@/lib/experience-server')
+      await autoAssignJourneys('ONBOARDING', employeeId).catch((err) => console.error('[journey auto-assign]', err))
+    }
+
     // Notify employee
     await notify({
       employeeId,

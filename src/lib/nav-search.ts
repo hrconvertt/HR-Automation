@@ -47,6 +47,8 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Pulse', href: '/dashboard/culture/pulse', section: 'People & Culture', keywords: ['engagement', 'survey', 'enps', 'how people feel', 'morale'] },
   { label: 'Talent Review', href: '/dashboard/performance/talent', section: 'Performance', keywords: ['nine box', '9-box', 'potential', 'succession', 'flight risk'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
   { label: 'Skills', href: '/dashboard/people/skills', section: 'People', keywords: ['who can cover', 'capability', 'expertise', 'cover'] },
+  { label: 'My Journeys', href: '/dashboard/my-journeys', section: 'People', keywords: ['journey', 'onboarding steps', 'first week', 'new manager', 'steps', 'guided'] },
+  { label: 'Journeys Studio', href: '/dashboard/journeys/studio', section: 'Lifecycle', keywords: ['build journey', 'transition to management', 'distribute', 'journey metrics'], roles: ['HR_ADMIN'] },
   { label: 'Help Center', href: '/dashboard/help', section: 'Help', keywords: ['help', 'faq', 'answers', 'question', 'how do i', 'support'] },
   { label: 'Create Case', href: '/dashboard/help/cases/new', section: 'Help', keywords: ['case', 'ticket', 'help desk', 'raise', 'complaint', 'concern', 'issue'] },
   { label: 'My Cases', href: '/dashboard/help/cases', section: 'Help', keywords: ['cases', 'tickets', 'help desk'] },

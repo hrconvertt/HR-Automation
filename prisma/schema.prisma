@@ -398,6 +398,7 @@ model Employee {
   careerSuggestions     CareerSuggestion[]     @relation("CareerSuggestionFor")
   careerSuggestionsMade CareerSuggestion[]     @relation("CareerSuggestionBy")
   careerPaths           CareerPath[]
+  experienceJourneys    ExperienceAssignment[]
   appraisals            AppraisalForm[]        @relation("AppraisalSubject")
   appraisalsGiven       AppraisalForm[]        @relation("AppraisalAppraiser")
   appraisalsReviewed    AppraisalForm[]        @relation("AppraisalReviewer")
@@ -4014,4 +4015,97 @@ model LeaveEvidence {
 
   @@index([leaveRequestId])
   @@map("leave_evidence")
+}
+
+// ─── JOURNEYS (guided experiences) ───────────────────────────────────────────
+/// A guided journey people walk through — onboarding, transition to
+/// management. Distinct from EmployeeJourney, which is HR's joiner and leaver
+/// task list.
+model ExperienceJourney {
+  id          String                 @id @default(cuid())
+  title       String
+  description String?
+  /// DRAFT | PUBLISHED
+  status      String                 @default("DRAFT")
+  /// ONBOARDING | NEW_MANAGER — assigns itself on that event. Null: HR distributes it.
+  autoAssign  String?
+  bannerTone  String                 @default("blue")
+  createdById String
+  modules     ExperienceModule[]
+  assignments ExperienceAssignment[]
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+
+  @@index([status, autoAssign])
+  @@map("experience_journeys")
+}
+
+model ExperienceModule {
+  id          String            @id @default(cuid())
+  journeyId   String
+  journey     ExperienceJourney @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  seq         Int
+  steps       ExperienceStep[]
+  createdAt   DateTime          @default(now())
+
+  @@index([journeyId, seq])
+  @@map("experience_modules")
+}
+
+model ExperienceStep {
+  id        String                   @id @default(cuid())
+  moduleId  String
+  module    ExperienceModule         @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  title     String
+  body      String?
+  /// ARTICLE | TEXT | LINK | VIDEO | LEARNING | TASK
+  type      String
+  url       String?
+  /// TrainingProgram.id for LEARNING steps.
+  programId String?
+  required  Boolean                  @default(true)
+  /// Due this many days after the journey is assigned.
+  dueDays   Int?
+  minutes   Int?
+  seq       Int
+  progress  ExperienceStepProgress[]
+  createdAt DateTime                 @default(now())
+  updatedAt DateTime                 @updatedAt
+
+  @@index([moduleId, seq])
+  @@map("experience_steps")
+}
+
+model ExperienceAssignment {
+  id           String                   @id @default(cuid())
+  journeyId    String
+  journey      ExperienceJourney        @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee                 @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  /// MANUAL | DEPARTMENT | MANAGERS | EVERYONE | AUTO_ONBOARDING | AUTO_NEW_MANAGER
+  method       String                   @default("MANUAL")
+  assignedById String?
+  assignedAt   DateTime                 @default(now())
+  startedAt    DateTime?
+  completedAt  DateTime?
+  progress     ExperienceStepProgress[]
+
+  @@unique([journeyId, employeeId])
+  @@index([employeeId])
+  @@map("experience_assignments")
+}
+
+model ExperienceStepProgress {
+  id           String               @id @default(cuid())
+  assignmentId String
+  assignment   ExperienceAssignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  stepId       String
+  step         ExperienceStep       @relation(fields: [stepId], references: [id], onDelete: Cascade)
+  viewedAt     DateTime?
+  completedAt  DateTime?
+
+  @@unique([assignmentId, stepId])
+  @@map("experience_step_progress")
 }
