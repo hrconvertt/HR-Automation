@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { nextLetterNumbers } from '@/lib/letter-number'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
 import { generateLetter, type LetterType } from '@/lib/letter-templates'
@@ -97,13 +98,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     const signedByTitle = (body.signedByTitle ?? '').toString().trim() || 'HR Department'
 
     // Allocate next letter number for current year
-    const year = new Date().getFullYear()
-    const prefix = `CON-LTR-${year}-`
-    const countThisYear = await prisma.letterRequest.count({
-      where: { letterNumber: { startsWith: prefix } },
-    })
-    const nextNum = String(countThisYear + 1).padStart(3, '0')
-    const letterNumber = `${prefix}${nextNum}`
+    const [letterNumber] = await nextLetterNumbers(prisma, new Date().getFullYear())
 
     // Compute monthly gross — prefer latest payslip, else sum salary components, else basicSalary
     const latestGross = letter.employee.payslips?.[0]?.grossSalary ?? null

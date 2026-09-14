@@ -13,6 +13,7 @@
 // Outcomes: CONFIRM | EXTEND | WARNING | TERMINATE
 
 import { prisma } from '@/lib/prisma'
+import { nextLetterNumbers } from '@/lib/letter-number'
 import { notify, notifyMany } from '@/lib/notifications'
 import { computeTimeMetrics } from '@/lib/performance-metrics'
 
@@ -294,12 +295,7 @@ export async function enactOutcome(recordId: string, actorUserId: string | null)
     }
 
     // ── 2. Generate confirmation letter ──
-    const year = now.getFullYear()
-    const prefix = `CON-LTR-${year}-`
-    const countThisYear = await prisma.letterRequest.count({
-      where: { letterNumber: { startsWith: prefix } },
-    })
-    const letterNumber = `${prefix}${String(countThisYear + 1).padStart(3, '0')}`
+    const [letterNumber] = await nextLetterNumbers(prisma, now.getFullYear())
     const signedByName = 'HR Department'
     const signedByTitle = 'Convertt HR'
     const letterBody = buildConfirmationLetter({

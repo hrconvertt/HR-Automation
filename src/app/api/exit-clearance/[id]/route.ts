@@ -12,6 +12,7 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
+import { nextLetterNumbers } from '@/lib/letter-number'
 import { verifyToken, hasRole } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
 import { generateLetter } from '@/lib/letter-templates'
@@ -244,12 +245,8 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
     // Auto-generate Experience + Relieving letters.
     if (emp) {
-      const year = now.getFullYear()
-      const prefix = `CON-LTR-${year}-`
-      // Allocate two sequential letter numbers (count once, then ++).
-      const countThisYear = await prisma.letterRequest.count({ where: { letterNumber: { startsWith: prefix } } })
-      const expNum = `${prefix}${String(countThisYear + 1).padStart(3, '0')}`
-      const relNum = `${prefix}${String(countThisYear + 2).padStart(3, '0')}`
+      // Two sequential letter numbers, after the highest issued this year.
+      const [expNum, relNum] = await nextLetterNumbers(prisma, now.getFullYear(), 2)
       const empInput = {
         fullName: emp.fullName,
         employeeCode: emp.employeeCode,
