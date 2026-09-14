@@ -85,6 +85,11 @@ export function canSeeSuccession(access: TalentAccess): boolean {
   return seesEveryone(access)
 }
 
+/** Company-wide talent setup — job profiles, flex teams for anyone: HR only. */
+export function canManageTalentSetup(access: TalentAccess): boolean {
+  return access.actualRole === 'HR_ADMIN' && !access.isPreviewMode
+}
+
 /** A calendar day from "YYYY-MM-DD", at local midnight like the rest of the app. */
 export function parseDay(v: unknown): Date | null {
   if (typeof v !== 'string' || !/^\d{4}-\d{2}-\d{2}/.test(v)) return null

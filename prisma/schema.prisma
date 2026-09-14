@@ -391,6 +391,13 @@ model Employee {
   mentoredBy            Mentorship[]           @relation("MenteeOf")
   successionsHeld       SuccessionPlan[]       @relation("SuccessionIncumbent")
   successorFor          SuccessionCandidate[]
+  skillRatings          SkillRating[]          @relation("SkillRatingOf")
+  skillRatingsGiven     SkillRating[]          @relation("SkillRatingBy")
+  flexTeamsHosted       FlexTeam[]             @relation("FlexTeamHost")
+  flexTeamMemberships   FlexTeamMember[]
+  careerSuggestions     CareerSuggestion[]     @relation("CareerSuggestionFor")
+  careerSuggestionsMade CareerSuggestion[]     @relation("CareerSuggestionBy")
+  careerPaths           CareerPath[]
   appraisals            AppraisalForm[]        @relation("AppraisalSubject")
   appraisalsGiven       AppraisalForm[]        @relation("AppraisalAppraiser")
   appraisalsReviewed    AppraisalForm[]        @relation("AppraisalReviewer")
@@ -2917,6 +2924,9 @@ model Skill {
   interests        SkillInterest[]
   developmentItems DevelopmentItem[]
   mentorships      Mentorship[]
+  roleRequirements RoleSkill[]
+  ratings          SkillRating[]
+  flexTeams        FlexTeamSkill[]
 
   @@map("skills")
 }
@@ -3025,6 +3035,7 @@ model Mentorship {
   skillId      String?
   skill        Skill?    @relation(fields: [skillId], references: [id], onDelete: SetNull)
   status       String    @default("PROPOSED") // PROPOSED | ACTIVE | ENDED
+  type         String    @default("CAREER") // CAREER | NEW_HIRE | PEER_COACH | LEADERSHIP
   message      String?
   proposedById String // User.id
   startedAt    DateTime?
@@ -3068,6 +3079,142 @@ model SuccessionCandidate {
   @@unique([planId, employeeId])
   @@index([employeeId])
   @@map("succession_candidates")
+}
+
+/// What a role asks for — a job profile's skills and how deep each must go.
+/// Keyed on the role title people actually hold (their designation), because
+/// that is what Convertt's records carry; Position rows are barely used.
+model RoleSkill {
+  id        String   @id @default(cuid())
+  roleTitle String
+  skillId   String
+  skill     Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  /// 1 aware, 2 working, 3 strong, 4 can teach it — the EmployeeSkill scale.
+  level     Int      @default(3)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([roleTitle, skillId])
+  @@index([skillId])
+  @@map("role_skills")
+}
+
+/// One person's rating of somebody's skill, out of five. The self rating,
+/// the manager's, HR's and a colleague's sit side by side on the skill panel.
+model SkillRating {
+  id         String   @id @default(cuid())
+  employeeId String
+  employee   Employee @relation("SkillRatingOf", fields: [employeeId], references: [id], onDelete: Cascade)
+  skillId    String
+  skill      Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+  raterId    String
+  rater      Employee @relation("SkillRatingBy", fields: [raterId], references: [id], onDelete: Cascade)
+  source     String // SELF | MANAGER | HR | PEER
+  rating     Int // 1-5
+  note       String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([employeeId, skillId, raterId])
+  @@index([skillId])
+  @@map("skill_ratings")
+}
+
+/// A short project people join alongside their job — Workday's flex team.
+model FlexTeam {
+  id           String           @id @default(cuid())
+  title        String
+  category     String?
+  description  String?
+  location     String?
+  workMode     String           @default("REMOTE") // REMOTE | ONSITE | HYBRID
+  hoursPerWeek String? // "1-5 hrs/wk"
+  startDate    DateTime?
+  endDate      DateTime?
+  spots        Int?
+  status       String           @default("OPEN") // OPEN | STAFFED | CLOSED
+  hostId       String?
+  host         Employee?        @relation("FlexTeamHost", fields: [hostId], references: [id], onDelete: SetNull)
+  createdById  String // User.id
+  skills       FlexTeamSkill[]
+  members      FlexTeamMember[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@map("flex_teams")
+}
+
+model FlexTeamSkill {
+  id         String   @id @default(cuid())
+  flexTeamId String
+  flexTeam   FlexTeam @relation(fields: [flexTeamId], references: [id], onDelete: Cascade)
+  skillId    String
+  skill      Skill    @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@unique([flexTeamId, skillId])
+  @@map("flex_team_skills")
+}
+
+model FlexTeamMember {
+  id         String   @id @default(cuid())
+  flexTeamId String
+  flexTeam   FlexTeam @relation(fields: [flexTeamId], references: [id], onDelete: Cascade)
+  employeeId String
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  status     String   @default("INTERESTED") // INTERESTED | MEMBER | DECLINED
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([flexTeamId, employeeId])
+  @@index([employeeId])
+  @@map("flex_team_members")
+}
+
+/// Something a manager or HR pointed a person towards — a flex team, a
+/// colleague to meet, a role — with the note that went with it. What the
+/// Career Hub shows under "Suggestions from your manager".
+model CareerSuggestion {
+  id            String    @id @default(cuid())
+  employeeId    String
+  employee      Employee  @relation("CareerSuggestionFor", fields: [employeeId], references: [id], onDelete: Cascade)
+  kind          String // FLEX_TEAM | CONNECTION | ROLE
+  refId         String // FlexTeam.id, Employee.id, or the role title
+  message       String?
+  suggestedById String?
+  suggestedBy   Employee? @relation("CareerSuggestionBy", fields: [suggestedById], references: [id], onDelete: SetNull)
+  dismissedAt   DateTime?
+  createdAt     DateTime  @default(now())
+
+  @@index([employeeId, dismissedAt])
+  @@map("career_suggestions")
+}
+
+/// A route somebody saved from where they are to a role they want.
+model CareerPath {
+  id         String           @id @default(cuid())
+  employeeId String
+  employee   Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  name       String           @default("Career Development")
+  /// Whether next moves were judged on skill interests or on skills held.
+  basis      String           @default("INTERESTS") // INTERESTS | SKILLS
+  steps      CareerPathStep[]
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@index([employeeId])
+  @@map("career_paths")
+}
+
+model CareerPathStep {
+  id        String     @id @default(cuid())
+  pathId    String
+  path      CareerPath @relation(fields: [pathId], references: [id], onDelete: Cascade)
+  seq       Int
+  roleTitle String
+  createdAt DateTime   @default(now())
+
+  @@unique([pathId, seq])
+  @@map("career_path_steps")
 }
 
 // ─── EMAIL TEMPLATES ──────────────────────────────────────────────────────────

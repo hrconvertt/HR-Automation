@@ -469,7 +469,7 @@ export interface MentorSuggestion {
   moreCount: number
 }
 
-async function mentorSuggestions(
+export async function mentorSuggestions(
   employeeId: string, interestSkillIds: string[], openMentorIds: Set<string>, now: Date,
 ): Promise<MentorSuggestion[]> {
   if (interestSkillIds.length === 0) return []
