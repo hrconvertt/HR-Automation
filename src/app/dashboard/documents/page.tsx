@@ -8,11 +8,11 @@
  * Per-employee files live on the employee profile (Documents tab).
  */
 
-import { useState, useEffect } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { buttonVariants } from '@/components/ui/button'
-import { PolicyList, type PolicyListItem } from '@/components/policies/policy-list'
+import { PolicyLibrary, type LibraryPolicy } from '@/components/policies/policy-library'
 import { FolderOpen } from 'lucide-react'
 
 export default function DocumentCenterPage() {
@@ -56,40 +56,37 @@ export default function DocumentCenterPage() {
 /* ─────────────────────── POLICIES ─────────────────────── */
 
 function CompanyPolicies() {
-  const [policies, setPolicies] = useState<PolicyListItem[]>([])
+  const [policies, setPolicies] = useState<LibraryPolicy[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     // /api/policies already applies each role's audience; HR also receives
-    // drafts and archived rows, which do not belong in a reading list.
+    // drafts and archived rows, which do not belong in a reading library.
     fetch('/api/policies')
       .then((r) => r.json())
       .then((d) => {
-        const live = (d.policies ?? []).filter(
-          (p: PolicyListItem) => p.status === 'ACTIVE' || p.status === 'PUBLISHED',
+        setPolicies(
+          (d.policies ?? []).filter((p: LibraryPolicy) => p.status === 'ACTIVE' || p.status === 'PUBLISHED'),
         )
-        setPolicies(live)
-        setLoading(false)
       })
-      .catch(() => setLoading(false))
+      .catch(() => setPolicies([]))
+      .finally(() => setLoading(false))
   }, [])
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex items-end justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-lg font-semibold text-slate-900">Company policies</h2>
-          <p className="text-sm text-slate-500">Click <span className="font-medium text-slate-700">Open policy</span> to read one in full.</p>
+          <p className="text-sm text-slate-500">Choose a category, then a policy to read it on the right.</p>
         </div>
         <Link href="/dashboard/policies" className={buttonVariants({ variant: 'outline', size: 'sm' })}>
           Go to Policies
         </Link>
       </div>
-      {loading ? (
-        <div className="py-8 text-center text-sm text-slate-400">Loading…</div>
-      ) : (
-        <PolicyList policies={policies} emptyText="No company policies are live yet." />
-      )}
+      <Suspense fallback={<div className="py-10 text-center text-sm text-slate-400">Loading…</div>}>
+        <PolicyLibrary policies={policies} loading={loading} emptyText="No company policies are live yet." />
+      </Suspense>
     </div>
   )
 }

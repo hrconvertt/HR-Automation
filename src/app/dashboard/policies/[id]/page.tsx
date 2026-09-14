@@ -4,20 +4,39 @@ import Link from 'next/link'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { parseAudienceRoles } from '@/lib/policy-access'
-import { ArrowLeft, ExternalLink, Calendar, Users, FileText, CalendarDays } from 'lucide-react'
-import { formatDate } from '@/lib/utils'
-import { renderMarkdown } from '@/lib/markdown'
+import { ArrowLeft } from 'lucide-react'
+import { LOGO_DATA_URI } from '@/lib/brand-logo'
 import { PrintButton } from '@/components/policies/print-button'
 import { PolicyApprovalActions } from '@/components/policy-approval-actions'
+import { PolicyDocument } from '@/components/policies/policy-document'
 import { knowledgeFor, relatedTo } from '@/lib/help-center-server'
 import { ArticleFooter } from '@/components/help/article-footer'
 
 /**
- * A policy, read the way the Help Center reads an article — Workday's layout:
- * the category over a large title, when it was last updated, the body, then
- * tags, related articles, "Was this article helpful?" and "Still need help?
- * Create a case". The approval workflow and the facts HR needs stay in the
- * quiet sidebar, and the page still prints clean.
+ * The browser puts the page title in the Save-as-PDF filename box, so the
+ * policy's name is the title — a saved policy arrives named after itself.
+ */
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
+  const policy = await prisma.policyDocument.findUnique({ where: { id }, select: { title: true } })
+  return { title: policy ? policy.title.replace(/[\\/:*?"<>|]/g, '').trim() : 'Policy' }
+}
+
+const CATEGORY_TAG: Record<string, string> = {
+  LEAVE: 'leave',
+  CODE_OF_CONDUCT: 'code of conduct',
+  IT: 'it',
+  SECURITY: 'security',
+  COMPENSATION: 'compensation',
+  GENERAL: 'general',
+}
+
+/**
+ * A policy on its own page, drawn as the official document (letterhead,
+ * document control, numbered clauses) with the real mark. The approval
+ * workflow sits in a bar above it; below it, the Help Center footer — tags,
+ * related articles, "Was this article helpful?" and "Create a case". Neither
+ * prints.
  */
 export default async function PolicyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -81,24 +100,15 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
     )
   }
 
-  const audienceLabel: Record<string, string> = {
-    ALL: 'All employees',
-    MANAGERS: 'Managers only',
-    HR_ONLY: 'HR only',
-  }
-  const categoryLabel: Record<string, string> = {
-    LEAVE: 'Leave',
-    CODE_OF_CONDUCT: 'Code of Conduct',
-    IT: 'IT',
-    SECURITY: 'Security',
-    COMPENSATION: 'Compensation',
-    GENERAL: 'General',
-  }
+  const showWorkflow = isHR || isReviewer || policy.reviews.length > 0
+  const myReview = user.employee
+    ? policy.reviews.find((r) => r.reviewerId === user.employee!.id) ?? null
+    : null
 
-  // The reading footer: related answers from the Help Center, and this
-  // reader's own "was it helpful" vote.
+  // The Help Center footer: related answers, and this reader's own
+  // "was it helpful" vote. Live policies only.
   const live = policy.status === 'ACTIVE' || policy.status === 'PUBLISHED'
-  const tags = ['policy', (categoryLabel[policy.category] ?? policy.category).toLowerCase()]
+  const tags = ['policy', CATEGORY_TAG[policy.category] ?? policy.category.toLowerCase()]
   const [entries, vote] = live
     ? await Promise.all([
         knowledgeFor(user.role),
@@ -112,163 +122,88 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
     : [[], null]
 
   return (
-    <div className="policy-print-root max-w-6xl mx-auto">
-      {/* Slim breadcrumb row */}
-      <div className="flex items-center justify-between gap-3 mb-5 print:hidden">
+    <div className="policy-print-root mx-auto max-w-5xl">
+      {/* Top bar */}
+      <div className="mb-4 flex items-center justify-between gap-3 print:hidden">
         <div className="flex items-center gap-3 text-sm">
-          <Link href="/dashboard/policies" className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 transition">
-            <ArrowLeft className="w-4 h-4" />
-            <span>Policies</span>
+          <Link
+            href={`/dashboard/policies?policy=${policy.id}`}
+            className="inline-flex items-center gap-1.5 font-medium text-slate-600 hover:text-slate-900"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Policies
           </Link>
           <span className="text-slate-300">·</span>
-          <Link href="/dashboard/help?cat=POLICIES" className="text-slate-500 underline underline-offset-2 hover:text-slate-900">Help Center</Link>
+          <Link href="/dashboard/help?cat=POLICIES" className="text-slate-500 underline underline-offset-2 hover:text-slate-900">
+            Help Center
+          </Link>
         </div>
         <PrintButton />
       </div>
 
-      {/* Two-column body: the article left, the facts and workflow right. */}
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-10 items-start">
-        <article className="min-w-0 bg-white border border-slate-200 rounded-2xl p-6 lg:p-10 print:border-0 print:p-0">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500 flex items-center gap-2">
-            <span>Policies</span>
-            <span className="text-slate-300">·</span>
-            <span>{categoryLabel[policy.category] ?? policy.category}</span>
-            <span className="text-slate-300">·</span>
-            <span>v{policy.version}</span>
-            {policy.status !== 'PUBLISHED' && policy.status !== 'ACTIVE' && (
-              <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${policy.status === 'ARCHIVED' ? 'bg-slate-100 text-slate-600' : 'bg-amber-50 text-amber-800 border border-amber-200'}`}>
-                {policy.status}
-              </span>
-            )}
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight tracking-tight mt-1">
-            {policy.title}
-          </h1>
-          <p className="text-sm text-slate-500 mt-3 flex items-center gap-2 border-b border-slate-100 pb-5">
-            <CalendarDays className="w-4 h-4" />
-            Last updated {policy.updatedAt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
-          </p>
-          {policy.description && (
-            <p className="text-lg font-semibold text-slate-900 mt-6 leading-relaxed">{policy.description}</p>
-          )}
-
-          {policy.content ? (
-            <div
-              className="prose prose-slate prose-headings:font-semibold prose-headings:tracking-tight prose-h2:mt-8 prose-h2:mb-3 prose-h3:mt-6 prose-h3:mb-2 prose-p:leading-relaxed prose-li:my-1 max-w-none mt-4"
-              dangerouslySetInnerHTML={{ __html: renderMarkdown(policy.content) }}
-            />
+      {/* Approval workflow — only the buttons that apply to this viewer, and
+          who has reviewed. Never printed. */}
+      {showWorkflow && (
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4 rounded-xl border border-slate-200 bg-white px-4 py-3 print:hidden">
+          {policy.reviews.length > 0 ? (
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Reviewers</p>
+              <ul className="mt-1 flex flex-wrap gap-x-5 gap-y-1 text-sm">
+                {policy.reviews.map((r) => (
+                  <li key={r.id} className="text-slate-800">
+                    <span className="font-medium">{r.reviewer.fullName}</span>
+                    <span className="text-slate-500">
+                      {' — '}
+                      {r.status === 'APPROVED' ? 'Approved' : r.status === 'REJECTED' ? 'Rejected' : 'Pending'}
+                      {r.comment ? ` · ${r.comment}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           ) : (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-5 py-8 text-center mt-6">
-              <p className="text-sm text-slate-500">
-                No in-app content for this policy.
-                {policy.url ? ' See the attached document below.' : ''}
-              </p>
-            </div>
+            <p className="text-sm text-slate-500">No reviewers assigned yet.</p>
           )}
-
-          {policy.url && (
-            <div className="mt-8 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-9 h-9 rounded-lg bg-white text-slate-700 flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-slate-900 truncate">Attached document</p>
-                  <p className="text-xs text-slate-500 truncate">{policy.url}</p>
-                </div>
-              </div>
-              <a
-                href={policy.url}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-blue-700 underline underline-offset-2 flex-shrink-0"
-              >
-                Open document <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-          )}
-
-          {live && (
-            <ArticleFooter
-              tags={tags}
-              related={relatedTo(entries, { kind: 'POLICY', id: policy.id, category: 'POLICIES', tags })}
-              refType="POLICY"
-              refId={policy.id}
-              myVote={vote?.helpful ?? null}
-              caseType="POLICY"
-              caseTitle={policy.title}
-            />
-          )}
-        </article>
-
-        {/* Metadata sidebar — quiet, no card chrome. Hidden in print. */}
-        <aside className="print:hidden lg:sticky lg:top-6 space-y-5">
-          <PolicyStatusPill status={policy.status} />
-
-          {/* Workflow panel — Send for Review (HR draft), Approve/Reject (assigned
-              reviewer), Activate (HR once APPROVED). Only renders relevant buttons. */}
           <PolicyApprovalActions
             policyId={policy.id}
             policyTitle={policy.title}
             status={policy.status}
             isHR={isHR}
             isReviewer={isReviewer}
-            myReview={
-              user.employee
-                ? policy.reviews.find((r) => r.reviewerId === user.employee!.id) ?? null
-                : null
-            }
+            myReview={myReview}
           />
+        </div>
+      )}
 
-          {/* Review timeline */}
-          {(policy.status === 'IN_REVIEW' || policy.status === 'APPROVED' || policy.reviews.length > 0) && (
-            <div>
-              <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide mb-2">Reviewers</p>
-              <ul className="space-y-2">
-                {policy.reviews.map((r) => (
-                  <li key={r.id} className="flex items-start gap-2 text-xs">
-                    <span
-                      className={`mt-0.5 inline-block w-2 h-2 rounded-full flex-shrink-0 ${
-                        r.status === 'APPROVED' ? 'bg-slate-500' :
-                        r.status === 'REJECTED' ? 'bg-slate-500' : 'bg-slate-300'
-                      }`}
-                    />
-                    <div className="min-w-0">
-                      <p className="text-slate-900 font-medium truncate">{r.reviewer.fullName}</p>
-                      <p className="text-slate-500 truncate">
-                        {r.status === 'APPROVED' ? 'Approved' : r.status === 'REJECTED' ? 'Rejected' : 'Pending'}
-                        {r.comment ? ` · ${r.comment}` : ''}
-                      </p>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-
-          <MetaRow Icon={Calendar} label="Effective" value={policy.effectiveDate ? formatDate(policy.effectiveDate) : '—'} />
-          <MetaRow Icon={Calendar} label="Published" value={policy.publishedAt ? formatDate(policy.publishedAt) : '—'} />
-          <MetaRow Icon={Users} label="Audience" value={audienceLabel[policy.audience] ?? policy.audience} />
-          <MetaRow Icon={FileText} label="Version" value={`v${policy.version}`} />
-        </aside>
+      <div className="rounded-xl bg-slate-100 p-4 sm:p-8 print:bg-white print:p-0">
+        <PolicyDocument policy={policy} logoSrc={LOGO_DATA_URI} />
       </div>
+
+      {live && (
+        <div className="mx-auto max-w-[820px]">
+          <ArticleFooter
+            tags={tags}
+            related={relatedTo(entries, { kind: 'POLICY', id: policy.id, category: 'POLICIES', tags })}
+            refType="POLICY"
+            refId={policy.id}
+            myVote={vote?.helpful ?? null}
+            caseType="POLICY"
+            caseTitle={policy.title}
+          />
+        </div>
+      )}
 
       {/*
         Print-only isolation. The dashboard layout wraps this page in a
-        sidebar + topbar + focus banner + role switcher + chatbot, none of
-        which belong on a saved PDF. We hide the entire tree by default
-        and only re-show the policy-print-root subtree, then reset its
-        positioning so it fills the page from the top-left.
+        sidebar + topbar + role switcher + chatbot, none of which belong on a
+        saved PDF. Hide the whole tree and re-show only the policy subtree.
       */}
       <style>{`
         @media print {
-          @page { margin: 18mm 16mm; }
+          @page { size: A4; margin: 14mm 12mm; }
           html, body { background: white !important; height: auto !important; overflow: visible !important; }
-          /* Hide everything by default */
           body * { visibility: hidden !important; }
-          /* Re-show the policy subtree */
           .policy-print-root, .policy-print-root * { visibility: visible !important; }
-          /* Float the subtree to fill the page cleanly */
           .policy-print-root {
             position: absolute !important;
             left: 0; top: 0; right: 0;
@@ -277,51 +212,11 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
             max-width: 100% !important;
             color: #000 !important;
           }
-          /* Hide every \`print:hidden\` element explicitly (Tailwind utility
-             targets media-print already, but we double-down for safety) */
           .print\\:hidden { display: none !important; }
-          aside { display: none !important; }
-          /* Allow long content to break across pages cleanly */
-          article, article * { page-break-inside: avoid-page; }
           h1, h2, h3 { page-break-after: avoid; }
+          tr, dl > div { page-break-inside: avoid; }
         }
       `}</style>
     </div>
-  )
-}
-
-function MetaRow({ Icon, label, value }: {
-  Icon: React.ComponentType<{ className?: string }>
-  label: string
-  value: string
-}) {
-  return (
-    <div className="flex items-start gap-2.5">
-      <Icon className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium text-slate-500 uppercase tracking-wide">{label}</p>
-        <p className="text-sm text-slate-900 mt-0.5 truncate">{value}</p>
-      </div>
-    </div>
-  )
-}
-
-// PrintButton lives in @/components/policies/print-button.tsx (client component).
-
-function PolicyStatusPill({ status }: { status: string }) {
-  const map: Record<string, { label: string; cls: string; dot: string }> = {
-    ACTIVE:    { label: 'Active',                 cls: 'bg-slate-50 text-slate-700 border-slate-100', dot: 'bg-slate-500' },
-    PUBLISHED: { label: 'Active',                 cls: 'bg-slate-50 text-slate-700 border-slate-100', dot: 'bg-slate-500' },
-    DRAFT:     { label: 'Draft',                  cls: 'bg-slate-100 text-slate-700 border-slate-200',     dot: 'bg-slate-400' },
-    IN_REVIEW: { label: 'In Review',              cls: 'bg-slate-50 text-slate-700 border-slate-100',      dot: 'bg-slate-500' },
-    APPROVED:  { label: 'Approved · Awaiting HR', cls: 'bg-slate-50 text-slate-700 border-slate-100',         dot: 'bg-slate-500' },
-    ARCHIVED:  { label: 'Archived',               cls: 'bg-slate-100 text-slate-600 border-slate-200',     dot: 'bg-slate-400' },
-  }
-  const s = map[status] ?? map.DRAFT
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-medium ${s.cls}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-      {s.label}
-    </span>
   )
 }

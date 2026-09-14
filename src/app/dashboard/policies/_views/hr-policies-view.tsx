@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { Suspense, useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog'
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select'
-import { Plus, Search, Check, Sparkles } from 'lucide-react'
+import { Plus, Check, Sparkles } from 'lucide-react'
 import { recommendAudience } from '@/lib/policy-access'
-import { PolicyList } from '@/components/policies/policy-list'
+import { PolicyLibrary } from '@/components/policies/policy-library'
 
 type Policy = {
   id: string
@@ -48,19 +48,17 @@ function parseAudienceRolesClient(s: string | null | undefined): string[] {
   return [...ALL_AUDIENCE_ROLES]
 }
 
-const CATEGORIES = ['ALL', 'LEAVE', 'CODE_OF_CONDUCT', 'IT', 'SECURITY', 'COMPENSATION', 'GENERAL']
+const CATEGORIES = ['LEAVE', 'CODE_OF_CONDUCT', 'IT', 'SECURITY', 'COMPENSATION', 'GENERAL']
 const POLICY_TYPES = ['HR_POLICY', 'LEAVE_POLICY', 'CODE_OF_CONDUCT', 'NDA_TEMPLATE', 'IT_SECURITY', 'HEALTH_SAFETY', 'ANTI_HARASSMENT', 'OTHER']
 
 const catLabels: Record<string, string> = {
-  ALL: 'All categories', LEAVE: 'Leave', CODE_OF_CONDUCT: 'Code of Conduct',
+  LEAVE: 'Leave', CODE_OF_CONDUCT: 'Code of Conduct',
   IT: 'IT', SECURITY: 'Confidentiality & Security', COMPENSATION: 'Compensation', GENERAL: 'General',
 }
 
 export default function HRPoliciesView() {
   const [policies, setPolicies] = useState<Policy[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [category, setCategory] = useState('ALL')
   const [showArchived, setShowArchived] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -86,16 +84,14 @@ export default function HRPoliciesView() {
     }))
   }
 
+  // Search and category filtering happen in the library, on the full list.
   const fetchPolicies = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams()
-    if (category !== 'ALL') params.set('category', category)
-    if (search) params.set('q', search)
-    const res = await fetch(`/api/policies?${params}`)
+    const res = await fetch('/api/policies')
     const data = await res.json()
     setPolicies(data.policies ?? [])
     setLoading(false)
-  }, [category, search])
+  }, [])
 
   useEffect(() => { fetchPolicies() }, [fetchPolicies])
 
@@ -156,13 +152,13 @@ export default function HRPoliciesView() {
   const draftCount = policies.filter((p) => p.status === 'DRAFT').length
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Policies</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             {liveCount} live for employees{draftCount ? ` · ${draftCount} draft${draftCount === 1 ? '' : 's'} only you can see` : ''}.
-            {' '}Click <span className="font-medium text-slate-700">Open policy</span> to read one, or <span className="font-medium text-slate-700">Edit details</span> to change it.
+            {' '}Choose a category, then a policy to read it on the right.
           </p>
         </div>
         <Button onClick={openCreate}>
@@ -170,50 +166,29 @@ export default function HRPoliciesView() {
         </Button>
       </div>
 
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-1 flex-1 min-w-[240px] bg-white border border-slate-200 rounded-lg px-3">
-          <Search className="w-4 h-4 text-slate-400" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search policies by name or content…"
-            className="border-0 focus-visible:ring-0 px-1"
-          />
-        </div>
-        <div className="w-56">
-          <Select value={category} onValueChange={setCategory}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {CATEGORIES.map((c) => (
-                <SelectItem key={c} value={c}>{catLabels[c]}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <label className="flex items-center gap-2 text-sm text-slate-700 cursor-pointer select-none">
-          <input
-            type="checkbox"
-            className="h-4 w-4"
-            checked={showArchived}
-            onChange={(e) => setShowArchived(e.target.checked)}
-          />
-          Include archived policies
-        </label>
-      </div>
-
-      {loading ? (
-        <div className="py-10 text-center text-sm text-slate-400">Loading…</div>
-      ) : (
-        <PolicyList
+      <Suspense fallback={<div className="py-10 text-center text-sm text-slate-400">Loading…</div>}>
+        <PolicyLibrary
           policies={visible}
+          loading={loading}
           onEdit={(id) => {
             const p = policies.find((x) => x.id === id)
             if (p) openEdit(p)
           }}
           onArchive={handleArchive}
-          emptyText="No policies match this search."
+          emptyText="No policies yet. Use New policy to add one."
+          railFooter={
+            <label className="flex items-center gap-2 px-2 text-sm text-slate-700 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                className="h-4 w-4"
+                checked={showArchived}
+                onChange={(e) => setShowArchived(e.target.checked)}
+              />
+              Include archived policies
+            </label>
+          }
         />
-      )}
+      </Suspense>
 
       {/* Create / Edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
@@ -232,7 +207,7 @@ export default function HRPoliciesView() {
                 <Select value={form.category} onValueChange={(v) => setForm({ ...form, category: v })}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.filter((c) => c !== 'ALL').map((c) => (
+                    {CATEGORIES.map((c) => (
                       <SelectItem key={c} value={c}>{catLabels[c]}</SelectItem>
                     ))}
                   </SelectContent>
@@ -256,7 +231,7 @@ export default function HRPoliciesView() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Short Description</label>
-              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Shown in policy list" />
+              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Shown in search results" />
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">Content (markdown)</label>
