@@ -11,6 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
+import { purgeEmployee } from '@/lib/employee-purge'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 import { triggerEmail, employeeVars } from '@/lib/email-triggers'
@@ -454,87 +455,8 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         console.error('[audit] Employee hard delete', auditErr)
       }
 
-      // Detach direct reports — they survive, but lose their manager pointer.
-      await tx.employee.updateMany({
-        where: { reportingManagerId: id },
-        data: { reportingManagerId: null },
-      })
-
-      // Detach manager-history references that point to this employee as
-      // old/new manager (the FK on those columns is a String, not a relation,
-      // so no enforcement — but the data is meaningless without the row).
-      // ManagerHistory.employeeId rows for THIS employee are deleted below.
-
-      // Wipe AuditLog rows that reference this employee (other than the one
-      // we just wrote, which has employeeId=null).
-      await tx.auditLog.updateMany({
-        where: { employeeId: id },
-        data: { employeeId: null },
-      })
-
-      // Delete all dependent rows. Models with onDelete: Cascade
-      // (TrustedDevice, EmployeeJourney) get cleaned automatically when the
-      // Employee is deleted, but we delete them explicitly for clarity.
-      await tx.attendancePunch.deleteMany({ where: { employeeId: id } })
-      await tx.attendanceLog.deleteMany({ where: { employeeId: id } })
-      await tx.leaveBalance.deleteMany({ where: { employeeId: id } })
-      await tx.leaveRequest.deleteMany({ where: { employeeId: id } })
-      await tx.payslip.deleteMany({ where: { employeeId: id } })
-      await tx.compensationHistory.deleteMany({ where: { employeeId: id } })
-      await tx.goal.deleteMany({ where: { employeeId: id } })
-      await tx.performanceReview.deleteMany({ where: { employeeId: id } })
-      await tx.showCause.deleteMany({ where: { employeeId: id } })
-      await tx.employeeWarning.deleteMany({ where: { employeeId: id } })
-      await tx.pIP.deleteMany({ where: { employeeId: id } })
-      await tx.onboardingChecklist.deleteMany({ where: { employeeId: id } })
-      await tx.employeeJourney.deleteMany({ where: { employeeId: id } })
-      await tx.emailDraft.deleteMany({ where: { employeeId: id } })
-      await tx.probationRecord.deleteMany({ where: { employeeId: id } })
-      await tx.trainingRecord.deleteMany({ where: { employeeId: id } })
-      await tx.certification.deleteMany({ where: { employeeId: id } })
-      await tx.assetAssignment.deleteMany({ where: { employeeId: id } })
-      await tx.employeeDocument.deleteMany({ where: { employeeId: id } })
-      await tx.helpDeskTicket.deleteMany({ where: { employeeId: id } })
-      await tx.notification.deleteMany({ where: { employeeId: id } })
-      await tx.exitClearance.deleteMany({ where: { employeeId: id } })
-      await tx.resignation.deleteMany({ where: { employeeId: id } })
-      await tx.managerHistory.deleteMany({ where: { employeeId: id } })
-      await tx.promotionRequest.deleteMany({ where: { employeeId: id } })
-      await tx.onboardingFeedback.deleteMany({ where: { employeeId: id } })
-      await tx.taskAssignment.deleteMany({ where: { employeeId: id } })
-      await tx.letterRequest.deleteMany({ where: { employeeId: id } })
-      await tx.trustedDevice.deleteMany({ where: { employeeId: id } })
-      // JobOffer + JobRequisition (via "HiringRequests") reference this
-      // employee but are recruiting-side artifacts. Null out rather than
-      // delete to preserve the recruiting history.
-      await tx.jobOffer.updateMany({
-        where: { employeeId: id },
-        data: { employeeId: null },
-      })
-      // Kudos: fromId/toId aren't nullable in the schema, so we have to
-      // delete instead of detach. Losing the social-history row is the
-      // unavoidable cost of a hard delete.
-      await tx.kudos.deleteMany({
-        where: { OR: [{ fromId: id }, { toId: id }] },
-      })
-      // CelebrationCard is keyed by forEmployeeId. Signatures cascade.
-      await tx.celebrationCard.deleteMany({ where: { forEmployeeId: id } })
-      // JobRequisition "HiringRequests" — null out instead of deleting
-      // (recruiting pipeline history outlives the manager).
-      await tx.jobRequisition.updateMany({
-        where: { requestedById: id },
-        data: { requestedById: null },
-      })
-      // Salary (1:1)
-      await tx.salary.deleteMany({ where: { employeeId: id } })
-
-      // Finally, the employee row.
-      await tx.employee.delete({ where: { id } })
-
-      // And the linked user row (if any). Cascade isn't on, so do it here.
-      if (emp.user) {
-        await tx.user.delete({ where: { id: emp.user.id } }).catch(() => undefined)
-      }
+      // Every row that points at them, then the employee, then the login.
+      await purgeEmployee(tx, id, emp.user?.id ?? null)
     }, { timeout: 30_000 })
 
     return NextResponse.json({ ok: true, mode: 'hard' })
