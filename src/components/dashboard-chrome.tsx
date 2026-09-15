@@ -139,8 +139,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         // A view of the people, not a talent process — beside People, where
         // executives already have it next to Workforce.
         { href: '/dashboard/org-chart', label: 'Org Chart', icon: Network },
-        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/payroll', label: 'Payroll', icon: Banknote },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
@@ -158,33 +157,28 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         // Flex Teams and My Journeys are inside Career Hub (CAREER_NAV) — each
         // was a top-level entry with no module menu of its own.
         { href: '/dashboard/career', label: 'Career Hub', icon: Compass },
-      ],
-    },
-    {
-      label: 'Finance & Admin',
-      items: [
-        { href: '/dashboard/compensation', label: 'Compensation', icon: Award },
-        { href: '/dashboard/compliance', label: 'Compliance', icon: Shield },
-        { href: '/dashboard/assets', label: 'Assets', icon: Package },
-      ],
-    },
-    {
-      label: 'Support & Admin',
-      items: [
+        // Recognition, events and the pulse are about people, so they sit with
+        // Talent rather than under Support.
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
+      ],
+    },
+    {
+      // One Admin group. "Finance & Admin" showed a single entry once
+      // Compensation and Assets were hidden, and "Developer" held only System
+      // Health, which is inside Settings > System now.
+      label: 'Admin',
+      items: [
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
-        { href: '/dashboard/email-queue', label: 'Email Queue', icon: Mail },
         { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
+        { href: '/dashboard/compliance', label: 'Compliance', icon: Shield },
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
+        // Hidden by HIDDEN_PATHS; listed so un-hiding one puts it back here.
+        { href: '/dashboard/compensation', label: 'Compensation', icon: Award },
+        { href: '/dashboard/assets', label: 'Assets', icon: Package },
+        { href: '/dashboard/email-queue', label: 'Email Queue', icon: Mail },
         // Case Management is inside the Help Center menu (HELP_NAV); a second
         // top-level entry to the same page is gone.
-      ],
-    },
-    {
-      label: 'Developer',
-      items: [
-        { href: '/dashboard/admin/health', label: 'System Health', icon: Heart },
       ],
     },
   ],
@@ -195,8 +189,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'Team Members', icon: Users },
-        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         // Team Insights (check-ins, development plans, mentors) is inside Team
         // Performance's menu; it was listed here as well.
@@ -214,14 +207,15 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/learning', label: 'Training & Development', icon: GraduationCap },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
-        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
       ],
     },
     {
+      // Settings left the sidebar for everyone but HR and executives: it is
+      // your own account, and the account menu top right already opens it.
       label: 'Support',
       items: [
+        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
-        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
   ],
@@ -231,8 +225,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'My Workspace',
       items: [
         { href: '/dashboard', label: 'Home', icon: LayoutDashboard },
-        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
         { href: '/dashboard/employees', label: 'Directory', icon: Users },
@@ -255,7 +248,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
-        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
   ],
@@ -266,8 +258,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'My Team', icon: Users },
-        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
       ],
     },
@@ -276,14 +267,13 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/payroll', label: 'My Payslips', icon: Banknote },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
-        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
       ],
     },
     {
       label: 'Support',
       items: [
+        { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
-        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
   ],
@@ -303,7 +293,6 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
-        { href: '/dashboard/settings', label: 'Settings', icon: Settings },
       ],
     },
   ],
@@ -314,8 +303,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/reports', label: 'Workforce Analytics', icon: PieChart },
-        { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
-        { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
+        { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },
         { href: '/dashboard/culture', label: 'People & Culture', icon: Sparkles },
@@ -470,6 +458,8 @@ const SETTINGS_NAV: NavGroup[] = [
       // Written to by sixteen API routes since the system went up, and until
       // now readable by nobody.
       { href: '/dashboard/settings/audit', label: 'Audit Trail', icon: History, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      // Was a one-item "Developer" group in the main menu.
+      { href: '/dashboard/admin/health', label: 'System Health', icon: Heart, roles: HR_ONLY },
     ],
   },
   {
@@ -626,6 +616,45 @@ const LEARNING_NAV: NavGroup[] = [
   },
 ]
 
+/**
+ * Time & Attendance — one entry in the main menu, one module menu.
+ *
+ * Time Tracking (hours, schedules, overtime) and Attendance (the day grid,
+ * corrections) were two top-level entries for every role, and people had to
+ * know which one held the thing they wanted. Both now open this menu, with the
+ * two halves as its two groups.
+ */
+const TIME_ATTENDANCE_NAV: NavGroup[] = [
+  {
+    label: 'Time Tracking',
+    items: [
+      { href: '/dashboard/time/me', label: 'My Time', icon: User },
+      // Your week, shift by shift — worked out from your standing hours,
+      // holidays and approved leave. Shaped after Workday's schedule.
+      { href: '/dashboard/time/schedule', label: 'My Schedule', icon: CalendarDays },
+      { href: '/dashboard/time/schedule/team', label: 'Team Schedule', icon: CalendarRange, roles: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'] },
+      { href: '/dashboard/time/everyone', label: 'Everyone', icon: Users, roles: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'] },
+      { href: '/dashboard/time/approvals', label: 'Approvals', icon: Inbox, roles: ['HR_ADMIN', 'MANAGER'] },
+      // One entry. The overtime record already filters to Approved with a
+      // chip on the page, so a second sidebar link to the same screen was
+      // the same destination twice.
+      { href: '/dashboard/time/overtime', label: 'Overtime', icon: Clock },
+      { href: '/dashboard/time/conflicts', label: 'Conflicts', icon: ShieldAlert, roles: ['HR_ADMIN'] },
+    ],
+  },
+  {
+    label: 'Attendance',
+    items: [
+      { href: '/dashboard/attendance?view=today', label: 'Today', icon: Sun, roles: ['HR_ADMIN'] },
+      { href: '/dashboard/attendance?view=grid', label: 'Grid View', icon: CalendarCheck },
+      { href: '/dashboard/attendance?view=summary', label: 'Summary View', icon: BarChart3 },
+      // The Team Absence Calendar is now part of the main Calendar (leave, WFH
+      // and LOA show there), so the duplicate is gone from here.
+      { href: '/dashboard/attendance/corrections', label: 'Corrections', icon: Inbox, roles: ['HR_ADMIN'] },
+    ],
+  },
+]
+
 const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/performance': PERFORMANCE_NAV,
   // Two of the module's own pages live outside /dashboard/performance. Without
@@ -638,6 +667,8 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
   '/dashboard/team-insights': PERFORMANCE_NAV,
   '/dashboard/help': HELP_NAV,
   '/dashboard/settings': SETTINGS_NAV,
+  // System Health lives in Settings > System, so its page keeps that menu.
+  '/dashboard/admin': SETTINGS_NAV,
   '/dashboard/letters': LETTERS_NAV,
   '/dashboard/recruiting': RECRUITING_NAV,
   '/dashboard/lifecycle': LIFECYCLE_NAV,
@@ -668,63 +699,9 @@ const NESTED_NAV: Record<string, NavGroup[]> = {
       ],
     },
   ],
-  '/dashboard/attendance': [
-    {
-      label: 'Attendance',
-      items: [
-        { href: '/dashboard/attendance?view=today', label: 'Today', icon: Sun, roles: ['HR_ADMIN'] },
-        { href: '/dashboard/attendance?view=grid', label: 'Grid View', icon: CalendarCheck },
-        { href: '/dashboard/attendance?view=summary', label: 'Summary View', icon: BarChart3 },
-        // The Team Absence Calendar is now part of the main Calendar (leave, WFH
-        // and LOA show there), so the duplicate is gone from here.
-        {
-          href: '/dashboard/attendance/corrections',
-          label: 'Corrections',
-          icon: Inbox,
-          roles: ['HR_ADMIN'],
-        },
-      ],
-    },
-  ],
-  '/dashboard/time': [
-    {
-      label: 'Time Tracking',
-      items: [
-        { href: '/dashboard/time/me', label: 'My Time', icon: User },
-        // Your week, shift by shift — worked out from your standing hours,
-        // holidays and approved leave. Shaped after Workday's schedule.
-        { href: '/dashboard/time/schedule', label: 'My Schedule', icon: CalendarDays },
-        {
-          href: '/dashboard/time/schedule/team',
-          label: 'Team Schedule',
-          icon: CalendarRange,
-          roles: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'],
-        },
-        {
-          href: '/dashboard/time/everyone',
-          label: 'Everyone',
-          icon: Users,
-          roles: ['HR_ADMIN', 'MANAGER', 'LEAD', 'EXECUTIVE'],
-        },
-        {
-          href: '/dashboard/time/approvals',
-          label: 'Approvals',
-          icon: Inbox,
-          roles: ['HR_ADMIN', 'MANAGER'],
-        },
-        // One entry. The overtime record already filters to Approved with a
-        // chip on the page, so a second sidebar link to the same screen was
-        // the same destination twice.
-        { href: '/dashboard/time/overtime', label: 'Overtime', icon: Clock },
-        {
-          href: '/dashboard/time/conflicts',
-          label: 'Conflicts',
-          icon: ShieldAlert,
-          roles: ['HR_ADMIN'],
-        },
-      ],
-    },
-  ],
+  // One module, reached from either path — see TIME_ATTENDANCE_NAV.
+  '/dashboard/attendance': TIME_ATTENDANCE_NAV,
+  '/dashboard/time': TIME_ATTENDANCE_NAV,
   '/dashboard/payroll': [
     {
       label: 'Payroll',
