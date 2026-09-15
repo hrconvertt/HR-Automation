@@ -56,7 +56,7 @@ export default async function JobPostSpendPage({ searchParams }: {
   // Every requisition can be advertised again, closed ones included — a role
   // going quiet does not stop the last advert being billed.
   const requisitionOptions = await prisma.jobRequisition.findMany({
-    where: { status: { notIn: ['PENDING', 'REJECTED'] } },
+    where: { status: { notIn: ['DRAFT', 'PENDING', 'REJECTED'] } },
     select: { id: true, title: true, status: true },
     orderBy: { createdAt: 'desc' },
   })

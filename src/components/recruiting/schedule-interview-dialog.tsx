@@ -17,9 +17,13 @@ interface Props {
   candidateId: string
   candidateName: string
   roleTitle: string
+  /** The candidate's job — its planned interview rounds are offered first. */
+  requisitionId?: string
   open: boolean
   onOpenChange: (open: boolean) => void
 }
+
+interface PlannedRound { name: string; type: string }
 
 const TYPES = [
   { value: 'PHONE',     label: 'Phone screen' },
@@ -29,9 +33,25 @@ const TYPES = [
   { value: 'ONSITE',    label: 'Onsite (final)' },
 ]
 
-export function ScheduleInterviewDialog({ candidateId, candidateName, roleTitle, open, onOpenChange }: Props) {
+export function ScheduleInterviewDialog({ candidateId, candidateName, roleTitle, requisitionId, open, onOpenChange }: Props) {
   const router = useRouter()
   const [type, setType] = useState('VIDEO')
+  const [rounds, setRounds] = useState<PlannedRound[]>([])
+  const [roundName, setRoundName] = useState('')
+
+  useEffect(() => {
+    if (!open || !requisitionId) return
+    fetch(`/api/recruiting/requisitions/${requisitionId}/post`)
+      .then((r) => (r.ok ? r.json() : { interviewRounds: [] }))
+      .then((d) => setRounds(d.interviewRounds ?? []))
+      .catch(() => setRounds([]))
+  }, [open, requisitionId])
+
+  function pickRound(name: string) {
+    setRoundName(name)
+    const r = rounds.find((x) => x.name === name)
+    if (r) setType(r.type)
+  }
   const [date, setDate] = useState(defaultDate())
   const [time, setTime] = useState('10:00')
   const [duration, setDuration] = useState('45')
@@ -70,6 +90,7 @@ export function ScheduleInterviewDialog({ candidateId, candidateName, roleTitle,
         scheduledAt: scheduledAt.toISOString(),
         duration: durNum,
         interviewerIds: interviewers,
+        roundName: roundName || undefined,
         meetingLink: meetingLink.trim() || undefined,
         notes: notes.trim() || undefined,
       }),
@@ -102,6 +123,17 @@ export function ScheduleInterviewDialog({ candidateId, candidateName, roleTitle,
             <span className="text-slate-400 mx-1.5">·</span>
             {roleTitle}
           </div>
+
+          {rounds.length > 0 && (
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">Round</label>
+              <select value={roundName} onChange={(e) => pickRound(e.target.value)}
+                className="w-full px-3 py-2 rounded-md border border-slate-300 text-sm">
+                <option value="">Not one of this job&apos;s planned rounds</option>
+                {rounds.map((r, i) => <option key={r.name} value={r.name}>{i + 1}. {r.name}</option>)}
+              </select>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-3">
             <div>

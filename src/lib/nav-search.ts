@@ -114,8 +114,7 @@ export const NAV_TASKS: NavDestination[] = [
 
   // HR
   { label: 'Add New Employee', href: '/dashboard/employees', section: 'People', keywords: ['create employee', 'hire', 'new hire', 'joiner', 'onboard', 'new'], roles: ['HR_ADMIN'] },
-  { label: 'New Requisition', href: '/dashboard/recruiting?tab=requisitions', section: 'Recruiting › Requisitions', keywords: ['create requisition', 'job opening', 'vacancy', 'role'], roles: ['HR_ADMIN'] },
-  { label: 'New Job Description', href: '/dashboard/recruiting/new-jd', section: 'Recruiting', keywords: ['create jd', 'jd', 'job description', 'write'], roles: ['HR_ADMIN'] },
+  { label: 'New Job Post', href: '/dashboard/recruiting/jobs/new', section: 'Recruiting', keywords: ['create job post', 'create requisition', 'new requisition', 'job description', 'jd', 'job opening', 'vacancy'], roles: ['HR_ADMIN', 'MANAGER'] },
   { label: 'Open New Review Cycle', href: '/dashboard/performance?tab=reviews', section: 'Performance › Reviews', keywords: ['create review cycle', 'appraisal', 'start review', 'new'], roles: ['HR_ADMIN'] },
   { label: 'New Job Change', href: '/dashboard/lifecycle/job-changes', section: 'Employee Lifecycle › Job Changes', keywords: ['create job change', 'promotion', 'transfer', 'designation change'], roles: ['HR_ADMIN'] },
   { label: 'Start Leave of Absence', href: '/dashboard/lifecycle/loa', section: 'Employee Lifecycle › Leave of Absence', keywords: ['create loa', 'loa', 'sabbatical', 'maternity', 'unpaid', 'new'], roles: ['HR_ADMIN'] },

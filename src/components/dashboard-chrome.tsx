@@ -505,8 +505,8 @@ const RECRUITING_NAV: NavGroup[] = [
       // 1. The role. Requests and requisitions were the same JobRequisition row
       //    at two statuses, under two menu entries, one of which was always empty.
       { href: '/dashboard/recruiting?tab=requisitions', label: 'Requisitions', icon: FolderOpen },
-      // HR and hiring managers write JDs; the page says "Access denied" to anyone else.
-      { href: '/dashboard/recruiting/new-jd', label: 'New Job Description', icon: FileText, roles: ['HR_ADMIN', 'MANAGER'] },
+      // HR and hiring managers write job posts; the page says "Access denied" to anyone else.
+      { href: '/dashboard/recruiting/jobs/new', label: 'New Job Post', icon: FileText, roles: ['HR_ADMIN', 'MANAGER'] },
       { href: '/dashboard/recruiting/job-post-spend', label: 'Job Post Payments', icon: BanknoteIcon, roles: ['HR_ADMIN', 'EXECUTIVE'] },
 
       // 2. The candidates. The board first, because it is where the day starts;

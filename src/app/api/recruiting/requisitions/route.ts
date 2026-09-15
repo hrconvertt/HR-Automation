@@ -13,6 +13,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { generateJD } from '@/lib/jd-generator'
+import { composeJdContent } from '@/lib/job-post'
+import { readDefaultApplicationFields, readJobFields } from '@/lib/job-post-server'
 
 export async function POST(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -42,6 +44,52 @@ export async function POST(request: NextRequest) {
   const isManager = effectiveRole === 'MANAGER'
 
   const body = await request.json()
+
+  // The job post editor sends its whole first step under `job`, and it is
+  // always saved as a draft: publishing is its own button at the end of the
+  // flow. Everything below is the quick dialog's older shape.
+  if (body.job !== undefined) {
+    const read = readJobFields(body.job)
+    if ('error' in read) return NextResponse.json({ error: read.error }, { status: 400 })
+    if (isManager && !me.employee) {
+      return NextResponse.json({ error: 'Your account has no employee record. Contact HR.' }, { status: 400 })
+    }
+    const f = read.fields
+    const dept = f.departmentId
+      ? await prisma.department.findUnique({ where: { id: f.departmentId }, select: { name: true } })
+      : null
+    const draft = await prisma.jobRequisition.create({
+      data: {
+        title: f.title,
+        departmentId: f.departmentId,
+        positionLevel: f.positionLevel,
+        type: f.type,
+        vacancies: f.vacancies,
+        location: f.location,
+        isRemote: f.isRemote,
+        internalCode: f.internalCode,
+        minExperienceYears: f.minExperienceYears,
+        educationLevel: f.educationLevel,
+        salaryMin: f.salaryMin,
+        salaryMax: f.salaryMax,
+        salaryCurrency: f.salaryCurrency,
+        closingDate: f.closingDate,
+        jdSections: JSON.stringify(f.sections),
+        jdContent: composeJdContent({ ...f, departmentName: dept?.name }, f.sections),
+        jdStatus: 'DRAFT_JD',
+        jdGeneratedAt: new Date(),
+        description: f.sections.summary || null,
+        requirements: f.sections.requirements.join('\n') || null,
+        // New jobs start from the form HR chose to keep for future jobs.
+        applicationForm: JSON.stringify({ fields: await readDefaultApplicationFields(), questions: [] }),
+        status: 'DRAFT',
+        requestedById: isManager ? me.employee!.id : null,
+      },
+      select: { id: true },
+    })
+    return NextResponse.json({ requisition: draft }, { status: 201 })
+  }
+
   const title         = String(body.title || '').trim()
   const departmentId  = body.departmentId ? String(body.departmentId) : null
   const positionLevel = body.positionLevel ? String(body.positionLevel) : null

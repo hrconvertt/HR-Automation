@@ -47,7 +47,7 @@ export function RecruitingModuleNav({ active, counts = {}, canSeeKnockouts = tru
 }) {
   const pathname = usePathname()
   const onOffers = pathname.endsWith('/offers')
-  const onNewJd = pathname.endsWith('/new-jd')
+  const onNewJd = pathname.endsWith('/jobs/new')
 
   const items = ITEMS.filter((i) => (i.tab === 'knockouts' ? canSeeKnockouts : true))
 
@@ -83,14 +83,14 @@ export function RecruitingModuleNav({ active, counts = {}, canSeeKnockouts = tru
         })}
         <li className="shrink-0 lg:mt-2 lg:pt-2 lg:border-t lg:border-slate-200">
           <Link
-            href="/dashboard/recruiting/new-jd"
+            href="/dashboard/recruiting/jobs/new"
             aria-current={onNewJd ? 'page' : undefined}
             className={`group flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
               onNewJd ? 'bg-slate-900 text-white font-medium' : 'text-slate-600 hover:bg-white hover:text-slate-900'
             }`}
           >
             <FilePlus2 className={`w-4 h-4 shrink-0 ${onNewJd ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} />
-            <span className="truncate">New Job Description</span>
+            <span className="truncate">New Job Post</span>
           </Link>
         </li>
         <li className="shrink-0">
