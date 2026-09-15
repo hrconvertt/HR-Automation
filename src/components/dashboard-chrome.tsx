@@ -136,6 +136,9 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       items: [
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
         { href: '/dashboard/employees', label: 'People', icon: Users },
+        // A view of the people, not a talent process — beside People, where
+        // executives already have it next to Workforce.
+        { href: '/dashboard/org-chart', label: 'Org Chart', icon: Network },
         { href: '/dashboard/time', label: 'Time Tracking', icon: Clock },
         { href: '/dashboard/attendance', label: 'Attendance', icon: CalendarCheck },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
@@ -144,17 +147,17 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       ],
     },
     {
+      // In the order the work happens: hire, onboard, review, train, grow.
       label: 'Talent',
       items: [
-        { href: '/dashboard/performance', label: 'Performance', icon: TrendingUp },
-        { href: '/dashboard/lifecycle', label: 'Employee Lifecycle', icon: UserPlus },
         { href: '/dashboard/recruiting', label: 'Recruiting', icon: Briefcase },
+        // The Journeys studio is inside Employee Lifecycle beside Onboarding.
+        { href: '/dashboard/lifecycle', label: 'Employee Lifecycle', icon: UserPlus },
+        { href: '/dashboard/performance', label: 'Performance', icon: TrendingUp },
         { href: '/dashboard/learning', label: 'Training & Development', icon: GraduationCap },
-        // Flex Teams and My Journeys are inside Career Hub (CAREER_NAV), and the
-        // Journeys studio is inside Employee Lifecycle beside Onboarding — each
+        // Flex Teams and My Journeys are inside Career Hub (CAREER_NAV) — each
         // was a top-level entry with no module menu of its own.
         { href: '/dashboard/career', label: 'Career Hub', icon: Compass },
-        { href: '/dashboard/org-chart', label: 'Org Chart', icon: Network },
       ],
     },
     {
@@ -1568,7 +1571,11 @@ export default function DashboardChrome({
             {/* Use the width that exists. Capped well above a typical monitor so
                 ultrawide screens do not stretch prose to unreadable line lengths,
                 but a 1920px display no longer loses ~320px a side to margin. */}
-            <div className="w-full max-w-[1800px] mx-auto">{children}</div>
+            {/* Recruiting is the exception: its sheets of candidates want every
+                pixel, so its layout runs edge to edge. */}
+            <div className={`w-full mx-auto ${pathname.startsWith('/dashboard/recruiting') ? '' : 'max-w-[1800px]'}`}>
+              {children}
+            </div>
           </div>
         </main>
       </div>

@@ -67,6 +67,8 @@ export interface EditorDetails {
   rounds: InterviewRound[]
   /** Why the job cannot be published yet, when it cannot. */
   gateReason: string | null
+  /** The Manpower Requisition Form the gate asks for, once one is started. */
+  manpowerForm: { id: string; status: string } | null
   poolMatches: number
   referralsAskedAt: string | null
 }

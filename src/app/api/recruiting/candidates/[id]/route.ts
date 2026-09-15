@@ -1,12 +1,16 @@
 /**
  * PATCH /api/recruiting/candidates/[id]
  *
- *   Move a candidate between pipeline stages.
- *   HR_ADMIN or MANAGER only.
+ *   HR_ADMIN or MANAGER only. Either:
  *     body: { stage: 'APPLIED' | 'SCREENING' | 'INTERVIEW' | 'OFFER' | 'HIRED' | 'REJECTED' }
+ *       — move a candidate between pipeline stages, or
+ *     body: { fields?: { <tracker key>: text }, screening?: { <column label>: text } }
+ *       — save cells of the recruitment tracker. An empty value clears the cell.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import type { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/prisma'
+import { parseScreening, trackerColumn } from '@/lib/candidate-tracker'
 import { verifyToken } from '@/lib/auth'
 import { autoTags, shouldAutoPool } from '@/lib/talent-pool'
 import { promoteToEmployee } from '@/lib/hire-candidate'
@@ -30,6 +34,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
   const { id } = await params
   const body = await request.json()
+  if (body.fields !== undefined || body.screening !== undefined) return saveTracker(id, body)
   const stage = String(body.stage || '').toUpperCase()
   if (!VALID.includes(stage)) {
     return NextResponse.json({ error: `Invalid stage. Must be one of ${VALID.join(', ')}` }, { status: 400 })
@@ -105,4 +110,46 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   }
 
   return NextResponse.json({ ok: true, stage })
+}
+
+/** Cells typed into the tracker. Only its own columns; nothing else on the record. */
+async function saveTracker(id: string, body: Record<string, unknown>) {
+  const c = await prisma.candidate.findUnique({ where: { id }, select: { id: true, screening: true } })
+  if (!c) return NextResponse.json({ error: 'Candidate not found' }, { status: 404 })
+
+  const data: Prisma.CandidateUncheckedUpdateInput = {}
+  const fields = body.fields && typeof body.fields === 'object' ? (body.fields as Record<string, unknown>) : {}
+  for (const [key, raw] of Object.entries(fields)) {
+    const col = trackerColumn(key)
+    if (!col) return NextResponse.json({ error: `Unknown column: ${key}` }, { status: 400 })
+    const text = raw == null ? '' : String(raw).trim()
+    if (col.key === 'matchScore') {
+      const n = Number(text)
+      if (text && (!Number.isFinite(n) || n < 0 || n > 100)) {
+        return NextResponse.json({ error: 'Fit score is a number from 0 to 100.' }, { status: 400 })
+      }
+      data.matchScore = text ? n : null
+    } else if (col.key === 'email') {
+      // Required on the record, so cleared means empty rather than null.
+      data.email = text.slice(0, 200)
+    } else {
+      (data as Record<string, unknown>)[col.key] = text ? text.slice(0, col.long ? 6000 : 1000) : null
+    }
+  }
+
+  if (body.screening && typeof body.screening === 'object') {
+    const current = parseScreening(c.screening)
+    for (const [label, raw] of Object.entries(body.screening as Record<string, unknown>)) {
+      const key = String(label).trim().slice(0, 120)
+      if (!key) continue
+      const text = raw == null ? '' : String(raw).trim().slice(0, 1000)
+      if (text) current[key] = text
+      else delete current[key]
+    }
+    data.screening = Object.keys(current).length ? JSON.stringify(current) : null
+  }
+
+  if (Object.keys(data).length === 0) return NextResponse.json({ error: 'Nothing to save' }, { status: 400 })
+  await prisma.candidate.update({ where: { id }, data })
+  return NextResponse.json({ ok: true })
 }

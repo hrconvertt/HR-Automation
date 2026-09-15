@@ -152,6 +152,25 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   if (previewRole && previewRole !== 'HR_ADMIN') {
     return NextResponse.json({ error: 'Switch back to HR view' }, { status: 403 })
   }
+  // ?mode=hard — delete for good, and only from the archive, so nothing that
+  // is live can disappear in one click. Reviews and acknowledgments cascade
+  // with the row; Help Center votes point at it by id only, so they go too.
+  if (new URL(request.url).searchParams.get('mode') === 'hard') {
+    const policy = await prisma.policyDocument.findUnique({ where: { id }, select: { status: true } })
+    if (!policy) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    if (policy.status !== 'ARCHIVED') {
+      return NextResponse.json(
+        { error: 'Only an archived policy can be deleted permanently. Archive it first.' },
+        { status: 400 },
+      )
+    }
+    await prisma.$transaction([
+      prisma.articleFeedback.deleteMany({ where: { refType: 'POLICY', refId: id } }),
+      prisma.policyDocument.delete({ where: { id } }),
+    ])
+    return NextResponse.json({ ok: true, deleted: true })
+  }
+
   // Soft delete via archive instead of hard-delete to keep audit
   await prisma.policyDocument.update({
     where: { id },

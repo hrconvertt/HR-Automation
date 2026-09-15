@@ -32,9 +32,13 @@ export default async function RecruitingLayout({ children }: { children: React.R
   }
 
   return (
-    <div className="-m-4 lg:-m-6 min-h-full bg-slate-50">
+    // Edge to edge. Recruiting is tables — the requisition workspace carries
+    // the sourcing sheet's thirty-odd columns — so it uses the whole screen:
+    // these margins cancel the shell's padding, and the shell drops its
+    // 1800px cap for this module (see dashboard-chrome).
+    <div className="-m-6 lg:-m-8 min-h-full bg-slate-50">
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between gap-3 flex-wrap">
+        <div className="px-4 sm:px-6 py-3.5 flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-baseline gap-3 min-w-0">
             <h1 className="text-lg font-semibold text-slate-900 leading-none">Recruiting</h1>
             <nav className="text-xs text-slate-400 truncate">
@@ -48,7 +52,7 @@ export default async function RecruitingLayout({ children }: { children: React.R
           </span>
         </div>
       </div>
-      <div className="max-w-[1800px] mx-auto px-4 sm:px-6 lg:px-8 py-5">{children}</div>
+      <div className="px-4 sm:px-6 py-5">{children}</div>
     </div>
   )
 }

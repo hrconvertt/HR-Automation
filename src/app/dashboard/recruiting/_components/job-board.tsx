@@ -215,7 +215,9 @@ function JobCard({ job, isHR }: { job: BoardJob; isHR: boolean }) {
         </p>
       </div>
 
-      {isHR && job.status !== 'DRAFT' && job.status !== 'PENDING' && (
+      {/* Drafts too: a new job's requisition form has to be approved before
+          it can be published, so the Form button is needed before then. */}
+      {isHR && job.status !== 'PENDING' && (
         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 px-5 py-2.5">
           <span className="text-[11px] uppercase tracking-wider text-slate-400 mr-1">Setup</span>
           <JdReviewButton requisitionId={job.id} title={job.title} jdStatus={job.jdStatus} />

@@ -1588,6 +1588,9 @@ model JobRequisition {
   jdSections      String? // { summary, responsibilities[], requirements[], niceToHave[], benefits[] }
   applicationForm String? // { fields: { key: MANDATORY|OPTIONAL|OFF }, questions[] } — null is the default form
   interviewRounds String? // [{ name, type }]
+  // The position's own tracker columns ("Figma/Adobe", "Knows CRO?"), in
+  // order — JSON string[]. They sit between Education and Verdict.
+  screeningColumns String?
   members         RequisitionMember[]
 
   manpowerForm     ManpowerRequisition?
@@ -1685,10 +1688,38 @@ model Candidate {
   skills            String? // JSON array of strings
   languages         String? // JSON array of strings
 
-  // Asked only when the job's application form switches them on.
-  expectedSalary Float?
+  // Asked by the job's application form, and kept on the recruitment tracker.
+  // Text rather than a number: the sheets say "80k", "12000-15000 AED".
+  expectedSalary String?
   noticePeriod   String?
   answers        String? // JSON [{ id, question, answer }] — the job's own questions
+
+  // ─── Recruitment tracker ─────────────────────────────────────────
+  //   The columns every position's sourcing sheet keeps, shown in the order
+  //   of src/lib/candidate-tracker.ts. Free text throughout: HR types "yes",
+  //   "1 week", "can be" into these, and a stricter type would refuse the
+  //   sheet's own values.
+  experienceSummary  String?
+  pastCompanies      String?
+  education          String?
+  verdict            String? // STRONG | SHORTLIST | MAYBE | PASS | REJECT, or HR's own word
+  evaluation         String?
+  whyLeaving         String?
+  currentSalary      String?
+  offerResponse      String?
+  onsiteWillingness  String?
+  easyCommute        String?
+  communication      String?
+  hrNotes            String?
+  callOutcome        String?
+  interviewType      String?
+  interviewDate      String?
+  interviewer        String?
+  leadFeedback       String?
+  finalMeeting       String?
+  finalMeetingDate   String?
+  finalMeetingStatus String?
+  screening          String? // JSON { "<screening column label>": "<value>" } — the position's own columns
 
   resumeParse ResumeParse?
   nurtureLogs NurtureLog[] @relation("CandidateNurtures")

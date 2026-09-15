@@ -22,6 +22,7 @@ import {
 import {
   composeJdContent, parseRounds, sanitizeApplicationForm, sanitizeRounds,
 } from '@/lib/job-post'
+import { parseScreening, sanitizeScreeningColumns } from '@/lib/candidate-tracker'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -94,6 +95,34 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
   if (body.interviewRounds !== undefined) {
     data.interviewRounds = JSON.stringify(sanitizeRounds(body.interviewRounds))
+  }
+
+  // The tracker's screening columns. A renamed column keeps its values: the
+  // candidates' cells are keyed by label, so they move to the new label here.
+  if (body.screeningColumns !== undefined) {
+    const cols = sanitizeScreeningColumns(body.screeningColumns)
+    data.screeningColumns = cols.length ? JSON.stringify(cols) : null
+    const renames = (Array.isArray(body.screeningRenames) ? body.screeningRenames : [])
+      .map((r: { from?: unknown; to?: unknown }) => ({ from: String(r?.from ?? '').trim(), to: String(r?.to ?? '').trim() }))
+      .filter((r: { from: string; to: string }) => r.from && r.to && r.from !== r.to)
+    if (renames.length) {
+      const people = await prisma.candidate.findMany({
+        where: { requisitionId: id, screening: { not: null } },
+        select: { id: true, screening: true },
+      })
+      for (const p of people) {
+        const cells = parseScreening(p.screening)
+        let changed = false
+        for (const r of renames) {
+          if (r.from in cells && !(r.to in cells)) {
+            cells[r.to] = cells[r.from]
+            delete cells[r.from]
+            changed = true
+          }
+        }
+        if (changed) await prisma.candidate.update({ where: { id: p.id }, data: { screening: JSON.stringify(cells) } })
+      }
+    }
   }
 
   if (Object.keys(data).length === 0) {

@@ -48,6 +48,8 @@ export function PolicyLibrary({
   loading = false,
   onEdit,
   onArchive,
+  onRestore,
+  onDeletePermanently,
   railFooter,
   emptyText = 'No policies yet.',
 }: {
@@ -57,6 +59,10 @@ export function PolicyLibrary({
   onEdit?: (id: string) => void
   /** HR only: archives a policy. */
   onArchive?: (id: string) => void
+  /** HR only: puts an archived policy back live. */
+  onRestore?: (id: string) => void
+  /** HR only: deletes an archived policy for good. */
+  onDeletePermanently?: (id: string) => void
   /** Extra controls under the categories (e.g. "Include archived"). */
   railFooter?: React.ReactNode
   emptyText?: string
@@ -199,6 +205,16 @@ export function PolicyLibrary({
               {onArchive && selected.status !== 'ARCHIVED' && (
                 <Button size="sm" variant="ghost" onClick={() => onArchive(selected.id)}>
                   Archive
+                </Button>
+              )}
+              {onRestore && selected.status === 'ARCHIVED' && (
+                <Button size="sm" variant="outline" onClick={() => onRestore(selected.id)}>
+                  Restore
+                </Button>
+              )}
+              {onDeletePermanently && selected.status === 'ARCHIVED' && (
+                <Button size="sm" variant="destructive" onClick={() => onDeletePermanently(selected.id)}>
+                  Delete permanently
                 </Button>
               )}
               <Link href={`/dashboard/policies/${selected.id}`} className={buttonVariants({ size: 'sm' })}>
