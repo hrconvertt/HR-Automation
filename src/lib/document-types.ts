@@ -20,6 +20,14 @@ export const DOC_TYPES = [
   { value: 'DRIVING_LICENSE', label: 'Driving License' },
   { value: 'SALARY_HISTORY', label: 'Salary History' },
   { value: 'TAX_CERTIFICATE', label: 'Tax Certificate' },
+  // Filed by show cause and the exit checklist, which were writing these
+  // types while the catalogue had no name for them.
+  { value: 'SHOW_CAUSE', label: 'Show Cause Notice' },
+  { value: 'NOTICE_PERIOD', label: 'Notice Period Letter' },
+  { value: 'TERMINATION_LETTER', label: 'Termination Letter' },
+  { value: 'EXIT_INTERVIEW', label: 'Exit Interview Form' },
+  { value: 'EXIT_CLEARANCE', label: 'Exit Clearance Form' },
+  { value: 'RELIEVING_CERTIFICATE', label: 'Relieving Certificate' },
   { value: 'OTHER', label: 'Other' },
 ] as const
 

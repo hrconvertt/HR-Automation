@@ -11,6 +11,11 @@ interface Props {
   employeeId: string
   /** When true, render a small inline button (used on employee profile). */
   compact?: boolean
+  /** Opens with this type chosen — for "Upload" beside a document that is missing. */
+  presetType?: string
+  /** Button text; defaults to "Upload Document". */
+  label?: string
+  variant?: 'default' | 'outline'
 }
 
 const MAX_SIZE_MB = 10
@@ -37,10 +42,10 @@ function fileIcon(name: string): string {
  * UX: drag-and-drop zone, file preview with icon + size, type dropdown,
  * inline validation (size cap, no-type), error states.
  */
-export default function UploadDocumentButton({ employeeId, compact }: Props) {
+export default function UploadDocumentButton({ employeeId, compact, presetType, label, variant = 'default' }: Props) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [type, setType] = useState<string>('OTHER')
+  const [type, setType] = useState<string>(presetType ?? 'OTHER')
   const [file, setFile] = useState<File | null>(null)
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState<string | null>(null)
@@ -78,7 +83,7 @@ export default function UploadDocumentButton({ employeeId, compact }: Props) {
         const j = await res.json().catch(() => ({}))
         throw new Error(j.error || 'Upload failed')
       }
-      setOpen(false); setFile(null); setType('OTHER')
+      setOpen(false); setFile(null); setType(presetType ?? 'OTHER')
       router.refresh()
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Upload failed')
@@ -89,13 +94,13 @@ export default function UploadDocumentButton({ employeeId, compact }: Props) {
 
   function reset() {
     if (busy) return
-    setOpen(false); setFile(null); setType('OTHER'); setErr(null)
+    setOpen(false); setFile(null); setType(presetType ?? 'OTHER'); setErr(null)
   }
 
   return (
     <>
-      <Button size={compact ? 'sm' : 'default'} onClick={() => setOpen(true)}>
-        <Upload className="w-4 h-4 mr-1.5" /> Upload Document
+      <Button size={compact ? 'sm' : 'default'} variant={variant} onClick={() => setOpen(true)}>
+        <Upload className="w-4 h-4 mr-1.5" /> {label ?? 'Upload Document'}
       </Button>
 
       {open && (

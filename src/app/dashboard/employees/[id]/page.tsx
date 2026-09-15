@@ -11,11 +11,11 @@ import { verifyToken } from '@/lib/auth'
 import { LEVEL_LABEL } from '@/lib/promotion'
 import EditEmployeeButton from '@/components/edit-employee-button'
 import DeleteEmployeeButton from '@/components/delete-employee-button'
-import UploadDocumentButton from '@/components/upload-document-button'
-import EmployeeDocumentRow from '@/components/employee-document-row'
+import EmployeeDocumentCenter from '@/components/documents/employee-document-center'
+import { buildDocumentSections, type SectionView } from '@/lib/employee-document-sections'
+import { LETTER_TYPE_LABEL } from '@/lib/letter-templates'
 import ProfilePhotoAvatar from '@/components/profile-photo-avatar'
 import Link from 'next/link'
-import { ExternalLink, FileText } from 'lucide-react'
 import CompensationPanel from '@/components/compensation-panel'
 import { canSeeBanking } from '@/lib/can-see-banking'
 import { SystemRolesPanel } from '@/components/system-roles-panel'
@@ -58,6 +58,13 @@ function sectionsComplete(c: {
   if (c.interviewCompletedAt) done++ // §6
   if (c.handoverSignedAt) done++ // §7
   return { done, total: 6 }
+}
+
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+/** The clock is read here, outside the component, so rendering stays pure. */
+function today(): Date {
+  return new Date()
 }
 
 function humanize(v: string | null | undefined): string | null {
@@ -270,6 +277,49 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
     assets: showAssets,
   }
   const shownTab = sectionAllowed[activeTab] ? activeTab : 'overview'
+
+  // The Documents tab: files by stage, plus payslips and issued letters.
+  // Only queried when that tab is the one being shown.
+  let documentSections: SectionView[] = []
+  if (shownTab === 'documents') {
+    const hrView = isHR && !isPreviewMode
+    const [payslipRows, letterRows] = await Promise.all([
+      showCompensation
+        ? prisma.payslip.findMany({
+            where: { employeeId: employee.id, ...(hrView ? {} : { status: { in: ['PAID', 'APPROVED', 'SENT'] } }) },
+            orderBy: [{ year: 'desc' }, { month: 'desc' }],
+            select: { id: true, month: true, year: true, netSalary: true, status: true },
+          })
+        : Promise.resolve([]),
+      prisma.letterRequest.findMany({
+        where: { employeeId: employee.id, ...(hrView ? {} : { status: { in: ['APPROVED', 'GENERATED'] } }) },
+        orderBy: { requestedAt: 'desc' },
+        select: { id: true, letterType: true, letterNumber: true, status: true, requestedAt: true, reviewedAt: true, letterBody: true },
+      }),
+    ])
+    documentSections = buildDocumentSections({
+      employeeId: employee.id,
+      status: employee.status,
+      docs: documentsForViewer,
+      payslips: payslipRows.map((p) => ({
+        id: p.id,
+        period: `${MONTH_NAMES[p.month - 1]} ${p.year}`,
+        net: `PKR ${Math.round(p.netSalary).toLocaleString('en-US')}`,
+        status: p.status === 'PAID' ? 'Paid' : p.status === 'DRAFT' ? 'Draft' : humanize(p.status) ?? p.status,
+        href: `/payslip/${p.id}/print`,
+      })),
+      letters: letterRows.map((l) => ({
+        id: l.id,
+        title: LETTER_TYPE_LABEL[l.letterType as keyof typeof LETTER_TYPE_LABEL] ?? humanize(l.letterType) ?? l.letterType,
+        number: l.letterNumber,
+        status: l.status === 'PENDING' ? 'Pending' : l.status === 'REJECTED' ? 'Rejected' : 'Issued',
+        dateLabel: formatDate(l.reviewedAt ?? l.requestedAt),
+        href: (l.status === 'APPROVED' || l.status === 'GENERATED') && l.letterBody ? `/letters/${l.id}/print` : null,
+      })),
+      showMissing: hrView,
+      today: today(),
+    })
+  }
 
   // Manager options + manager name lookup for the editable Role History card.
   const managerOptions = (isHR && !isPreviewMode)
@@ -764,59 +814,11 @@ export default async function EmployeeProfilePage({ params, searchParams }: Page
               />
             </div>
           )}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Documents</CardTitle>
-              <div className="flex items-center gap-2">
-                <Link
-                  href={`/dashboard/documents?employee=${employee.id}`}
-                  className="text-xs text-slate-700 hover:underline inline-flex items-center gap-1"
-                >
-                  View in Document Center <ExternalLink className="w-3 h-3" />
-                </Link>
-                <UploadDocumentButton employeeId={employee.id} compact />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Uploaded</TableHead>
-                    <TableHead>Action</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {documentsForViewer.length === 0 ? (
-                    <TableRow><TableCell colSpan={4} className="text-center text-gray-400">No documents.</TableCell></TableRow>
-                  ) : (
-                    documentsForViewer.map((doc) => (
-                      <EmployeeDocumentRow
-                        key={doc.id}
-                        canEdit={canEditFull}
-                        formatDate={formatDate(doc.createdAt)}
-                        doc={{
-                          id: doc.id,
-                          name: doc.name,
-                          type: doc.type,
-                          url: doc.url,
-                          createdAt: doc.createdAt.toISOString(),
-                          expiryDate: doc.expiryDate?.toISOString() ?? null,
-                          visibleToEmployee: doc.visibleToEmployee,
-                          // Link-only rows (imported Drive URLs, lazily-rendered
-                          // salary slips) hold no bytes, so there is nothing to
-                          // read. Anything else stays enabled and lets the API
-                          // give the precise reason if it can't be read.
-                          hasFile: !(doc.url && !doc.fileSize),
-                        }}
-                      />
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <EmployeeDocumentCenter
+            employeeId={employee.id}
+            sections={documentSections}
+            canManage={canEditFull}
+          />
         </TabsContent>}
 
         {/* Performance */}
