@@ -224,6 +224,11 @@ const SIGN_AND_STAMP_SPACE = 110
 /** The lowest the name may sit and still leave the title clear of the bottom bar. */
 const SIGNATURE_NAME_LOWEST_TOP = 760
 
+/** Whether a body ending on this baseline still leaves the full sign-and-stamp space. */
+export function leavesSignSpace(lastBaseline: number): boolean {
+  return PAGE_H - lastBaseline + SIGN_AND_STAMP_SPACE <= SIGNATURE_NAME_LOWEST_TOP
+}
+
 /**
  * Place the signature block and serialise.
  *

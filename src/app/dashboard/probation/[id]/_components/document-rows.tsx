@@ -47,7 +47,8 @@ export const EMPLOYMENT_LETTER: DocRow[] = [
     docType: 'OFFER_LETTER',
     name: 'Employment Letter',
     sub: 'Designation, joining date, compensation and probation — the terms this review judges against',
-    openHref: (id) => `/api/documents/employment-letter?employeeId=${id}`,
+    // The editor, filled from the record: change any line, preview, download.
+    openHref: (id) => `/dashboard/letters/employment?employeeId=${id}`,
     flagWhenMissing: true,
     uploaded: null,
   },

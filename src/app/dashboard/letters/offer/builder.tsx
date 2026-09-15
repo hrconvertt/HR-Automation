@@ -128,7 +128,7 @@ export function EmploymentLetterBuilder({ staff }: { staff: Staff[] }) {
             <Mail className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Employment Letter</h1>
+            <h1 className="text-2xl font-bold tracking-tight">Offer Letter</h1>
             <p className="text-white/80 text-sm mt-1">
               Pick an employee, the fields fill in, then save a draft, preview or print.
             </p>
