@@ -37,6 +37,7 @@ interface Props {
     matchScore: number | null
     scoreReason: string | null
     inTalentPool?: boolean
+    requisitionId?: string
     requisition: { title: string } | null
   }
   canMove: boolean
@@ -177,6 +178,7 @@ export function CandidateCard({ candidate, canMove }: Props) {
         candidateId={candidate.id}
         candidateName={candidate.fullName}
         roleTitle={candidate.requisition?.title ?? 'the role'}
+        requisitionId={candidate.requisitionId}
         open={interviewOpen}
         onOpenChange={setInterviewOpen}
       />

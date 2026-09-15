@@ -439,6 +439,29 @@ export function WorkspaceCandidates({ active, inactive, canAct }: {
                         <td className="px-3 py-2.5">
                           <p className="font-medium text-slate-900">{c.fullName}</p>
                           <p className="text-[11px] text-slate-400">{c.email}</p>
+                          {(c.expectedSalary != null || c.noticePeriod) && (
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              {[
+                                c.expectedSalary != null ? `Expects PKR ${c.expectedSalary.toLocaleString('en-US')} a month` : null,
+                                c.noticePeriod ? `Notice: ${c.noticePeriod}` : null,
+                              ].filter(Boolean).join(' · ')}
+                            </p>
+                          )}
+                          {c.answers.length > 0 && (
+                            <details className="mt-1 text-[11px] text-slate-600">
+                              <summary className="cursor-pointer text-slate-500 hover:text-slate-900">
+                                {c.answers.length} application {c.answers.length === 1 ? 'answer' : 'answers'}
+                              </summary>
+                              <dl className="mt-1 space-y-1 max-w-xs">
+                                {c.answers.map((a, i) => (
+                                  <div key={i}>
+                                    <dt className="text-slate-400">{a.question}</dt>
+                                    <dd className="text-slate-700">{a.answer}</dd>
+                                  </div>
+                                ))}
+                              </dl>
+                            </details>
+                          )}
                           {c.inTalentPool && (
                             <span className="inline-block mt-1 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">
                               Talent pool

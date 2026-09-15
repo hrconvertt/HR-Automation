@@ -342,6 +342,7 @@ model Employee {
   pips                PIP[]
   jobOffers           JobOffer[]
   hiringRequests      JobRequisition[]         @relation("HiringRequests") // requisitions this manager raised
+  requisitionMemberships RequisitionMember[]   @relation("RequisitionMemberships") // hiring teams they sit on
   auditLogs           AuditLog[]
   trustedDevices      TrustedDevice[]
   journeys            EmployeeJourney[]
@@ -1551,7 +1552,7 @@ model JobRequisition {
   salaryMax          Float?
   postedDate         DateTime?
   closingDate        DateTime?
-  status             String    @default("OPEN") // PENDING | OPEN | PAUSED | CLOSED | FILLED | REJECTED
+  status             String    @default("OPEN") // DRAFT | PENDING | OPEN | PAUSED | CLOSED | FILLED | REJECTED
   requestedById      String? // Manager (Employee.id) who raised the request, if any
   requestedBy        Employee? @relation("HiringRequests", fields: [requestedById], references: [id])
   requestReason      String? // REPLACEMENT | GROWTH | BACKFILL | OTHER — picked by the manager
@@ -1573,6 +1574,21 @@ model JobRequisition {
   // Per-role score threshold (0-100). Candidates scoring at/above
   // this number qualify for auto talent-pool inclusion. Default 60.
   scoreThreshold Int @default(60)
+
+  // ─── Job post editor ─────────────────────────────────────────────
+  //   The five-step create flow at /dashboard/recruiting/jobs, shaped after
+  //   Workable. DRAFT is a status of its own: a job still being written is on
+  //   no board and no careers page until it is published or submitted.
+  //   The list-shaped pieces are JSON strings — see src/lib/job-post.ts.
+  location        String?
+  isRemote        Boolean @default(false)
+  internalCode    String?
+  educationLevel  String? // NONE | HIGH_SCHOOL | DIPLOMA | BACHELORS | MASTERS | PHD
+  salaryCurrency  String  @default("PKR")
+  jdSections      String? // { summary, responsibilities[], requirements[], niceToHave[], benefits[] }
+  applicationForm String? // { fields: { key: MANDATORY|OPTIONAL|OFF }, questions[] } — null is the default form
+  interviewRounds String? // [{ name, type }]
+  members         RequisitionMember[]
 
   manpowerForm     ManpowerRequisition?
   postings         JobPosting[]
@@ -1603,6 +1619,22 @@ model KnockoutCriterion {
 
   @@index([requisitionId])
   @@map("knockout_criteria")
+}
+
+// The people hiring for one job — its hiring manager and interviewers, set on
+// the Team Members step of the job post editor.
+model RequisitionMember {
+  id            String         @id @default(cuid())
+  requisitionId String
+  requisition   JobRequisition @relation(fields: [requisitionId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee       @relation("RequisitionMemberships", fields: [employeeId], references: [id], onDelete: Cascade)
+  role          String         @default("INTERVIEWER") // HIRING_MANAGER | INTERVIEWER
+  addedById     String? // User.id
+  createdAt     DateTime       @default(now())
+
+  @@unique([requisitionId, employeeId])
+  @@map("requisition_members")
 }
 
 model Candidate {
@@ -1652,6 +1684,11 @@ model Candidate {
   openToRemote      Boolean @default(false)
   skills            String? // JSON array of strings
   languages         String? // JSON array of strings
+
+  // Asked only when the job's application form switches them on.
+  expectedSalary Float?
+  noticePeriod   String?
+  answers        String? // JSON [{ id, question, answer }] — the job's own questions
 
   resumeParse ResumeParse?
   nurtureLogs NurtureLog[] @relation("CandidateNurtures")

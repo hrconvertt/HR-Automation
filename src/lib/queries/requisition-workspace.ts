@@ -57,6 +57,11 @@ export interface WorkspaceCandidate {
   openToRemote: boolean
   /** JSON array on the record; parsed to a list here. */
   skills: string[]
+  /** Asked only when the job's application form switches them on. */
+  expectedSalary: number | null
+  noticePeriod: string | null
+  /** The job's own application questions, as answered. */
+  answers: { question: string; answer: string }[]
 }
 
 export interface WorkspaceDetail {
@@ -135,6 +140,7 @@ export async function requisitionWorkspace(
           yearsExperience: true, email: true, phone: true, inTalentPool: true,
           source: true, educationLevel: true, location: true,
           workAuthorization: true, openToRemote: true, skills: true,
+          expectedSalary: true, noticePeriod: true, answers: true,
         },
       },
     },
@@ -183,6 +189,20 @@ export async function requisitionWorkspace(
     workAuthorization: c.workAuthorization,
     openToRemote: c.openToRemote,
     skills: parseSkills(c.skills),
+    expectedSalary: c.expectedSalary,
+    noticePeriod: c.noticePeriod,
+    answers: (() => {
+      try {
+        const v: unknown = c.answers ? JSON.parse(c.answers) : []
+        return Array.isArray(v)
+          ? v
+            .filter((a): a is { question: string; answer: unknown } => !!a && typeof a.question === 'string')
+            .map((a) => ({ question: a.question, answer: String(a.answer ?? '') }))
+          : []
+      } catch {
+        return []
+      }
+    })(),
   })
 
   // Active / Inactive is Workday's split, and it is the useful one: who is

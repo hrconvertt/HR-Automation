@@ -1,5 +1,7 @@
+import Link from 'next/link'
 import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { Plus } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
@@ -13,19 +15,16 @@ import { RequestToHireButton } from '@/components/recruiting/request-to-hire-but
 import { DecideRequestButtons } from '@/components/recruiting/decide-request-buttons'
 import { AddCandidateButton } from '@/components/recruiting/add-candidate-button'
 import { CandidateCard } from '@/components/recruiting/candidate-card'
-import { RequisitionStatusMenu } from '@/components/recruiting/requisition-status-menu'
-import { ManpowerFormButton } from '@/components/recruiting/manpower-form-button'
 import { authorisationForAll } from '@/lib/requisition-gate'
-import { JdReviewButton } from '@/components/recruiting/jd-review-button'
 import { InterviewFeedbackButton } from '@/components/recruiting/interview-feedback-button'
 import { TalentPoolView } from '@/components/recruiting/talent-pool-view'
-import { KnockoutEditorButton } from '@/components/recruiting/knockout-editor-button'
 import { KnockoutOverrideButton } from '@/components/recruiting/knockout-override-button'
 import { BulkPipelineActions } from '@/components/recruiting/bulk-pipeline-actions'
 import { PipelineRoleFilter } from '@/components/recruiting/pipeline-role-filter'
-import { BulkJDUpload } from '@/components/recruiting/bulk-jd-upload'
 import { BulkResumeUpload } from '@/components/recruiting/bulk-resume-upload'
 import { RecruitingDashboardView } from './_components/dashboard-view'
+import { JobBoard } from './_components/job-board'
+import { jobBoardData } from '@/lib/queries/job-board'
 import { recruitingDashboard } from '@/lib/queries/recruiting-dashboard'
 import { recruitingAnalytics } from '@/lib/queries/recruiting-analytics'
 import { RequisitionWorkspaceView } from './_components/workspace-view'
@@ -142,33 +141,10 @@ const TYPE_LABEL: Record<string, string> = {
   CONTRACT: 'Contract',
 }
 
-/**
- * Status, said plainly. "Filled" and "Closed" look alike at a glance and mean
- * opposite things — one is a hire, the other is an abandonment — so they get
- * different colours rather than two greys.
- */
-const REQ_STATUS: Record<string, { label: string; tone: string }> = {
-  OPEN:     { label: 'Open',      tone: 'bg-emerald-50 text-emerald-800 border-emerald-200' },
-  PAUSED:   { label: 'Paused',    tone: 'bg-amber-50 text-amber-800 border-amber-200' },
-  FILLED:   { label: 'Filled',    tone: 'bg-sky-50 text-sky-800 border-sky-200' },
-  CLOSED:   { label: 'Closed',    tone: 'bg-slate-50 text-slate-500 border-slate-200' },
-  PENDING:  { label: 'Pending',   tone: 'bg-amber-50 text-amber-800 border-amber-200' },
-  REJECTED: { label: 'Rejected',  tone: 'bg-red-50 text-red-800 border-red-200' },
-}
-
 function TypeChip({ type }: { type: string }) {
   return (
     <span className="text-[12px] text-slate-600 whitespace-nowrap">
       {TYPE_LABEL[type] ?? type.replace(/_/g, ' ').toLowerCase()}
-    </span>
-  )
-}
-
-function StatusChip({ status }: { status: string }) {
-  const s = REQ_STATUS[status] ?? { label: status, tone: 'bg-slate-50 text-slate-600 border-slate-200' }
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-[12px] font-medium px-2 py-0.5 rounded-full border ${s.tone}`}>
-      {s.label}
     </span>
   )
 }
@@ -250,6 +226,16 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   // Whether each role is authorised to be worked — see requisition-gate.ts.
   const authorised = await authorisationForAll()
 
+  // The requisitions board: every role but the rejected ones. A draft is on
+  // the board of whoever can finish it — HR, or the manager writing it.
+  const boardJobs = activeView === 'requisitions'
+    ? await jobBoardData(
+        requisitions.filter((r) =>
+          r.status !== 'REJECTED' && (r.status !== 'DRAFT' || isHR || r.requestedById === myEmployeeId)),
+        authorised,
+      )
+    : []
+
   const openRoles = requisitions
     .filter((r) => r.status === 'OPEN')
     .map((r) => ({ id: r.id, title: r.title }))
@@ -257,7 +243,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
   // just OPEN ones. A paused or filled role still takes pipeline/backfill
   // candidates, and gating the dropdown to OPEN left it empty (and unusable).
   const screenableRoles = requisitions
-    .filter((r) => r.status !== 'PENDING' && r.status !== 'REJECTED')
+    .filter((r) => r.status !== 'DRAFT' && r.status !== 'PENDING' && r.status !== 'REJECTED')
     .map((r) => ({ id: r.id, title: r.title }))
 
   return (
@@ -446,110 +432,21 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             // know what hiring was in flight — with one of the two usually
             // empty. Awaiting approval is pinned to the top, because it is the
             // only part of the list that needs a decision.
-            const RANK: Record<string, number> = { PENDING: 0, OPEN: 1, PAUSED: 2, FILLED: 3, CLOSED: 4 }
-            const liveReqs = requisitions
-              .filter((r) => r.status !== 'REJECTED')
-              .sort((a, b) => (RANK[a.status] ?? 9) - (RANK[b.status] ?? 9))
-            const awaiting = liveReqs.filter((r) => r.status === 'PENDING').length
             return (
               <>
               <ViewHeader
                 title="Job Requisitions"
-                blurb="The hiring board — every approved role, its job description and its knockout filters."
-                actions={isHR && (
-                  <>
-                    <BulkJDUpload />
-                    <RequestToHireButton role="HR_ADMIN" />
-                  </>
+                blurb="The hiring board — every role, where its candidates are, and where it is advertised."
+                actions={(isHR || isManager) && (
+                  <Link
+                    href="/dashboard/recruiting/jobs/new"
+                    className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-md bg-slate-900 text-white text-sm font-medium hover:bg-slate-800"
+                  >
+                    <Plus className="w-4 h-4" /> New Job Post
+                  </Link>
                 )}
               />
-              <Card className="rounded-xl border-slate-200 overflow-hidden shadow-sm">
-                <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
-                  <p className="text-xs text-slate-500">
-                    <span className="font-semibold text-slate-900">{liveReqs.length}</span> {liveReqs.length === 1 ? 'requisition' : 'requisitions'}
-                    {awaiting > 0 && (
-                      <span className="text-amber-800 font-semibold"> · {awaiting} awaiting approval</span>
-                    )}
-                    <span className="ml-3 inline-flex items-center gap-3 text-[11px] text-slate-400 align-middle">
-                      <span className="inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-slate-300" /> not started
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" /> in progress
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> done
-                      </span>
-                    </span>
-                  </p>
-                </div>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Title</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Vacancies</TableHead>
-                      <TableHead>Status</TableHead>
-                      {isHR && <TableHead className="text-center">JD</TableHead>}
-                      {isHR && <TableHead className="text-center">Filters</TableHead>}
-                      {isHR && <TableHead className="text-center">Form</TableHead>}
-                      <TableHead>Closes</TableHead>
-                      {isHR && <TableHead></TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {liveReqs.length === 0 ? (
-                      <TableRow><TableCell colSpan={isHR ? 9 : 5} className="text-center py-10 text-slate-400 text-sm">
-                        No open requisitions yet. {isHR && 'Click "New Requisition" to add one, or approve a pending request.'}
-                      </TableCell></TableRow>
-                    ) : (
-                      liveReqs.map((r) => (
-                        <TableRow key={r.id}>
-                          <TableCell className="font-medium text-slate-900">
-                            {r.title}
-                            {authorised.get(r.id)?.ok === false && (
-                              <span className="block text-[11px] font-normal text-amber-800">
-                                {authorised.get(r.id)?.reason} No JD or job post until it is.
-                              </span>
-                            )}
-                          </TableCell>
-                          <TableCell><TypeChip type={r.type} /></TableCell>
-                          <TableCell className="tabular-nums">{r.vacancies}</TableCell>
-                          <TableCell><StatusChip status={r.status} /></TableCell>
-                          {/* One chip per column, all the same width. Three
-                              different-length buttons stacked in a single cell
-                              made thirteen rows of ragged edges. */}
-                          {isHR && (
-                            <TableCell className="text-center">
-                              <JdReviewButton requisitionId={r.id} title={r.title} jdStatus={r.jdStatus} />
-                            </TableCell>
-                          )}
-                          {isHR && (
-                            <TableCell className="text-center">
-                              <KnockoutEditorButton requisitionId={r.id} title={r.title} jdContent={r.jdContent} />
-                            </TableCell>
-                          )}
-                          {isHR && (
-                            <TableCell className="text-center">
-                              <ManpowerFormButton requisitionId={r.id}
-                                existingFormId={r.manpowerForm?.id ?? null}
-                                status={r.manpowerForm?.status ?? null} />
-                            </TableCell>
-                          )}
-                          <TableCell className="text-slate-500">{r.closingDate ? formatDate(r.closingDate) : '—'}</TableCell>
-                          {isHR && (
-                            <TableCell>
-                              {r.status === 'PENDING'
-                                ? <DecideRequestButtons requisitionId={r.id} title={r.title} />
-                                : <RequisitionStatusMenu requisitionId={r.id} status={r.status} title={r.title} />}
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </Card>
+              <JobBoard jobs={boardJobs} isHR={isHR} />
               </>
             )
           })()}

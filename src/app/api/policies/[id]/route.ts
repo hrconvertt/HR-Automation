@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 import { canSeePolicy, resolveAudienceEmployeeIds, ALLOWED_AUDIENCE_ROLES } from '@/lib/policy-access'
+import { extractCode } from '@/lib/policy-builder'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -44,6 +45,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   const body = await request.json()
+
+  // A policy ID refers to one policy only — letters and forms cite it.
+  const code = typeof body.content === 'string' ? extractCode(body.content) : null
+  if (code) {
+    const clash = await prisma.policyDocument.findFirst({
+      where: { id: { not: id }, content: { contains: `| Policy ID | ${code} |` } },
+      select: { title: true },
+    })
+    if (clash) {
+      return NextResponse.json({ error: `${code} is already used by “${clash.title}”.` }, { status: 409 })
+    }
+  }
+
   const allowed: Record<string, unknown> = {}
   for (const k of [
     'title', 'type', 'category', 'description', 'content', 'url',

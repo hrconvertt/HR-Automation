@@ -74,6 +74,12 @@ export async function POST(request: NextRequest) {
   if (!VALID_TYPES.includes(type)) {
     return NextResponse.json({ error: `type must be one of ${VALID_TYPES.join(', ')}` }, { status: 400 })
   }
+  // A round planned on the job's Workflow step ("CEO interview") names the
+  // interview in the invitation instead of the bare type.
+  const roundName = (body as { roundName?: unknown }).roundName
+    ? String((body as { roundName?: unknown }).roundName).trim().slice(0, 80)
+    : ''
+  const roundLabel = roundName || TYPE_LABEL[type as keyof typeof TYPE_LABEL]
   const scheduledAt = scheduledAtRaw ? new Date(String(scheduledAtRaw)) : null
   if (!scheduledAt || isNaN(scheduledAt.getTime())) {
     return NextResponse.json({ error: 'scheduledAt must be a valid ISO datetime' }, { status: 400 })
@@ -133,7 +139,7 @@ export async function POST(request: NextRequest) {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   }) + ' at ' + scheduledAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: true })
   const firstName = candidate.fullName.split(' ')[0]
-  const subject = `Interview invitation â€” ${TYPE_LABEL[type]} with Convertt for ${candidate.requisition.title}`
+  const subject = `Interview invitation â€” ${roundLabel} with Convertt for ${candidate.requisition.title}`
   const interviewerLine = interviewers.length
     ? `<p><strong>You'll be meeting:</strong> ${interviewers.map((iv) => escapeHtml(`${iv.fullName}${iv.designation ? ` (${iv.designation})` : ''}`)).join(', ')}</p>`
     : ''
@@ -143,7 +149,7 @@ export async function POST(request: NextRequest) {
   const notesLine = notes ? `<p>${escapeHtml(notes)}</p>` : ''
   const bodyHtml = `
 <p>Hi ${escapeHtml(firstName)},</p>
-<p>Thanks for applying for the <strong>${escapeHtml(candidate.requisition.title)}</strong> role at Convertt. We'd like to invite you to a <strong>${escapeHtml(TYPE_LABEL[type])}</strong>.</p>
+<p>Thanks for applying for the <strong>${escapeHtml(candidate.requisition.title)}</strong> role at Convertt. We'd like to invite you to a <strong>${escapeHtml(roundLabel)}</strong>.</p>
 <p><strong>When:</strong> ${escapeHtml(slotLine)}<br/>
 <strong>Duration:</strong> ~${Math.round(duration)} minutes</p>
 ${linkLine}
@@ -173,7 +179,7 @@ ${notesLine}
         employeeId: iv.id,
         type: 'GENERAL',
         title: 'Interview scheduled',
-        message: `${candidate.fullName} â€” ${TYPE_LABEL[type]} on ${slotLine}.`,
+        message: `${candidate.fullName} â€” ${roundLabel} on ${slotLine}.`,
         link: `/dashboard/recruiting?tab=schedule`,
       }),
     ),
@@ -187,7 +193,7 @@ ${notesLine}
       ...candidateVars({ fullName: candidate.fullName, jobTitle: candidate.requisition.title }),
       'Day, Date, Time + Timezone': slotLine + ' PKT',
       '~45 minutes': `~${Math.round(duration)} minutes`,
-      'Video call / In-person / Phone': TYPE_LABEL[type],
+      'Video call / In-person / Phone': roundLabel,
       'Meeting link / Office address â€” Mega Tower, Lahore': meetingLink || 'Mega Tower, Lahore',
       'Name, Title': interviewers.map((iv) => `${iv.fullName}${iv.designation ? ` (${iv.designation})` : ''}`).join(', ') || 'TBD',
     },

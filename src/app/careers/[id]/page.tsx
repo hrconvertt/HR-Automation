@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { renderMarkdown } from '@/lib/markdown'
 import { ArrowLeft, MapPin, Briefcase } from 'lucide-react'
 import { ApplyForm } from '@/components/careers/apply-form'
+import { parseApplicationForm } from '@/lib/job-post'
 
 /**
  * Public /careers/[id] page — no auth.
@@ -20,8 +21,12 @@ const TYPE_LABEL: Record<string, string> = {
   CONTRACT:   'Contract',
 }
 
-export default async function CareersDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CareersDetailPage({ params, searchParams }: {
+  params: Promise<{ id: string }>
+  searchParams: Promise<{ source?: string }>
+}) {
   const { id } = await params
+  const { source } = await searchParams
   const job = await prisma.jobRequisition.findUnique({ where: { id } })
 
   if (!job || job.jdStatus !== 'POSTED' || job.status !== 'OPEN' || !job.jdContent) {
@@ -55,7 +60,7 @@ export default async function CareersDetailPage({ params }: { params: Promise<{ 
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100">{dept.name}</span>
           )}
           <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100">
-            <MapPin className="w-3 h-3" /> Lahore (On-Site)
+            <MapPin className="w-3 h-3" /> {job.isRemote ? 'Remote' : job.location || 'Lahore (On-Site)'}
           </span>
           {job.vacancies > 1 && (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-50 text-slate-700 border border-slate-100">
@@ -77,7 +82,12 @@ export default async function CareersDetailPage({ params }: { params: Promise<{ 
             Tell us about yourself. Shortlisted candidates hear back within 7 working days.
           </p>
           <div className="mt-5">
-            <ApplyForm requisitionId={job.id} jobTitle={job.title} />
+            <ApplyForm
+              requisitionId={job.id}
+              jobTitle={job.title}
+              config={parseApplicationForm(job.applicationForm)}
+              source={source}
+            />
           </div>
         </section>
       </main>
