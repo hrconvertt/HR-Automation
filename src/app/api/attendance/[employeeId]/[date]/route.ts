@@ -125,19 +125,23 @@ export async function PATCH(request: NextRequest, ctx: RouteContext) {
     },
   })
 
-  // Marking a cell LEAVE makes the approved leave request behind it, and
-  // moving it off leave withdraws the one it made — see src/lib/grid-leave.ts.
-  // This is the route the grid actually calls; the same behaviour lives on
-  // POST /api/attendance for the other manual-entry path.
+  // Marking a cell L, WFH or HD makes the approved request behind it — leave,
+  // work from home or a half day — so the day appears in Leave Approved, WFH
+  // Approved or Half Days; moving the cell to anything else withdraws the one
+  // it made. See src/lib/grid-leave.ts. This is the route the grid and the
+  // Today board call; the same behaviour lives on POST /api/attendance and the
+  // month bulk editor.
   let leave: { created: boolean; requestId?: string } = { created: false }
   if (await interimEnabled('interim_grid_leave')) {
     const me = await prisma.employee.findFirst({
       where: { userId: user.id }, select: { id: true },
     })
-    if (saved.status === 'LEAVE') {
+    const kind = body.status === 'LEAVE' ? 'LEAVE' : body.status === 'WFH' ? 'WFH' : body.status === 'HALF_DAY' ? 'HALF_DAY' : null
+    if (kind) {
       leave = await leaveRequestForGridMark({
         employeeId,
         date,
+        kind,
         leaveType: typeof (body as { leaveType?: string }).leaveType === 'string'
           ? (body as { leaveType?: string }).leaveType
           : null,

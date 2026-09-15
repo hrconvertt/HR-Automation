@@ -319,5 +319,26 @@ export async function POST(request: NextRequest, ctx: RouteContext) {
     }
   })
 
+  // The same writeback as the single-cell edit: L, WFH and HD days get the
+  // approved request behind them, and any other day withdraws the one the grid
+  // made. Without this a month typed in bulk left every leave and WFH day
+  // missing from the leave lists. See src/lib/grid-leave.ts.
+  const { interimEnabled } = await import('@/lib/interim-flags')
+  if (await interimEnabled('interim_grid_leave')) {
+    const { leaveRequestForGridMark, withdrawGridLeave } = await import('@/lib/grid-leave')
+    const me = await prisma.employee.findFirst({ where: { userId: user.id }, select: { id: true } })
+    for (const v of validated) {
+      const kind = v.cell.status === 'LEAVE' ? 'LEAVE'
+        : v.cell.status === 'HALF_DAY' ? 'HALF_DAY'
+          : v.cell.workType === 'WFH' ? 'WFH'
+            : null
+      if (kind) {
+        await leaveRequestForGridMark({ employeeId, date: v.date, kind, approvedByEmployeeId: me?.id ?? null })
+      } else {
+        await withdrawGridLeave(employeeId, v.date)
+      }
+    }
+  }
+
   return NextResponse.json({ ok: true, count: cells.length, cells })
 }

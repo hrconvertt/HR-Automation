@@ -641,15 +641,21 @@ export async function POST(request: NextRequest) {
     // clearing the cell withdraws the one it made. See src/lib/grid-leave.ts —
     // a day marked L used to exist only as a letter in a grid, invisible to
     // payroll, to the sandwich rule and to the leave list.
+    // Work from home and half days get their request the same way.
     let leave: { created: boolean; requestId?: string } = { created: false }
     const gridLeaveOn = await interimEnabled('interim_grid_leave')
-    if (nextStatus === 'LEAVE' && gridLeaveOn) {
+    const gridKind = nextStatus === 'LEAVE' ? 'LEAVE'
+      : nextStatus === 'HALF_DAY' ? 'HALF_DAY'
+        : nextStatus === 'PRESENT' && log.workType === 'WFH' ? 'WFH'
+          : null
+    if (gridKind && gridLeaveOn) {
       const me = await prisma.employee.findFirst({
         where: { userId: payload.userId }, select: { id: true },
       })
       leave = await leaveRequestForGridMark({
         employeeId: empId,
         date: logDate,
+        kind: gridKind,
         leaveType: typeof leaveType === 'string' ? leaveType : null,
         approvedByEmployeeId: me?.id ?? null,
       })
