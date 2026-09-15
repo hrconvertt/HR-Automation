@@ -200,8 +200,10 @@ export async function startLetter(
     })
   })
 
+  // Right-aligned, on the address block's right edge — HR's call; the
+  // measured sample had it on the left.
   page.drawText(letterDate, {
-    x: LEFT_MARGIN,
+    x: ADDRESS_RIGHT - fonts.regular.widthOfTextAtSize(letterDate, DATE_FONT_SIZE),
     y: textY(DATE_TOP_FROM_TOP, DATE_FONT_SIZE),
     size: DATE_FONT_SIZE, font: fonts.regular, color: TEXT_BLACK,
   })
