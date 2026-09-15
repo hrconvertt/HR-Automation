@@ -2,6 +2,7 @@
 import { prisma } from '@/lib/prisma'
 import { verifyToken, hasRole } from '@/lib/auth'
 import { parseAudienceRoles, ALLOWED_AUDIENCE_ROLES, DEFAULT_AUDIENCE_ROLES } from '@/lib/policy-access'
+import { extractCode } from '@/lib/policy-builder'
 
 export async function GET(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -96,6 +97,18 @@ export async function POST(request: NextRequest) {
 
   if (!title || !type) {
     return NextResponse.json({ error: 'title and type are required' }, { status: 400 })
+  }
+
+  // A policy ID refers to one policy only — letters and forms cite it.
+  const code = extractCode(content)
+  if (code) {
+    const clash = await prisma.policyDocument.findFirst({
+      where: { content: { contains: `| Policy ID | ${code} |` } },
+      select: { title: true },
+    })
+    if (clash) {
+      return NextResponse.json({ error: `${code} is already used by “${clash.title}”.` }, { status: 409 })
+    }
   }
 
   // Validate audienceRoles: must be a non-empty array of allowed roles, no HR_ADMIN.
