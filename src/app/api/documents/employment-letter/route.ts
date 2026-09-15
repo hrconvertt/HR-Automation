@@ -3,8 +3,9 @@
  * actually issues, as a PDF on the measured letterhead.
  *
  * The six employment letters on file are all this document: one page, the
- * letterhead, "Subject: Employment Letter", the four bulleted terms, signed by
- * the Director Administration. `renderEmploymentLetter` reproduces it exactly
+ * letterhead, "Subject: Employment Letter", the terms, signed by the Director
+ * Administration. The terms are a paragraph rather than the files' bullets,
+ * with room left above the signatory for signature and stamp. `renderEmploymentLetter` reproduces it exactly
  * and has had no caller since it was written — nothing in the app could
  * produce the letter it is missing. This is that caller.
  *

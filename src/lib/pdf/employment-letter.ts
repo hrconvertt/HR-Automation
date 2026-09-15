@@ -5,8 +5,7 @@
  * Only the employee-specific values vary.
  */
 import {
-  startLetter, finishLetter, drawParagraph, LEFT_MARGIN, MAX_WIDTH,
-  BODY_FONT_SIZE, BODY_LEADING, BODY_PARA_GAP, type Run,
+  startLetter, finishLetter, drawParagraph, BODY_LEADING, BODY_PARA_GAP, type Run,
 } from './letterhead'
 
 export interface EmploymentLetterData {
@@ -46,8 +45,10 @@ export async function renderEmploymentLetter(d: EmploymentLetterData): Promise<U
   })
 
   let y = l.bodyStart
+  let lastBaseline = y
   const para = (runs: Run[], gap = BODY_PARA_GAP) => {
     y = drawParagraph(l.page, l.fonts, runs, y)
+    lastBaseline = y + BODY_LEADING
     y -= gap
   }
 
@@ -57,34 +58,15 @@ export async function renderEmploymentLetter(d: EmploymentLetterData): Promise<U
       + ' We were impressed with your profile and are excited to welcome you to our team.',
   }])
 
-  para([{ text: 'Below are the details of your employment:' }], 4)
-
-  // Joining date and probation are plain lines; the four terms below them are
-  // bulleted. That asymmetry is how the issued letter reads.
-  para([{ text: `Joining Date: ${ordinalDate(d.joiningDate)}` }], 0)
+  // The terms as one paragraph, not a bulleted list: HR asked for it this way,
+  // and the list's bullet glyph printed as an empty box.
   para([{
-    text: `Probation Period: ${d.probationMonths ?? 3} months, dependent upon your performance`,
-  }], 2)
-
-  const bulletIndent = 14
-  const bullets = [
-    `Compensation: PKR ${d.compensation > 0 ? d.compensation.toLocaleString('en-US') : '[Compensation]'} per month`,
-    `Timings: ${d.timings}`,
-    `Working Days: ${d.workingDays}`,
-    'Office Location: Convertt, Mega Tower – 63-B Main Boulevard Gulberg, 5th Floor, Office No. 201, Lahore',
-  ]
-  for (const b of bullets) {
-    l.page.drawText('●', {
-      x: LEFT_MARGIN, y, size: 7, font: l.fonts.regular,
-    })
-    y = drawParagraph(l.page, l.fonts, [{ text: b }], y, {
-      x: LEFT_MARGIN + bulletIndent,
-      maxWidth: MAX_WIDTH - bulletIndent,
-      size: BODY_FONT_SIZE,
-      leading: BODY_LEADING,
-    })
-  }
-  y -= BODY_PARA_GAP
+    text: `Your joining date is ${ordinalDate(d.joiningDate)}, and your probation period is`
+      + ` ${d.probationMonths ?? 3} months, dependent upon your performance. Your compensation is`
+      + ` PKR ${d.compensation > 0 ? d.compensation.toLocaleString('en-US') : '[Compensation]'} per month,`
+      + ` your timings are ${d.timings}, and your working days are ${d.workingDays}. You will be based at`
+      + ' our office: Convertt, Mega Tower – 63-B Main Boulevard Gulberg, 5th Floor, Office No. 201, Lahore.',
+  }])
 
   para([{
     text: 'Convertt is a CRO-focused design and development agency working with ecommerce brands,'
@@ -97,5 +79,5 @@ export async function renderEmploymentLetter(d: EmploymentLetterData): Promise<U
   para([{ text: 'We look forward to having you onboard and working together towards shared success.' }])
   para([{ text: 'Congratulations once again!' }])
 
-  return finishLetter(l)
+  return finishLetter(l, undefined, { lastBaseline })
 }

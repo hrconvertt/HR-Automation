@@ -215,19 +215,38 @@ export async function startLetter(
   return { pdf, page, fonts, bodyStart: textY(BODY_TOP_FROM_TOP, BODY_FONT_SIZE) }
 }
 
-/** Place the signature block at its measured position and serialise. */
+/** Clear room between the last line of the body and the signatory's name, for
+ *  a signature with the company stamp beside or over it (a stamp is about an
+ *  inch and a half across). */
+const SIGN_AND_STAMP_SPACE = 110
+/** The lowest the name may sit and still leave the title clear of the bottom bar. */
+const SIGNATURE_NAME_LOWEST_TOP = 760
+
+/**
+ * Place the signature block and serialise.
+ *
+ * It sits at its measured position unless the body runs long, in which case
+ * it moves down just far enough to keep SIGN_AND_STAMP_SPACE clear above it.
+ * Pass the baseline of the body's last line as `lastBaseline`.
+ */
 export async function finishLetter(
   l: LetterheadPage,
   signatory = { name: 'Syed Khawer', title: 'Director Administration' },
+  { lastBaseline }: { lastBaseline?: number } = {},
 ): Promise<Uint8Array> {
+  let nameTop = SIGNATURE_NAME_TOP_FROM_TOP
+  if (lastBaseline !== undefined) {
+    nameTop = Math.min(SIGNATURE_NAME_LOWEST_TOP, Math.max(nameTop, PAGE_H - lastBaseline + SIGN_AND_STAMP_SPACE))
+  }
+  const titleTop = nameTop + (SIGNATURE_TITLE_TOP_FROM_TOP - SIGNATURE_NAME_TOP_FROM_TOP)
   l.page.drawText(signatory.name, {
     x: LEFT_MARGIN,
-    y: textY(SIGNATURE_NAME_TOP_FROM_TOP, SIGNATURE_NAME_FONT_SIZE),
+    y: textY(nameTop, SIGNATURE_NAME_FONT_SIZE),
     size: SIGNATURE_NAME_FONT_SIZE, font: l.fonts.bold, color: TEXT_BLACK,
   })
   l.page.drawText(signatory.title, {
     x: LEFT_MARGIN,
-    y: textY(SIGNATURE_TITLE_TOP_FROM_TOP, SIGNATURE_TITLE_FONT_SIZE),
+    y: textY(titleTop, SIGNATURE_TITLE_FONT_SIZE),
     size: SIGNATURE_TITLE_FONT_SIZE, font: l.fonts.regular, color: TEXT_BLACK,
   })
   return l.pdf.save()
