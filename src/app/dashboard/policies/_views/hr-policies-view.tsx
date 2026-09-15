@@ -36,7 +36,6 @@ export default function HRPoliciesView() {
   const router = useRouter()
   const [policies, setPolicies] = useState<Policy[]>([])
   const [loading, setLoading] = useState(true)
-  const [showArchived, setShowArchived] = useState(false)
 
   // Search and category filtering happen in the library, on the full list.
   const loadPolicies = useCallback(() => {
@@ -90,8 +89,9 @@ export default function HRPoliciesView() {
     await loadPolicies()
   }
 
+  // Archived policies are passed to the library too; it lists them under their
+  // own Archived entry, apart from the live categories.
   const archivedCount = policies.filter((p) => p.status === 'ARCHIVED').length
-  const visible = policies.filter((p) => showArchived || p.status !== 'ARCHIVED')
   // "Live" = workflow ACTIVE + legacy PUBLISHED rows.
   const liveCount = policies.filter((p) => p.status === 'ACTIVE' || p.status === 'PUBLISHED').length
   const draftCount = policies.filter((p) => p.status === 'DRAFT').length
@@ -103,7 +103,7 @@ export default function HRPoliciesView() {
           <h1 className="text-2xl font-bold text-gray-900">Policies</h1>
           <p className="text-gray-500 text-sm mt-0.5">
             {liveCount} live for employees{draftCount ? ` · ${draftCount} draft${draftCount === 1 ? '' : 's'} only you can see` : ''}
-            {archivedCount ? ` · ${archivedCount} archived (tick Include archived policies to see, restore or delete them)` : ''}.
+            {archivedCount ? ` · ${archivedCount} archived (open Archived policies, below the categories, to restore or delete them)` : ''}.
             {' '}Choose a category, then a policy to read it on the right. New policy opens the guided builder.
           </p>
         </div>
@@ -114,24 +114,13 @@ export default function HRPoliciesView() {
 
       <Suspense fallback={<div className="py-10 text-center text-sm text-slate-400">Loading…</div>}>
         <PolicyLibrary
-          policies={visible}
+          policies={policies}
           loading={loading}
           onEdit={(id) => router.push(`/dashboard/policies/${id}/edit`)}
           onArchive={handleArchive}
           onRestore={handleRestore}
           onDeletePermanently={handleDeletePermanently}
           emptyText="No policies yet. Use New policy to add one."
-          railFooter={
-            <label className="flex items-center gap-2 px-2 text-sm text-slate-700 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="h-4 w-4"
-                checked={showArchived}
-                onChange={(e) => setShowArchived(e.target.checked)}
-              />
-              Include archived policies
-            </label>
-          }
         />
       </Suspense>
     </div>

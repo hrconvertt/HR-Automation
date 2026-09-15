@@ -27,6 +27,7 @@ const CATEGORY_ORDER = ['CODE_OF_CONDUCT', 'SECURITY', 'IT', 'COMPENSATION', 'LE
 
 const CATEGORY_LABEL: Record<string, string> = {
   ALL: 'All policies',
+  ARCHIVED: 'Archived',
   CODE_OF_CONDUCT: 'Code of Conduct',
   SECURITY: 'Confidentiality & Security',
   IT: 'IT',
@@ -86,9 +87,15 @@ export function PolicyLibrary({
     [policies, q],
   )
 
+  // Archived policies are kept out of the categories and counted on their own,
+  // under a separate Archived entry — only HR is ever sent any.
+  const hasArchived = policies.some((p) => p.status === 'ARCHIVED')
+  const liveMatching = matching.filter((p) => p.status !== 'ARCHIVED')
+  const archivedMatching = matching.filter((p) => p.status === 'ARCHIVED')
+
   const counts = useMemo(() => {
     const c: Record<string, number> = {}
-    for (const p of matching) c[p.category] = (c[p.category] ?? 0) + 1
+    for (const p of matching) if (p.status !== 'ARCHIVED') c[p.category] = (c[p.category] ?? 0) + 1
     return c
   }, [matching])
   const categories = [
@@ -96,14 +103,16 @@ export function PolicyLibrary({
     ...Object.keys(counts).filter((c) => !CATEGORY_ORDER.includes(c)).sort(),
   ]
 
-  const inCategory = matching
-    .filter((p) => category === 'ALL' || p.category === category)
+  const inCategory = (category === 'ARCHIVED' ? archivedMatching : liveMatching)
+    .filter((p) => category === 'ALL' || category === 'ARCHIVED' || p.category === category)
     .sort((a, b) => a.title.localeCompare(b.title))
 
   const selectedId = searchParams.get('policy')
   const selected =
     inCategory.find((p) => p.id === selectedId) ??
-    policies.find((p) => p.id === selectedId) ??
+    // A link to a policy opens it, but only in its own side of the list: the
+    // Archived entry never shows a live policy, and a category never an archived one.
+    policies.find((p) => p.id === selectedId && (category === 'ARCHIVED') === (p.status === 'ARCHIVED')) ??
     inCategory[0] ??
     null
 
@@ -135,7 +144,7 @@ export function PolicyLibrary({
         <ul className="space-y-0.5">
           {['ALL', ...categories].map((c) => {
             const on = category === c
-            const n = c === 'ALL' ? matching.length : counts[c] ?? 0
+            const n = c === 'ALL' ? liveMatching.length : counts[c] ?? 0
             return (
               <li key={c}>
                 <button
@@ -153,6 +162,24 @@ export function PolicyLibrary({
             )
           })}
         </ul>
+        {hasArchived && (
+          <div className="mt-4 border-t border-slate-100 pt-3">
+            <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Archived</p>
+            <button
+              type="button"
+              onClick={() => setCategory('ARCHIVED')}
+              aria-pressed={category === 'ARCHIVED'}
+              className={`flex w-full items-center justify-between rounded-md px-2.5 py-2 text-left text-sm transition-colors ${
+                category === 'ARCHIVED' ? 'bg-slate-900 font-medium text-white' : 'text-slate-700 hover:bg-slate-100'
+              }`}
+            >
+              <span>Archived policies</span>
+              <span className={`text-xs tabular-nums ${category === 'ARCHIVED' ? 'text-slate-300' : 'text-slate-400'}`}>
+                {archivedMatching.length}
+              </span>
+            </button>
+          </div>
+        )}
         {railFooter && <div className="mt-auto border-t border-slate-100 pt-3">{railFooter}</div>}
       </aside>
 
@@ -169,7 +196,7 @@ export function PolicyLibrary({
           <ul>
             {inCategory.map((p) => {
               const on = selected?.id === p.id
-              const tag = NOT_LIVE[p.status]
+              const tag = category === 'ARCHIVED' ? undefined : NOT_LIVE[p.status]
               return (
                 <li key={p.id}>
                   <button
