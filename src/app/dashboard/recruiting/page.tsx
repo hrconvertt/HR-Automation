@@ -273,6 +273,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
             data={workspace}
             sub={sp.sub === 'details' ? 'details' : 'candidates'}
             canAct={isHR || isManager}
+            canEditColumns={isHR}
           />
         </TabsContent>
 

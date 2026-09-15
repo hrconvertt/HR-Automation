@@ -207,7 +207,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       openToRemote,
       skills,
       languages,
-      expectedSalary: kept('expectedSalary') as number | null,
+      expectedSalary: kept('expectedSalary') != null ? String(kept('expectedSalary')) : null,
       noticePeriod: kept('noticePeriod') as string | null,
       answers: answers.length ? JSON.stringify(answers) : null,
     },

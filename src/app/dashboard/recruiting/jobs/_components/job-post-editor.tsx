@@ -18,6 +18,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { AlertCircle, ArrowLeft, CheckCircle2, ExternalLink, Eye } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { ManpowerFormButton } from '@/components/recruiting/manpower-form-button'
 import { safeFetch } from '@/lib/safe-fetch'
 import { missingForPublish } from '@/lib/job-post'
 import {
@@ -55,7 +56,7 @@ export function JobPostEditor({ job: initial, step, isHR, canEdit, departments, 
   const [job, setJob] = useState(initial)
   const [saved, setSaved] = useState(initial)
   const [busy, setBusy] = useState<null | 'draft' | 'continue' | 'publish'>(null)
-  const [error, setError] = useState<{ text: string; formHref?: string } | null>(null)
+  const [error, setError] = useState<{ text: string; needsForm?: boolean } | null>(null)
   const [justSaved, setJustSaved] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
 
@@ -117,7 +118,7 @@ export function JobPostEditor({ job: initial, step, isHR, canEdit, departments, 
     if (!r.ok) {
       setError({
         text: r.error ?? 'Could not publish the job.',
-        formHref: r.data?.needsForm ? `/dashboard/recruiting/requisitions/${job.id}` : undefined,
+        needsForm: !!r.data?.needsForm,
       })
       return
     }
@@ -196,13 +197,18 @@ export function JobPostEditor({ job: initial, step, isHR, canEdit, departments, 
             <AlertCircle className="w-4 h-4 mt-0.5 shrink-0" />
             <span>
               {error.text}
-              {error.formHref && (
-                <>
-                  {' '}
-                  <Link href={error.formHref} className="font-medium underline underline-offset-2">
-                    Open the requisition form
-                  </Link>
-                </>
+              {/* The form page takes the form's own id, and a new job has no
+                  form yet — so this is the board's Form button, which starts
+                  one on first click and opens it after. */}
+              {error.needsForm && job.id && (
+                <span className="mt-2 flex items-center gap-2">
+                  Requisition form:
+                  <ManpowerFormButton
+                    requisitionId={job.id}
+                    existingFormId={details?.manpowerForm?.id ?? null}
+                    status={details?.manpowerForm?.status ?? null}
+                  />
+                </span>
               )}
             </span>
           </div>
@@ -271,6 +277,7 @@ export function JobPostEditor({ job: initial, step, isHR, canEdit, departments, 
           published={published}
           isHR={isHR}
           gateReason={details.gateReason}
+          manpowerForm={details.manpowerForm}
           poolMatches={details.poolMatches}
           referralsAskedAt={details.referralsAskedAt}
           onPublish={canPublish ? publish : undefined}

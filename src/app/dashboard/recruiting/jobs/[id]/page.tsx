@@ -35,6 +35,7 @@ export default async function JobPostPage({ params, searchParams }: {
         orderBy: { createdAt: 'asc' },
       },
       knockoutCriteria: { select: { type: true, isHard: true } },
+      manpowerForm: { select: { id: true, status: true } },
     },
   })
   if (!req || req.status === 'REJECTED') notFound()
@@ -104,6 +105,7 @@ export default async function JobPostPage({ params, searchParams }: {
         employees: employees.map((e) => ({ id: e.id, name: e.fullName, designation: e.designation })),
         rounds: parseRounds(req.interviewRounds),
         gateReason: gate.ok ? null : gate.reason,
+        manpowerForm: req.manpowerForm,
         poolMatches,
         referralsAskedAt: asked?.value ?? null,
       }}

@@ -14,6 +14,7 @@ import { useEffect, useState } from 'react'
 import {
   AtSign, Banknote, Check, Code2, Copy, Globe, Link2, Mail, MessageCircle, Rss, Share2, Star, Users,
 } from 'lucide-react'
+import { ManpowerFormButton } from '@/components/recruiting/manpower-form-button'
 import { safeFetch } from '@/lib/safe-fetch'
 
 interface Props {
@@ -23,6 +24,7 @@ interface Props {
   published: boolean
   isHR: boolean
   gateReason: string | null
+  manpowerForm: { id: string; status: string } | null
   poolMatches: number
   referralsAskedAt: string | null
   onPublish?: () => void
@@ -84,7 +86,7 @@ function Share({ href, label, disabled }: { href: string; label: string; disable
 }
 
 export function StepFindCandidates({
-  jobId, title, status, published, isHR, gateReason, poolMatches, referralsAskedAt, onPublish,
+  jobId, title, status, published, isHR, gateReason, manpowerForm, poolMatches, referralsAskedAt, onPublish,
 }: Props) {
   const [origin, setOrigin] = useState('')
   const [referral, setReferral] = useState<{ busy?: boolean; text?: string }>({})
@@ -130,11 +132,13 @@ export function StepFindCandidates({
             </>
           )}
           {isHR && gateReason && (
-            <p className="mt-1 text-amber-800">
-              Before it can be published: {gateReason}{' '}
-              <Link href={`/dashboard/recruiting/requisitions/${jobId}`} className="font-medium underline underline-offset-2">
-                Open the requisition form
-              </Link>
+            <p className="mt-1 text-amber-800 flex flex-wrap items-center gap-2">
+              Before it can be published: {gateReason}
+              <ManpowerFormButton
+                requisitionId={jobId}
+                existingFormId={manpowerForm?.id ?? null}
+                status={manpowerForm?.status ?? null}
+              />
             </p>
           )}
         </div>

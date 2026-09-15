@@ -11,6 +11,9 @@
  */
 import { prisma } from '@/lib/prisma'
 import { STAGES, type StageCount } from './recruiting-dashboard'
+import {
+  parseScreening, parseScreeningColumns, trackerValues, type TrackerKey,
+} from '@/lib/candidate-tracker'
 
 /** Statuses that mean the role is real and worth listing. */
 const LIVE = ['OPEN', 'PAUSED', 'FILLED', 'CLOSED']
@@ -57,11 +60,12 @@ export interface WorkspaceCandidate {
   openToRemote: boolean
   /** JSON array on the record; parsed to a list here. */
   skills: string[]
-  /** Asked only when the job's application form switches them on. */
-  expectedSalary: number | null
-  noticePeriod: string | null
   /** The job's own application questions, as answered. */
   answers: { question: string; answer: string }[]
+  /** Every tracker column as text — see src/lib/candidate-tracker.ts. */
+  tracker: Record<TrackerKey, string | null>
+  /** The position's own screening columns, by label. */
+  screening: Record<string, string>
 }
 
 export interface WorkspaceDetail {
@@ -82,6 +86,8 @@ export interface WorkspaceDetail {
   requestReason: string | null
   requestNote: string | null
   manpowerFormId: string | null
+  /** The position's own tracker columns, between Education and Verdict. */
+  screeningColumns: string[]
   /** Stage counts for this requisition alone. */
   stages: StageCount[]
   active: WorkspaceCandidate[]
@@ -141,6 +147,14 @@ export async function requisitionWorkspace(
           source: true, educationLevel: true, location: true,
           workAuthorization: true, openToRemote: true, skills: true,
           expectedSalary: true, noticePeriod: true, answers: true,
+          // The recruitment tracker's columns.
+          experienceSummary: true, pastCompanies: true, education: true,
+          verdict: true, evaluation: true, whyLeaving: true, currentSalary: true,
+          offerResponse: true, onsiteWillingness: true, easyCommute: true,
+          communication: true, hrNotes: true, callOutcome: true,
+          interviewType: true, interviewDate: true, interviewer: true,
+          leadFeedback: true, finalMeeting: true, finalMeetingDate: true,
+          finalMeetingStatus: true, screening: true,
         },
       },
     },
@@ -189,8 +203,8 @@ export async function requisitionWorkspace(
     workAuthorization: c.workAuthorization,
     openToRemote: c.openToRemote,
     skills: parseSkills(c.skills),
-    expectedSalary: c.expectedSalary,
-    noticePeriod: c.noticePeriod,
+    tracker: trackerValues(c),
+    screening: parseScreening(c.screening),
     answers: (() => {
       try {
         const v: unknown = c.answers ? JSON.parse(c.answers) : []
@@ -240,6 +254,7 @@ export async function requisitionWorkspace(
       requestReason: full.requestReason,
       requestNote: full.requestNote,
       manpowerFormId: full.manpowerForm?.id ?? null,
+      screeningColumns: parseScreeningColumns(full.screeningColumns),
       stages: STAGES.map((s) => ({
         key: s.key,
         label: s.label,

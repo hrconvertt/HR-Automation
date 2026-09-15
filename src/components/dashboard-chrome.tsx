@@ -1568,7 +1568,11 @@ export default function DashboardChrome({
             {/* Use the width that exists. Capped well above a typical monitor so
                 ultrawide screens do not stretch prose to unreadable line lengths,
                 but a 1920px display no longer loses ~320px a side to margin. */}
-            <div className="w-full max-w-[1800px] mx-auto">{children}</div>
+            {/* Recruiting is the exception: its sheets of candidates want every
+                pixel, so its layout runs edge to edge. */}
+            <div className={`w-full mx-auto ${pathname.startsWith('/dashboard/recruiting') ? '' : 'max-w-[1800px]'}`}>
+              {children}
+            </div>
           </div>
         </main>
       </div>
