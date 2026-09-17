@@ -27,8 +27,11 @@ import {
 } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
+import {
+  NoticeRecordSection, RecordNoticeDialog, DueBadge, fmtPkDate, fmtPkDateTime, VIA_LABEL, type NoticeRecord,
+} from './show-cause-record'
 
-interface Notice {
+interface Notice extends Omit<NoticeRecord, 'employee'> {
   id: string
   issueType: string
   status: string
@@ -60,6 +63,7 @@ interface Notice {
     id: string
     employeeCode: string
     fullName: string
+    reportingManagerId: string | null
     department: { name: string } | null
   }
 }
@@ -95,6 +99,7 @@ export function ShowCausePanel({ role, employeeId, isPreviewMode = false }: Prop
   const [notices, setNotices] = useState<Notice[]>([])
   const [loading, setLoading] = useState(true)
   const [flagOpen, setFlagOpen] = useState(false)
+  const [recordOpen, setRecordOpen] = useState(false)
   const [selected, setSelected] = useState<Notice | null>(null)
 
   const isHR = role === 'HR_ADMIN' && !isPreviewMode
@@ -119,15 +124,24 @@ export function ShowCausePanel({ role, employeeId, isPreviewMode = false }: Prop
             {isManager
               ? 'Flag a concern with a direct report → log the meeting outcome → escalate to HR for a formal Show Cause if the pattern persists.'
               : isHR
-                ? 'Review manager-flagged concerns and issue formal Show Cause Notices.'
-                : 'View any Show Cause matters raised about you and submit your response.'}
+                ? 'Review manager-flagged concerns, issue formal Show Cause Notices, and record notices already sent.'
+                : role === 'EXECUTIVE'
+                  ? 'Every Show Cause Notice, with its dates and who was kept informed.'
+                  : 'Show Cause matters raised about you, or that you are kept informed of.'}
           </p>
         </div>
-        {(isHR || isManager) && (
-          <Button onClick={() => setFlagOpen(true)}>
-            <Plus className="w-4 h-4 mr-1" /> Flag Concern
-          </Button>
-        )}
+        <div className="flex gap-2 flex-wrap">
+          {isHR && (
+            <Button variant="outline" onClick={() => setRecordOpen(true)}>
+              <FileWarning className="w-4 h-4 mr-1" /> Record issued notice
+            </Button>
+          )}
+          {(isHR || isManager) && (
+            <Button onClick={() => setFlagOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" /> Flag Concern
+            </Button>
+          )}
+        </div>
       </div>
 
       {loading ? (
@@ -140,16 +154,17 @@ export function ShowCausePanel({ role, employeeId, isPreviewMode = false }: Prop
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {notices.map((n) => (
-            <NoticeCard
-              key={n.id}
-              notice={n}
-              isHR={isHR}
-              isManager={isManager}
-              isOwn={n.employee.id === employeeId}
-              onClick={() => setSelected(n)}
-            />
+        <div className="space-y-4">
+          {groupByMatter(notices).map((g) => g.caseRef ? (
+            <MatterGroup key={g.key} caseRef={g.caseRef} notices={g.notices}>
+              {g.notices.map((n) => (
+                <NoticeCard key={n.id} notice={n} isHR={isHR} isManager={isManager}
+                  isOwn={n.employee.id === employeeId} onClick={() => setSelected(n)} inGroup />
+              ))}
+            </MatterGroup>
+          ) : (
+            <NoticeCard key={g.key} notice={g.notices[0]} isHR={isHR} isManager={isManager}
+              isOwn={g.notices[0].employee.id === employeeId} onClick={() => setSelected(g.notices[0])} />
           ))}
         </div>
       )}
@@ -159,6 +174,13 @@ export function ShowCausePanel({ role, employeeId, isPreviewMode = false }: Prop
           isHR={isHR}
           onClose={() => setFlagOpen(false)}
           onCreated={() => { fetchNotices(); setFlagOpen(false) }}
+        />
+      )}
+
+      {recordOpen && (
+        <RecordNoticeDialog
+          onClose={() => setRecordOpen(false)}
+          onCreated={() => { fetchNotices(); setRecordOpen(false) }}
         />
       )}
 
@@ -178,8 +200,56 @@ export function ShowCausePanel({ role, employeeId, isPreviewMode = false }: Prop
 
 // ─── Notice card ─────────────────────────────────────────────────────────────
 
-function NoticeCard({ notice, onClick }: {
-  notice: Notice; isHR: boolean; isManager: boolean; isOwn: boolean; onClick: () => void;
+/**
+ * Notices issued over the same matter sit together: four people given the
+ * same notice about one project are one case to follow up, not four rows.
+ * Order follows the list (newest issue first); single notices stay as they are.
+ */
+function groupByMatter(notices: Notice[]): { key: string; caseRef: string | null; notices: Notice[] }[] {
+  const out: { key: string; caseRef: string | null; notices: Notice[] }[] = []
+  const byRef = new Map<string, { key: string; caseRef: string | null; notices: Notice[] }>()
+  for (const n of notices) {
+    const ref = n.caseRef?.trim()
+    if (!ref) { out.push({ key: n.id, caseRef: null, notices: [n] }); continue }
+    const k = ref.toLowerCase()
+    const g = byRef.get(k)
+    if (g) g.notices.push(n)
+    else { const ng = { key: `case:${k}`, caseRef: ref, notices: [n] }; byRef.set(k, ng); out.push(ng) }
+  }
+  return out
+}
+
+function MatterGroup({ caseRef, notices, children }: { caseRef: string; notices: Notice[]; children: React.ReactNode }) {
+  function same(f: (n: Notice) => string | null): string | null {
+    const first = f(notices[0])
+    return notices.every((n) => f(n) === first) ? first : null
+  }
+  const issued = same((n) => (n.issueDate ? fmtPkDate(n.issueDate) : null))
+  const due = same((n) => (n.deadline ? fmtPkDate(n.deadline, true) : null))
+  const replied = notices.filter((n) => n.responseAt).length
+  const allReplied = replied === notices.length
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50/50">
+      <div className="px-4 py-3 border-b border-slate-200 flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500">Matter</p>
+          <p className="font-semibold text-slate-900">{caseRef}</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            {notices.length} notice{notices.length === 1 ? '' : 's'}
+            {issued && <> · issued {issued}</>}
+            {due && <> · reply due {due}</>}
+            {' · '}{replied} of {notices.length} replied
+          </p>
+        </div>
+        {due && !allReplied && <DueBadge notice={{ deadline: notices[0].deadline, responseAt: null, status: 'ISSUED' }} />}
+      </div>
+      <div className="p-2 space-y-2">{children}</div>
+    </div>
+  )
+}
+
+function NoticeCard({ notice, onClick, inGroup = false }: {
+  notice: Notice; isHR: boolean; isManager: boolean; isOwn: boolean; onClick: () => void; inGroup?: boolean;
 }) {
   const meta = STATUS_META[notice.status] ?? STATUS_META.MEETING_REQUESTED
   const Icon = meta.icon ?? MessageSquare
@@ -197,13 +267,32 @@ function NoticeCard({ notice, onClick }: {
               <Badge variant={meta.tone}><Icon className="w-3 h-3 mr-1 inline" />{meta.label}</Badge>
               {notice.occurrenceNo > 1 && <span className="text-[10px] text-slate-700 font-semibold">Occurrence #{notice.occurrenceNo}</span>}
             </div>
-            <p className="text-xs text-slate-500 mt-1 line-clamp-2">
-              {notice.meetingConcerns || notice.description || notice.escalationReason || 'No description'}
-            </p>
-            <p className="text-[11px] text-slate-400 mt-1">
-              {notice.requestedByName && <>Flagged by <strong>{notice.requestedByName}</strong> · </>}
-              {new Date(notice.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-            </p>
+            {!inGroup && notice.subject && <p className="text-sm text-slate-800 mt-1">{notice.subject}</p>}
+            {!notice.subject && (
+              <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                {notice.meetingConcerns || notice.description || notice.escalationReason || 'No description'}
+              </p>
+            )}
+            {notice.issueDate ? (
+              <div className="mt-1.5 flex items-center gap-x-3 gap-y-1 flex-wrap text-[11px] text-slate-600">
+                <span>Issued <strong>{fmtPkDate(notice.issueDate)}</strong></span>
+                {notice.deliveredAt && (
+                  <span>Sent {fmtPkDateTime(notice.deliveredAt)}{notice.deliveredVia ? ` ${VIA_LABEL[notice.deliveredVia] ?? ''}` : ''}</span>
+                )}
+                {notice.deadline && <span>Reply due <strong>{fmtPkDate(notice.deadline, true)}</strong></span>}
+                <DueBadge notice={notice} />
+              </div>
+            ) : (
+              <p className="text-[11px] text-slate-400 mt-1">
+                {notice.requestedByName && <>Flagged by <strong>{notice.requestedByName}</strong> · </>}
+                {fmtPkDate(notice.createdAt)}
+              </p>
+            )}
+            {notice.informed?.length > 0 && (
+              <p className="text-[11px] text-slate-500 mt-1">
+                Kept informed: {notice.informed.map((p) => `${p.fullName}${p.asLead ? ' (lead)' : ''}`).join(', ')}
+              </p>
+            )}
           </div>
         </div>
         {/* Progress dots */}
@@ -406,6 +495,8 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
           </p>
         </DialogHeader>
 
+        <NoticeRecordSection notice={notice} isHR={isHR} onSaved={onUpdated} />
+
         {/* Timeline */}
         <div className="space-y-3 text-sm">
           {notice.meetingRequestedAt && (
@@ -447,7 +538,7 @@ function NoticeDetailDialog({ notice, isHR, isManager, isOwn, onClose, onUpdated
               by={notice.issuedBy ?? 'HR'}
               at={notice.issueDate}
               body={notice.description}
-              extra={notice.deadline && <>Response due by <strong>{new Date(notice.deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</strong></>}
+              extra={notice.deadline && <>Response due by <strong>{fmtPkDate(notice.deadline, true)}</strong></>}
             />
           )}
           {notice.responseAt && (
@@ -806,7 +897,7 @@ function TimelineEntry({ icon: Icon, tone, title, by, at, body, extra }: {
         <Icon className="w-3.5 h-3.5" />
         <p className="text-sm font-semibold">{title}</p>
         <span className="text-[11px] opacity-70 ml-auto">
-          {by}{at && ` · ${new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}`}
+          {by}{at && ` · ${new Date(at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })}`}
         </span>
       </div>
       {body && <p className="text-sm whitespace-pre-line opacity-90">{body}</p>}

@@ -67,6 +67,7 @@ export async function listEmployees(opts: ListEmployeesOpts) {
       designation: true,
       employeeType: true,
       status: true,
+      reportingManagerId: true,
       department: { select: { name: true } },
     },
     orderBy: { fullName: 'asc' },
