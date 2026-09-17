@@ -85,7 +85,7 @@ export function suggestMapping(headers: string[], screeningColumns: string[]): M
   for (const [target, words] of Object.entries(SYNONYMS)) {
     for (const w of words) if (!byLabel.has(w)) byLabel.set(w, target as MapTarget)
   }
-  return headers.map((h) => {
+  return headers.map((h): MapTarget => {
     const n = norm(h)
     if (!n) return ''
     const hit = byLabel.get(n)

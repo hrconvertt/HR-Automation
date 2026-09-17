@@ -8,8 +8,9 @@
  * card, but the card leads with what matters day to day: the candidates at
  * each stage, where the job is advertised, and when somebody last applied.
  *
- * Drafts and finished jobs sit behind "Include N …" links so the board opens
- * on the roles actually being hired for.
+ * Every requisition is on the board — open, waiting, drafts, paused, filled and
+ * closed — with a status filter above it. Hiding the finished ones by default
+ * left a board of one card whenever only one role was open.
  */
 
 import Link from 'next/link'
@@ -51,21 +52,18 @@ const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one :
 export function JobBoard({ jobs, isHR }: { jobs: BoardJob[]; isHR: boolean }) {
   const [q, setQ] = useState('')
   const [dept, setDept] = useState('')
-  const [showDrafts, setShowDrafts] = useState(false)
-  const [showClosed, setShowClosed] = useState(false)
+  const [status, setStatus] = useState('')
 
   const departments = useMemo(
     () => [...new Set(jobs.map((j) => j.department).filter((d): d is string => !!d))].sort(),
     [jobs],
   )
-  const drafts = jobs.filter((j) => j.status === 'DRAFT').length
-  const closed = jobs.filter((j) => j.status === 'CLOSED' || j.status === 'FILLED').length
+  const countOf = (s: string) => jobs.filter((j) => j.status === s).length
   const awaiting = jobs.filter((j) => j.status === 'PENDING').length
 
   const needle = q.trim().toLowerCase()
   const shown = jobs
-    .filter((j) => showDrafts || j.status !== 'DRAFT')
-    .filter((j) => showClosed || (j.status !== 'CLOSED' && j.status !== 'FILLED'))
+    .filter((j) => !status || j.status === status)
     .filter((j) => !dept || j.department === dept)
     .filter((j) => !needle || j.title.toLowerCase().includes(needle))
     .sort((a, b) => (RANK[a.status] ?? 9) - (RANK[b.status] ?? 9))
@@ -92,18 +90,17 @@ export function JobBoard({ jobs, isHR }: { jobs: BoardJob[]; isHR: boolean }) {
           <option value="">All departments</option>
           {departments.map((d) => <option key={d} value={d}>{d}</option>)}
         </select>
-        {drafts > 0 && (
-          <button type="button" onClick={() => setShowDrafts((v) => !v)}
-            className="text-sm text-slate-700 underline underline-offset-2 hover:text-slate-900">
-            {showDrafts ? 'Hide' : 'Include'} {plural(drafts, 'draft job', 'draft jobs')}
-          </button>
-        )}
-        {closed > 0 && (
-          <button type="button" onClick={() => setShowClosed((v) => !v)}
-            className="text-sm text-slate-700 underline underline-offset-2 hover:text-slate-900">
-            {showClosed ? 'Hide' : 'Include'} {plural(closed, 'closed or filled job', 'closed or filled jobs')}
-          </button>
-        )}
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value)}
+          aria-label="Status"
+          className="h-10 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-800"
+        >
+          <option value="">All statuses ({jobs.length})</option>
+          {Object.entries(STATUS_CHIP)
+            .filter(([k]) => countOf(k) > 0)
+            .map(([k, v]) => <option key={k} value={k}>{v.label} ({countOf(k)})</option>)}
+        </select>
       </div>
 
       <p className="text-xs text-slate-500 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -155,6 +152,9 @@ function JobCard({ job, isHR }: { job: BoardJob; isHR: boolean }) {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          {job.status !== 'DRAFT' && job.status !== 'PENDING' && (
+            <Link href={`/dashboard/recruiting/jobs/${job.id}/candidates`} className={outlineLink}>View candidates</Link>
+          )}
           {job.status === 'DRAFT'
             ? <Link href={editHref} className={outlineLink}>Continue writing</Link>
             : <Link href={`${editHref}?step=find`} className={outlineLink}>Find Candidates</Link>}
@@ -174,9 +174,9 @@ function JobCard({ job, isHR }: { job: BoardJob; isHR: boolean }) {
           return (
             <Link
               key={s.key}
-              href={`/dashboard/recruiting?tab=pipeline&role=${job.id}`}
+              href={`/dashboard/recruiting/jobs/${job.id}/candidates?stage=${s.key}`}
               className="py-3 text-center hover:bg-slate-50"
-              aria-label={`${n} ${s.label} — open the pipeline for ${job.title}`}
+              aria-label={`${n} ${s.label} — open ${job.title}'s candidates at ${s.label}`}
             >
               <p className={`text-xl tabular-nums ${n ? 'font-semibold text-slate-900' : 'text-slate-300'}`}>{n || '–'}</p>
               <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>

@@ -15,8 +15,8 @@ import {
   parseScreening, parseScreeningColumns, trackerValues, type TrackerKey,
 } from '@/lib/candidate-tracker'
 
-/** Statuses that mean the role is real and worth listing. */
-const LIVE = ['OPEN', 'PAUSED', 'FILLED', 'CLOSED']
+/** Every requisition that exists as a role — drafts too, so CVs can be read into one before it is posted. */
+const LIVE = ['DRAFT', 'OPEN', 'PAUSED', 'FILLED', 'CLOSED']
 
 export interface RailItem {
   id: string

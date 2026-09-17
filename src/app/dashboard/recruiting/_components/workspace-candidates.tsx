@@ -24,6 +24,8 @@ import { Button } from '@/components/ui/button'
 import { toastSuccess, toastError } from '@/components/ui/toaster'
 import { STAGE_COLORS } from './stage-donut'
 import { ScreeningColumnsDialog } from './screening-columns-dialog'
+import { ImportSheetDialog, UploadCvsDialog } from './intake-dialogs'
+import Link from 'next/link'
 import type { WorkspaceCandidate } from '@/lib/queries/requisition-workspace'
 import {
   SCREENING_AFTER, SCREENING_WIDTH, TRACKER_COLUMNS,
@@ -45,6 +47,7 @@ const STAGE_LABEL: Record<string, string> = {
 const SOURCE_LABEL: Record<string, string> = {
   REFERRAL: 'Referral', LINKEDIN: 'LinkedIn', PORTAL: 'Job portal',
   CAREERS_PAGE: 'Careers page', WALK_IN: 'Walk-in', OTHER: 'Other',
+  CV_UPLOAD: 'CV upload', SHEET_IMPORT: 'Screening sheet', BULK_UPLOAD: 'CV upload',
 }
 
 const DEGREE_LABEL: Record<string, string> = {
@@ -102,6 +105,7 @@ export function WorkspaceCandidates({
   const [busy, setBusy] = useState<string | null>(null)
   const [local, setLocal] = useState<Record<string, LocalEdits>>({})
   const [columnsOpen, setColumnsOpen] = useState(false)
+  const [intake, setIntake] = useState<null | 'cvs' | 'sheet'>(null)
 
   const pool = tab === 'active' ? active : inactive
 
@@ -378,6 +382,18 @@ export function WorkspaceCandidates({
           </button>
         )}
         <span className="ml-auto text-[11px] text-slate-400">{rows.length} of {pool.length} shown</span>
+        <Link
+          href={`/dashboard/recruiting/jobs/${requisitionId}/candidates`}
+          className="inline-flex items-center h-8 px-3 rounded-md border border-slate-200 bg-white text-xs font-medium text-slate-700 hover:bg-slate-50"
+        >
+          Candidate view
+        </Link>
+        {canAct && (
+          <>
+            <Button size="sm" variant="outline" onClick={() => setIntake('cvs')}>Upload CVs</Button>
+            <Button size="sm" variant="outline" onClick={() => setIntake('sheet')}>Import screened sheet</Button>
+          </>
+        )}
         {canEditColumns && (
           <Button size="sm" variant="outline" onClick={() => setColumnsOpen(true)}>
             Edit screening columns
@@ -569,6 +585,18 @@ export function WorkspaceCandidates({
             </span>
           )}
         </div>
+      )}
+
+      {intake === 'cvs' && (
+        <UploadCvsDialog
+          requisitionId={requisitionId}
+          screeningColumns={screeningColumns}
+          canEditColumns={canEditColumns}
+          onClose={() => setIntake(null)}
+        />
+      )}
+      {intake === 'sheet' && (
+        <ImportSheetDialog requisitionId={requisitionId} canEditColumns={canEditColumns} onClose={() => setIntake(null)} />
       )}
 
       {canEditColumns && columnsOpen && (

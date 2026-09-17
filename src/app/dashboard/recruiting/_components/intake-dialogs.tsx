@@ -27,7 +27,7 @@ async function readJson(res: Response): Promise<Record<string, unknown>> {
 
 // ─── Upload CVs ──────────────────────────────────────────────────────────────
 
-type FileState =
+export type FileState =
   | { state: 'waiting' }
   | { state: 'reading' }
   | { state: 'created'; name: string; score: number | null; verdict: string | null; knockedOut: boolean; readBy: string }
@@ -35,6 +35,72 @@ type FileState =
   | { state: 'error'; error: string }
 
 interface Suggestion { label: string; on: boolean }
+
+export const CV_ACCEPT = '.pdf,.docx,.txt,.md,image/png,image/jpeg,image/webp,image/gif'
+export const isCvFile = (f: File) => /\.(pdf|docx|txt|md|png|jpe?g|webp|gif)$/i.test(f.name)
+
+/**
+ * The upload queue: each CV its own request, three at a time. Files can be
+ * added while earlier ones are still being read.
+ */
+export function useCvUploads(requisitionId: string, onEach?: () => void) {
+  const [items, setItems] = useState<{ file: File; status: FileState }[]>([])
+  const queue = useRef<{ index: number; file: File }[]>([])
+  const running = useRef(0)
+  const count = useRef(0)
+  const onEachRef = useRef(onEach)
+  useEffect(() => { onEachRef.current = onEach }, [onEach])
+
+  const setStatus = (index: number, status: FileState) =>
+    setItems((all) => all.map((it, i) => (i === index ? { ...it, status } : it)))
+
+  async function pump() {
+    while (running.current < 3 && queue.current.length) {
+      const job = queue.current.shift()!
+      running.current++
+      setStatus(job.index, { state: 'reading' })
+      const body = new FormData()
+      body.append('file', job.file)
+      void fetch(`/api/recruiting/requisitions/${requisitionId}/intake/cv`, { method: 'POST', body })
+        .then(async (res) => {
+          const d = await readJson(res)
+          setStatus(job.index, !res.ok
+            ? { state: 'error', error: String(d.error ?? res.statusText) }
+            : d.status === 'updated'
+              ? { state: 'updated', name: String(d.fullName ?? ''), filled: Number(d.filled ?? 0) }
+              : {
+                  state: 'created', name: String(d.fullName ?? ''),
+                  score: typeof d.matchScore === 'number' ? d.matchScore : null,
+                  verdict: typeof d.verdict === 'string' ? d.verdict : null,
+                  knockedOut: d.knockedOut === true, readBy: String(d.readBy ?? ''),
+                })
+        })
+        .catch(() => setStatus(job.index, { state: 'error', error: 'The upload did not go through.' }))
+        .finally(() => {
+          running.current--
+          onEachRef.current?.()
+          void pump()
+        })
+    }
+  }
+
+  function add(files: File[]): string | null {
+    const ok = files.filter(isCvFile)
+    const big = ok.filter((f) => f.size > 4 * 1024 * 1024)
+    const take = ok.filter((f) => f.size <= 4 * 1024 * 1024)
+    for (const file of take) queue.current.push({ index: count.current++, file })
+    setItems((all) => [...all, ...take.map((file) => ({ file, status: { state: 'waiting' } as FileState }))])
+    void pump()
+    const skipped = files.length - ok.length
+    return [
+      big.length ? `Larger than 4 MB, not uploaded: ${big.map((f) => f.name).join(', ')}.` : '',
+      skipped ? `${skipped} file${skipped === 1 ? ' is' : 's are'} not a CV format (PDF, Word .docx, text or image).` : '',
+    ].filter(Boolean).join(' ') || null
+  }
+
+  const done = items.filter((i) => i.status.state !== 'waiting' && i.status.state !== 'reading').length
+  return { items, add, done, busy: done < items.length, clear: () => { if (running.current === 0 && queue.current.length === 0) { count.current = 0; setItems([]) } } }
+}
 
 export function UploadCvsDialog({ requisitionId, screeningColumns, canEditColumns, onClose }: {
   requisitionId: string
@@ -45,12 +111,13 @@ export function UploadCvsDialog({ requisitionId, screeningColumns, canEditColumn
   const router = useRouter()
   const inputRef = useRef<HTMLInputElement>(null)
   const [files, setFiles] = useState<File[]>([])
-  const [status, setStatus] = useState<Record<number, FileState>>({})
+  const uploads = useCvUploads(requisitionId)
   const [suggestions, setSuggestions] = useState<Suggestion[]>([])
   const [suggesting, setSuggesting] = useState(true)
   const [note, setNote] = useState<string | null>(null)
   const [custom, setCustom] = useState('')
-  const [phase, setPhase] = useState<'pick' | 'running' | 'done'>('pick')
+  const [started, setStarted] = useState(false)
+  const phase: 'pick' | 'running' | 'done' = !started ? 'pick' : uploads.busy || uploads.items.length === 0 ? 'running' : 'done'
   const [error, setError] = useState('')
   const [dragging, setDragging] = useState(false)
 
@@ -71,7 +138,7 @@ export function UploadCvsDialog({ requisitionId, screeningColumns, canEditColumn
 
   function addFiles(list: FileList | null) {
     if (!list) return
-    const incoming = Array.from(list).filter((f) => /\.(pdf|docx|txt|md|png|jpe?g|webp|gif)$/i.test(f.name))
+    const incoming = Array.from(list).filter(isCvFile)
     setFiles((prev) => {
       const seen = new Set(prev.map((f) => `${f.name}:${f.size}`))
       return [...prev, ...incoming.filter((f) => !seen.has(`${f.name}:${f.size}`))]
@@ -97,7 +164,7 @@ export function UploadCvsDialog({ requisitionId, screeningColumns, canEditColumn
     const tooBig = files.filter((f) => f.size > 4 * 1024 * 1024)
     if (tooBig.length) { setError(`Larger than 4 MB: ${tooBig.map((f) => f.name).join(', ')}. Remove them or compress them first.`); return }
 
-    setPhase('running')
+    setStarted(true)
     if (newColumns.length) {
       const res = await fetch(`/api/recruiting/requisitions/${requisitionId}/post`, {
         method: 'PUT',
@@ -107,45 +174,18 @@ export function UploadCvsDialog({ requisitionId, screeningColumns, canEditColumn
       if (!res.ok) {
         const d = await readJson(res)
         setError(`Could not add the columns: ${String(d.error ?? res.statusText)}`)
-        setPhase('pick')
+        setStarted(false)
         return
       }
     }
-
-    setStatus(Object.fromEntries(files.map((_, i) => [i, { state: 'waiting' } as FileState])))
-    let next = 0
-    async function worker() {
-      while (next < files.length) {
-        const i = next++
-        setStatus((s) => ({ ...s, [i]: { state: 'reading' } }))
-        const body = new FormData()
-        body.append('file', files[i])
-        try {
-          const res = await fetch(`/api/recruiting/requisitions/${requisitionId}/intake/cv`, { method: 'POST', body })
-          const d = await readJson(res)
-          const result: FileState = !res.ok
-            ? { state: 'error', error: String(d.error ?? res.statusText) }
-            : d.status === 'updated'
-              ? { state: 'updated', name: String(d.fullName ?? ''), filled: Number(d.filled ?? 0) }
-              : {
-                  state: 'created', name: String(d.fullName ?? ''),
-                  score: typeof d.matchScore === 'number' ? d.matchScore : null,
-                  verdict: typeof d.verdict === 'string' ? d.verdict : null,
-                  knockedOut: d.knockedOut === true, readBy: String(d.readBy ?? ''),
-                }
-          setStatus((s) => ({ ...s, [i]: result }))
-        } catch {
-          setStatus((s) => ({ ...s, [i]: { state: 'error', error: 'The upload did not go through.' } }))
-        }
-      }
-    }
-    // Three at a time: quick enough for a batch, gentle on the reader.
-    await Promise.all([worker(), worker(), worker()])
-    setPhase('done')
-    router.refresh()
+    uploads.add(files)
   }
 
-  const states = Object.values(status)
+  useEffect(() => {
+    if (phase === 'done') router.refresh()
+  }, [phase, router])
+
+  const states = uploads.items.map((i) => i.status)
   const counts = {
     created: states.filter((s) => s.state === 'created').length,
     updated: states.filter((s) => s.state === 'updated').length,
@@ -153,7 +193,7 @@ export function UploadCvsDialog({ requisitionId, screeningColumns, canEditColumn
     knocked: states.filter((s) => s.state === 'created' && s.knockedOut).length,
     textOnly: states.filter((s) => s.state === 'created' && s.readBy === 'text').length,
   }
-  const done = states.filter((s) => s.state !== 'waiting' && s.state !== 'reading').length
+  const done = uploads.done
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o && phase !== 'running') onClose() }}>
@@ -276,8 +316,7 @@ export function UploadCvsDialog({ requisitionId, screeningColumns, canEditColumn
               </p>
             )}
             <ul className="divide-y divide-slate-100 rounded-md border border-slate-100 max-h-[50vh] overflow-y-auto">
-              {files.map((f, i) => {
-                const s = status[i] ?? { state: 'waiting' }
+              {uploads.items.map(({ file: f, status: s }) => {
                 return (
                   <li key={`${f.name}:${f.size}`} className="flex items-center gap-2 px-3 py-2 text-sm">
                     {s.state === 'reading' || s.state === 'waiting'

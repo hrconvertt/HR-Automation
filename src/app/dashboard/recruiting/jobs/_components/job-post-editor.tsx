@@ -153,6 +153,14 @@ export function JobPostEditor({ job: initial, step, isHR, canEdit, departments, 
                 <CheckCircle2 className="w-3.5 h-3.5" /> Saved
               </span>
             )}
+            {job.id && (
+              <Link
+                href={`/dashboard/recruiting/jobs/${job.id}/candidates`}
+                className="inline-flex items-center h-9 px-3 rounded-md border border-slate-300 bg-white text-sm font-medium text-slate-800 hover:bg-slate-50"
+              >
+                View candidates
+              </Link>
+            )}
             {job.id && details && (
               <Button variant="outline" size="sm" onClick={() => setPreviewOpen(true)}>
                 <Eye className="w-4 h-4 mr-1.5" /> Preview job
