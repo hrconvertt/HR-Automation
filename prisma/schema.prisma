@@ -4239,3 +4239,40 @@ model ExperienceStepProgress {
   @@unique([assignmentId, stepId])
   @@map("experience_step_progress")
 }
+/// A fortnightly copy of every data set as CSV files, kept in the system so HR
+/// can download it (Settings → Data backups). The daily cron makes one when the
+/// last is 14 days old and keeps reminding HR until it has been downloaded.
+model DataBackup {
+  id               String           @id @default(cuid())
+  trigger          String // SCHEDULED | MANUAL
+  createdByName    String?
+  fileCount        Int              @default(0)
+  rowCount         Int              @default(0)
+  /// Size of the CSVs as downloaded (they are stored gzipped).
+  sizeBytes        Int              @default(0)
+  downloadedAt     DateTime?
+  downloadedByName String?
+  lastRemindedAt   DateTime?
+  createdAt        DateTime         @default(now())
+  files            DataBackupFile[]
+
+  @@index([createdAt])
+  @@map("data_backups")
+}
+
+model DataBackupFile {
+  id           String     @id @default(cuid())
+  backupId     String
+  backup       DataBackup @relation(fields: [backupId], references: [id], onDelete: Cascade)
+  folder       String // e.g. "Leave", "Work from home"
+  dataset      String // registry key, e.g. "leave-requests"
+  fileName     String // e.g. "leave-requests.csv"
+  rowCount     Int
+  sizeBytes    Int
+  /// The CSV, gzipped.
+  gz           Bytes
+  downloadedAt DateTime?
+
+  @@index([backupId])
+  @@map("data_backup_files")
+}

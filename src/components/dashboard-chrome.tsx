@@ -44,6 +44,7 @@ import {
   Mail,
   ShieldCheck,
   History,
+  DatabaseBackup,
   Heart,
   Sparkles,
   AlertTriangle,
@@ -458,6 +459,8 @@ const SETTINGS_NAV: NavGroup[] = [
       // Written to by sixteen API routes since the system went up, and until
       // now readable by nobody.
       { href: '/dashboard/settings/audit', label: 'Audit Trail', icon: History, roles: ['HR_ADMIN', 'EXECUTIVE'] },
+      // Fortnightly CSV copy of every data set; the cron reminds HR to download it.
+      { href: '/dashboard/settings/data-backups', label: 'Data Backups', icon: DatabaseBackup, roles: ['HR_ADMIN', 'EXECUTIVE'] },
       // Was a one-item "Developer" group in the main menu.
       { href: '/dashboard/admin/health', label: 'System Health', icon: Heart, roles: HR_ONLY },
     ],
