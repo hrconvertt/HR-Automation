@@ -1743,6 +1743,10 @@ model Candidate {
   screening          String? // JSON { "<screening column label>": "<value>" } — the position's own columns
 
   resumeParse ResumeParse?
+  /// The CV file, when it was uploaded here. cvUrl then points at
+  /// /api/recruiting/candidates/<id>/cv. Its own table so that loading a
+  /// candidate never loads the bytes.
+  cvFile      CandidateCvFile?
   nurtureLogs NurtureLog[] @relation("CandidateNurtures")
   interviews  Interview[]
   offer       JobOffer?
@@ -1751,6 +1755,19 @@ model Candidate {
   updatedAt   DateTime     @updatedAt
 
   @@map("candidates")
+}
+
+model CandidateCvFile {
+  id          String    @id @default(cuid())
+  candidateId String    @unique
+  candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  name        String
+  mime        String
+  size        Int
+  bytes       Bytes
+  createdAt   DateTime  @default(now())
+
+  @@map("candidate_cv_files")
 }
 
 model Interview {
