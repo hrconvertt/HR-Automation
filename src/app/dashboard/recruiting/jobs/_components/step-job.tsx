@@ -5,13 +5,14 @@
  * with its Do and Don't beside it, and past job descriptions a click away.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
   EDUCATION_LABEL, EDUCATION_LEVELS, EMPLOYMENT_TYPES, LEVELS, SALARY_CURRENCIES, humanise,
   type JdSections,
 } from '@/lib/job-post'
+import type { ParsedJobPost } from '@/lib/jd-extract'
 import type { EditorJob, JobTemplate } from './types'
 import { TemplatePicker } from './template-picker'
 
@@ -107,6 +108,79 @@ export function StepJob({ job, onChange, departments, canEdit, isDraft, busy, on
 
   const written = job.sections.summary.length + job.sections.responsibilities.length + job.sections.requirements.length
 
+  // Upload JD: read a job description file into the boxes below, the way an
+  // uploaded CV fills in a candidate. Only boxes the file covers change.
+  const jdInput = useRef<HTMLInputElement>(null)
+  const [jdBusy, setJdBusy] = useState(false)
+  const [jdMessage, setJdMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+
+  async function uploadJd(file: File) {
+    const hasContent = !!(job.title.trim() || job.sections.summary.trim()
+      || job.sections.responsibilities.trim() || job.sections.requirements.trim())
+    if (hasContent && !confirm(
+      'Fill the form from this job description? Boxes the file covers are replaced; the rest stay as they are.',
+    )) {
+      if (jdInput.current) jdInput.current.value = ''
+      return
+    }
+    setJdBusy(true)
+    setJdMessage(null)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      body.append('departments', JSON.stringify(departments.map((d) => d.name)))
+      const res = await fetch('/api/recruiting/jobs/parse-jd', { method: 'POST', body })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setJdMessage({ tone: 'error', text: data.error ?? 'That file could not be read.' })
+        return
+      }
+      const p = data.job as ParsedJobPost
+      const next: EditorJob = { ...job, sections: { ...job.sections } }
+      const filled: string[] = []
+
+      if (p.title) { next.title = p.title; filled.push('job title') }
+      const dept = p.department
+        ? departments.find((d) => d.name.toLowerCase() === p.department!.toLowerCase())
+        : undefined
+      if (dept) { next.departmentId = dept.id; filled.push('department') }
+      if (p.isRemote === true) { next.isRemote = true; filled.push('fully remote') }
+      else if (p.location) { next.isRemote = false; next.location = p.location; filled.push('location') }
+      if (p.summary) { next.sections.summary = p.summary; filled.push('description') }
+      if (p.responsibilities.length) { next.sections.responsibilities = p.responsibilities.join('\n'); filled.push('responsibilities') }
+      if (p.requirements.length) { next.sections.requirements = p.requirements.join('\n'); filled.push('requirements') }
+      if (p.niceToHave.length) { next.sections.niceToHave = p.niceToHave.join('\n'); filled.push('nice to have') }
+      if (p.benefits.length) { next.sections.benefits = p.benefits.join('\n'); filled.push('benefits') }
+      if (p.type) { next.type = p.type; filled.push('employment type') }
+      if (p.positionLevel) { next.positionLevel = p.positionLevel; filled.push('level') }
+      if (p.vacancies) { next.vacancies = Math.min(100, p.vacancies); filled.push('openings') }
+      if (p.minExperienceYears !== null) { next.minExperienceYears = String(p.minExperienceYears); filled.push('minimum experience') }
+      if (p.educationLevel) { next.educationLevel = p.educationLevel; filled.push('education') }
+      if (p.salaryMin !== null || p.salaryMax !== null) {
+        if (p.salaryMin !== null) next.salaryMin = String(p.salaryMin)
+        if (p.salaryMax !== null) next.salaryMax = String(p.salaryMax)
+        if (p.salaryCurrency) next.salaryCurrency = p.salaryCurrency
+        filled.push('salary')
+      }
+      if (p.closingDate) { next.closingDate = p.closingDate; filled.push('closing date') }
+
+      if (filled.length === 0) {
+        setJdMessage({ tone: 'error', text: `Nothing in ${data.filename ?? 'that file'} looked like a job description.` })
+        return
+      }
+      onChange(next)
+      setJdMessage({
+        tone: 'ok',
+        text: `Filled from ${data.filename ?? 'the file'}: ${filled.join(', ')}. Check each box before you save.`,
+      })
+    } catch {
+      setJdMessage({ tone: 'error', text: 'That file could not be uploaded. Check your connection and try again.' })
+    } finally {
+      setJdBusy(false)
+      if (jdInput.current) jdInput.current.value = ''
+    }
+  }
+
   function importSections(picked: JdSections) {
     onChange({
       ...job,
@@ -122,6 +196,33 @@ export function StepJob({ job, onChange, departments, canEdit, isDraft, busy, on
 
   return (
     <fieldset disabled={!canEdit} className="space-y-6 min-w-0">
+      <section className="rounded-xl border border-dashed border-slate-300 bg-white px-5 py-4 flex flex-wrap items-center justify-between gap-3 lg:mr-[296px]">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-900">Already have a job description?</p>
+          <p className="text-sm text-slate-500">
+            Upload it as a PDF, Word (.docx) or text file and the boxes below are filled in for you to check.
+          </p>
+          {jdMessage && (
+            <p className={`mt-1 text-sm ${jdMessage.tone === 'ok' ? 'text-emerald-700' : 'text-red-700'}`}>
+              {jdMessage.text}
+            </p>
+          )}
+        </div>
+        <input
+          ref={jdInput}
+          type="file"
+          accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain"
+          className="hidden"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            if (f) void uploadJd(f)
+          }}
+        />
+        <Button type="button" variant="outline" disabled={jdBusy} onClick={() => jdInput.current?.click()}>
+          {jdBusy ? 'Reading the job description…' : 'Upload JD file'}
+        </Button>
+      </section>
+
       <Block
         title="Job title and department"
         tips={<Tips
