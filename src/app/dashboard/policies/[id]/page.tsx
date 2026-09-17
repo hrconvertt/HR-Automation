@@ -62,7 +62,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
   })
   if (!policy) notFound()
 
-  const isHR = user.role === 'HR_ADMIN'
+  const isHR = payload.role === 'HR_ADMIN'
   // Non-HR users only see ACTIVE / PUBLISHED policies in their audience.
   // (Executives assigned as reviewers see IN_REVIEW too — see assignment lookup below.)
   const isReviewer = !!user.employee && policy.reviewerIds.includes(user.employee.id)
@@ -73,10 +73,10 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
       : ['ACTIVE', 'PUBLISHED']
     if (!visibleStatuses.includes(policy.status)) notFound()
     if (policy.audience === 'HR_ONLY' && !isReviewer) notFound()
-    if (policy.audience === 'MANAGERS' && user.role !== 'MANAGER' && !isReviewer) notFound()
+    if (policy.audience === 'MANAGERS' && payload.role !== 'MANAGER' && !isReviewer) notFound()
     // ── Per-role audience check.
     const audienceRoles = parseAudienceRoles(policy.audienceRoles)
-    if (!audienceRoles.includes(user.role) && !isReviewer) {
+    if (!audienceRoles.includes(payload.role) && !isReviewer) {
       unauthorized = true
     }
   }
@@ -111,7 +111,7 @@ export default async function PolicyDetailPage({ params }: { params: Promise<{ i
   const tags = ['policy', CATEGORY_TAG[policy.category] ?? policy.category.toLowerCase()]
   const [entries, vote] = live
     ? await Promise.all([
-        knowledgeFor(user.role),
+        knowledgeFor(payload.role),
         user.employee
           ? prisma.articleFeedback.findUnique({
               where: { refType_refId_employeeId: { refType: 'POLICY', refId: policy.id, employeeId: user.employee.id } },

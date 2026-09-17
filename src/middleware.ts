@@ -96,6 +96,23 @@ async function hasValidHrToken(req: NextRequest): Promise<boolean> {
 export default clerkMiddleware(async (auth, req) => {
   if (isPublicRoute(req)) return
 
+  // "View as" is read-only. While HR previews another role the session IS that
+  // role, so without this a preview as Executive could approve what only an
+  // executive may. One gate here covers every API route and server action,
+  // rather than trusting each route to remember the cookie. Anyone else
+  // carrying the cookie only blocks their own writes; exiting the preview is a
+  // client-side cookie change and needs no request.
+  if (
+    req.cookies.get('hr_preview_role')?.value &&
+    !['GET', 'HEAD', 'OPTIONS'].includes(req.method) &&
+    !req.nextUrl.pathname.startsWith('/api/auth/')
+  ) {
+    return NextResponse.json(
+      { error: 'View-only while previewing another role. Exit "Viewing as" to make changes.' },
+      { status: 403 },
+    )
+  }
+
   const { userId } = await auth()
   if (userId) return
 

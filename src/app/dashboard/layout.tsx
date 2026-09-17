@@ -66,7 +66,9 @@ export default async function DashboardLayout({
   // Normalise role â€” if null/unknown, fall back to EMPLOYEE so the user
   // is never stranded with an empty sidebar.
   const knownRoles = new Set(['HR_ADMIN', 'MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'])
-  const role = knownRoles.has(user.role) ? user.role : 'EMPLOYEE'
+  // The session's role, not the stored one: during "View as" it is the
+  // previewed role, so the sidebar and header show that role's app only.
+  const role = knownRoles.has(payload.role) ? payload.role : 'EMPLOYEE'
 
   const displayName = user.employee?.fullName ?? user.email ?? 'User'
   const designation = user.employee?.designation ?? null

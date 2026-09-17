@@ -22,7 +22,7 @@ export default async function HealthPage() {
   if (!payload) redirect('/login')
 
   const me = await prisma.user.findUnique({ where: { id: payload.userId }, select: { role: true } })
-  if (!me || me.role !== 'HR_ADMIN') redirect('/dashboard')
+  if (!me || payload.role !== 'HR_ADMIN') redirect('/dashboard')
 
   const initialReport = await runHealthScan()
 

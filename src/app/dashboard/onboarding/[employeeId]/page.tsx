@@ -69,8 +69,8 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
   }
 
   // Auth: HR_ADMIN, the hire's manager, or the hire themselves.
-  const isHR = me.role === 'HR_ADMIN'
-  const isManager = me.role === 'MANAGER' && me.employee?.id === employee.reportingManagerId
+  const isHR = payload.role === 'HR_ADMIN'
+  const isManager = payload.role === 'MANAGER' && me.employee?.id === employee.reportingManagerId
   const isSelf = me.employee?.id === employee.id
   if (!isHR && !isManager && !isSelf) {
     redirect('/dashboard/onboarding')
@@ -141,7 +141,7 @@ export default async function OnboardingWorkspacePage({ params }: PageProps) {
         }))}
         canEdit={isHR}
         canMarkComplete={canComplete}
-        viewerRole={me.role}
+        viewerRole={payload.role}
         joiningDate={employee.joiningDate.toISOString()}
         employeeName={employee.fullName}
         toEmail={employee.personalEmail ?? employee.email}

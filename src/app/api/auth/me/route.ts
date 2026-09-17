@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
@@ -35,16 +35,21 @@ export async function GET(_request: NextRequest) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 })
     }
 
-    const roles = user.userRoles.length > 0
-      ? user.userRoles.map((r) => r.role)
-      : [user.role]
+    // During "View as" the session carries only the previewed role, and client
+    // pages that ask who they are must see the same thing the server does.
+    const roles = payload.previewOf
+      ? payload.roles
+      : user.userRoles.length > 0
+        ? user.userRoles.map((r) => r.role)
+        : [user.role]
 
     return NextResponse.json({
       user: {
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: payload.role,
         roles,
+        previewOf: payload.previewOf ?? null,
         mustChangePass: user.mustChangePass,
         isActive: user.isActive,
         employee: user.employee,

@@ -12,7 +12,7 @@ export default async function CultureNotificationsSettingsPage() {
 
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
   if (!user) redirect('/login')
-  if (user.role !== 'HR_ADMIN') redirect('/dashboard')
+  if (payload.role !== 'HR_ADMIN') redirect('/dashboard')
 
   let config = await prisma.cultureNotificationConfig.findFirst()
   if (!config) config = await prisma.cultureNotificationConfig.create({ data: {} })

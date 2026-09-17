@@ -12,8 +12,9 @@
  * EMPLOYEE, a prop-driven control would hide itself and strand you there. The
  * cookie is the one thing that still says "this is a preview".
  *
- * Preview is view-only by design: the write paths check for the cookie and
- * refuse, so this cannot be used to act as someone else.
+ * While previewing, the session is that role and nothing else (see
+ * applyPreview in lib/auth), and the middleware refuses every write, so this
+ * cannot be used to act as someone else.
  */
 
 import { useEffect, useState } from 'react'
@@ -67,50 +68,52 @@ export default function RolePreviewSwitcher({ role }: { role: string }) {
 
   if (!mounted) return null
 
-  if (preview) {
-    const label = ROLES.find((r) => r.value === preview)?.label ?? preview
-    return (
-      <button
-        onClick={exit}
-        title="Return to your own access"
-        className="inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-medium px-3 py-1.5 hover:bg-amber-200"
-      >
-        <Eye className="w-3.5 h-3.5" />
-        Viewing as {label}
-        <X className="w-3.5 h-3.5" />
-      </button>
-    )
-  }
+  // Only real HR can start a preview. While previewing, the server hands this
+  // component the previewed role, so the cookie is what keeps it visible.
+  if (!preview && role !== 'HR_ADMIN') return null
 
-  // Only real HR can start a preview. While previewing the branch above runs,
-  // so the exit route is never hidden by this check.
-  if (role !== 'HR_ADMIN') return null
+  const current = ROLES.find((r) => r.value === preview)?.label ?? preview
 
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-full border border-slate-300 text-slate-700 text-xs px-3 py-1.5 hover:bg-slate-50"
-        title="See the app as another role"
+        className={
+          preview
+            ? 'inline-flex items-center gap-1.5 rounded-full bg-amber-100 border border-amber-300 text-amber-900 text-xs font-medium px-3 py-1.5 hover:bg-amber-200'
+            : 'inline-flex items-center gap-1.5 rounded-full border border-slate-300 text-slate-700 text-xs px-3 py-1.5 hover:bg-slate-50'
+        }
+        title={preview ? 'Switch role or return to HR view' : 'See the app as another role'}
       >
-        <Eye className="w-3.5 h-3.5" /> View as <ChevronDown className="w-3 h-3" />
+        <Eye className="w-3.5 h-3.5" />
+        {preview ? `Viewing as ${current}` : 'View as'}
+        <ChevronDown className="w-3 h-3" />
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 mt-1 z-50 w-52 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
+          <div className="absolute right-0 mt-1 z-50 w-56 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
             <p className="px-3 py-1.5 text-[11px] text-slate-500 border-b border-slate-100">
-              Read-only preview
+              Only that role&apos;s view · read-only
             </p>
             {ROLES.map((r) => (
               <button
                 key={r.value}
                 onClick={() => enter(r.value)}
-                className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50"
+                disabled={r.value === preview}
+                className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:font-semibold disabled:text-amber-800 disabled:bg-amber-50"
               >
                 {r.label}
               </button>
             ))}
+            {preview && (
+              <button
+                onClick={exit}
+                className="w-full text-left px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 border-t border-slate-100 inline-flex items-center gap-1.5"
+              >
+                <X className="w-3.5 h-3.5" /> Back to HR view
+              </button>
+            )}
           </div>
         </>
       )}

@@ -10,7 +10,7 @@ export default async function TimeTrackingSettingsPage() {
   const payload = await verifyToken(tok)
   if (!payload) redirect('/login')
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
-  if (!user || user.role !== 'HR_ADMIN') redirect('/dashboard')
+  if (!user || payload.role !== 'HR_ADMIN') redirect('/dashboard')
 
   const modeRow = await prisma.config.findUnique({ where: { key: 'timeTrackingMode' } })
   const catRow = await prisma.config.findUnique({ where: { key: 'timesheetCategories' } })

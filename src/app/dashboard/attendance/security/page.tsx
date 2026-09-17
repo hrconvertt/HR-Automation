@@ -14,7 +14,7 @@ export default async function AttendanceSecurityPage() {
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
-  if (!user || user.role !== 'HR_ADMIN') {
+  if (!user || payload.role !== 'HR_ADMIN') {
     return (
       <div className="p-6 bg-slate-50 border border-slate-100 rounded-2xl">
         <h2 className="text-lg font-semibold text-slate-900">HR-only area</h2>

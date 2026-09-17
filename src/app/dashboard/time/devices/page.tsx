@@ -18,7 +18,7 @@ export default async function DevicesPage() {
   if (!payload) redirect('/login')
 
   const user = await prisma.user.findUnique({ where: { id: payload.userId } })
-  if (!user || user.role !== 'HR_ADMIN') redirect('/dashboard/time')
+  if (!user || payload.role !== 'HR_ADMIN') redirect('/dashboard/time')
 
   return (
     <div className="space-y-3">

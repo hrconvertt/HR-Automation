@@ -96,6 +96,32 @@ export interface AuthPayload {
   role: string
   roles: string[]
   employeeId?: string
+  /** Set while HR is using "View as": the real role behind the preview. */
+  previewOf?: string
+}
+
+const PREVIEWABLE = new Set(['MANAGER', 'LEAD', 'EMPLOYEE', 'EXECUTIVE', 'FINANCE'])
+
+/**
+ * "View as". While HR has the hr_preview_role cookie set, the session IS that
+ * role — `role` and `roles` both — so no menu, page or permission check mixes
+ * HR's access, or HR's other role memberships, into the preview. Viewing as a
+ * manager shows the manager's app and nothing else.
+ *
+ * Only a real HR admin can preview; for anyone else the cookie means nothing.
+ * Pages that already resolved the cookie themselves keep working: they only
+ * honour it when `payload.role` is HR_ADMIN, and during a preview it is not.
+ */
+async function applyPreview(base: AuthPayload): Promise<AuthPayload> {
+  if (base.role !== 'HR_ADMIN') return base
+  let preview: string | undefined
+  try {
+    preview = (await cookies()).get('hr_preview_role')?.value
+  } catch {
+    return base
+  }
+  if (!preview || !PREVIEWABLE.has(preview)) return base
+  return { ...base, role: preview, roles: [preview], previewOf: base.role }
 }
 
 /**
@@ -138,7 +164,7 @@ export async function verifyToken(_unused?: string | null): Promise<AuthPayload 
     if (user && user.isActive) {
       const extra = user.userRoles.map((r) => r.role)
       const dedup = Array.from(new Set([user.role, ...extra]))
-      return { userId: user.id, role: user.role, roles: dedup, employeeId: user.employee?.id }
+      return applyPreview({ userId: user.id, role: user.role, roles: dedup, employeeId: user.employee?.id })
     }
   }
 
@@ -159,7 +185,7 @@ export async function verifyToken(_unused?: string | null): Promise<AuthPayload 
         if (user && user.isActive) {
           const extra = user.userRoles.map((r) => r.role)
           const dedup = Array.from(new Set([user.role, ...extra]))
-          return { userId: user.id, role: user.role, roles: dedup, employeeId: user.employee?.id }
+          return applyPreview({ userId: user.id, role: user.role, roles: dedup, employeeId: user.employee?.id })
         }
       }
     }

@@ -37,7 +37,7 @@ export default async function LeadershipChatPage({
   if (!user || !user.employee) redirect('/dashboard')
 
   const eligible = canUseLeadershipChat(
-    user.role,
+    payload.role,
     user.employee.designation,
     user.employee.position?.level ?? null,
   )
@@ -54,7 +54,7 @@ export default async function LeadershipChatPage({
       <ChatShell
         myEmployeeId={user.employee.id}
         myName={user.employee.fullName}
-        isHr={user.role === 'HR_ADMIN'}
+        isHr={payload.role === 'HR_ADMIN'}
         initialPartnerId={searchParams.with ?? null}
       />
     </div>
