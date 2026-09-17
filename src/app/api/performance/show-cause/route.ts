@@ -2,6 +2,9 @@
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
+import {
+  NOTICE_SELECT, DELIVERY_CHANNELS, endOfPkDay, parseInstant, informedPeople, notifyInformed,
+} from '@/lib/show-cause'
 
 async function resolveAccess(request: NextRequest) {
   const token = request.cookies.get('hr_token')?.value
@@ -34,30 +37,41 @@ export async function GET(request: NextRequest) {
   const access = await resolveAccess(request)
   if (!access) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+  // Anyone kept informed of a notice can read it — a lead told about their
+  // team member's notice, even when their own account is an employee's.
+  const informed = access.employeeId ? [{ informedIds: { has: access.employeeId } }] : []
   let where: object = {}
   if (access.effectiveRole === 'EMPLOYEE') {
-    where = { employeeId: access.employeeId }
+    where = { OR: [{ employeeId: access.employeeId ?? '__none__' }, ...informed] }
   } else if (access.effectiveRole === 'MANAGER' && access.employeeId) {
     where = {
       OR: [
         { employeeId: access.employeeId },
         { employee: { reportingManagerId: access.employeeId } },
+        ...informed,
       ],
     }
   }
 
-  const notices = await prisma.showCause.findMany({
+  const rows = await prisma.showCause.findMany({
     where,
-    include: {
-      employee: {
-        select: {
-          id: true, employeeCode: true, fullName: true,
-          department: { select: { name: true } },
-        },
-      },
-    },
-    orderBy: { createdAt: 'desc' },
+    select: NOTICE_SELECT,
+    orderBy: [{ issueDate: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
   })
+  const people = await informedPeople(rows)
+  const isOwnView = (r: (typeof rows)[number]) => r.employeeId === access.employeeId
+  const notices = rows.map((r) => ({
+    ...r,
+    // The bytes stay out of the list; letterName says whether there is one.
+    hasLetter: !!r.letterName,
+    // The employee sees their notice; who else was told is for HR, leads and leadership.
+    informed: isOwnView(r) && access.effectiveRole === 'EMPLOYEE'
+      ? []
+      : r.informedIds.map((id) => ({
+          ...(people.get(id) ?? { id, fullName: 'Former employee', designation: '' }),
+          asLead: id === r.employee.reportingManagerId,
+        })),
+  }))
 
   return NextResponse.json({ notices })
 }
@@ -108,28 +122,69 @@ export async function POST(request: NextRequest) {
   // Occurrence number across all stages
   const prior = await prisma.showCause.count({ where: { employeeId } })
 
-  // HR direct-issue path â€” skip meeting, jump straight to ISSUED
+  // HR records a notice already issued — the notice as it went out, dated as
+  // it went out. Issuing it today and recording it tomorrow must not move its
+  // dates to tomorrow.
   if (issueImmediately && access.effectiveRole === 'HR_ADMIN') {
     if (!description) {
       return NextResponse.json({ error: 'description required when issuing immediately' }, { status: 400 })
     }
+    const employee = await prisma.employee.findUnique({
+      where: { id: employeeId }, select: { fullName: true, reportingManagerId: true },
+    })
+    if (!employee) return NextResponse.json({ error: 'Employee not found' }, { status: 404 })
+
+    const issueDate = parseInstant(body.issueDate) ?? new Date()
+    const due = typeof deadline === 'string' ? endOfPkDay(deadline) ?? parseInstant(deadline) : null
+    const deliveredAt = parseInstant(body.deliveredAt)
+    const deliveredVia = DELIVERY_CHANNELS.includes(body.deliveredVia) ? body.deliveredVia as string : null
+    const informedIds = [...new Set<string>(
+      (Array.isArray(body.informedIds) ? body.informedIds : []).filter((x: unknown): x is string => typeof x === 'string' && x !== employeeId),
+    )]
+    const letter = typeof body.letterBase64 === 'string' && body.letterBase64
+      ? Buffer.from(body.letterBase64.replace(/^data:[^,]+,/, ''), 'base64')
+      : null
+    if (letter && letter.length > 8 * 1024 * 1024) {
+      return NextResponse.json({ error: 'The signed notice must be 8 MB or smaller' }, { status: 400 })
+    }
+    const text = (v: unknown, max: number) => typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null
+
     const notice = await prisma.showCause.create({
       data: {
         employeeId, issueType,
+        severity: ['MINOR', 'MODERATE', 'SEVERE'].includes(body.severity) ? body.severity : 'MODERATE',
         description,
-        issueDate: new Date(),
-        deadline: deadline ? new Date(deadline) : null,
-        issuedBy: access.userName ?? 'HR',
+        issueDate,
+        deadline: due,
+        issuedBy: text(body.issuedBy, 120) ?? access.userName ?? 'HR',
         occurrenceNo: prior + 1,
         status: 'ISSUED',
+        subject: text(body.subject, 200),
+        caseRef: text(body.caseRef, 120),
+        deliveredAt,
+        deliveredVia,
+        directives: text(body.directives, 4000),
+        informedIds,
+        informedAt: informedIds.length ? new Date() : null,
+        ...(letter ? {
+          letterBlob: letter,
+          letterMime: text(body.letterMime, 100) ?? 'application/pdf',
+          letterName: text(body.letterName, 200) ?? 'Show Cause Notice.pdf',
+        } : {}),
       },
+      select: { id: true },
     })
+    const fmt = (d: Date) => d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Karachi' })
     await notify({
       employeeId,
       type: 'SHOW_CAUSE_ISSUED',
-      title: 'âš ï¸ Show Cause Notice',
-      message: `You have been issued a ${issueType.replace('_', ' ')} notice. Please respond${deadline ? ` by ${new Date(deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}` : ''}.`,
-      link: '/dashboard/performance',
+      title: 'Show Cause Notice',
+      message: `A Show Cause Notice${body.subject ? ` (${String(body.subject).slice(0, 120)})` : ''} was issued to you on ${fmt(issueDate)}. Please respond${due ? ` by ${fmt(due)}` : ''}.`,
+      link: '/dashboard/performance?tab=showcause',
+    })
+    await notifyInformed({
+      ids: informedIds, employeeName: employee.fullName, subject: text(body.subject, 200),
+      issueDate, deadline: due, leadId: employee.reportingManagerId,
     })
     return NextResponse.json({ notice }, { status: 201 })
   }

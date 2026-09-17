@@ -200,7 +200,9 @@ export default async function PerformancePage(
           </div>
         </TabsContent>
 
-        {showDisciplinaryTabs && (
+        {/* Executives read Show Cause as well: leadership is kept informed of
+            every notice, and a notice they cannot open is not awareness. */}
+        {(showDisciplinaryTabs || role === 'EXECUTIVE') && (
           <TabsContent value="showcause">
             <ShowCausePanel role={role} employeeId={employeeId} isPreviewMode={isPreviewMode} />
           </TabsContent>

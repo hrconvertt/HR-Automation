@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
 import { notify } from '@/lib/notifications'
+import { DELIVERY_CHANNELS, endOfPkDay, parseInstant, notifyInformed } from '@/lib/show-cause'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -41,12 +42,16 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   const body = await request.json()
   const action = body.action as
     | 'LOG_MEETING_OUTCOME' | 'ESCALATE_TO_HR' | 'ISSUE_FORMAL_NOTICE'
-    | 'RESPOND' | 'RESOLVE' | 'ESCALATE_TO_PIP'
+    | 'RESPOND' | 'RESOLVE' | 'ESCALATE_TO_PIP' | 'UPDATE_RECORD'
     | undefined
 
   const notice = await prisma.showCause.findUnique({
     where: { id },
-    include: { employee: { select: { id: true, reportingManagerId: true, fullName: true } } },
+    select: {
+      id: true, employeeId: true, status: true, meetingConcerns: true, escalationReason: true,
+      informedIds: true, subject: true, issueDate: true, deadline: true,
+      employee: { select: { id: true, reportingManagerId: true, fullName: true } },
+    },
   })
   if (!notice) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
@@ -166,17 +171,70 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       break
     }
 
+    case 'UPDATE_RECORD': {
+      if (!isHR) {
+        return NextResponse.json({ error: 'Only HR can edit the notice record' }, { status: 403 })
+      }
+      const text = (v: unknown, max: number) => typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null
+      if ('subject' in body) data.subject = text(body.subject, 200)
+      if ('caseRef' in body) data.caseRef = text(body.caseRef, 120)
+      if ('directives' in body) data.directives = text(body.directives, 4000)
+      if ('description' in body && text(body.description, 20000)) data.description = text(body.description, 20000)
+      if ('issuedBy' in body && text(body.issuedBy, 120)) data.issuedBy = text(body.issuedBy, 120)
+      if ('issueDate' in body) {
+        const d = parseInstant(body.issueDate)
+        if (!d) return NextResponse.json({ error: 'Issue date is not a date' }, { status: 400 })
+        data.issueDate = d
+      }
+      if ('deadline' in body) {
+        data.deadline = typeof body.deadline === 'string' && body.deadline
+          ? endOfPkDay(body.deadline) ?? parseInstant(body.deadline)
+          : null
+      }
+      if ('deliveredAt' in body) data.deliveredAt = parseInstant(body.deliveredAt)
+      if ('deliveredVia' in body) data.deliveredVia = DELIVERY_CHANNELS.includes(body.deliveredVia) ? body.deliveredVia : null
+      if ('severity' in body && ['MINOR', 'MODERATE', 'SEVERE'].includes(body.severity)) data.severity = body.severity
+      let added: string[] = []
+      if (Array.isArray(body.informedIds)) {
+        const next = [...new Set<string>(body.informedIds.filter((x: unknown): x is string => typeof x === 'string' && x !== notice.employeeId))]
+        added = next.filter((x) => !notice.informedIds.includes(x))
+        data.informedIds = next
+        if (added.length) data.informedAt = new Date()
+      }
+      if (typeof body.letterBase64 === 'string' && body.letterBase64) {
+        const bytes = Buffer.from(body.letterBase64.replace(/^data:[^,]+,/, ''), 'base64')
+        if (bytes.length > 8 * 1024 * 1024) {
+          return NextResponse.json({ error: 'The signed notice must be 8 MB or smaller' }, { status: 400 })
+        }
+        data.letterBlob = bytes
+        data.letterMime = text(body.letterMime, 100) ?? 'application/pdf'
+        data.letterName = text(body.letterName, 200) ?? 'Show Cause Notice.pdf'
+      }
+      if (added.length) {
+        await notifyInformed({
+          ids: added,
+          employeeName: notice.employee.fullName,
+          subject: (data.subject as string | null | undefined) ?? notice.subject,
+          issueDate: (data.issueDate as Date | undefined) ?? notice.issueDate,
+          deadline: (data.deadline as Date | null | undefined) ?? notice.deadline,
+          leadId: notice.employee.reportingManagerId,
+        })
+      }
+      break
+    }
+
     default:
       return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   }
 
-  const updated = await prisma.showCause.update({ where: { id }, data })
+  // Never send the letter's bytes back.
+  const updated = await prisma.showCause.update({ where: { id }, data, select: { id: true, status: true } })
 
   if (notification && !isOwn) {
     await notify({
       employeeId: notice.employeeId,
       ...notification,
-      link: '/dashboard/performance',
+      link: '/dashboard/performance?tab=showcause',
     })
   }
 

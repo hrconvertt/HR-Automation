@@ -1189,6 +1189,27 @@ model ShowCause {
   issuedBy     String?
   occurrenceNo Int       @default(1)
 
+  // The notice as it actually went out. A notice's dates decide everything
+  // after it — when the response is due, whether a reply was late, whether
+  // termination can follow — so each one is its own field, not a sentence.
+  subject      String?
+  /// One matter across several notices: four people issued the same notice
+  /// over the same project are one case, and the list shows them together.
+  caseRef      String?
+  /// When it reached the employee, and how (EMAIL | HAND | WHATSAPP | APP).
+  deliveredAt  DateTime?
+  deliveredVia String?
+  /// What the employee is directed to do by the deadline, one per line.
+  directives   String?
+  /// Employees kept informed — the reporting lead, the team lead, leadership.
+  /// They can read the notice and are notified when it is recorded.
+  informedIds  String[]  @default([])
+  informedAt   DateTime?
+  /// The signed notice exactly as sent.
+  letterName   String?
+  letterMime   String?
+  letterBlob   Bytes?
+
   // Employee response
   employeeResponse String?
   responseAt       DateTime?
