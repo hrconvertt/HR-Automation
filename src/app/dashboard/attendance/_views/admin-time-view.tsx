@@ -319,8 +319,11 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
 
   const totalPendingOT = summary.reduce((sum, s) => sum + (s.pendingOvertimeHours ?? 0), 0)
 
-  const inOffice = todayLogs.filter(r => r.clockIn && r.workType !== 'WFH')
-  const wfhList  = todayLogs.filter(r => r.clockIn && r.workType === 'WFH')
+  // Whoever is present, clocked in or marked by HR — the grid is marked by
+  // hand, so requiring a clock-in left both lists empty and WFH at 0.
+  const isPresent = (r: TodayRecord) => r.status === 'PRESENT' || r.status === 'LATE'
+  const inOffice = todayLogs.filter(r => isPresent(r) && r.workType !== 'WFH')
+  const wfhList  = todayLogs.filter(r => isPresent(r) && r.workType === 'WFH')
   const onLeave  = todayLogs.filter(r => r.status === 'LEAVE')
   const absent   = todayLogs.filter(r => r.status === 'ABSENT')
 
@@ -370,7 +373,7 @@ export default function AdminTimeView({ mode = 'today' }: { mode?: 'today' | 'ca
           <p className="text-xs text-gray-400 truncate">{r.department}</p>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-xs font-medium text-gray-700">{fmtTime(r.clockIn)}</p>
+          <p className="text-xs font-medium text-gray-700">{r.clockIn ? fmtTime(r.clockIn) : 'Marked by HR'}</p>
           <p className="text-xs text-gray-400">{hoursLabel(r.clockIn, r.clockOut, r.hoursWorked)}</p>
         </div>
       </div>

@@ -206,11 +206,15 @@ export async function GET(request: NextRequest) {
     })
 
     const todayStats = {
-      present: allRecords.filter(r => r.status === 'PRESENT' || r.status === 'LATE').length,
+      // Present means in the office and WFH means at home, so the two add up
+      // instead of overlapping. Neither needs a clock-in: attendance is marked
+      // by hand, and WFH counted only clocked-in rows, so a day HR marked WFH
+      // showed 0 WFH and was counted as present instead.
+      present: allRecords.filter(r => (r.status === 'PRESENT' || r.status === 'LATE') && r.workType !== 'WFH').length,
       late: allRecords.filter(r => r.isLate).length,
       absent: allRecords.filter(r => r.status === 'ABSENT').length,
       notYetIn: allRecords.filter(r => r.status === 'NOT_IN').length,
-      wfh: allRecords.filter(r => r.workType === 'WFH' && r.clockIn).length,
+      wfh: allRecords.filter(r => (r.status === 'PRESENT' || r.status === 'LATE') && r.workType === 'WFH').length,
       leave: allRecords.filter(r => r.status === 'LEAVE').length,
       loa: allRecords.filter(r => r.status === 'LOA').length,
       total: allRecords.length,
