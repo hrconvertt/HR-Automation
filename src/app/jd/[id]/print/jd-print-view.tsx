@@ -6,6 +6,7 @@
  * bold labels, bullets and paragraphs, so a full parser would be dead weight.
  */
 import { useEffect } from 'react'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 export function JdPrintView({
   title, department, body,
@@ -58,6 +59,7 @@ export function JdPrintView({
       </div>
 
       <div className="sheet">
+        <DocumentLogo height={28} style={{ marginBottom: 16 }} />
         {renderMarkdown(body, title, department)}
       </div>
     </div>

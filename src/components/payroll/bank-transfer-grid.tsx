@@ -26,6 +26,7 @@ import { bankCodeFromIban, isFaysalIban } from '@/lib/bank-codes'
 import { Save, Download, Landmark, AlertCircle, Eye, Printer, X, Pencil } from 'lucide-react'
 import { safeFetch } from '@/lib/safe-fetch'
 import type { GridPayslip, GridRole } from './payroll-grid-editor'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 export type BankFormat = 'IFT' | 'IBFT'
 
@@ -288,6 +289,7 @@ export function BankTransferGrid({
             className="bg-white rounded-2xl shadow-xl w-full max-w-5xl my-4 print:shadow-none print:rounded-none print:my-0 print:max-w-none"
             onClick={(e) => e.stopPropagation()}
           >
+            <div className="hidden print:block mb-3"><DocumentLogo height={26} /></div>
             <div className="flex items-center justify-between gap-3 px-5 py-3 border-b border-slate-100 print-hide">
               <h2 className="text-sm font-semibold text-slate-900">
                 {format} Transfer File — {reference}

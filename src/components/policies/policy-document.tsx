@@ -12,7 +12,7 @@
 
 import { renderMarkdown } from '@/lib/markdown'
 import { formatDate } from '@/lib/utils'
-import { BRAND_CHARCOAL, BRAND_GREEN, BRAND_NAME_UPPER } from '@/lib/brand'
+import { BRAND_CHARCOAL } from '@/lib/brand'
 
 export type PolicyDocumentData = {
   title: string
@@ -68,17 +68,6 @@ function kindOf(code: string | undefined): string {
   return 'HR Policy'
 }
 
-function Wordmark() {
-  return (
-    <div className="flex items-center gap-2">
-      <span className="inline-block h-3.5 w-3.5 rounded-[3px]" style={{ background: BRAND_GREEN }} />
-      <span className="text-[19px] font-extrabold tracking-[0.14em]" style={{ color: BRAND_CHARCOAL }}>
-        {BRAND_NAME_UPPER}
-      </span>
-    </div>
-  )
-}
-
 export function PolicyDocument({ policy, logoSrc }: { policy: PolicyDocumentData; logoSrc?: string }) {
   const { rows, body } = splitDocumentControl(policy.content ?? '')
   const code = rows.find(([k]) => /\bID$/.test(k))?.[1]
@@ -99,12 +88,10 @@ export function PolicyDocument({ policy, logoSrc }: { policy: PolicyDocumentData
         style={{ borderColor: BRAND_CHARCOAL }}
       >
         <div>
-          {logoSrc ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={logoSrc} alt="Convertt" className="block h-9 w-auto" />
-          ) : (
-            <Wordmark />
-          )}
+          {/* The real mark on every view — the library and builder previews
+              use the hosted copy so the client bundle stays small. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logoSrc ?? '/brand/convertt-logo.png'} alt="Convertt" className="block h-9 w-auto" />
           <p className="mt-2 text-[10.5px] font-semibold uppercase tracking-[0.2em] text-slate-500">
             {kindOf(code)}
           </p>

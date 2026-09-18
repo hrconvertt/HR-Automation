@@ -16,6 +16,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { verifyToken } from '@/lib/auth'
+import { LOGO_DATA_URI } from '@/lib/brand-logo'
 
 interface RouteParams { params: Promise<{ id: string }> }
 
@@ -112,7 +113,6 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
   h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; margin: 28px 0 12px; padding-bottom: 6px; border-bottom: 1px solid #f1f5f9; }
   .header { display: flex; justify-content: space-between; padding-bottom: 24px; border-bottom: 1px solid #e2e8f0; }
   .logo { display: flex; gap: 14px; align-items: flex-start; }
-  .logo-box { width: 52px; height: 52px; background: #1d4ed8; color: white; font-weight: 700; font-size: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; }
   .meta { text-align: right; }
   .meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: #64748b; font-weight: 600; }
   .meta-value { font-size: 18px; font-weight: 700; margin-top: 4px; }
@@ -145,9 +145,8 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     <!-- Header -->
     <div class="header">
       <div class="logo">
-        <div class="logo-box">C</div>
         <div>
-          <h1>Convertt Ltd</h1>
+          <img src="${LOGO_DATA_URI}" alt="Convertt" style="height:30px;width:auto;display:block;margin-bottom:6px">
           <p style="margin:4px 0 0;font-size:11px;color:#64748b;line-height:1.6">
             Office 201, 5th Floor, Mega Tower<br>
             Gulberg Main Boulevard, Lahore, Pakistan<br>

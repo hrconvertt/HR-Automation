@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Printer, CalendarPlus } from 'lucide-react'
 import { StatusBadge, type Status } from '@/components/attendance/status-badge'
 import { getInitials } from '@/lib/utils'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 // Inline filterable legend — click a status to dim everything else across all
 // month blocks. Click again to clear. 'WE' (weekend) intentionally not filterable.
@@ -176,6 +177,7 @@ export function EmployeeDetailView({ employee, months, ytd, recentLeaves, leaveB
 
   return (
     <div className="space-y-5">
+      <div className="hidden print:block mb-3"><DocumentLogo height={26} /></div>
       {/* Header */}
       <div className="flex items-start justify-between gap-4 print:hidden">
         <Link

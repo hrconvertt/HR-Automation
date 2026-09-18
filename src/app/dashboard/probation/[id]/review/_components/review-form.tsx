@@ -25,6 +25,7 @@ import {
   DIMENSIONS, RATING_SCALE, ASSESSMENTS, INCREMENT_BRACKETS,
   averageRating, suggestedAssessment, incrementFor,
 } from '@/lib/probation-review'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 interface Review {
   id: string
@@ -166,6 +167,7 @@ export function ProbationReviewForm({ id }: { id: string }) {
 
   return (
     <div className="space-y-4 print:max-w-none">
+      <div className="hidden print:block mb-3"><DocumentLogo height={26} /></div>
       <div className="flex items-center justify-between gap-3 print:hidden">
         <Back id={id} />
         <div className="flex items-center gap-2">

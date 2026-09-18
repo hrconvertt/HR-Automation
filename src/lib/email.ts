@@ -27,8 +27,9 @@ type EmailResult = {
 
 const SMTP_CONFIGURED = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER)
 
-export async function sendEmail(args: EmailArgs): Promise<EmailResult> {
-  if (!args.to) return { ok: false, transport: 'console', error: 'No recipient' }
+export async function sendEmail(input: EmailArgs): Promise<EmailResult> {
+  if (!input.to) return { ok: false, transport: 'console', error: 'No recipient' }
+  const args: EmailArgs = { ...input, html: withLogo(input.html) }
 
   // Always log to server so devs can see what would go out
   console.log('[email]', JSON.stringify({
@@ -79,6 +80,22 @@ export async function sendEmail(args: EmailArgs): Promise<EmailResult> {
     console.error('[email] smtp send failed', err)
     return { ok: false, transport: 'smtp', error: String(err) }
   }
+}
+
+/**
+ * Every email opens with the Convertt logo. Mail clients block data-URI
+ * images, so this points at the hosted copy in /public/brand. Marked so a
+ * queued email that is sent later does not get a second logo.
+ */
+function withLogo(html: string): string {
+  if (html.includes('data-convertt-logo')) return html
+  const base = (process.env.NEXT_PUBLIC_APP_URL || 'https://convertt-hr.vercel.app').replace(/\/$/, '')
+  const band =
+    `<div data-convertt-logo style="padding:20px 0 8px;text-align:center">` +
+    `<img src="${base}/brand/convertt-logo.png" alt="Convertt" height="28" style="height:28px;width:auto;border:0;display:inline-block">` +
+    `</div>`
+  const body = html.match(/<body[^>]*>/i)
+  return body ? html.replace(body[0], body[0] + band) : band + html
 }
 
 function stripHtml(html: string): string {

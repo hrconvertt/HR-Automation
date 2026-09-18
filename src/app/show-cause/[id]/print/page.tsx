@@ -4,6 +4,7 @@ import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { COMPANY } from '@/lib/letter-templates'
 import { PrintButton } from '@/components/letters/print-button'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -121,8 +122,8 @@ export default async function PrintShowCausePage({ params }: PageProps) {
         <header style={{ borderBottom: '2px solid #111827', paddingBottom: 14, marginBottom: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
             <div>
-              <h1 style={{ fontSize: 28, fontWeight: 800, letterSpacing: 2, margin: 0, color: '#111827' }}>
-                {COMPANY.name.toUpperCase()}
+              <h1 style={{ margin: 0 }}>
+                <DocumentLogo height={30} />
               </h1>
               <p style={{ margin: '4px 0 0', fontSize: 12, color: '#4b5563' }}>{COMPANY.address}</p>
               <p style={{ margin: '2px 0 0', fontSize: 12, color: '#4b5563' }}>{COMPANY.website}</p>

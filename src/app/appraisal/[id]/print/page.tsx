@@ -16,6 +16,7 @@ import {
   sectionMax, subTotal, overallTotal, overallAverage, bandFor,
   type Ratings, type GoalRow, type DevelopmentRow,
 } from '@/lib/appraisal-form'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 export const dynamic = 'force-dynamic'
 
@@ -94,6 +95,7 @@ export default async function AppraisalPrintPage(
       </div>
 
       <div className="sheet">
+        <DocumentLogo height={28} style={{ marginBottom: 14 }} />
         <h1>PERFORMANCE APPRAISAL FORM</h1>
 
         <p style={{ margin: '0 0 8pt', fontSize: '10.5pt' }}>

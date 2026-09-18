@@ -19,6 +19,7 @@
 
 import { useMemo, useState } from 'react'
 import { Printer, RotateCcw } from 'lucide-react'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 interface Dept { id: string; name: string }
 
@@ -198,7 +199,7 @@ export function OfferLetterBuilder({ departments }: { departments: Dept[] }) {
           style={{ fontFamily: 'Calibri, Carlito, sans-serif' }}
         >
           <div className="text-center mb-6">
-            <div className="text-lg font-bold tracking-wide">CONVERTT LTD</div>
+            <DocumentLogo height={30} style={{ margin: '0 auto 6px' }} />
             <div className="text-[11px] text-slate-500">
               Office 201, 5th Floor, Mega Tower, Gulberg Main Boulevard, Lahore
             </div>

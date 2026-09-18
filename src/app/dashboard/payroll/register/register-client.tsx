@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { formatCurrency } from '@/lib/utils'
 import { Printer, Download, ArrowLeft } from 'lucide-react'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 export interface RegisterRow {
   employeeId: string
@@ -149,6 +150,7 @@ export function RegisterClient({ data }: { data: RegisterData }) {
 
       {/* Print header (only visible when printing) */}
       <div className="hidden print:block">
+        <DocumentLogo height={26} style={{ marginBottom: 8 }} />
         <h1 className="text-lg font-bold">Convertt — Payroll Register — {data.monthLabel}</h1>
       </div>
 

@@ -3,6 +3,7 @@ import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { AutoPrint, PrintButton } from './auto-print'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 interface PageProps { params: Promise<{ id: string }> }
 
@@ -145,6 +146,7 @@ export default async function PerformanceReportPage({ params }: PageProps) {
       <article className="report-page">
         {/* Header */}
         <header style={{ borderBottom: '2px solid #4f46e5', paddingBottom: 12, marginBottom: 18 }}>
+          <DocumentLogo height={26} style={{ marginBottom: 10 }} />
           <h1>Performance Report</h1>
           <p style={{ color: '#6b7280', fontSize: 10, margin: 0 }}>Convertt · Issued {today}</p>
           <div className="row" style={{ marginTop: 14 }}>

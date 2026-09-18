@@ -9,6 +9,7 @@ import { cookies } from 'next/headers'
 import { redirect, notFound } from 'next/navigation'
 import { verifyToken } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { DocumentLogo } from '@/components/brand/document-logo'
 
 export const dynamic = 'force-dynamic'
 
@@ -100,6 +101,7 @@ export default async function ManpowerRequisitionPrintPage(
       </div>
 
       <div className="sheet">
+        <DocumentLogo height={28} style={{ marginBottom: 14 }} />
         <h1>MANPOWER <u>REQUISITION</u> FORM</h1>
 
         <table>

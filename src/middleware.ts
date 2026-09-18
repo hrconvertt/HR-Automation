@@ -25,7 +25,6 @@ const isPublicRoute = createRouteMatcher([
   '/api/auth/emergency-signin',
   '/api/auth/set-password',
   '/set-password(.*)',
-  '/api/bootstrap-hr',
   '/',
 ])
 
