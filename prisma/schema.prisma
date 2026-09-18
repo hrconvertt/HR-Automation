@@ -555,6 +555,9 @@ model LetterRequest {
   signedByName       String? // who signs on company side
   signedByTitle      String?
   letterBody         String? // generated text snapshot
+  /// The letter as the editor holds it (date, subject, paragraphs, signatory),
+  /// as JSON. The PDF is drawn from it; older letters only have letterBody.
+  letterText         String?
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 

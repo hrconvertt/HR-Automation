@@ -536,19 +536,13 @@ const LETTERS_NAV: NavGroup[] = [
   {
     label: 'Letters',
     items: [
-      { href: '/dashboard/letters', label: 'All requests', icon: FileText },
-      // The letterhead letter, editable line by line.
-      { href: '/dashboard/letters/employment', label: 'Employment Letter', icon: Mail },
+      // Every letter, stored, filterable by type and status. The per-type
+      // entries that were here are now the type dropdown on that page.
+      { href: '/dashboard/letters', label: 'Letter requests', icon: FileText },
+      // One editor for every letter type, with the letterhead preview beside it.
+      { href: '/dashboard/letters/write', label: 'Write a letter', icon: Mail, roles: HR_ONLY },
       // The longer pre-hire offer with counter-signature slots, kept as it was.
-      { href: '/dashboard/letters/offer', label: 'Offer Letter', icon: FileText },
-      { href: '/dashboard/letters?type=EXPERIENCE', label: 'Experience Letter', icon: FileText },
-      { href: '/dashboard/letters?type=SALARY_CERTIFICATE', label: 'Salary Certificate', icon: Banknote },
-      { href: '/dashboard/letters?type=NOC_VISA', label: 'NOC for Visa', icon: PlaneIcon },
-      { href: '/dashboard/letters?type=BONAFIDE', label: 'Employment Verification', icon: ShieldCheck },
-      { href: '/dashboard/letters?type=RELIEVING', label: 'Relieving Letter', icon: LogOut },
-      { href: '/dashboard/letters?type=CONFIRMATION', label: 'Confirmation Letter', icon: CheckCircle2 },
-      { href: '/dashboard/letters?type=SERVICE_CERTIFICATE', label: 'Service Certificate', icon: FileText },
-      { href: '/dashboard/letters?type=WARNING', label: 'Warning Letter', icon: ShieldAlert },
+      { href: '/dashboard/letters/offer', label: 'Offer Letter', icon: FileText, roles: HR_ONLY },
     ],
   },
 ]
