@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import { prisma } from '@/lib/prisma'
 import { parseScreening, parseScreeningColumns, trackerValues } from '@/lib/candidate-tracker'
+import { parseScreeningMatch } from '@/lib/candidate-intake'
 import { resolveViewer } from '../../_lib/load'
 import { NoAccess } from '../../_components/no-access'
 import { CandidatesView, type ViewCandidate } from './candidates-view'
@@ -28,7 +29,7 @@ export default async function JobCandidatesPage({ params, searchParams }: {
     where: { id },
     select: {
       id: true, title: true, status: true, location: true, isRemote: true, departmentId: true,
-      screeningColumns: true, jdContent: true,
+      screeningColumns: true, jdContent: true, description: true, requirements: true,
     },
   })
   if (!job || job.status === 'REJECTED') notFound()
@@ -47,7 +48,7 @@ export default async function JobCandidatesPage({ params, searchParams }: {
         whyLeaving: true, currentSalary: true, expectedSalary: true, offerResponse: true, noticePeriod: true,
         onsiteWillingness: true, easyCommute: true, communication: true, hrNotes: true, callOutcome: true,
         interviewType: true, interviewDate: true, interviewer: true, leadFeedback: true,
-        finalMeeting: true, finalMeetingDate: true, finalMeetingStatus: true, screening: true,
+        finalMeeting: true, finalMeetingDate: true, finalMeetingStatus: true, screening: true, screeningMatch: true,
         cvFile: { select: { name: true, mime: true } },
         interviews: { select: { id: true, type: true, scheduledAt: true, result: true }, orderBy: { scheduledAt: 'asc' } },
       },
@@ -87,6 +88,7 @@ export default async function JobCandidatesPage({ params, searchParams }: {
     tracker: trackerValues(r),
     screening: parseScreening(r.screening),
     interviews: r.interviews.map((i) => ({ id: i.id, type: i.type, scheduledAt: i.scheduledAt.toISOString(), result: i.result })),
+    match: parseScreeningMatch(r.screeningMatch),
   }))
 
   return (
@@ -97,7 +99,7 @@ export default async function JobCandidatesPage({ params, searchParams }: {
         status: job.status,
         meta: [dept?.name, job.isRemote ? 'Remote' : job.location].filter(Boolean).join(' · '),
         screeningColumns: parseScreeningColumns(job.screeningColumns),
-        hasJd: !!job.jdContent,
+        hasJd: !!(job.jdContent || job.description || job.requirements),
       }}
       candidates={candidates}
       initialStage={stage ?? null}

@@ -284,6 +284,8 @@ export interface CvReading {
   evaluation: string | null
   screening: Record<string, string>
   knockoutFailures: string[]
+  /** The requirement-by-requirement match; null when read without AI. */
+  match: ScreeningMatch | null
   /** How it was read. */
   readBy: 'ai' | 'text'
 }
@@ -341,7 +343,7 @@ export async function readCv(opts: {
       pastCompanies: null, education: null, educationLevel: null, experienceSummary: null,
       totalExperienceYears: null, skills: [], matchScore: null, verdict: null,
       evaluation: 'Uploaded without AI reading — only name, email and phone were picked up.',
-      screening: {}, knockoutFailures: [], readBy: 'text',
+      screening: {}, knockoutFailures: [], match: null, readBy: 'text',
     }
   }
 
@@ -358,26 +360,76 @@ export async function readCv(opts: {
     if (text.trim().length < 30) throw new IntakeError('No text could be read from this CV.')
     fileBlock = { type: 'text', text: `=== CV (${opts.filename}) ===\n${text.slice(0, 30000)}` }
   }
+  return readAgainstJob({ block: fileBlock, basis: 'cv', job: opts.job, screeningColumns: opts.screeningColumns })
+}
 
+/** A candidate's saved details as text — what screening reads when there is no CV file. */
+export function profileText(c: Record<string, unknown>): string {
+  const lines: string[] = []
+  const add = (label: string, v: unknown) => {
+    if (v == null || v === '') return
+    lines.push(`${label}: ${typeof v === 'string' ? v : JSON.stringify(v)}`)
+  }
+  add('Name', c.fullName); add('Location', c.location); add('Current role', c.currentRole)
+  add('Current company', c.currentCompany); add('Experience', c.experienceSummary ?? c.experience)
+  add('Past companies', c.pastCompanies); add('Education', c.education ?? c.educationLevel)
+  add('Skills', c.skills); add('Languages', c.languages); add('Notes', c.notes); add('HR notes', c.hrNotes)
+  add('Evaluation so far', c.evaluation); add('Application answers', c.answers); add('Screening answers', c.screening)
+  add('Expected salary', c.expectedSalary); add('Notice period', c.noticePeriod)
+  return lines.join('\n')
+}
+
+export type MatchLevel = 'yes' | 'partial' | 'no' | 'unknown'
+export interface RequirementMatch { category: string; requirement: string; met: MatchLevel; evidence: string | null }
+export interface ScreeningMatch {
+  score: number | null
+  summary: string | null
+  requirements: RequirementMatch[]
+  basis: 'cv' | 'profile'
+  screenedAt: string
+}
+
+export function parseScreeningMatch(raw: string | null | undefined): ScreeningMatch | null {
+  if (!raw) return null
+  try {
+    const v = JSON.parse(raw)
+    return v && Array.isArray(v.requirements) ? v as ScreeningMatch : null
+  } catch { return null }
+}
+
+const CATEGORIES = ['Education', 'Experience', 'Skills', 'Other']
+
+/**
+ * Screen one person against the job: every requirement the job description
+ * sets, marked met, partly met, not met or not stated, with the evidence, and
+ * the details for the sheet's columns. Works on a CV or, where there is none,
+ * on the details already on the record.
+ */
+export async function readAgainstJob(opts: {
+  block: Anthropic.ContentBlockParam; basis: 'cv' | 'profile'; job: JobForColumns; screeningColumns: string[]
+}): Promise<CvReading> {
   const screeningSchema = opts.screeningColumns.length
     ? opts.screeningColumns.map((c) => `    ${JSON.stringify(c)}: string | null`).join(',\n')
     : ''
+  const what = opts.basis === 'cv' ? 'the CV above' : "the candidate's details above (there is no CV file)"
 
   const client = new Anthropic()
   const message = await client.messages.create({
     model: MODEL,
-    max_tokens: 4000,
+    max_tokens: 6000,
     system:
-      'You read CVs for a recruiter and fill in their screening sheet. You write down only what the CV actually says. '
-      + 'A blank is better than a guess: a wrong phone number or invented experience misleads the people hiring.',
+      'You screen candidates for a recruiter against a job description and fill in their screening sheet. '
+      + 'You write down only what the candidate material actually says. A blank is better than a guess: '
+      + 'a wrong phone number or invented experience misleads the people hiring. Your score must follow from '
+      + 'the requirements you mark — someone who misses most must-have requirements cannot score high.',
     messages: [{
       role: 'user',
       content: [
-        fileBlock,
+        opts.block,
         {
           type: 'text',
           text: `=== JOB DESCRIPTION ===\n${jobText(opts.job)}\n\n`
-            + 'Read the CV above and return ONLY JSON of exactly this shape:\n'
+            + `Screen ${what} against this job and return ONLY JSON of exactly this shape:\n`
             + '{\n'
             + '  "fullName": string | null,\n'
             + '  "email": string | null,\n'
@@ -391,16 +443,23 @@ export async function readCv(opts: {
             + '  "experienceSummary": string | null,   // e.g. "4.5 years — 3 in Shopify development, 1.5 in WordPress"\n'
             + '  "totalExperienceYears": number | null,\n'
             + '  "skills": string[],\n'
-            + '  "matchScore": number,                 // 0-100 fit against the job description\n'
+            + '  "requirements": [                     // 5 to 12 requirements taken from the job description, must-haves first\n'
+            + '    { "category": "Education" | "Experience" | "Skills" | "Other",\n'
+            + '      "requirement": string,            // short, e.g. "3+ years of Shopify theme development"\n'
+            + '      "met": "yes" | "partial" | "no" | "unknown",   // unknown = the material does not say\n'
+            + '      "evidence": string | null }       // what in the material shows it\n'
+            + '  ],\n'
+            + '  "matchScore": number,                 // 0-100, following from the requirements\n'
             + '  "verdict": "STRONG" | "SHORTLIST" | "MAYBE" | "PASS" | "REJECT",\n'
-            + '  "evaluation": string,                 // 2-3 sentences: why this score, strengths, gaps\n'
+            + '  "summary": string,                    // one sentence: how this person matches this job\n'
+            + '  "evaluation": string,                 // 2-3 sentences: strengths, gaps, what to ask on the call\n'
             + `  "screening": {\n${screeningSchema}\n  },\n`
-            + '  "knockoutFailures": string[]           // hard requirements of the job this CV clearly fails; [] if none\n'
+            + '  "knockoutFailures": string[]           // must-have requirements clearly not met; [] if none or unclear\n'
             + '}\n\n'
             + 'Rules:\n'
-            + '- null for anything the CV does not state. Do not infer an email or phone.\n'
-            + '- Each screening answer is short and specific to what the CV shows, e.g. "Yes — Figma, 3 years" or "No mention". Use null only if the question cannot be judged from a CV.\n'
-            + '- Scores: 90-100 exceptional, 70-89 strong, 50-69 possible, 30-49 weak, 0-29 poor.',
+            + '- null for anything not stated. Do not infer an email or phone.\n'
+            + '- Each screening answer is short and specific, e.g. "Yes — Figma, 3 years" or "No mention". null only if it cannot be judged.\n'
+            + '- Scores: 90-100 exceptional, 70-89 strong, 50-69 possible, 30-49 weak, 0-29 poor. Verdict: STRONG 85+, SHORTLIST 70-84, MAYBE 50-69, PASS 30-49, REJECT below 30.',
         },
       ],
     }],
@@ -417,6 +476,24 @@ export async function readCv(opts: {
     const v = str(screeningRaw[col], 1000)
     if (v) screening[col] = v
   }
+  const requirements: RequirementMatch[] = (Array.isArray(raw.requirements) ? raw.requirements : [])
+    .map((r): RequirementMatch | null => {
+      const o = r && typeof r === 'object' ? r as Record<string, unknown> : {}
+      const requirement = str(o.requirement, 300)
+      if (!requirement) return null
+      const cat = str(o.category) ?? 'Other'
+      const met = String(o.met ?? 'unknown').toLowerCase()
+      return {
+        category: CATEGORIES.includes(cat) ? cat : 'Other',
+        requirement,
+        met: (['yes', 'partial', 'no', 'unknown'].includes(met) ? met : 'unknown') as MatchLevel,
+        evidence: str(o.evidence, 400),
+      }
+    })
+    .filter((r): r is RequirementMatch => r !== null)
+    .slice(0, 15)
+  const matchScore = Number.isFinite(score) && score >= 0 && score <= 100 ? Math.round(score) : null
+
   return {
     fullName: str(raw.fullName, 200),
     email: str(raw.email, 200),
@@ -429,12 +506,19 @@ export async function readCv(opts: {
     educationLevel: level && LEVELS.includes(level) ? level : null,
     experienceSummary: str(raw.experienceSummary, 1000),
     totalExperienceYears: Number.isFinite(years) && years >= 0 && years < 60 ? Math.round(years * 10) / 10 : null,
-    skills: Array.isArray(raw.skills) ? raw.skills.map((s) => String(s).trim()).filter(Boolean).slice(0, 40) : [],
-    matchScore: Number.isFinite(score) && score >= 0 && score <= 100 ? Math.round(score) : null,
+    skills: Array.isArray(raw.skills) ? raw.skills.map((x) => String(x).trim()).filter(Boolean).slice(0, 40) : [],
+    matchScore,
     verdict: verdict && VERDICTS.includes(verdict) ? verdict : null,
     evaluation: str(raw.evaluation, 3000),
     screening,
     knockoutFailures: Array.isArray(raw.knockoutFailures) ? raw.knockoutFailures.map((f) => String(f).trim()).filter(Boolean).slice(0, 10) : [],
+    match: {
+      score: matchScore,
+      summary: str(raw.summary, 500),
+      requirements,
+      basis: opts.basis,
+      screenedAt: new Date().toISOString(),
+    },
     readBy: 'ai',
   }
 }

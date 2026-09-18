@@ -25,6 +25,9 @@ import { TRACKER_COLUMNS, type TrackerKey } from '@/lib/candidate-tracker'
 import {
   CV_ACCEPT, ImportSheetDialog, UploadCvsDialog, useCvUploads,
 } from '../../../_components/intake-dialogs'
+import {
+  CommentsPanel, EmailPanel, MatchCard, ReviewPanel, ScoreRing, type CandidateMatch,
+} from './candidate-panels'
 
 export interface ViewCandidate {
   id: string
@@ -49,6 +52,7 @@ export interface ViewCandidate {
   tracker: Record<TrackerKey, string | null>
   screening: Record<string, string>
   interviews: { id: string; type: string; scheduledAt: string; result: string | null }[]
+  match: CandidateMatch | null
 }
 
 interface JobInfo {
@@ -103,6 +107,8 @@ export function CandidatesView({ job, candidates, initialStage, initialCandidate
   const [stage, setStage] = useState<string>(firstStage)
   const [list, setList] = useState<'qualified' | 'disqualified'>('qualified')
   const [q, setQ] = useState('')
+  const [sort, setSort] = useState<'newest' | 'best'>('newest')
+  const [screening, setScreening] = useState<{ done: number; total: number } | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(initialCandidateId)
   const [picked, setPicked] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
@@ -126,9 +132,40 @@ export function CandidatesView({ job, candidates, initialStage, initialCandidate
 
   const pool = list === 'qualified' ? qualified.filter((c) => c.stage === stage) : disqualified
   const needle = q.trim().toLowerCase()
-  const shown = needle
+  const filtered = needle
     ? pool.filter((c) => [c.fullName, c.headline, c.email, c.location, ...c.skills].filter(Boolean).join(' ').toLowerCase().includes(needle))
     : pool
+  const shown = sort === 'best'
+    ? [...filtered].sort((a, b) => (b.matchScore ?? -1) - (a.matchScore ?? -1))
+    : filtered
+  const unscreened = pool.filter((c) => !c.match)
+
+  // Screen everyone at this stage who has not been, three at a time.
+  async function screenAll() {
+    if (!job.hasJd) { toastError('This job has no description to screen against yet.'); return }
+    const list = unscreened.map((c) => c.id)
+    if (!list.length) return
+    if (!confirm(`Screen ${list.length} candidate${list.length === 1 ? '' : 's'} against the job description? Each takes a few seconds.`)) return
+    let done = 0
+    let failed = 0
+    setScreening({ done, total: list.length })
+    const queue = [...list]
+    async function worker() {
+      while (queue.length) {
+        const id = queue.shift()!
+        const res = await fetch(`/api/recruiting/candidates/${id}/screen`, { method: 'POST' }).catch(() => null)
+        if (!res?.ok) failed++
+        done++
+        setScreening({ done, total: list.length })
+      }
+    }
+    await Promise.all([worker(), worker(), worker()])
+    setScreening(null)
+    setSort('best')
+    if (failed) toastError(`${failed} could not be screened`, 'Usually because there is too little on their record. Upload their CV.')
+    toastSuccess(`${list.length - failed} screened — best matches first`)
+    router.refresh()
+  }
 
   const selected = candidates.find((c) => c.id === selectedId) ?? shown[0] ?? null
 
@@ -288,6 +325,19 @@ export function CandidatesView({ job, candidates, initialStage, initialCandidate
                 aria-label="Filter candidates"
                 className="w-full h-9 rounded-md border border-slate-200 px-3 text-sm focus:outline-none focus:ring-2 focus:ring-slate-900/10" />
               <div className="flex items-center justify-between gap-2">
+                <select value={sort} onChange={(e) => setSort(e.target.value as 'newest' | 'best')} aria-label="Sort"
+                  className="h-8 rounded-md border border-slate-200 px-2 text-xs bg-white">
+                  <option value="newest">Newest first</option>
+                  <option value="best">Best match first</option>
+                </select>
+                {unscreened.length > 0 && job.hasJd && (
+                  <button type="button" onClick={screenAll} disabled={!!screening}
+                    className="text-xs px-2 py-1 rounded border border-violet-200 text-violet-800 bg-violet-50 hover:bg-violet-100 disabled:opacity-60">
+                    {screening ? `Screening ${screening.done} of ${screening.total}…` : `Screen ${unscreened.length} against the job`}
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center justify-between gap-2">
                 <label className="inline-flex items-center gap-2 text-xs text-slate-600">
                   <input type="checkbox" checked={shown.length > 0 && shown.every((c) => picked.includes(c.id))}
                     onChange={(e) => setPicked(e.target.checked ? shown.map((c) => c.id) : [])} />
@@ -334,9 +384,7 @@ export function CandidatesView({ job, candidates, initialStage, initialCandidate
                           {c.headline ?? ago(c.createdAt)}
                         </span>
                       </span>
-                      {c.matchScore != null && (
-                        <span className="text-xs tabular-nums text-slate-600 shrink-0">{Math.round(c.matchScore)}</span>
-                      )}
+                      {c.matchScore != null && <ScoreRing score={Math.round(c.matchScore)} size={30} />}
                     </button>
                   </li>
                 )
@@ -351,6 +399,7 @@ export function CandidatesView({ job, candidates, initialStage, initialCandidate
               c={selected}
               job={job}
               busy={busy}
+              isHR={isHR}
               onMove={(to) => moveTo([selected.id], to)}
             />
           ) : (
@@ -449,8 +498,19 @@ function EmptyState({ onUpload, onImport }: { onUpload: () => void; onImport: ()
   )
 }
 
-function Profile({ c, job, busy, onMove }: { c: ViewCandidate; job: JobInfo; busy: boolean; onMove: (to: string) => void }) {
+const TABS = [
+  { key: 'profile', label: 'Profile' },
+  { key: 'timeline', label: 'Timeline' },
+  { key: 'communication', label: 'Communication' },
+  { key: 'review', label: 'Review' },
+  { key: 'comments', label: 'Comments' },
+] as const
+type TabKey = (typeof TABS)[number]['key']
+
+function Profile({ c, job, busy, isHR, onMove }: { c: ViewCandidate; job: JobInfo; busy: boolean; isHR: boolean; onMove: (to: string) => void }) {
   const router = useRouter()
+  const [tab, setTab] = useState<TabKey>('profile')
+  const firstName = c.fullName.split(' ')[0]
   const [scheduleOpen, setScheduleOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [savingEmail, setSavingEmail] = useState(false)
@@ -543,8 +603,42 @@ function Profile({ c, job, busy, onMove }: { c: ViewCandidate; job: JobInfo; bus
         </div>
       )}
 
+      <nav className="flex flex-wrap gap-1 px-6 pt-4" aria-label="Candidate tabs">
+        {TABS.map((t) => (
+          <button key={t.key} type="button" onClick={() => setTab(t.key)} aria-current={tab === t.key ? 'page' : undefined}
+            className={`h-8 px-3 rounded-md text-sm ${tab === t.key ? 'bg-slate-900 text-white' : 'text-slate-600 hover:bg-slate-100'}`}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+
+      {tab === 'communication' && <div className="p-6 max-w-3xl"><EmailPanel candidateId={c.id} email={c.email} /></div>}
+      {tab === 'review' && <div className="p-6"><ReviewPanel candidateId={c.id} jobId={job.id} stage={c.stage} firstName={firstName} /></div>}
+      {tab === 'comments' && <div className="p-6 max-w-3xl"><CommentsPanel candidateId={c.id} isHR={isHR} /></div>}
+      {tab === 'timeline' && (
+        <div className="p-6">
+          <ol className="space-y-3 text-sm">
+            <li className="flex gap-2"><Upload className="w-4 h-4 text-slate-400 mt-0.5" />
+              <span>{SOURCE[c.source ?? ''] ?? 'Added'} · <span className="text-slate-500">{fmt(c.createdAt)}</span></span></li>
+            {c.match && (
+              <li className="flex gap-2"><CheckCircle2 className="w-4 h-4 text-slate-400 mt-0.5" />
+                <span>Screened against the job: {c.match.score ?? '–'}/100 · <span className="text-slate-500">{fmt(c.match.screenedAt)}</span></span></li>
+            )}
+            {c.interviews.map((i) => (
+              <li key={i.id} className="flex gap-2"><CalendarClock className="w-4 h-4 text-slate-400 mt-0.5" />
+                <span>{i.type.charAt(0) + i.type.slice(1).toLowerCase()} interview · <span className="text-slate-500">{fmt(i.scheduledAt)}</span>{i.result ? ` · ${i.result.toLowerCase()}` : ''}</span></li>
+            ))}
+            <li className="flex gap-2"><ArrowRight className="w-4 h-4 text-slate-400 mt-0.5" />
+              <span>Now at {LABEL[c.stage] ?? c.stage} · <span className="text-slate-500">last change {ago(c.updatedAt)}</span></span></li>
+          </ol>
+        </div>
+      )}
+
+      {tab === 'profile' && (
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] p-6">
         <div className="space-y-6 min-w-0">
+          <MatchCard candidateId={c.id} firstName={firstName} match={c.match} hasJd={job.hasJd} onDone={() => router.refresh()} />
+
           {(c.tracker.evaluation || c.knockoutReasons.length > 0) && (
             <Block title="Evaluation">
               {c.tracker.evaluation && <p className="text-sm text-slate-700 whitespace-pre-line">{c.tracker.evaluation}</p>}
@@ -608,18 +702,6 @@ function Profile({ c, job, busy, onMove }: { c: ViewCandidate; job: JobInfo; bus
             </Block>
           )}
 
-          <Block title="Timeline">
-            <ol className="space-y-2 text-sm">
-              <li className="flex gap-2"><Upload className="w-4 h-4 text-slate-400 mt-0.5" />
-                <span>{SOURCE[c.source ?? ''] ?? 'Added'} · <span className="text-slate-500">{fmt(c.createdAt)}</span></span></li>
-              {c.interviews.map((i) => (
-                <li key={i.id} className="flex gap-2"><CalendarClock className="w-4 h-4 text-slate-400 mt-0.5" />
-                  <span>{i.type.charAt(0) + i.type.slice(1).toLowerCase()} interview · <span className="text-slate-500">{fmt(i.scheduledAt)}</span>{i.result ? ` · ${i.result.toLowerCase()}` : ''}</span></li>
-              ))}
-              <li className="flex gap-2"><ArrowRight className="w-4 h-4 text-slate-400 mt-0.5" />
-                <span>Now at {LABEL[c.stage] ?? c.stage} · <span className="text-slate-500">last change {ago(c.updatedAt)}</span></span></li>
-            </ol>
-          </Block>
         </div>
 
         <div className="min-w-0">
@@ -646,6 +728,7 @@ function Profile({ c, job, busy, onMove }: { c: ViewCandidate; job: JobInfo; bus
           </Block>
         </div>
       </div>
+      )}
 
       <ScheduleInterviewDialog candidateId={c.id} candidateName={c.fullName} roleTitle={job.title}
         requisitionId={job.id} open={scheduleOpen} onOpenChange={setScheduleOpen} />

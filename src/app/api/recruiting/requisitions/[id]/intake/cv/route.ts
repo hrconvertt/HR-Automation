@@ -66,6 +66,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       yearsExperience: cv.totalExperienceYears != null ? Math.floor(cv.totalExperienceYears) : null,
       matchScore: cv.matchScore, verdict: cv.verdict, evaluation: cv.evaluation,
       skills: cv.skills.length ? JSON.stringify(cv.skills) : null,
+      screeningMatch: cv.match ? JSON.stringify(cv.match) : null,
     }
 
     const email = cv.email?.toLowerCase() ?? null

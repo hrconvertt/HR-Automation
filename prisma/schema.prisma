@@ -1612,6 +1612,9 @@ model JobRequisition {
   // The position's own tracker columns ("Figma/Adobe", "Knows CRO?"), in
   // order — JSON string[]. They sit between Education and Verdict.
   screeningColumns String?
+  /// The job's scorecard: JSON [{ competency, questions: string[] }], drawn
+  /// from the job description and used for every stage evaluation.
+  scorecardTemplate String?
   members         RequisitionMember[]
 
   manpowerForm     ManpowerRequisition?
@@ -1741,12 +1744,18 @@ model Candidate {
   finalMeetingDate   String?
   finalMeetingStatus String?
   screening          String? // JSON { "<screening column label>": "<value>" } — the position's own columns
+  /// How this person matches the job, read against its description:
+  /// JSON { score, summary, requirements: [{ category, requirement, met, evidence }], basis, screenedAt }.
+  screeningMatch     String?
 
   resumeParse ResumeParse?
   /// The CV file, when it was uploaded here. cvUrl then points at
   /// /api/recruiting/candidates/<id>/cv. Its own table so that loading a
   /// candidate never loads the bytes.
   cvFile      CandidateCvFile?
+  evaluations CandidateEvaluation[]
+  assessments CandidateAssessment[]
+  comments    CandidateComment[]
   nurtureLogs NurtureLog[] @relation("CandidateNurtures")
   interviews  Interview[]
   offer       JobOffer?
@@ -1755,6 +1764,71 @@ model Candidate {
   updatedAt   DateTime     @updatedAt
 
   @@map("candidates")
+}
+
+/// A stage scorecard: someone on the hiring team rates the candidate on the
+/// job's competencies, question by question, and recommends a decision.
+model CandidateEvaluation {
+  id             String    @id @default(cuid())
+  candidateId    String
+  candidate      Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  stage          String // the stage it was written at: SCREENING | INTERVIEW | …
+  authorUserId   String
+  authorName     String
+  /// JSON [{ competency, question?, rating 1-5 | null, note }]
+  ratings        String
+  overallRating  Float?
+  recommendation String? // STRONG_YES | YES | NO | STRONG_NO
+  summary        String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([candidateId])
+  @@map("candidate_evaluations")
+}
+
+/// A test the candidate took — a practical task, a skills test, an outside
+/// assessment — and how they did.
+model CandidateAssessment {
+  id           String    @id @default(cuid())
+  candidateId  String
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  name         String
+  kind         String    @default("PRACTICAL") // PRACTICAL | SKILLS | COGNITIVE | PERSONALITY | OTHER
+  /// The task or questions as sent, when written here.
+  brief        String?
+  score        Float?
+  maxScore     Float?
+  result       String? // PASS | BORDERLINE | FAIL
+  notes        String?
+  link         String?
+  sentAt       DateTime?
+  completedAt  DateTime?
+  recordedById String?
+  recordedBy   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([candidateId])
+  @@map("candidate_assessments")
+}
+
+/// A note on a candidate for the hiring team. Never shown to the candidate.
+model CandidateComment {
+  id           String    @id @default(cuid())
+  candidateId  String
+  candidate    Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+  authorUserId String
+  authorName   String
+  body         String
+  /// HIRING_TEAM (everyone who can see the job) | MANAGERS (HR and managers) | HR (HR only)
+  visibility   String    @default("HIRING_TEAM")
+  /// Employee ids mentioned with @ — they are notified.
+  mentions     String[]  @default([])
+  createdAt    DateTime  @default(now())
+
+  @@index([candidateId])
+  @@map("candidate_comments")
 }
 
 model CandidateCvFile {
