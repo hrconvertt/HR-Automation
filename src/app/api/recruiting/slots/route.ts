@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
+import { resolveJobActor } from '@/lib/job-post-server'
 import { prisma } from '@/lib/prisma'
 
 // GET /api/recruiting/slots?interviewerIds=xxx,yyy&date=2026-07-20
@@ -12,6 +13,12 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const interviewerIds = searchParams.get('interviewerIds')?.split(',').filter(Boolean) || []
     const dateStr = searchParams.get('date')
+
+    // HR and hiring managers see anyone's free slots; an interviewer sees their own.
+    const actor = await resolveJobActor(request)
+    if (actor instanceof NextResponse && interviewerIds.some((i) => i !== payload.employeeId)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+    }
 
     if (interviewerIds.length === 0 || !dateStr) {
       return NextResponse.json({ error: 'Missing interviewerIds or date' }, { status: 400 })
@@ -49,6 +56,11 @@ export async function POST(request: NextRequest) {
 
     if (!interviewerId || !date || !startTime || !endTime) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
+    }
+
+    const actor = await resolveJobActor(request)
+    if (actor instanceof NextResponse && interviewerId !== payload.employeeId) {
+      return NextResponse.json({ error: 'You can only add your own interview slots' }, { status: 403 })
     }
 
     const slot = await prisma.interviewSlot.create({

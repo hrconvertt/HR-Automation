@@ -67,11 +67,18 @@ export default async function AuthDebugPage() {
     userByClerkId = u
   }
 
+  // The admin sections below name every HR account. This page is public (it
+  // has to be — it is for people who cannot sign in), so those sections are
+  // only shown to someone already signed in as HR.
+  const viewerIsHr = userByClerkId?.role === 'HR_ADMIN' && userByClerkId.isActive
+
   // 4. DB User row matching hr@convertt.co specifically (the HR allowlist target)
-  const hrUser = await prisma.user.findUnique({
-    where: { email: 'hr@convertt.co' },
-    select: { id: true, email: true, role: true, isActive: true, clerkUserId: true },
-  })
+  const hrUser = viewerIsHr
+    ? await prisma.user.findUnique({
+        where: { email: 'hr@convertt.co' },
+        select: { id: true, email: true, role: true, isActive: true, clerkUserId: true },
+      })
+    : null
 
   // 5. DB User row matching whatever email Clerk thinks we are
   let userByClerkEmail: typeof hrUser | null = null
@@ -83,10 +90,12 @@ export default async function AuthDebugPage() {
   }
 
   // 6. All HR_ADMIN rows so we know the universe
-  const allAdmins = await prisma.user.findMany({
-    where: { role: 'HR_ADMIN' },
-    select: { id: true, email: true, isActive: true, clerkUserId: true },
-  })
+  const allAdmins = viewerIsHr
+    ? await prisma.user.findMany({
+        where: { role: 'HR_ADMIN' },
+        select: { id: true, email: true, isActive: true, clerkUserId: true },
+      })
+    : []
 
   // Diagnosis
   const diagnoses: string[] = []
@@ -169,6 +178,7 @@ export default async function AuthDebugPage() {
           </pre>
         </section>
 
+        {viewerIsHr && (<>
         {/* HR row */}
         <section className="rounded-lg bg-white border border-slate-200 p-4">
           <h2 className="font-bold text-slate-900">5. DB User row for hr@convertt.co</h2>
@@ -184,6 +194,7 @@ export default async function AuthDebugPage() {
 {JSON.stringify(allAdmins, null, 2)}
           </pre>
         </section>
+        </>)}
       </div>
     </div>
   )

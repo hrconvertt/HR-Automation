@@ -1363,10 +1363,8 @@ export default function DashboardChrome({
         `}
       >
         <div className="flex items-center gap-2.5 px-4 h-14 border-b border-slate-700/60 flex-shrink-0">
-          <div className="w-8 h-8 bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0 shadow-sm">
-            <span className="text-white font-bold text-sm">C</span>
-          </div>
-          <span className="text-white font-semibold text-[15px] tracking-tight">Convertt</span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/convertt-logo-white.png" alt="Convertt" className="h-6 w-auto flex-shrink-0" />
           <button
             className="ml-auto lg:hidden text-slate-400 hover:text-white"
             onClick={() => setSidebarOpen(false)}
@@ -1463,10 +1461,8 @@ export default function DashboardChrome({
             href="/dashboard"
             className={`flex items-center gap-2 ${sidebarHidden ? 'lg:flex' : 'lg:hidden'}`}
           >
-            <div className="w-7 h-7 bg-slate-700 rounded-lg flex items-center justify-center flex-shrink-0">
-              <span className="text-white font-bold text-xs">C</span>
-            </div>
-            <span className="text-gray-900 font-semibold text-[15px] tracking-tight">Convertt</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/convertt-logo.png" alt="Convertt" className="h-5 w-auto flex-shrink-0" />
           </Link>
 
           <div className="flex-1" />

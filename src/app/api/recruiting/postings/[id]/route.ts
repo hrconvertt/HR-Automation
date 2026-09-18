@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
+import { resolveJobActor } from '@/lib/job-post-server'
 import { prisma } from '@/lib/prisma'
 import { POSTING_PLATFORMS, POSTING_STATUSES, POSTING_CURRENCIES } from '@/lib/job-posting'
 
@@ -38,6 +39,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const token = request.cookies.get('hr_token')?.value
     const payload = await verifyToken(token)
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // A post's spend and its removal are HR's call.
+    const actor = await resolveJobActor(request)
+    if (actor instanceof NextResponse) return actor
+    if (!actor.isHR) return NextResponse.json({ error: 'Only HR can change or remove a job post' }, { status: 403 })
 
     const body = await request.json()
     const { status, impressions, clicks, applications, platform, currency, notes } = body
@@ -86,6 +91,10 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     const token = request.cookies.get('hr_token')?.value
     const payload = await verifyToken(token)
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // A post's spend and its removal are HR's call.
+    const actor = await resolveJobActor(request)
+    if (actor instanceof NextResponse) return actor
+    if (!actor.isHR) return NextResponse.json({ error: 'Only HR can change or remove a job post' }, { status: 403 })
 
     await prisma.jobPosting.delete({ where: { id } })
     return NextResponse.json({ success: true })

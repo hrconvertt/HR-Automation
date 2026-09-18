@@ -26,6 +26,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Email and password are required.' }, { status: 400 })
   }
 
+  if (await lockedOut(email)) {
+    return NextResponse.json(
+      { error: 'Too many wrong passwords. Wait 15 minutes, or ask HR to reset it.' },
+      { status: 429 },
+    )
+  }
+
   // Allowlist matching: the User row's own email, OR the linked Employee's
   // work / personal email (all stored lowercase).
   const userSelect = { id: true, password: true, role: true, isActive: true } as const
@@ -66,8 +73,10 @@ export async function POST(req: NextRequest) {
 
   const ok = await verifyPassword(password, user.password)
   if (!ok) {
+    await recordFailure(email)
     return NextResponse.json({ error: 'Invalid email or password.' }, { status: 401 })
   }
+  await prisma.config.deleteMany({ where: { key: failKey(email) } }).catch(() => {})
 
   const token = signEmergencyJwt({ userId: user.id, role: user.role })
 
@@ -80,4 +89,32 @@ export async function POST(req: NextRequest) {
     maxAge: 7 * 24 * 60 * 60, // 7 days
   })
   return res
+}
+
+// ─── Wrong-password lockout ─────────────────────────────────────────────────
+// Kept in Config rather than memory: serverless instances do not share
+// memory, so an in-process counter would reset on every cold start.
+const MAX_FAILURES = 8
+const WINDOW_MS = 15 * 60 * 1000
+const failKey = (email: string) => `signin_fail_${email}`
+
+async function readFailures(email: string): Promise<{ count: number; since: number }> {
+  const row = await prisma.config.findUnique({ where: { key: failKey(email) } }).catch(() => null)
+  try {
+    const v = row ? (JSON.parse(row.value) as { count: number; since: number }) : null
+    if (v && Date.now() - v.since < WINDOW_MS) return v
+  } catch { /* unreadable counter: start again */ }
+  return { count: 0, since: Date.now() }
+}
+
+async function lockedOut(email: string): Promise<boolean> {
+  return (await readFailures(email)).count >= MAX_FAILURES
+}
+
+async function recordFailure(email: string): Promise<void> {
+  const v = await readFailures(email)
+  const value = JSON.stringify({ count: v.count + 1, since: v.since })
+  await prisma.config
+    .upsert({ where: { key: failKey(email) }, update: { value }, create: { key: failKey(email), value } })
+    .catch(() => {})
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
+import { resolveJobActor } from '@/lib/job-post-server'
 import { installPdfGlobals } from '@/lib/pdf-node-globals'
 import Anthropic from '@anthropic-ai/sdk'
 
@@ -120,6 +121,9 @@ export async function POST(request: NextRequest) {
     const token = request.cookies.get('hr_token')?.value
     const payload = await verifyToken(token)
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Recruiting data is for HR and hiring managers only.
+    const actor = await resolveJobActor(request)
+    if (actor instanceof NextResponse) return actor
 
     const formData = await request.formData()
 

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verifyToken } from '@/lib/auth'
+import { resolveJobActor } from '@/lib/job-post-server'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -40,6 +41,9 @@ export async function POST(request: NextRequest) {
     const token = request.cookies.get('hr_token')?.value
     const payload = await verifyToken(token)
     if (!payload) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    // Recruiting data is for HR and hiring managers only.
+    const actor = await resolveJobActor(request)
+    if (actor instanceof NextResponse) return actor
 
     const body = await request.json()
     const { jds } = body as { jds: ParsedJD[] }

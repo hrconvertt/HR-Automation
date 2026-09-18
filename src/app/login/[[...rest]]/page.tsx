@@ -25,10 +25,9 @@ export default async function LoginPage({
       <div className="hidden lg:flex lg:w-1/2 bg-slate-900 flex-col justify-between p-12">
         <div>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
-            </div>
-            <span className="text-white text-xl font-bold">Convertt HR</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/convertt-logo-white.png" alt="Convertt" className="h-8 w-auto" />
+            <span className="text-slate-300 text-xl font-semibold">HR</span>
           </div>
           <div className="mt-16">
             <h2 className="text-white text-4xl font-bold leading-tight">
@@ -61,10 +60,9 @@ export default async function LoginPage({
       <div className="flex-1 flex items-center justify-center p-8 bg-white">
         <div className="w-full max-w-md">
           <div className="flex items-center gap-3 mb-8 lg:hidden">
-            <div className="w-10 h-10 bg-slate-700 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-lg">C</span>
-            </div>
-            <span className="text-slate-900 text-xl font-bold">Convertt HR</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/brand/convertt-logo.png" alt="Convertt" className="h-8 w-auto" />
+            <span className="text-slate-500 text-xl font-semibold">HR</span>
           </div>
 
           {hasKey ? (
