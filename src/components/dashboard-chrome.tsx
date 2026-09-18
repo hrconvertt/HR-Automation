@@ -172,6 +172,7 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
         { href: '/dashboard/documents', label: 'Document Center', icon: FolderOpen },
         { href: '/dashboard/help', label: 'Help Center', icon: LifeBuoy },
         { href: '/dashboard/compliance', label: 'Compliance', icon: Shield },
+        { href: '/dashboard/people-analytics', label: 'People Analytics', icon: PieChart },
         { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/settings', label: 'Settings', icon: Settings },
         // Hidden by HIDDEN_PATHS; listed so un-hiding one puts it back here.
@@ -303,7 +304,8 @@ const NAV_GROUPS_BY_ROLE: Record<string, NavGroup[]> = {
       label: 'Overview',
       items: [
         { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { href: '/dashboard/reports', label: 'Workforce Analytics', icon: PieChart },
+        { href: '/dashboard/people-analytics', label: 'People Analytics', icon: PieChart },
+        { href: '/dashboard/reports', label: 'Reports', icon: BarChart3 },
         { href: '/dashboard/time', label: 'Time & Attendance', icon: Clock },
         { href: '/dashboard/leave', label: 'Leave', icon: PlaneIcon },
         { href: '/dashboard/calendar', label: 'Calendar', icon: CalendarDays },

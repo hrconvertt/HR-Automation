@@ -59,6 +59,7 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Career Path Builder', href: '/dashboard/career/path', section: 'Career Hub', keywords: ['career path', 'next move', 'promotion path', 'plan'] },
   { label: 'Flex Teams', href: '/dashboard/career/flex-teams', section: 'Career Hub', keywords: ['flex team', 'project', 'gig', 'stretch'] },
   { label: 'Navigate Succession Plans', href: '/dashboard/performance/succession/navigate', section: 'Performance', keywords: ['successor chart', 'succession org chart'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
+  { label: 'People Analytics', href: '/dashboard/people-analytics', section: 'Admin', keywords: ['analytics', 'dashboard', 'headcount', 'attrition', 'turnover', 'salary bill', 'payroll cost', 'workforce'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
   { label: 'Team Insights', href: '/dashboard/team-insights', section: 'Performance', keywords: ['manager hub', 'check-in', 'one to one', '1:1', 'mentor', 'development plan', 'career'], roles: ['HR_ADMIN', 'MANAGER', 'EXECUTIVE'] },
   { label: 'Succession Planning', href: '/dashboard/performance/succession', section: 'Performance', keywords: ['successor', 'nine box', '9-box', 'bench', 'cover a role', 'flight risk'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
   { label: 'Skills Dashboard', href: '/dashboard/performance/skills', section: 'Performance', keywords: ['skill gaps', 'adoption', 'mentoring', 'engagement'], roles: ['HR_ADMIN', 'EXECUTIVE'] },
