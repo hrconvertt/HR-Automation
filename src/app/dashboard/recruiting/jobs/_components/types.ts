@@ -71,6 +71,8 @@ export interface EditorDetails {
   manpowerForm: { id: string; status: string } | null
   poolMatches: number
   referralsAskedAt: string | null
+  /** The job's own screening columns — its custom fields. */
+  screeningColumns: string[]
 }
 
 export interface JobTemplate {

@@ -49,7 +49,8 @@ function since(iso: string | null): string {
 
 const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`
 
-export function JobBoard({ jobs, isHR }: { jobs: BoardJob[]; isHR: boolean }) {
+export function JobBoard({ jobs, isHR, myEmployeeId }: { jobs: BoardJob[]; isHR: boolean; myEmployeeId: string | null }) {
+  const [view, setView] = useState<'jobs' | 'plan'>('jobs')
   const [q, setQ] = useState('')
   const [dept, setDept] = useState('')
   const [status, setStatus] = useState('')
@@ -70,6 +71,16 @@ export function JobBoard({ jobs, isHR }: { jobs: BoardJob[]; isHR: boolean }) {
 
   return (
     <div className="space-y-3">
+      <div className="flex items-center gap-6 border-b border-slate-200">
+        {(['jobs', 'plan'] as const).map((v) => (
+          <button key={v} type="button" onClick={() => setView(v)}
+            className={`pb-2 -mb-px border-b-2 text-sm font-semibold uppercase tracking-wide ${view === v ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-700'}`}>
+            {v === 'jobs' ? 'Jobs' : 'Hiring plan'}
+          </button>
+        ))}
+      </div>
+
+      {view === 'plan' ? <HiringPlan jobs={jobs} myEmployeeId={myEmployeeId} /> : (<>
       <div className="flex flex-wrap items-center gap-3">
         <label className="relative flex-1 min-w-[220px]">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -125,6 +136,117 @@ export function JobBoard({ jobs, isHR }: { jobs: BoardJob[]; isHR: boolean }) {
       ) : (
         shown.map((j) => <JobCard key={j.id} job={j} isHR={isHR} />)
       )}
+      </>)}
+    </div>
+  )
+}
+
+type PlanSort = 'code' | 'manager' | 'owner' | 'plan' | 'status'
+
+function SortHead({ k, on, set, children }: { k: PlanSort; on: PlanSort; set: (k: PlanSort) => void; children: React.ReactNode }) {
+  return (
+    <th className="text-left px-4 py-2.5 font-medium">
+      <button type="button" onClick={() => set(k)} className={`inline-flex items-center gap-1 ${on === k ? 'text-slate-900' : ''}`}>
+        {children}{on === k ? ' ↓' : ''}
+      </button>
+    </th>
+  )
+}
+
+/**
+ * The hiring plan: every requisition as a row — who is hiring, who owns it,
+ * the salary, when it should be filled, and where it stands — the way
+ * Workable lists requisitions under Hiring Plan.
+ */
+function HiringPlan({ jobs, myEmployeeId }: { jobs: BoardJob[]; myEmployeeId: string | null }) {
+  const [filter, setFilter] = useState<'all' | 'mine' | 'approval'>('all')
+  const [q, setQ] = useState('')
+  const [sortKey, setSortKey] = useState<PlanSort>('code')
+  const needle = q.trim().toLowerCase()
+  const money = (n: number) => n.toLocaleString('en-PK')
+  const fmt = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '—')
+  const owner = (j: BoardJob) => j.requestedBy ?? 'HR'
+  const manager = (j: BoardJob) => j.hiringManagers.join(', ') || j.requestedBy || '—'
+
+  const rows = jobs
+    .filter((j) => filter === 'all' || (filter === 'mine' ? j.requestedById === myEmployeeId : j.status === 'PENDING'))
+    .filter((j) => !needle || `${j.code} ${j.title} ${j.department ?? ''} ${manager(j)}`.toLowerCase().includes(needle))
+    .sort((a, b) => {
+      if (sortKey === 'code') return a.createdAt.localeCompare(b.createdAt)
+      if (sortKey === 'manager') return manager(a).localeCompare(manager(b))
+      if (sortKey === 'owner') return owner(a).localeCompare(owner(b))
+      if (sortKey === 'plan') return (a.planDate ?? '9').localeCompare(b.planDate ?? '9')
+      return (RANK[a.status] ?? 9) - (RANK[b.status] ?? 9)
+    })
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2">
+        {([['all', 'All requisitions'], ['mine', 'My requisitions'], ['approval', 'Need approval']] as const).map(([k, l]) => (
+          <button key={k} type="button" onClick={() => setFilter(k)}
+            className={`text-xs px-3 py-1.5 rounded-full border ${filter === k ? 'border-emerald-300 bg-emerald-50 text-emerald-900 font-semibold' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}>
+            {l}{k === 'approval' ? ` (${jobs.filter((j) => j.status === 'PENDING').length})` : ''}
+          </button>
+        ))}
+        <label className="relative ml-auto w-64">
+          <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search requisitions" aria-label="Search requisitions"
+            className="w-full h-9 pl-8 pr-2 rounded-md border border-slate-200 text-sm" />
+        </label>
+      </div>
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <table className="w-full text-sm min-w-[900px]">
+          <thead className="bg-slate-50 text-xs text-slate-500">
+            <tr>
+              <SortHead k="code" on={sortKey} set={setSortKey}>Requisition</SortHead>
+              <SortHead k="manager" on={sortKey} set={setSortKey}>Hiring manager</SortHead>
+              <SortHead k="owner" on={sortKey} set={setSortKey}>Requisition owner</SortHead>
+              <th className="text-left px-4 py-2.5 font-medium">Salary</th>
+              <SortHead k="plan" on={sortKey} set={setSortKey}>Plan date</SortHead>
+              <th className="text-left px-4 py-2.5 font-medium">Candidates</th>
+              <SortHead k="status" on={sortKey} set={setSortKey}>Status</SortHead>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
+            {rows.length === 0 && (
+              <tr><td colSpan={7} className="px-4 py-8 text-center text-slate-400">No requisitions match.</td></tr>
+            )}
+            {rows.map((j) => {
+              const chip = STATUS_CHIP[j.status]
+              const late = j.planDate && new Date(j.planDate) < new Date() && ['OPEN', 'PENDING', 'PAUSED'].includes(j.status)
+              return (
+                <tr key={j.id} className="hover:bg-slate-50/60">
+                  <td className="px-4 py-3">
+                    <Link href={`/dashboard/recruiting/jobs/${j.id}`} className="font-medium text-emerald-800 hover:underline">
+                      {j.code} {j.title}
+                    </Link>
+                    <p className="text-xs text-slate-500">{[j.department, j.isRemote ? 'Remote' : j.location].filter(Boolean).join(' · ') || '—'}</p>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">{manager(j)}</td>
+                  <td className="px-4 py-3 text-slate-700">{owner(j)}</td>
+                  <td className="px-4 py-3 text-slate-700 whitespace-nowrap">
+                    {j.salaryMin || j.salaryMax
+                      ? <>{j.salaryCurrency} {money(j.salaryMin ?? 0)}{j.salaryMax ? `–${money(j.salaryMax)}` : ''}<span className="text-slate-400">/month</span></>
+                      : <span className="text-slate-300">—</span>}
+                  </td>
+                  <td className={`px-4 py-3 whitespace-nowrap ${late ? 'text-red-700 font-medium' : 'text-slate-700'}`}>
+                    {fmt(j.planDate)}{late ? ' · overdue' : ''}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Link href={`/dashboard/recruiting/jobs/${j.id}/candidates`} className="text-slate-700 hover:underline tabular-nums">
+                      {j.total} · {j.counts.HIRED ?? 0} of {j.vacancies} hired
+                    </Link>
+                  </td>
+                  <td className="px-4 py-3">
+                    {chip && <span className={`text-[11px] font-semibold uppercase tracking-wide px-2.5 py-1 rounded-full border ${chip.tone}`}>{chip.label}</span>}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="text-xs text-slate-400">Plan date is the date applications close. REQ numbers follow the order requisitions were raised; an internal code, where set, is shown instead.</p>
     </div>
   )
 }

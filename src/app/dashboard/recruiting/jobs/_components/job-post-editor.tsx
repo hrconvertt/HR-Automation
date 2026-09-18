@@ -31,6 +31,7 @@ import { StepFindCandidates } from './step-find-candidates'
 import { StepTeam } from './step-team'
 import { StepWorkflow } from './step-workflow'
 import { JobPreviewDialog } from './job-preview-dialog'
+import { CustomFields, ScorecardEditor } from './job-setup-extras'
 
 interface Props {
   job: EditorJob
@@ -300,8 +301,16 @@ export function JobPostEditor({ job: initial, step, isHR, canEdit, departments, 
           canEdit={canEdit}
         />
       )}
+      {job.id && details && step === 'team' && (
+        <div className="max-w-4xl">
+          <CustomFields jobId={job.id} initial={details.screeningColumns} canEdit={isHR} />
+        </div>
+      )}
       {job.id && details && step === 'workflow' && (
-        <StepWorkflow jobId={job.id} initial={details.rounds} canEdit={canEdit} />
+        <div className="space-y-4">
+          <StepWorkflow jobId={job.id} initial={details.rounds} canEdit={canEdit} />
+          <div className="max-w-4xl"><ScorecardEditor jobId={job.id} canEdit={canEdit} /></div>
+        </div>
       )}
 
       {job.id && details && (

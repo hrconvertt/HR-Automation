@@ -32,6 +32,18 @@ export interface BoardJob {
   requestedBy: string | null
   jdContent: string | null
   manpowerForm: { id: string; status: string } | null
+  // The hiring plan's columns.
+  /** REQ101, REQ102… in the order the requisitions were raised, or the internal code. */
+  code: string
+  requestedById: string | null
+  hiringManagers: string[]
+  salaryMin: number | null
+  salaryMax: number | null
+  salaryCurrency: string
+  /** When the role should be filled by: the closing date, if one is set. */
+  planDate: string | null
+  postedDate: string | null
+  createdAt: string
 }
 
 interface ReqRow {
@@ -47,13 +59,21 @@ interface ReqRow {
   jdContent: string | null
   requestedBy: { fullName: string } | null
   manpowerForm: { id: string; status: string } | null
+  requestedById: string | null
+  internalCode: string | null
+  salaryMin: number | null
+  salaryMax: number | null
+  salaryCurrency: string
+  closingDate: Date | null
+  postedDate: Date | null
+  createdAt: Date
 }
 
 export async function jobBoardData(reqs: ReqRow[], authorised: Map<string, GateResult>): Promise<BoardJob[]> {
   const ids = reqs.map((r) => r.id)
   if (ids.length === 0) return []
 
-  const [stages, latest, failed, posts, departments] = await Promise.all([
+  const [stages, latest, failed, posts, departments, managers, order] = await Promise.all([
     prisma.candidate.groupBy({
       by: ['requisitionId', 'stage'],
       where: { requisitionId: { in: ids } },
@@ -75,7 +95,16 @@ export async function jobBoardData(reqs: ReqRow[], authorised: Map<string, GateR
       _count: { _all: true },
     }),
     prisma.department.findMany({ select: { id: true, name: true } }),
+    prisma.requisitionMember.findMany({
+      where: { requisitionId: { in: ids }, role: 'HIRING_MANAGER' },
+      select: { requisitionId: true, employee: { select: { fullName: true } } },
+    }),
+    // Every requisition ever raised, oldest first, so REQ numbers never shift.
+    prisma.jobRequisition.findMany({ select: { id: true }, orderBy: { createdAt: 'asc' } }),
   ])
+  const reqNo = new Map(order.map((r, i) => [r.id, `REQ${101 + i}`]))
+  const managersOf = new Map<string, string[]>()
+  for (const m of managers) managersOf.set(m.requisitionId, [...(managersOf.get(m.requisitionId) ?? []), m.employee.fullName])
 
   const deptName = new Map(departments.map((d) => [d.id, d.name]))
   const counts = new Map<string, Record<string, number>>()
@@ -111,6 +140,15 @@ export async function jobBoardData(reqs: ReqRow[], authorised: Map<string, GateR
       requestedBy: r.requestedBy?.fullName ?? null,
       jdContent: r.jdContent,
       manpowerForm: r.manpowerForm,
+      code: r.internalCode?.trim() || reqNo.get(r.id) || 'REQ',
+      requestedById: r.requestedById,
+      hiringManagers: managersOf.get(r.id) ?? [],
+      salaryMin: r.salaryMin,
+      salaryMax: r.salaryMax,
+      salaryCurrency: r.salaryCurrency,
+      planDate: r.closingDate?.toISOString() ?? null,
+      postedDate: r.postedDate?.toISOString() ?? null,
+      createdAt: r.createdAt.toISOString(),
     }
   })
 }

@@ -15,6 +15,14 @@ import {
 import type { ParsedJobPost } from '@/lib/jd-extract'
 import type { EditorJob, JobTemplate } from './types'
 import { TemplatePicker } from './template-picker'
+import { JOB_TITLE_LIBRARY } from '@/lib/job-title-library'
+
+/** The title with the typed text underlined, as Workable's title box shows it. */
+function Marked({ text, q }: { text: string; q: string }) {
+  const i = text.toLowerCase().indexOf(q)
+  if (!q || i < 0) return <>{text}</>
+  return <>{text.slice(0, i)}<span className="underline underline-offset-2">{text.slice(i, i + q.length)}</span>{text.slice(i + q.length)}</>
+}
 
 interface Props {
   job: EditorJob
@@ -102,8 +110,11 @@ export function StepJob({ job, onChange, departments, canEdit, isDraft, busy, on
   const setSection = (k: keyof JdSections, v: string) => onChange({ ...job, sections: { ...job.sections, [k]: v } })
 
   const q = job.title.trim().toLowerCase()
-  const suggestions = titleFocus && q.length >= 2
-    ? titles.filter((t) => t.toLowerCase().includes(q) && t.toLowerCase() !== q).slice(0, 8)
+  const words = q.split(/\s+/).filter(Boolean)
+  const fits = (t: string) => { const l = t.toLowerCase(); return l !== q && words.every((w) => l.includes(w)) }
+  const suggestions = titleFocus && q.length >= 2 ? titles.filter(fits).slice(0, 6) : []
+  const common = titleFocus && q.length >= 2
+    ? JOB_TITLE_LIBRARY.filter((t) => fits(t) && !suggestions.some((s) => s.toLowerCase() === t.toLowerCase())).slice(0, 8)
     : []
 
   const written = job.sections.summary.length + job.sections.responsibilities.length + job.sections.requirements.length
@@ -242,21 +253,33 @@ export function StepJob({ job, onChange, departments, canEdit, isDraft, busy, on
               autoComplete="off"
             />
           </Field>
-          {suggestions.length > 0 && (
-            <div className="absolute z-20 left-0 right-0 mt-1 rounded-lg border border-slate-200 bg-white shadow-lg py-1">
-              <p className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
-                Roles at Convertt
-              </p>
+          {(suggestions.length > 0 || common.length > 0) && (
+            <div className="absolute z-20 left-0 right-0 mt-1 rounded-lg border border-slate-200 bg-white shadow-lg py-1 max-h-80 overflow-y-auto">
+              {suggestions.length > 0 && (
+                <p className="px-3 pt-1 pb-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Roles at Convertt</p>
+              )}
               {suggestions.map((t) => (
-                <button
-                  key={t}
-                  type="button"
+                <button key={`c:${t}`} type="button"
                   onMouseDown={(e) => { e.preventDefault(); set({ title: t }); setTitleFocus(false) }}
-                  className="block w-full text-left px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
-                >
-                  {t}
+                  className="block w-full text-left px-3 py-1.5 text-sm text-slate-800 hover:bg-amber-50">
+                  <Marked text={t} q={q} />
                 </button>
               ))}
+              {common.length > 0 && (
+                <p className={`px-3 pt-2 pb-1.5 text-[10px] uppercase tracking-wider text-slate-400 font-semibold ${suggestions.length ? 'border-t border-slate-100 mt-1' : ''}`}>Common job titles</p>
+              )}
+              {common.map((t) => (
+                <button key={`l:${t}`} type="button"
+                  onMouseDown={(e) => { e.preventDefault(); set({ title: t }); setTitleFocus(false) }}
+                  className="block w-full text-left px-3 py-1.5 text-sm text-slate-800 hover:bg-amber-50">
+                  <Marked text={t} q={q} />
+                </button>
+              ))}
+              <button type="button"
+                onMouseDown={(e) => { e.preventDefault(); setTitleFocus(false); setPickerOpen(true) }}
+                className="block w-full text-left px-3 py-2 mt-1 border-t border-slate-100 text-xs font-medium text-slate-700 hover:bg-slate-50">
+                See job description templates for “{job.title.trim()}”
+              </button>
             </div>
           )}
         </div>

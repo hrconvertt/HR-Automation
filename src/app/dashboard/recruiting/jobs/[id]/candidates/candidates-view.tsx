@@ -20,6 +20,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { toastError, toastSuccess } from '@/components/ui/toaster'
 import { ScheduleInterviewDialog } from '@/components/recruiting/schedule-interview-dialog'
+import { CreateOfferDialog } from '@/components/recruiting/create-offer-dialog'
 import { getInitials } from '@/lib/utils'
 import { TRACKER_COLUMNS, type TrackerKey } from '@/lib/candidate-tracker'
 import {
@@ -512,6 +513,7 @@ function Profile({ c, job, busy, isHR, onMove }: { c: ViewCandidate; job: JobInf
   const [tab, setTab] = useState<TabKey>('profile')
   const firstName = c.fullName.split(' ')[0]
   const [scheduleOpen, setScheduleOpen] = useState(false)
+  const [offerOpen, setOfferOpen] = useState(false)
   const [email, setEmail] = useState('')
   const [savingEmail, setSavingEmail] = useState(false)
   const [moveOpen, setMoveOpen] = useState(false)
@@ -561,6 +563,9 @@ function Profile({ c, job, busy, isHR, onMove }: { c: ViewCandidate; job: JobInf
           <Button variant="outline" size="sm" onClick={() => setScheduleOpen(true)}>
             <CalendarClock className="w-4 h-4 mr-1.5" /> Schedule interview
           </Button>
+          {(c.stage === 'INTERVIEW' || c.stage === 'OFFER') && (
+            <Button variant="outline" size="sm" onClick={() => setOfferOpen(true)}>Create offer</Button>
+          )}
           {c.stage !== 'REJECTED' && (
             <Button variant="outline" size="sm" disabled={busy} onClick={() => confirm(`Disqualify ${c.fullName}?`) && onMove('REJECTED')}
               className="text-red-700 hover:bg-red-50">
@@ -732,6 +737,8 @@ function Profile({ c, job, busy, isHR, onMove }: { c: ViewCandidate; job: JobInf
 
       <ScheduleInterviewDialog candidateId={c.id} candidateName={c.fullName} roleTitle={job.title}
         requisitionId={job.id} open={scheduleOpen} onOpenChange={setScheduleOpen} />
+      <CreateOfferDialog candidateId={c.id} candidateName={c.fullName} roleTitle={job.title}
+        open={offerOpen} onOpenChange={setOfferOpen} />
     </section>
   )
 }

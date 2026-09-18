@@ -511,6 +511,8 @@ const RECRUITING_NAV: NavGroup[] = [
       //    then one role opened up; then the ones a hard filter turned away.
       { href: '/dashboard/recruiting?tab=pipeline', label: 'Pipeline', icon: BarChart3 },
       { href: '/dashboard/recruiting?tab=workspace', label: 'Requisition Workspace', icon: KanbanSquare },
+      // Every candidate on every job, searchable — Workable's Candidates tab.
+      { href: '/dashboard/recruiting/candidates', label: 'Candidates', icon: Users, roles: ['HR_ADMIN', 'MANAGER'] },
       // The Knockouts view only renders for HR and managers; an executive got a blank page.
       { href: '/dashboard/recruiting?tab=knockouts', label: 'Knockouts', icon: ShieldAlert, roles: ['HR_ADMIN', 'MANAGER'] },
       { href: '/dashboard/recruiting?tab=schedule', label: 'My Schedule', icon: CalendarCheck },

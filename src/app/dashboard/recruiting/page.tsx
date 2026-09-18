@@ -447,7 +447,7 @@ export default async function RecruitingPage({ searchParams }: { searchParams?: 
                   </Link>
                 )}
               />
-              <JobBoard jobs={boardJobs} isHR={isHR} />
+              <JobBoard jobs={boardJobs} isHR={isHR} myEmployeeId={myEmployeeId ?? null} />
               </>
             )
           })()}

@@ -187,6 +187,10 @@ export function StepFindCandidates({
               : 'Nobody kept from earlier hiring matches this title yet.'}>
             <Link href="/dashboard/recruiting?tab=pool" className={actionLink}>Open the Talent Pool</Link>
           </ActionCard>
+          <ActionCard icon={Users} title="Resurfaced candidates"
+            text="Everyone who applied for other Convertt jobs, ranked by how much of this job's title and requirements their record mentions. Add the good ones here with their CV.">
+            <Link href={`/dashboard/recruiting/candidates?forJob=${jobId}`} className={actionLink}>Search past candidates</Link>
+          </ActionCard>
         </Stage>
 
         <Stage n={2} title="More ways to share" blurb="Each opens its own app with the job link ready to send.">

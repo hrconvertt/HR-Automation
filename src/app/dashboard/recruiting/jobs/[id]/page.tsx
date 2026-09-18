@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requisitionAuthorised } from '@/lib/requisition-gate'
 import { KNOCKOUT_FIELD, parseApplicationForm, parseRounds, type ApplicationFieldKey } from '@/lib/job-post'
 import { resolveViewer, toEditorJob } from '../_lib/load'
+import { parseScreeningColumns } from '@/lib/candidate-tracker'
 import { JobPostEditor } from '../_components/job-post-editor'
 import { NoAccess } from '../_components/no-access'
 import { STEP_KEYS, type StepKey } from '../_components/types'
@@ -104,6 +105,7 @@ export default async function JobPostPage({ params, searchParams }: {
           : null,
         employees: employees.map((e) => ({ id: e.id, name: e.fullName, designation: e.designation })),
         rounds: parseRounds(req.interviewRounds),
+        screeningColumns: parseScreeningColumns(req.screeningColumns),
         gateReason: gate.ok ? null : gate.reason,
         manpowerForm: req.manpowerForm,
         poolMatches,
